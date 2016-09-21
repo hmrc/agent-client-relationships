@@ -1,4 +1,5 @@
 import sbt.Keys._
+import play.PlayImport.PlayKeys._
 import sbt.Tests.{SubProcess, Group}
 import sbt._
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
@@ -28,6 +29,7 @@ trait MicroService {
     .settings(scalaSettings: _*)
     .settings(publishingSettings: _*)
     .settings(defaultSettings(): _*)
+    .settings(routesImport ++= Seq("uk.gov.hmrc.agentclientrelationships.binders.PathBinders._"))
     .settings(
       libraryDependencies ++= appDependencies,
       retrieveManaged := true,
