@@ -19,8 +19,14 @@ package uk.gov.hmrc.agentclientrelationships.model
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.{SimpleObjectReads, SimpleObjectWrites}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+
+case class Arn(value: String)
+object Arn {
+  implicit val writes = new SimpleObjectWrites[Arn](_.value)
+  implicit val reads = new SimpleObjectReads[Arn]("arn", Arn.apply)
+}
 
 object Relationship {
   implicit val oidFormats = ReactiveMongoFormats.objectIdFormats
@@ -29,7 +35,7 @@ object Relationship {
 }
 
 case class Relationship (id: BSONObjectID,
-                         agentCode: AgentCode,
+                         arn: Arn,
                          regime: String,
                          clientRegimeId: String,
                          created: DateTime,
