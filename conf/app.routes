@@ -1,6 +1,6 @@
 # microservice specific routes
 
-PUT        /relationships/sa/:saUtr/:arn             @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.create(saUtr: uk.gov.hmrc.domain.SaUtr, arn: uk.gov.hmrc.agentclientrelationships.model.Arn)
-GET        /relationships/sa/:saUtr/:arn             @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.getRelationship(saUtr: uk.gov.hmrc.domain.SaUtr, arn: uk.gov.hmrc.agentclientrelationships.model.Arn)
-DELETE     /relationships/sa/:saUtr/:arn             @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.removeRelationship(saUtr: uk.gov.hmrc.domain.SaUtr, arn: uk.gov.hmrc.agentclientrelationships.model.Arn)
+PUT        /relationships/sa/:clientRegimeId/:arn    @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.create(clientRegimeId: String, arn: uk.gov.hmrc.agentclientrelationships.model.Arn)
+GET        /relationships/sa/:clientRegimeId/:arn    @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.getRelationship(clientRegimeId: String, arn: uk.gov.hmrc.agentclientrelationships.model.Arn)
+DELETE     /relationships/sa/:clientRegimeId/:arn    @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.removeRelationship(clientRegimeId: String, arn: uk.gov.hmrc.agentclientrelationships.model.Arn)
 GET        /relationships/agent/:arn                 @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.getAgentRelationships(arn: uk.gov.hmrc.agentclientrelationships.model.Arn)

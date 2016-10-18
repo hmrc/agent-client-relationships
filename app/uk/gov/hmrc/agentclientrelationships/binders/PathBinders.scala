@@ -17,10 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.binders
 
 import uk.gov.hmrc.agentclientrelationships.model.Arn
-import uk.gov.hmrc.domain.SaUtr
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 object PathBinders {
   implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
-  implicit object SaUtrBinder extends SimpleObjectBinder[SaUtr](SaUtr.apply, _.value)
 }
