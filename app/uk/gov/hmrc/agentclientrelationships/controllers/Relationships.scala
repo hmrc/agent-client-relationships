@@ -26,10 +26,11 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 import scala.concurrent.Future
 
 class Relationships(relationshipRepository: RelationshipRepository) extends BaseController {
+    val regime = "mtd-sa"
 
     def create(clientRegimeId: String, arn: Arn) = Action.async {
         findNonRemoved(clientRegimeId, arn).flatMap {
-            case Nil => relationshipRepository.create(clientRegimeId.toString(), "sa", arn).map(Json.toJson(_)).map(Ok(_))
+            case Nil => relationshipRepository.create(clientRegimeId.toString(), regime, arn).map(Json.toJson(_)).map(Ok(_))
             case r :: _ => Future successful Ok(Json.toJson(r))
         }
     }
@@ -44,12 +45,12 @@ class Relationships(relationshipRepository: RelationshipRepository) extends Base
     def removeRelationship(clientRegimeId: String, arn: Arn) = Action.async {
         findNonRemoved(clientRegimeId, arn).flatMap {
             case Nil => Future successful NoContent
-            case r :: _ => relationshipRepository.removeRelationship(clientRegimeId.toString(), "sa", arn).map(_ => NoContent)
+            case r :: _ => relationshipRepository.removeRelationship(clientRegimeId.toString(), regime, arn).map(_ => NoContent)
         }
     }
 
     def findNonRemoved(clientRegimeId: String, arn: Arn): Future[List[Relationship]] = {
-        relationshipRepository.list(clientRegimeId.toString(), "sa", arn).map(
+        relationshipRepository.list(clientRegimeId.toString(), regime, arn).map(
             _.filter(r => !r.isRemoved))
     }
 

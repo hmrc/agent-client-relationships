@@ -25,12 +25,12 @@ class RelationshipISpec extends UnitSpec with MongoApp {
 
   implicit val hc: HeaderCarrier = new HeaderCarrier()
 
-  "PUT to /relationships/sa/:clientRegimeId/:arn" should {
+  "PUT to /relationships/mtd-sa/:clientRegimeId/:arn" should {
     "create a relationship" in {
       val response = await(WSHttp.PUT[String, JsValue](urlFor("0123456789", "A9999B"), ""))
 
       (response \ "clientRegimeId").as[String] shouldBe "0123456789"
-      (response \ "regime").as[String] shouldBe "sa"
+      (response \ "regime").as[String] shouldBe "mtd-sa"
       (response \ "arn").as[String] shouldBe "A9999B"
       (response \ "created").as[Long] should be >= 0L
     }
@@ -46,7 +46,7 @@ class RelationshipISpec extends UnitSpec with MongoApp {
     }
   }
 
-  "GET to /relationships/sa/:clientRegimeId/:arn" should {
+  "GET to /relationships/mtd-sa/:clientRegimeId/:arn" should {
     "Return an existing relationship" in {
       val response1 = await(WSHttp.PUT[String, JsValue](urlFor("0123456788", "A9999B"), ""))
       val response2 = await(WSHttp.GET[JsValue](urlFor("0123456788", "A9999B")))
@@ -102,6 +102,6 @@ class RelationshipISpec extends UnitSpec with MongoApp {
   }
 
   def urlFor(clientRegimeId: String, arn: String) = {
-    s"http://localhost:$port/agent-client-relationships/relationships/sa/$clientRegimeId/$arn"
+    s"http://localhost:$port/agent-client-relationships/relationships/mtd-sa/$clientRegimeId/$arn"
   }
 }
