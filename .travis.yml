@@ -11,7 +11,7 @@ cache:
 branches:
   except:
     - master
-    services:
+  services:
     - mongodb
 addons:
   apt:
