@@ -84,7 +84,7 @@ class RelationshipISpec extends UnitSpec with MongoApp {
     }
   }
 
-  "DELETE to /relationships/sa/:clientRegimeId/:arn" should {
+  "DELETE to /relationships/mtd-sa/:clientRegimeId/:arn" should {
     "remove an existing relationship" in {
       await(WSHttp.PUT[String, JsValue](urlFor("0123456788", "A9999B"), ""))
       val deleteResponse = await(WSHttp.DELETE[HttpResponse](urlFor("0123456788", "A9999B")))
