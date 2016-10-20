@@ -12,7 +12,7 @@ branches:
   except:
     - master
     services:
-- mongodb
+    - mongodb
 addons:
   apt:
     sources:
