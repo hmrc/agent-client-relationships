@@ -17,30 +17,29 @@
 package uk.gov.hmrc.agentclientrelationships.repositories
 
 import org.joda.time.DateTime
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.api.DB
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentclientrelationships.model.Relationship
-import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.agentclientrelationships.model.{Arn, Relationship}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository, Repository}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
 trait RelationshipRepository extends Repository[Relationship, BSONObjectID] {
 
-  def create(clientRegimeId: String, regime: String, agentCode: AgentCode): Future[Relationship]
-  def removeRelationship(clientRegimeId: String, regime: String, agentCode: AgentCode): Future[_]
-  def list(clientRegimeId: String, regime: String, agentCode: AgentCode): Future[List[Relationship]]
-  def list(agentCode: AgentCode): Future[Seq[Relationship]]
+  def create(clientRegimeId: String, regime: String, arn: Arn): Future[Relationship]
+  def removeRelationship(clientRegimeId: String, regime: String, arn: Arn): Future[_]
+  def list(clientRegimeId: String, regime: String, arn: Arn): Future[List[Relationship]]
+  def list(arn: Arn): Future[Seq[Relationship]]
 }
 
 class RelationshipMongoRepository(implicit mongo: () => DB) extends ReactiveRepository[Relationship, BSONObjectID]("agentClientRelationships", mongo, Relationship.mongoFormats, ReactiveMongoFormats.objectIdFormats)
         with RelationshipRepository with AtomicUpdate[Relationship] {
-  override def create(clientRegimeId: String, regime: String, agentCode: AgentCode): Future[Relationship] = {
+  override def create(clientRegimeId: String, regime: String, arn: Arn): Future[Relationship] = {
     val request = Relationship(
       id = BSONObjectID.generate,
-      agentCode = agentCode,
+      arn = arn,
       regime = regime,
       clientRegimeId = clientRegimeId,
       created = new DateTime()
@@ -49,16 +48,16 @@ class RelationshipMongoRepository(implicit mongo: () => DB) extends ReactiveRepo
     insert(request).map(_ => request)
   }
 
-  override def list(clientRegimeId: String, regime: String, agentCode: AgentCode): Future[List[Relationship]] =
-    find("clientRegimeId" -> clientRegimeId, "regime" -> regime, "agentCode" -> agentCode)
+  override def list(clientRegimeId: String, regime: String, arn: Arn): Future[List[Relationship]] =
+    find("clientRegimeId" -> clientRegimeId, "regime" -> regime, "arn" -> arn)
 
-  override def removeRelationship(clientRegimeId: String, regime: String, agentCode: AgentCode) = {
-    remove(query = "clientRegimeId" -> clientRegimeId, "regime" -> regime, "agentCode" -> agentCode)
+  override def removeRelationship(clientRegimeId: String, regime: String, arn: Arn) = {
+    remove(query = "clientRegimeId" -> clientRegimeId, "regime" -> regime, "arn" -> arn)
   }
 
 
-  override def list(agentCode: AgentCode): Future[Seq[Relationship]] =
-    find("agentCode" -> agentCode)
+  override def list(arn: Arn): Future[Seq[Relationship]] =
+    find("arn" -> arn)
 
   override def isInsertion(newRecordId: BSONObjectID, oldRecord: Relationship): Boolean =
     newRecordId != oldRecord.id

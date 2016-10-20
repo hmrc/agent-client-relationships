@@ -18,20 +18,20 @@ package uk.gov.hmrc.agentclientrelationships
 
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpDelete, HttpResponse}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 class RelationshipISpec extends UnitSpec with MongoApp {
 
   implicit val hc: HeaderCarrier = new HeaderCarrier()
 
-  "PUT to /relationships/sa/:saUtr/:agentCode" should {
+  "PUT to /relationships/mtd-sa/:clientRegimeId/:arn" should {
     "create a relationship" in {
       val response = await(WSHttp.PUT[String, JsValue](urlFor("0123456789", "A9999B"), ""))
 
       (response \ "clientRegimeId").as[String] shouldBe "0123456789"
-      (response \ "regime").as[String] shouldBe "sa"
-      (response \ "agentCode").as[String] shouldBe "A9999B"
+      (response \ "regime").as[String] shouldBe "mtd-sa"
+      (response \ "arn").as[String] shouldBe "A9999B"
       (response \ "created").as[Long] should be >= 0L
     }
 
@@ -46,7 +46,7 @@ class RelationshipISpec extends UnitSpec with MongoApp {
     }
   }
 
-  "GET to /relationships/sa/:saUtr/:agentCode" should {
+  "GET to /relationships/mtd-sa/:clientRegimeId/:arn" should {
     "Return an existing relationship" in {
       val response1 = await(WSHttp.PUT[String, JsValue](urlFor("0123456788", "A9999B"), ""))
       val response2 = await(WSHttp.GET[JsValue](urlFor("0123456788", "A9999B")))
@@ -73,7 +73,7 @@ class RelationshipISpec extends UnitSpec with MongoApp {
     }
   }
 
-  "GET to /relationships/agent/:agentCode" should {
+  "GET to /relationships/agent/:arn" should {
     "return all relationships for the agency" in {
       await(WSHttp.PUT[String, JsValue](urlFor("0123456788", "A9999B"), ""))
       await(WSHttp.PUT[String, JsValue](urlFor("0123456789", "A9999B"), ""))
@@ -84,7 +84,7 @@ class RelationshipISpec extends UnitSpec with MongoApp {
     }
   }
 
-  "DELETE to /relationships/sa/:saUtr/:agentCode" should {
+  "DELETE to /relationships/mtd-sa/:clientRegimeId/:arn" should {
     "remove an existing relationship" in {
       await(WSHttp.PUT[String, JsValue](urlFor("0123456788", "A9999B"), ""))
       val deleteResponse = await(WSHttp.DELETE[HttpResponse](urlFor("0123456788", "A9999B")))
@@ -101,7 +101,7 @@ class RelationshipISpec extends UnitSpec with MongoApp {
     }
   }
 
-  def urlFor(saUtr: String, agentCode: String) = {
-    s"http://localhost:$port/agent-client-relationships/relationships/sa/$saUtr/$agentCode"
+  def urlFor(clientRegimeId: String, arn: String) = {
+    s"http://localhost:$port/agent-client-relationships/relationships/mtd-sa/$clientRegimeId/$arn"
   }
 }

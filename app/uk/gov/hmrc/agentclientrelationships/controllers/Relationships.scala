@@ -19,42 +19,42 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc.Action
-import uk.gov.hmrc.agentclientrelationships.model.Relationship
+import uk.gov.hmrc.agentclientrelationships.model.{Arn, Relationship}
 import uk.gov.hmrc.agentclientrelationships.repositories.RelationshipRepository
-import uk.gov.hmrc.domain.{AgentCode, SaUtr}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
 
 class Relationships(relationshipRepository: RelationshipRepository) extends BaseController {
+    val regime = "mtd-sa"
 
-    def create(saUtr: SaUtr, agentCode: AgentCode) = Action.async {
-        findNonRemoved(saUtr, agentCode).flatMap {
-            case Nil => relationshipRepository.create(saUtr.toString(), "sa", agentCode).map(Json.toJson(_)).map(Ok(_))
+    def create(clientRegimeId: String, arn: Arn) = Action.async {
+        findNonRemoved(clientRegimeId, arn).flatMap {
+            case Nil => relationshipRepository.create(clientRegimeId.toString(), regime, arn).map(Json.toJson(_)).map(Ok(_))
             case r :: _ => Future successful Ok(Json.toJson(r))
         }
     }
 
-    def getRelationship(saUtr: SaUtr, agentCode: AgentCode) = Action.async {
-        findNonRemoved(saUtr, agentCode).map {
+    def getRelationship(clientRegimeId: String, arn: Arn) = Action.async {
+        findNonRemoved(clientRegimeId, arn).map {
             case Nil => NotFound
             case r :: _ => Ok(Json.toJson(r))
         }
     }
 
-    def removeRelationship(saUtr: SaUtr, agentCode: AgentCode) = Action.async {
-        findNonRemoved(saUtr, agentCode).flatMap {
+    def removeRelationship(clientRegimeId: String, arn: Arn) = Action.async {
+        findNonRemoved(clientRegimeId, arn).flatMap {
             case Nil => Future successful NoContent
-            case r :: _ => relationshipRepository.removeRelationship(saUtr.toString(), "sa", agentCode).map(_ => NoContent)
+            case r :: _ => relationshipRepository.removeRelationship(clientRegimeId.toString(), regime, arn).map(_ => NoContent)
         }
     }
 
-    def findNonRemoved(saUtr: SaUtr, agentCode: AgentCode): Future[List[Relationship]] = {
-        relationshipRepository.list(saUtr.toString(), "sa", agentCode).map(
+    def findNonRemoved(clientRegimeId: String, arn: Arn): Future[List[Relationship]] = {
+        relationshipRepository.list(clientRegimeId.toString(), regime, arn).map(
             _.filter(r => !r.isRemoved))
     }
 
-    def getAgentRelationships(agentCode: AgentCode) = Action.async {
-        relationshipRepository.list(agentCode).map(Json.toJson(_)).map(Ok(_))
+    def getAgentRelationships(arn: Arn) = Action.async {
+        relationshipRepository.list(arn).map(Json.toJson(_)).map(Ok(_))
     }
 }
