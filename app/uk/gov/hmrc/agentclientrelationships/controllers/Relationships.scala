@@ -28,29 +28,29 @@ import scala.concurrent.Future
 class Relationships(relationshipRepository: RelationshipRepository) extends BaseController {
     val regime = "mtd-sa"
 
-    def create(clientRegimeId: String, arn: Arn) = Action.async {
-        findNonRemoved(clientRegimeId, arn).flatMap {
-            case Nil => relationshipRepository.create(clientRegimeId.toString(), regime, arn).map(Json.toJson(_)).map(Ok(_))
+    def create(clientId: String, arn: Arn) = Action.async {
+        findNonRemoved(clientId, arn).flatMap {
+            case Nil => relationshipRepository.create(clientId.toString(), regime, arn).map(Json.toJson(_)).map(Ok(_))
             case r :: _ => Future successful Ok(Json.toJson(r))
         }
     }
 
-    def getRelationship(clientRegimeId: String, arn: Arn) = Action.async {
-        findNonRemoved(clientRegimeId, arn).map {
+    def getRelationship(clientId: String, arn: Arn) = Action.async {
+        findNonRemoved(clientId, arn).map {
             case Nil => NotFound
             case r :: _ => Ok(Json.toJson(r))
         }
     }
 
-    def removeRelationship(clientRegimeId: String, arn: Arn) = Action.async {
-        findNonRemoved(clientRegimeId, arn).flatMap {
+    def removeRelationship(clientId: String, arn: Arn) = Action.async {
+        findNonRemoved(clientId, arn).flatMap {
             case Nil => Future successful NoContent
-            case r :: _ => relationshipRepository.removeRelationship(clientRegimeId.toString(), regime, arn).map(_ => NoContent)
+            case r :: _ => relationshipRepository.removeRelationship(clientId.toString(), regime, arn).map(_ => NoContent)
         }
     }
 
-    def findNonRemoved(clientRegimeId: String, arn: Arn): Future[List[Relationship]] = {
-        relationshipRepository.list(clientRegimeId.toString(), regime, arn).map(
+    def findNonRemoved(clientId: String, arn: Arn): Future[List[Relationship]] = {
+        relationshipRepository.list(clientId.toString(), regime, arn).map(
             _.filter(r => !r.isRemoved))
     }
 

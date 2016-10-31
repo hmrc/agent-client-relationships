@@ -37,7 +37,7 @@ object Relationship {
 case class Relationship (id: BSONObjectID,
                          arn: Arn,
                          regime: String,
-                         clientRegimeId: String,
+                         clientId: String,
                          created: DateTime,
                          removed: Option[DateTime] = None) {
   val isRemoved = removed.isDefined

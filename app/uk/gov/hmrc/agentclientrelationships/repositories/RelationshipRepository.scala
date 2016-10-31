@@ -28,31 +28,31 @@ import scala.concurrent.Future
 
 trait RelationshipRepository extends Repository[Relationship, BSONObjectID] {
 
-  def create(clientRegimeId: String, regime: String, arn: Arn): Future[Relationship]
-  def removeRelationship(clientRegimeId: String, regime: String, arn: Arn): Future[_]
-  def list(clientRegimeId: String, regime: String, arn: Arn): Future[List[Relationship]]
+  def create(clientId: String, regime: String, arn: Arn): Future[Relationship]
+  def removeRelationship(clientId: String, regime: String, arn: Arn): Future[_]
+  def list(clientId: String, regime: String, arn: Arn): Future[List[Relationship]]
   def list(arn: Arn): Future[Seq[Relationship]]
 }
 
 class RelationshipMongoRepository(implicit mongo: () => DB) extends ReactiveRepository[Relationship, BSONObjectID]("agentClientRelationships", mongo, Relationship.mongoFormats, ReactiveMongoFormats.objectIdFormats)
         with RelationshipRepository with AtomicUpdate[Relationship] {
-  override def create(clientRegimeId: String, regime: String, arn: Arn): Future[Relationship] = {
+  override def create(clientId: String, regime: String, arn: Arn): Future[Relationship] = {
     val request = Relationship(
       id = BSONObjectID.generate,
       arn = arn,
       regime = regime,
-      clientRegimeId = clientRegimeId,
+      clientId = clientId,
       created = new DateTime()
     )
 
     insert(request).map(_ => request)
   }
 
-  override def list(clientRegimeId: String, regime: String, arn: Arn): Future[List[Relationship]] =
-    find("clientRegimeId" -> clientRegimeId, "regime" -> regime, "arn" -> arn)
+  override def list(clientId: String, regime: String, arn: Arn): Future[List[Relationship]] =
+    find("clientId" -> clientId, "regime" -> regime, "arn" -> arn)
 
-  override def removeRelationship(clientRegimeId: String, regime: String, arn: Arn) = {
-    remove(query = "clientRegimeId" -> clientRegimeId, "regime" -> regime, "arn" -> arn)
+  override def removeRelationship(clientId: String, regime: String, arn: Arn) = {
+    remove(query = "clientId" -> clientId, "regime" -> regime, "arn" -> arn)
   }
 
 
