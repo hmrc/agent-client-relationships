@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships
 
-import play.api.mvc.Controller
-import play.modules.reactivemongo.ReactiveMongoPlugin
-import uk.gov.hmrc.agentclientrelationships.controllers.Relationships
-import uk.gov.hmrc.agentclientrelationships.repositories.{RelationshipMongoRepository, RelationshipRepository}
-import uk.gov.hmrc.mongo.MongoConnector
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.auth.microservice.connectors.AuthConnector
@@ -38,26 +33,4 @@ object MicroserviceAuditConnector extends AuditConnector with RunMode {
 
 object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
   override val authBaseUrl = baseUrl("auth")
-}
-
-trait LazyMongoDbConnection {
-  import play.api.Play.current
-
-  lazy val mongoConnector: MongoConnector = ReactiveMongoPlugin.mongoConnector
-
-  implicit lazy val db = mongoConnector.db
-}
-
-trait ServiceRegistry extends LazyMongoDbConnection {
-  lazy val relationshipRepository: RelationshipRepository = new RelationshipMongoRepository()
-}
-
-trait ControllerRegistry {
-  registry: ServiceRegistry =>
-
-  private lazy val controllers = Map[Class[_], Controller](
-    classOf[Relationships] -> new Relationships(relationshipRepository)
-  )
-
-  def getController[A](controllerClass: Class[A]) : A = controllers(controllerClass).asInstanceOf[A]
 }
