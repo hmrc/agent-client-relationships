@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.repositories
 
+import javax.inject.Inject
+
+import com.google.inject.{ImplementedBy, Singleton}
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.DB
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentclientrelationships.model.{Arn, Relationship}
@@ -26,6 +30,8 @@ import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository, Repository}
 
 import scala.concurrent.Future
 
+
+@ImplementedBy(classOf[RelationshipMongoRepository])
 trait RelationshipRepository extends Repository[Relationship, BSONObjectID] {
 
   def create(clientId: String, regime: String, arn: Arn): Future[Relationship]
@@ -34,7 +40,8 @@ trait RelationshipRepository extends Repository[Relationship, BSONObjectID] {
   def list(arn: Arn): Future[Seq[Relationship]]
 }
 
-class RelationshipMongoRepository(implicit mongo: () => DB) extends ReactiveRepository[Relationship, BSONObjectID]("agentClientRelationships", mongo, Relationship.mongoFormats, ReactiveMongoFormats.objectIdFormats)
+@Singleton
+class RelationshipMongoRepository @Inject() (mongoComponent: ReactiveMongoComponent) extends ReactiveRepository[Relationship, BSONObjectID]("agentClientRelationships", mongoComponent.mongoConnector.db , Relationship.mongoFormats, ReactiveMongoFormats.objectIdFormats)
         with RelationshipRepository with AtomicUpdate[Relationship] {
   override def create(clientId: String, regime: String, arn: Arn): Future[Relationship] = {
     val request = Relationship(
