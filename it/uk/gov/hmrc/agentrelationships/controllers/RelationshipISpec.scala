@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentrelationships
+package uk.gov.hmrc.agentrelationships.controllers
 
 import org.scalatestplus.play.OneServerPerSuite
 import uk.gov.hmrc.agentsubscription.support.Resource
@@ -22,7 +22,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 class RelationshipISpec extends UnitSpec with OneServerPerSuite {
 
-  "GET /agent/:ARN/service/:serviceName/client/:identifierKey/:identifierValue" ignore {
+  "GET /agent/:ARN/service/:serviceName/client/:identifierKey/:identifierValue" in {
 
     "return 200 when relationship exists in GG" in {
       val result = await(doAgentRequest())
@@ -36,6 +36,6 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite {
 
   }
 
-  private def doAgentRequest() = new Resource(s"/agent-client-relationships/agent/AARN0000002/service/HMRC-MTD-IT/client/MTDITID/foo", port).get()
+  private def doAgentRequest() = new Resource(s"/agent-client-relationships/agent/AARN0000002/service/HMRC-MTD-IT/client/MTDITID/ABCDEF123456789", port).get()
 
 }

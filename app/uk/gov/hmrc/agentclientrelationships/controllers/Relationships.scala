@@ -30,5 +30,8 @@ class Relationships @Inject() extends BaseController {
 
   def check(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, serviceName: String, identifierKey: String, identifierValue: String) = Action.async {
     implicit request => Future.successful(InternalServerError(""))
+    //1. ask gg for credId having arn
+    //2. ask gg for agentCode having credId
+    //3. lookup enrollment in gg for agentCode
   }
 }

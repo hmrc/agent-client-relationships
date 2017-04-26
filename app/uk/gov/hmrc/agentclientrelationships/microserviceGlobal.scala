@@ -16,16 +16,47 @@
 
 package uk.gov.hmrc.agentclientrelationships
 
+import java.net.URL
+import javax.inject.Provider
+
+import com.google.inject.AbstractModule
+import com.google.inject.name.Names
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.play.audit.filters.AuditFilter
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.auth.controllers.AuthParamsControllerConfig
-import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
-import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
-import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
 import uk.gov.hmrc.play.auth.microservice.filters.AuthorisationFilter
-import net.ceedubs.ficus.Ficus._
+import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
+import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
+import uk.gov.hmrc.play.http.{HttpGet, HttpPost}
+import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
+
+class GuiceModule() extends AbstractModule with ServicesConfig {
+  def configure() = {
+    bind(classOf[HttpGet]).toInstance(WSHttp)
+    bind(classOf[HttpPost]).toInstance(WSHttp)
+    bind(classOf[AuditConnector]).toInstance(MicroserviceGlobal.auditConnector)
+    bindBaseUrl("government-gateway-proxy")
+  }
+
+  private def bindBaseUrl(serviceName: String) =
+    bind(classOf[URL]).annotatedWith(Names.named(s"$serviceName-baseUrl")).toProvider(new BaseUrlProvider(serviceName))
+
+  private class BaseUrlProvider(serviceName: String) extends Provider[URL] {
+    override lazy val get = new URL(baseUrl(serviceName))
+  }
+
+  private def bindConfigProperty(propertyName: String) =
+    bind(classOf[String]).annotatedWith(Names.named(s"$propertyName")).toProvider(new ConfigPropertyProvider(propertyName))
+
+  private class ConfigPropertyProvider(propertyName: String) extends Provider[String] {
+    override lazy val get = getConfString(propertyName, throw new RuntimeException(s"No configuration value found for '$propertyName'"))
+  }
+
+}
 
 
 object ControllerConfiguration extends ControllerConfig {
