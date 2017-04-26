@@ -24,12 +24,9 @@ private object AppDependencies {
   private val hmrcTestVersion = "2.3.0"
   private val scalaTestVersion = "2.2.6"
   private val pegdownVersion = "1.6.0"
-
-  private val playReactivemongoVersion = "5.2.0"
+  private val mtdIdentifiersVersion = "0.4.0"
 
   val compile = Seq(
-    "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,
-
     ws,
     "uk.gov.hmrc" %% "microservice-bootstrap" % microserviceBootstrapVersion,
     "uk.gov.hmrc" %% "play-authorisation" % playAuthVersion,
@@ -37,7 +34,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
     "uk.gov.hmrc" %% "logback-json-logger" % logbackJsonLoggerVersion,
-    "uk.gov.hmrc" %% "domain" % domainVersion
+    "uk.gov.hmrc" %% "domain" % domainVersion,
+    "uk.gov.hmrc" %% "agent-mtd-identifiers" % mtdIdentifiersVersion
   )
 
   trait TestDependencies {

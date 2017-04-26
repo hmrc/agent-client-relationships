@@ -18,47 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
-import play.api.mvc.Action
-import uk.gov.hmrc.agentclientrelationships.model.{Arn, Relationship}
-import uk.gov.hmrc.agentclientrelationships.repositories.RelationshipRepository
 import uk.gov.hmrc.play.microservice.controller.BaseController
-
-import scala.concurrent.Future
 
 
 @Singleton
-class Relationships @Inject() (relationshipRepository: RelationshipRepository) extends BaseController {
-    val regime = "mtd-sa"
+class Relationships @Inject() extends BaseController {
 
-    def create(clientId: String, arn: Arn) = Action.async {
-        findNonRemoved(clientId, arn).flatMap {
-            case Nil => relationshipRepository.create(clientId.toString(), regime, arn).map(Json.toJson(_)).map(Ok(_))
-            case r :: _ => Future successful Ok(Json.toJson(r))
-        }
-    }
-
-    def getRelationship(clientId: String, arn: Arn) = Action.async {
-        findNonRemoved(clientId, arn).map {
-            case Nil => NotFound
-            case r :: _ => Ok(Json.toJson(r))
-        }
-    }
-
-    def removeRelationship(clientId: String, arn: Arn) = Action.async {
-        findNonRemoved(clientId, arn).flatMap {
-            case Nil => Future successful NoContent
-            case r :: _ => relationshipRepository.removeRelationship(clientId.toString(), regime, arn).map(_ => NoContent)
-        }
-    }
-
-    def findNonRemoved(clientId: String, arn: Arn): Future[List[Relationship]] = {
-        relationshipRepository.list(clientId.toString(), regime, arn).map(
-            _.filter(r => !r.isRemoved))
-    }
-
-    def getAgentRelationships(arn: Arn) = Action.async {
-        relationshipRepository.list(arn).map(Json.toJson(_)).map(Ok(_))
-    }
 }

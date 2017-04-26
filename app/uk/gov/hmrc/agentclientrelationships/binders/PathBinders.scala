@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.binders
 
-import uk.gov.hmrc.agentclientrelationships.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 object PathBinders {
