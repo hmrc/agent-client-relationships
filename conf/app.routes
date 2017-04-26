@@ -1,0 +1,1 @@
+GET     /agent/:arn/service/:serviceName/client/:identifierKey/:identifierValue  @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.check(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, serviceName: String, identifierKey: String, identifierValue: String)

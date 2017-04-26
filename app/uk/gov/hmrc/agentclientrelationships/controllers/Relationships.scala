@@ -18,10 +18,17 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
 
+import play.api.mvc.Action
 import uk.gov.hmrc.play.microservice.controller.BaseController
+
+import scala.concurrent.Future
 
 
 @Singleton
 class Relationships @Inject() extends BaseController {
 
+
+  def check(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, serviceName: String, identifierKey: String, identifierValue: String) = Action.async {
+    implicit request => Future.successful(InternalServerError(""))
+  }
 }
