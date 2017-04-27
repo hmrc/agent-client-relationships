@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.Action
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn,MtdItId}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
@@ -28,7 +29,7 @@ import scala.concurrent.Future
 class Relationships @Inject() extends BaseController {
 
 
-  def check(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, serviceName: String, identifierKey: String, identifierValue: String) = Action.async {
+  def check(arn: Arn, mtditid: MtdItId) = Action.async {
     implicit request => Future.successful(InternalServerError(""))
     //1. ask gg for credId having arn
     //2. ask gg for agentCode having credId

@@ -26,7 +26,7 @@ private object AppDependencies {
   private val pegdownVersion = "1.6.0"
   private val wiremockVersion = "2.3.1"
   private val scalaTestPlusVersion = "1.5.1"
-  private val mtdIdentifiersVersion = "0.4.0"
+  private val mtdIdentifiersVersion = "0.5.0"
 
   val compile = Seq(
     ws,

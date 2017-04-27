@@ -22,7 +22,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 class RelationshipISpec extends UnitSpec with OneServerPerSuite {
 
-  "GET /agent/:ARN/service/:serviceName/client/:identifierKey/:identifierValue" ignore {
+  "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" ignore {
 
     "return 200 when relationship exists in GG" in {
       val result = await(doAgentRequest())

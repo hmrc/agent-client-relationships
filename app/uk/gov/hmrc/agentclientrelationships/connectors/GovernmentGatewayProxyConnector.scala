@@ -31,7 +31,7 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost}
 import scala.concurrent.Future
 import scala.xml.Elem
 import com.kenshoo.play.metrics.Metrics
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.AgentCode
 
 @Singleton
@@ -59,7 +59,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentCodes(mtditid: String)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
+  def getAllocatedAgentCodes(mtditid: MtdItId)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
     monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
       httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(mtditid), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
@@ -98,12 +98,12 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       <CredentialIdentifier>{credentialIdentifier}</CredentialIdentifier>
     </GsoAdminGetUserDetailsXmlInput>.toString()
 
-  private def GsoAdminGetAssignedAgentsXmlInput(mtditid: String):String =
+  private def GsoAdminGetAssignedAgentsXmlInput(mtditid: MtdItId):String =
     <GsoAdminGetAssignedAgentsXmlInput xmlns="urn:GSO-System-Services:external:2.13.3:GsoAdminGetAssignedAgentsXmlInput">
       <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
       <ServiceName>HMRC-MTD-IT</ServiceName>
       <Identifiers>
-        <Identifier IdentifierType="MTDITID">{mtditid}</Identifier>
+        <Identifier IdentifierType="MTDITID">{mtditid.value}</Identifier>
       </Identifiers>
     </GsoAdminGetAssignedAgentsXmlInput>.toString()
 }

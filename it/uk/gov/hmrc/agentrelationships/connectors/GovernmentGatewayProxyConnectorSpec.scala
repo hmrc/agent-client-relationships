@@ -6,7 +6,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -21,7 +21,9 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.government-gateway-proxy.port" -> wireMockPort
+        "microservice.services.government-gateway-proxy.port" -> wireMockPort,
+        "auditing.consumer.baseUri.host" -> wireMockHost,
+        "auditing.consumer.baseUri.port" -> wireMockPort
       )
 
   implicit val hc = HeaderCarrier()
@@ -57,17 +59,17 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
 
     "return set containing agent code if agent is allocated and assigned for a client" in {
       agentIsAllocatedAndAssignedToClient("foo", "bar")
-      await(connector.getAllocatedAgentCodes("foo")) should contain(AgentCode("bar"))
+      await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should contain(AgentCode("bar"))
     }
 
     "return set containing agent code if agent is allocated but not assigned for a client" in {
       agentIsAllocatedButNotAssignedToClient("foo", "bar")
-      await(connector.getAllocatedAgentCodes("foo")) should contain(AgentCode("bar"))
+      await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should contain(AgentCode("bar"))
     }
 
     "return set without expected agent code if agent is not allocated for a client" in {
       agentIsNotAllocatedToClient("foo")
-      await(connector.getAllocatedAgentCodes("foo")) should not contain AgentCode("bar")
+      await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should not contain AgentCode("bar")
     }
 
   }

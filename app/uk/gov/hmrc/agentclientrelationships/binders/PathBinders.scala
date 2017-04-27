@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.binders
 
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 object PathBinders {
   implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
+  implicit object MtdItIdBinder extends SimpleObjectBinder[MtdItId](MtdItId.apply, _.value)
 }
