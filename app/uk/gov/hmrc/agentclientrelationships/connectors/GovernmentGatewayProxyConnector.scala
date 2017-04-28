@@ -46,7 +46,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       httpPost.POSTString(path("GsoAdminGetCredentialsForDirectEnrolments"), GsoAdminGetCredentialsForDirectEnrolmentsXmlInput(arn), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml = toXmlElement(response.body)
-      (xml \\ "CredentialIdentifier").headOption.map(_.text).getOrElse(throw new Exception("Credentials not found"))
+      (xml \\ "CredentialIdentifier").headOption.map(_.text).getOrElse(throw new RelationshipNotFound())
     })
   }
 
@@ -55,7 +55,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       httpPost.POSTString(path("GsoAdminGetUserDetails"), GsoAdminGetUserDetailsXmlInput(credentialIdentifier), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml = toXmlElement(response.body)
-      AgentCode((xml \\ "AgentCode").headOption.map(_.text).getOrElse(throw new Exception("Agent code missing")))
+      AgentCode((xml \\ "AgentCode").headOption.map(_.text).getOrElse(throw new RelationshipNotFound()))
     })
   }
 
@@ -107,3 +107,5 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       </Identifiers>
     </GsoAdminGetAssignedAgentsXmlInput>.toString()
 }
+
+case class RelationshipNotFound() extends Exception

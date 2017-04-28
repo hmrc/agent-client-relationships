@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.Action
-import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.actionSyntax._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.AgentCode
@@ -36,12 +36,12 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
       credentialIdentifier <- gg.getCredIdFor(arn).orRaiseError("INVALID_ARN")
       agentCode <- gg.getAgentCodeFor(credentialIdentifier).orRaiseError("UNKNOWN_AGENT_CODE")
       allocatedAgents <- gg.getAllocatedAgentCodes(mtditid).orFail
-      result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode) else raiseError("RELATIONSHIP_NOT_FOUND")
+      result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode) else raiseError("RELATIONSHIP_NOT_FOUND", RelationshipNotFound())
     } yield result
 
     result fold {
-      case upstreamException4xxOr5xx(exception) => throw exception
-      case failure(exception, errorCode) => NotFound(toJson(exception, errorCode))
+      case failure(RelationshipNotFound(), errorCode) => NotFound(toJson(errorCode))
+      case failure(exception, _) => throw exception
       case success(_) => Ok("")
     }
 

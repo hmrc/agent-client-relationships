@@ -56,14 +56,6 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"
     }
 
-    "return 502 when agent code is not found in GG" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
-      whenGetUserDetailReturns(500)
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
-      val result = await(doAgentRequest())
-      result.status shouldBe 502
-    }
-
     "return 404 when agent code is not found in GG" in {
       givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
@@ -85,16 +77,16 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
     //FAILURE CASES
 
     "return 502 when GsoAdminGetCredentialsForDirectEnrolments returns 5xx" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      whenGetCredentialsReturns(500)
       givenAgentCodeIsFoundFor("foo", "bar")
-      whenGetAssignedAgentsReturns(500)
+      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 502
     }
 
     "return 502 when GsoAdminGetUserDetails returns 5xx" in {
-      whenGetCredentialsReturns(500)
-      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      whenGetUserDetailReturns(500)
       givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 502
@@ -102,36 +94,35 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
 
     "return 502 when GsoAdminGetAssignedAgents returns 5xx" in {
       givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
-      whenGetUserDetailReturns(500)
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
-      val result = await(doAgentRequest())
-      result.status shouldBe 502
-    }
-
-    "return 502 when GG fails to deliver allocations" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       whenGetAssignedAgentsReturns(500)
       val result = await(doAgentRequest())
       result.status shouldBe 502
     }
 
-    "return 502 when GG fails to check credentials" in {
-      whenGetCredentialsReturns(500)
+    "return 400 when GsoAdminGetCredentialsForDirectEnrolments returns 4xx" in {
+      whenGetCredentialsReturns(400)
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
       val result = await(doAgentRequest())
-      result.status shouldBe 502
+      result.status shouldBe 400
     }
 
-    "return 502 when GG fails to get user details" in {
+    "return 400 when GsoAdminGetUserDetails returns 4xx" in {
       givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
-      whenGetUserDetailReturns(500)
+      whenGetUserDetailReturns(400)
       givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
       val result = await(doAgentRequest())
-      result.status shouldBe 502
+      result.status shouldBe 400
     }
 
+    "return 400 when GsoAdminGetAssignedAgents returns 4xx" in {
+      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      whenGetAssignedAgentsReturns(400)
+      val result = await(doAgentRequest())
+      result.status shouldBe 400
+    }
   }
 
   private def doAgentRequest() = new Resource(s"/agent-client-relationships/agent/AARN0000002/service/HMRC-MTD-IT/client/MTDITID/ABCDEF123456789", port).get()
