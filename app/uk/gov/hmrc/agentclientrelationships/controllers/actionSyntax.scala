@@ -17,9 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.syntax.either._
-import org.apache.http.HttpException
 import play.api.libs.json.{JsObject, Json}
-import uk.gov.hmrc.play.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -28,14 +26,12 @@ import scala.util.{Failure, Success}
 
 object actionSyntax {
 
-  type Result[T] = Either[(Throwable, String), T]
+  type Result[T] = Either[Throwable, T]
 
   implicit class FutureOps[T](val f: Future[T]) extends AnyVal {
 
-    def orRaiseError(code: String): FutureOfEither[T] =
-      FutureOfEither(f map Right.apply recover { case NonFatal(e) => Left((e, code)) })
-
-    def orFail: FutureOfEither[T] = FutureOfEither(f map Right.apply)
+    implicit def orFail: FutureOfEither[T] =
+      FutureOfEither(f map Right.apply recover { case NonFatal(e) => Left(e) })
   }
 
   final case class FutureOfEither[T](value: Future[Result[T]]) {
@@ -72,13 +68,13 @@ object actionSyntax {
 
   def returnValue[T](a: T): FutureOfEither[T] = FutureOfEither(Future.successful(Right(a)))
 
-  def raiseError(code: String, exception: Throwable) = FutureOfEither(Future.successful(Left((exception, code))))
+  def raiseError[T](exception: Throwable): FutureOfEither[T] = FutureOfEither(Future.successful(Left(exception)))
 
   def toJson(code: String): JsObject = Json.obj("code" -> code)
 
   object failure {
-    def unapply[T](result: Result[T]): Option[(Throwable,String)] = result match {
-      case Left((exception, errorCode)) => Some((exception, errorCode))
+    def unapply[T](result: Result[T]): Option[Throwable] = result match {
+      case Left(exception) => Some(exception)
       case _ => None
     }
   }

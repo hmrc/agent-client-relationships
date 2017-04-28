@@ -33,15 +33,16 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
   def check(arn: Arn, mtditid: MtdItId) = Action.async { implicit request =>
 
     val result: FutureOfEither[AgentCode] = for {
-      credentialIdentifier <- gg.getCredIdFor(arn).orRaiseError("INVALID_ARN")
-      agentCode <- gg.getAgentCodeFor(credentialIdentifier).orRaiseError("UNKNOWN_AGENT_CODE")
+      credentialIdentifier <- gg.getCredIdFor(arn).orFail
+      agentCode <- gg.getAgentCodeFor(credentialIdentifier).orFail
       allocatedAgents <- gg.getAllocatedAgentCodes(mtditid).orFail
-      result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode) else raiseError("RELATIONSHIP_NOT_FOUND", RelationshipNotFound())
+      result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode)
+                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
     result fold {
-      case failure(RelationshipNotFound(), errorCode) => NotFound(toJson(errorCode))
-      case failure(exception, _) => throw exception
+      case failure(RelationshipNotFound(errorCode)) => NotFound(toJson(errorCode))
+      case failure(exception) => throw exception
       case success(_) => Ok("")
     }
 
