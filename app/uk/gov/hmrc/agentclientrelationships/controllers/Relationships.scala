@@ -20,9 +20,8 @@ import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.Action
 import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
-import uk.gov.hmrc.agentclientrelationships.controllers.actionSyntax._
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -32,18 +31,18 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
 
   def check(arn: Arn, mtditid: MtdItId) = Action.async { implicit request =>
 
-    val result: FutureOfEither[AgentCode] = for {
-      credentialIdentifier <- gg.getCredIdFor(arn).orFail
-      agentCode <- gg.getAgentCodeFor(credentialIdentifier).orFail
-      allocatedAgents <- gg.getAllocatedAgentCodes(mtditid).orFail
+    val result = for {
+      credentialIdentifier <- gg.getCredIdFor(arn)
+      agentCode <- gg.getAgentCodeFor(credentialIdentifier)
+      allocatedAgents <- gg.getAllocatedAgentCodes(mtditid)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode)
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
-    result fold {
-      case failure(RelationshipNotFound(errorCode)) => NotFound(toJson(errorCode))
-      case failure(exception) => throw exception
-      case success(_) => Ok("")
+    result map {
+      case _ => Ok("")
+    } recover {
+      case RelationshipNotFound(errorCode) => NotFound(toJson(errorCode))
     }
 
   }
