@@ -14,6 +14,7 @@ trait MicroService {
   import uk.gov.hmrc.SbtAutoBuildPlugin
   import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
   import uk.gov.hmrc.versioning.SbtGitVersioning
+  import scoverage.ScoverageKeys.{coverageExcludedPackages}
 
 
   import TestPhases._
@@ -36,7 +37,8 @@ trait MicroService {
       libraryDependencies ++= appDependencies,
       retrieveManaged := true,
       evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
-      routesGenerator := StaticRoutesGenerator
+      routesGenerator := StaticRoutesGenerator,
+      coverageExcludedPackages := """uk\.gov\.hmrc\.[a-zA-Z0-1]*;com\.kenshoo\.play\..*;.*\.Routes.*;.*\.Reverse.*;.*\.javascript\..*"""
     )
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
@@ -45,7 +47,8 @@ trait MicroService {
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
-      parallelExecution in IntegrationTest := false)
+      parallelExecution in IntegrationTest := false
+    )
     .settings(
       resolvers += Resolver.bintrayRepo("hmrc", "releases"),
       resolvers += Resolver.jcenterRepo
