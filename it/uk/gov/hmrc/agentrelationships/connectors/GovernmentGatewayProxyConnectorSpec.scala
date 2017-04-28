@@ -33,42 +33,42 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
   "GovernmentGatewayProxy" should {
 
     "return some agent credentials when credentials has been found" in {
-      agentCredentialsAreFoundFor(Arn("foo"), "bar")
+      givenAgentCredentialsAreFoundFor(Arn("foo"), "bar")
       await(connector.getCredIdFor(Arn("foo"))) shouldBe "bar"
     }
 
-    "return nothing when credentials for arn has not been found" in {
-      agentCredentialsAreNotFoundFor(Arn("foo"))
+    "fail when credentials for arn has not been found" in {
+      givenAgentCredentialsAreNotFoundFor(Arn("foo"))
       an[Exception] should be thrownBy await(connector.getCredIdFor(Arn("foo")))
     }
 
     "exchange credential identifier for agent code" in {
-      agentCodeIsFoundFor("foo", "bar")
+      givenAgentCodeIsFoundFor("foo", "bar")
       await(connector.getAgentCodeFor("foo")) shouldBe AgentCode("bar")
     }
 
-    "return none agent code when credentials are invalid" in {
-      agentCodeIsNotFoundFor("foo")
+    "fail if agent code when credentials are invalid" in {
+      givenAgentCodeIsNotFoundFor("foo")
       an[Exception] should be thrownBy await(connector.getAgentCodeFor("foo"))
     }
 
-    "return none agent code when credentials are not of type Agent" in {
-      agentCodeIsFoundButNotAgentFor("foo")
+    "fail if agent code when credentials are not of type Agent" in {
+      givenAgentCodeIsFoundButNotAgentFor("foo")
       an[Exception] should be thrownBy await(connector.getAgentCodeFor("foo"))
     }
 
     "return set containing agent code if agent is allocated and assigned for a client" in {
-      agentIsAllocatedAndAssignedToClient("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient("foo", "bar")
       await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should contain(AgentCode("bar"))
     }
 
     "return set containing agent code if agent is allocated but not assigned for a client" in {
-      agentIsAllocatedButNotAssignedToClient("foo", "bar")
+      givenAgentIsAllocatedButNotAssignedToClient("foo", "bar")
       await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should contain(AgentCode("bar"))
     }
 
     "return set without expected agent code if agent is not allocated for a client" in {
-      agentIsNotAllocatedToClient("foo")
+      givenAgentIsNotAllocatedToClient("foo")
       await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should not contain AgentCode("bar")
     }
 

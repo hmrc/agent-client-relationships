@@ -17,21 +17,69 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import org.scalatestplus.play.OneServerPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
 import uk.gov.hmrc.agentsubscription.support.Resource
 import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.support.WireMockSupport
 
-class RelationshipISpec extends UnitSpec with OneServerPerSuite {
+class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs {
 
-  "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" ignore {
+  override implicit lazy val app: Application = appBuilder
+    .build()
+
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .configure(
+        "microservice.services.government-gateway-proxy.port" -> wireMockPort,
+        "auditing.enabled" -> false
+      )
+
+  "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
     "return 200 when relationship exists in GG" in {
+      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 200
     }
 
-    "return 404 when relationship doesn't exist in GG" in {
+    "return 404 when credentials are not found in GG" in {
+      givenAgentCredentialsAreNotFoundFor(Arn("AARN0000002"))
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+    }
+
+    "return 404 when agent code is not found in GG" in {
+      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCodeIsNotFoundFor("foo")
+      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      val result = await(doAgentRequest())
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+    }
+
+    "return 404 when agent not allocated to client in GG" in {
+      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient("ABCDEF123456789")
+      val result = await(doAgentRequest())
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 502 when cannot check allocations in GG" in {
+      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      whenGetAssignedAgentsReturns500("ABCDEF123456789")
+      val result = await(doAgentRequest())
+      result.status shouldBe 502
     }
 
   }

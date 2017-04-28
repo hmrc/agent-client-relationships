@@ -35,6 +35,7 @@ import uk.gov.hmrc.play.http.{HttpGet, HttpPost}
 import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
 
 class GuiceModule() extends AbstractModule with ServicesConfig {
+
   def configure() = {
     bind(classOf[HttpGet]).toInstance(WSHttp)
     bind(classOf[HttpPost]).toInstance(WSHttp)

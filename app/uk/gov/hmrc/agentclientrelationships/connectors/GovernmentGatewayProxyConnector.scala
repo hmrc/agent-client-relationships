@@ -46,7 +46,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       httpPost.POSTString(path("GsoAdminGetCredentialsForDirectEnrolments"), GsoAdminGetCredentialsForDirectEnrolmentsXmlInput(arn), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml = toXmlElement(response.body)
-      (xml \\ "CredentialIdentifier").head.text
+      (xml \\ "CredentialIdentifier").headOption.map(_.text).getOrElse(throw new IllegalStateException("Credentials not found"))
     })
   }
 

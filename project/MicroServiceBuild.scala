@@ -38,7 +38,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "logback-json-logger" % logbackJsonLoggerVersion,
     "uk.gov.hmrc" %% "domain" % domainVersion,
     "uk.gov.hmrc" %% "agent-mtd-identifiers" % mtdIdentifiersVersion,
-    "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "2.0.0"
+    "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "2.0.0",
+    "org.typelevel" %% "cats" % "0.9.0"
   )
 
   trait TestDependencies {

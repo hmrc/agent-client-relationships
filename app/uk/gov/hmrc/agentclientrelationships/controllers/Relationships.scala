@@ -19,20 +19,30 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.Action
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn,MtdItId}
+import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyConnector
+import uk.gov.hmrc.agentclientrelationships.controllers.actionSyntax._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-import scala.concurrent.Future
-
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
-class Relationships @Inject() extends BaseController {
+class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends BaseController {
 
+  def check(arn: Arn, mtditid: MtdItId) = Action.async { implicit request =>
 
-  def check(arn: Arn, mtditid: MtdItId) = Action.async {
-    implicit request => Future.successful(InternalServerError(""))
-    //1. ask gg for credId having arn
-    //2. ask gg for agentCode having credId
-    //3. lookup enrollment in gg for agentCode
+    val result: FutureOfEither[AgentCode] = for {
+      credentialIdentifier <- gg.getCredIdFor(arn).orRaiseError("INVALID_ARN")
+      agentCode <- gg.getAgentCodeFor(credentialIdentifier).orRaiseError("UNKNOWN_AGENT_CODE")
+      allocatedAgents <- gg.getAllocatedAgentCodes(mtditid).orFail
+      result <- if (allocatedAgents.contains(agentCode)) success(agentCode) else raiseError("RELATIONSHIP_NOT_FOUND")
+    } yield result
+
+    result fold {
+      case Left((exception, errorCode)) => NotFound(toJson(exception, errorCode))
+      case Right(_) => Ok("")
+    }
+
   }
 }
