@@ -26,7 +26,7 @@ import play.api.http.ContentTypes.XML
 import play.api.http.HeaderNames.CONTENT_TYPE
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost, Upstream5xxResponse}
 
 import scala.concurrent.Future
 import scala.xml.Elem
@@ -46,7 +46,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       httpPost.POSTString(path("GsoAdminGetCredentialsForDirectEnrolments"), GsoAdminGetCredentialsForDirectEnrolmentsXmlInput(arn), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml = toXmlElement(response.body)
-      (xml \\ "CredentialIdentifier").headOption.map(_.text).getOrElse(throw new IllegalStateException("Credentials not found"))
+      (xml \\ "CredentialIdentifier").headOption.map(_.text).getOrElse(throw new Exception("Credentials not found"))
     })
   }
 
@@ -55,7 +55,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       httpPost.POSTString(path("GsoAdminGetUserDetails"), GsoAdminGetUserDetailsXmlInput(credentialIdentifier), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml = toXmlElement(response.body)
-      AgentCode((xml \\ "AgentCode").head.text)
+      AgentCode((xml \\ "AgentCode").headOption.map(_.text).getOrElse(throw new Exception("Agent code missing")))
     })
   }
 

@@ -79,4 +79,11 @@ object actionSyntax {
     Json.obj("code" -> code) ++ message
   }
 
+  def toJson(m: String, code: String): JsObject = {
+    val message = Option(m)
+      .flatMap(m => if (m.trim().isEmpty) None else Some(m))
+      .map(m => Json.obj("message" -> m)).getOrElse(Json.obj())
+    Json.obj("code" -> code) ++ message
+  }
+
 }

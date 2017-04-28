@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyCon
 import uk.gov.hmrc.agentclientrelationships.controllers.actionSyntax._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.play.http.{Upstream4xxResponse, Upstream5xxResponse}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -40,7 +41,10 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
     } yield result
 
     result fold {
+      case Left((ex @ Upstream5xxResponse(_,_,_), _)) => throw ex
+      case Left((ex @ Upstream4xxResponse(_,_,_,_), _)) => throw ex
       case Left((exception, errorCode)) => NotFound(toJson(exception, errorCode))
+
       case Right(_) => Ok("")
     }
 

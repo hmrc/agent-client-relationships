@@ -48,12 +48,12 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
     }
 
     "fail if agent code when credentials are invalid" in {
-      givenAgentCodeIsNotFoundFor("foo")
+      whenGetUserDetailReturns(500)
       an[Exception] should be thrownBy await(connector.getAgentCodeFor("foo"))
     }
 
     "fail if agent code when credentials are not of type Agent" in {
-      givenAgentCodeIsFoundButNotAgentFor("foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
       an[Exception] should be thrownBy await(connector.getAgentCodeFor("foo"))
     }
 

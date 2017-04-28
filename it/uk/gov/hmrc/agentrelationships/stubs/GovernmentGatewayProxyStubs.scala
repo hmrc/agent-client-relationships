@@ -79,13 +79,7 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentCodeIsNotFoundFor(credentialIdentifier: String) = {
-    stubFor(getAgentCodeFor(credentialIdentifier)
-      .willReturn(aResponse().withStatus(500)))
-    this
-  }
-
-  def givenAgentCodeIsFoundButNotAgentFor(credentialIdentifier: String) = {
+  def givenAgentCodeIsNotInTheResponseFor(credentialIdentifier: String) = {
     stubFor(getAgentCodeFor(credentialIdentifier)
       .willReturn(aResponse()
         .withBody(
@@ -204,11 +198,22 @@ trait GovernmentGatewayProxyStubs {
   }
 
 
-  def whenGetAssignedAgentsReturns500(mtditid: String) = {
-    stubFor(getAssignedAgentsFor(mtditid)
-      .willReturn(aResponse().withStatus(500)))
+  def whenGetAssignedAgentsReturns(status: Int) = {
+    stubFor(post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetAssignedAgents"))
+      .willReturn(aResponse().withStatus(status)))
     this
   }
 
+  def whenGetCredentialsReturns(status: Int) = {
+    stubFor(post(urlPathEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetCredentialsForDirectEnrolments"))
+      .willReturn(aResponse().withStatus(status)))
+    this
+  }
+
+  def whenGetUserDetailReturns(status: Int) = {
+    stubFor(post(urlPathEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetUserDetails"))
+      .willReturn(aResponse().withStatus(status)))
+    this
+  }
 
 }
