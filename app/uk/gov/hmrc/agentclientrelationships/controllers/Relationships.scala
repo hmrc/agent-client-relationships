@@ -23,7 +23,6 @@ import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyCon
 import uk.gov.hmrc.agentclientrelationships.controllers.actionSyntax._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.play.http.{Upstream4xxResponse, Upstream5xxResponse}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,15 +36,13 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
       credentialIdentifier <- gg.getCredIdFor(arn).orRaiseError("INVALID_ARN")
       agentCode <- gg.getAgentCodeFor(credentialIdentifier).orRaiseError("UNKNOWN_AGENT_CODE")
       allocatedAgents <- gg.getAllocatedAgentCodes(mtditid).orFail
-      result <- if (allocatedAgents.contains(agentCode)) success(agentCode) else raiseError("RELATIONSHIP_NOT_FOUND")
+      result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode) else raiseError("RELATIONSHIP_NOT_FOUND")
     } yield result
 
     result fold {
-      case Left((ex @ Upstream5xxResponse(_,_,_), _)) => throw ex
-      case Left((ex @ Upstream4xxResponse(_,_,_,_), _)) => throw ex
-      case Left((exception, errorCode)) => NotFound(toJson(exception, errorCode))
-
-      case Right(_) => Ok("")
+      case upstreamException4xxOr5xx(exception) => throw exception
+      case failure(exception, errorCode) => NotFound(toJson(exception, errorCode))
+      case success(_) => Ok("")
     }
 
   }

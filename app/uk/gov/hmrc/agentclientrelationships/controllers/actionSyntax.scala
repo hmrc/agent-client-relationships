@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.syntax.either._
 import play.api.libs.json.{JsObject, Json}
+import uk.gov.hmrc.play.http.{Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -68,7 +69,7 @@ object actionSyntax {
 
   }
 
-  def success[T](a: T): FutureOfEither[T] = FutureOfEither(Future.successful(Right(a)))
+  def returnValue[T](a: T): FutureOfEither[T] = FutureOfEither(Future.successful(Right(a)))
 
   def raiseError(code: String) = FutureOfEither(Future.successful(Left((new Exception, code))))
 
@@ -84,6 +85,28 @@ object actionSyntax {
       .flatMap(m => if (m.trim().isEmpty) None else Some(m))
       .map(m => Json.obj("message" -> m)).getOrElse(Json.obj())
     Json.obj("code" -> code) ++ message
+  }
+
+  object upstreamException4xxOr5xx {
+    def unapply[T](result: Result[T]): Option[Exception] = result match {
+      case Left((ex@Upstream5xxResponse(_, _, _), _)) => Some(ex)
+      case Left((ex@Upstream4xxResponse(_, _, _, _), _)) => Some(ex)
+      case _ => None
+    }
+  }
+
+  object failure {
+    def unapply[T](result: Result[T]): Option[(Throwable,String)] = result match {
+      case Left((exception, errorCode)) => Some((exception, errorCode))
+      case _ => None
+    }
+  }
+
+  object success {
+    def unapply[T](result: Result[T]): Option[T] = result match {
+      case Right(a) => Some(a)
+      case _ => None
+    }
   }
 
 }
