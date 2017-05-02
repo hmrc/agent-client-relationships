@@ -39,7 +39,7 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
-    result map (_ => Ok("")) recover {
+    result map (_ => Ok ) recover {
       case RelationshipNotFound(errorCode) => NotFound(toJson(errorCode))
     }
   }
