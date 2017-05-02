@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentsubscription.support
+package uk.gov.hmrc.agentrelationships.support
 
 import play.api.Play.current
 import play.api.http.{HeaderNames, MimeTypes}
@@ -26,6 +26,7 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 object Http {
 
@@ -63,14 +64,14 @@ class Resource(path: String, port: Int) {
 
   private def url() = s"http://localhost:$port$path"
 
-  def get()(implicit hc: HeaderCarrier = HeaderCarrier()) = Http.get(url)(hc)
+  def get()(implicit hc: HeaderCarrier = HeaderCarrier()): HttpResponse = Http.get(url())(hc)
 
-  def postAsJson(body: String)(implicit hc: HeaderCarrier = HeaderCarrier()) =
-    Http.post(url, body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))(hc)
+  def postAsJson(body: String)(implicit hc: HeaderCarrier = HeaderCarrier()): HttpResponse =
+    Http.post(url(), body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))(hc)
 
-  def postEmpty()(implicit hc: HeaderCarrier = HeaderCarrier()) =
-    Http.postEmpty(url)(hc)
+  def postEmpty()(implicit hc: HeaderCarrier = HeaderCarrier()): HttpResponse =
+    Http.postEmpty(url())(hc)
 
-  def putEmpty()(implicit hc: HeaderCarrier = HeaderCarrier()) =
-    Http.putEmpty(url)(hc)
+  def putEmpty()(implicit hc: HeaderCarrier = HeaderCarrier()): HttpResponse =
+    Http.putEmpty(url())(hc)
 }

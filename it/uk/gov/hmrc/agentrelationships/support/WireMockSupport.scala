@@ -1,13 +1,13 @@
-package uk.gov.hmrc.support
+package uk.gov.hmrc.agentrelationships.support
 
 import java.net.URL
 
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.{configureFor, reset}
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
-import uk.gov.hmrc.play.it.Port
+import uk.gov.hmrc.play.it.Port.randomAvailable
 
 case class WireMockBaseUrl(value: URL)
 
@@ -15,7 +15,7 @@ object WireMockSupport {
   // We have to make the wireMockPort constant per-JVM instead of constant
   // per-WireMockSupport-instance because config values containing it are
   // cached in the GGConfig object
-  private lazy val wireMockPort = Port.randomAvailable
+  private lazy val wireMockPort = randomAvailable
 }
 
 trait WireMockSupport extends BeforeAndAfterAll with BeforeAndAfterEach {
@@ -33,7 +33,7 @@ trait WireMockSupport extends BeforeAndAfterAll with BeforeAndAfterEach {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    WireMock.configureFor(wireMockHost, wireMockPort)
+    configureFor(wireMockHost, wireMockPort)
     wireMockServer.start()
   }
 
@@ -44,6 +44,6 @@ trait WireMockSupport extends BeforeAndAfterAll with BeforeAndAfterEach {
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
-    WireMock.reset()
+    reset()
   }
 }

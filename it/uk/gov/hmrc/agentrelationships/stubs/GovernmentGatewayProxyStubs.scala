@@ -11,7 +11,7 @@ trait GovernmentGatewayProxyStubs {
       .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
   }
 
-  def givenAgentCredentialsAreFoundFor(arn: Arn, credentialIdentifier: String) = {
+  def givenAgentCredentialsAreFoundFor(arn: Arn, credentialIdentifier: String): GovernmentGatewayProxyStubs = {
     stubFor(getCredentialsFor(arn)
       .willReturn(aResponse()
         .withBody(
@@ -24,7 +24,7 @@ trait GovernmentGatewayProxyStubs {
              |        <Identifier IdentifierType="AgentReferenceNumber">${arn.value}</Identifier>
              |      </Identifiers>
              |      <CredentialIdentifiers>
-             |        <CredentialIdentifier>${credentialIdentifier}</CredentialIdentifier>
+             |        <CredentialIdentifier>$credentialIdentifier</CredentialIdentifier>
              |      </CredentialIdentifiers>
              |    </CredentialAndIdentifiersSet>
              |  </CredentialAndIdentifiersSets>
@@ -32,7 +32,7 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentCredentialsAreNotFoundFor(arn: Arn) = {
+  def givenAgentCredentialsAreNotFoundFor(arn: Arn): GovernmentGatewayProxyStubs = {
     stubFor(getCredentialsFor(arn)
       .willReturn(aResponse()
         .withBody(
@@ -55,11 +55,11 @@ trait GovernmentGatewayProxyStubs {
 
   private def getAgentCodeFor(credentialIdentifier: String) = {
     post(urlPathEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetUserDetails"))
-      .withRequestBody(matching(s".*>${credentialIdentifier}<.*"))
+      .withRequestBody(matching(s".*>$credentialIdentifier<.*"))
       .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
   }
 
-  def givenAgentCodeIsFoundFor(credentialIdentifier: String, agentCode: String) = {
+  def givenAgentCodeIsFoundFor(credentialIdentifier: String, agentCode: String): GovernmentGatewayProxyStubs = {
     stubFor(getAgentCodeFor(credentialIdentifier)
       .willReturn(aResponse()
         .withBody(
@@ -71,7 +71,7 @@ trait GovernmentGatewayProxyStubs {
              |  <RegistrationCategory>Agent</RegistrationCategory>
              |  <CredentialRole>User</CredentialRole>
              |  <AgentDetails>
-             |    <AgentCode>${agentCode}</AgentCode>
+             |    <AgentCode>$agentCode</AgentCode>
              |    <AgentFriendlyName>Friendly Name</AgentFriendlyName>
              |  </AgentDetails>
              |</GsoAdminGetUserDetailsXmlOutput>
@@ -79,7 +79,7 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentCodeIsNotInTheResponseFor(credentialIdentifier: String) = {
+  def givenAgentCodeIsNotInTheResponseFor(credentialIdentifier: String): GovernmentGatewayProxyStubs = {
     stubFor(getAgentCodeFor(credentialIdentifier)
       .willReturn(aResponse()
         .withBody(
@@ -95,14 +95,14 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  private def getAssignedAgentsFor(mtditid: String) = {
+  private def getAssignedAgentsFor(mtdItId: String) = {
     post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetAssignedAgents"))
-      .withRequestBody(matching(s".*>$mtditid<.*"))
+      .withRequestBody(matching(s".*>$mtdItId<.*"))
       .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
   }
 
-  def givenAgentIsAllocatedAndAssignedToClient(mtditid: String, agentCode: String) = {
-    stubFor(getAssignedAgentsFor(mtditid)
+  def givenAgentIsAllocatedAndAssignedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(mtdItId)
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -143,8 +143,8 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentIsAllocatedButNotAssignedToClient(mtditid: String, agentCode: String) = {
-    stubFor(getAssignedAgentsFor(mtditid)
+  def givenAgentIsAllocatedButNotAssignedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(mtdItId)
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -185,8 +185,8 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentIsNotAllocatedToClient(mtditid: String) = {
-    stubFor(getAssignedAgentsFor(mtditid)
+  def givenAgentIsNotAllocatedToClient(mtdItId: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(mtdItId)
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -198,19 +198,19 @@ trait GovernmentGatewayProxyStubs {
   }
 
 
-  def whenGetAssignedAgentsReturns(status: Int) = {
+  def whenGetAssignedAgentsReturns(status: Int): GovernmentGatewayProxyStubs = {
     stubFor(post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetAssignedAgents"))
       .willReturn(aResponse().withStatus(status)))
     this
   }
 
-  def whenGetCredentialsReturns(status: Int) = {
+  def whenGetCredentialsReturns(status: Int): GovernmentGatewayProxyStubs = {
     stubFor(post(urlPathEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetCredentialsForDirectEnrolments"))
       .willReturn(aResponse().withStatus(status)))
     this
   }
 
-  def whenGetUserDetailReturns(status: Int) = {
+  def whenGetUserDetailReturns(status: Int): GovernmentGatewayProxyStubs = {
     stubFor(post(urlPathEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetUserDetails"))
       .willReturn(aResponse().withStatus(status)))
     this

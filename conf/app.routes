@@ -1,1 +1,1 @@
-GET     /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid  @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.check(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtditid: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
+GET     /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId  @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.check(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)

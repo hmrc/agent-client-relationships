@@ -21,9 +21,8 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
-import uk.gov.hmrc.agentsubscription.support.Resource
+import uk.gov.hmrc.agentrelationships.support.{Resource, WireMockSupport}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.support.WireMockSupport
 
 class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs {
 

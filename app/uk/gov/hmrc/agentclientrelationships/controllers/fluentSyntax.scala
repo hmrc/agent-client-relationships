@@ -19,12 +19,13 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.Future
+import scala.concurrent.Future.{failed, successful}
 
 object fluentSyntax {
 
-  def returnValue[T](a: T): Future[T] = Future.successful(a)
+  def returnValue[T](a: T): Future[T] = successful(a)
 
-  def raiseError(exception: Throwable): Future[Nothing] = Future.failed(exception)
+  def raiseError(exception: Throwable): Future[Nothing] = failed(exception)
 
   def toJson(code: String): JsObject = Json.obj("code" -> code)
 
