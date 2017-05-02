@@ -18,26 +18,28 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
 import javax.inject.{Inject, Named, Singleton}
-import javax.xml.XMLConstants
+import javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING
 import javax.xml.parsers.SAXParserFactory
 
-import org.apache.xerces.impl.Constants
+import com.codahale.metrics.MetricRegistry
+import com.kenshoo.play.metrics.Metrics
+import org.apache.xerces.impl.Constants._
 import play.api.http.ContentTypes.XML
 import play.api.http.HeaderNames.CONTENT_TYPE
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost, Upstream5xxResponse}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost}
 
 import scala.concurrent.Future
 import scala.xml.Elem
-import com.kenshoo.play.metrics.Metrics
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.AgentCode
+import scala.xml.XML.withSAXParser
 
 @Singleton
 class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy-baseUrl") baseUrl: URL, httpPost: HttpPost, metrics: Metrics)
   extends HttpAPIMonitor {
-  override val kenshooRegistry = metrics.defaultRegistry
+  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private def path(method: String): String = new URL(baseUrl, s"/government-gateway-proxy/api/admin/$method").toString
 
@@ -71,13 +73,11 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
 
   private def toXmlElement(xmlString: String): Elem = {
     val factory = SAXParserFactory.newInstance("org.apache.xerces.jaxp.SAXParserFactoryImpl", this.getClass.getClassLoader)
-    factory.setFeature(Constants.SAX_FEATURE_PREFIX + Constants.EXTERNAL_GENERAL_ENTITIES_FEATURE, false)
-    factory.setFeature(Constants.SAX_FEATURE_PREFIX + Constants.EXTERNAL_PARAMETER_ENTITIES_FEATURE, false)
-    factory.setFeature(Constants.XERCES_FEATURE_PREFIX + Constants.DISALLOW_DOCTYPE_DECL_FEATURE, true)
-    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-    val XML = scala.xml.XML.withSAXParser(factory.newSAXParser())
-
-    XML.loadString(xmlString)
+    factory.setFeature(SAX_FEATURE_PREFIX + EXTERNAL_GENERAL_ENTITIES_FEATURE, false)
+    factory.setFeature(SAX_FEATURE_PREFIX + EXTERNAL_PARAMETER_ENTITIES_FEATURE, false)
+    factory.setFeature(XERCES_FEATURE_PREFIX + DISALLOW_DOCTYPE_DECL_FEATURE, true)
+    factory.setFeature(FEATURE_SECURE_PROCESSING, true)
+    withSAXParser(factory.newSAXParser())loadString(xmlString)
   }
 
   private def GsoAdminGetCredentialsForDirectEnrolmentsXmlInput(arn: Arn): String =
