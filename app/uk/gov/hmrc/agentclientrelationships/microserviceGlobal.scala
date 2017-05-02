@@ -50,13 +50,9 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     override lazy val get = new URL(baseUrl(serviceName))
   }
 
-  private def bindConfigProperty(propertyName: String) =
-    bind(classOf[String]).annotatedWith(Names.named(s"$propertyName")).toProvider(new ConfigPropertyProvider(propertyName))
-
   private class ConfigPropertyProvider(propertyName: String) extends Provider[String] {
     override lazy val get = getConfString(propertyName, throw new RuntimeException(s"No configuration value found for '$propertyName'"))
   }
-
 }
 
 
@@ -93,5 +89,4 @@ object MicroserviceGlobal extends DefaultMicroserviceGlobal with RunMode {
   override val microserviceAuditFilter = MicroserviceAuditFilter
 
   override val authFilter = Some(MicroserviceAuthFilter)
-
 }

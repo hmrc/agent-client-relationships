@@ -24,7 +24,7 @@ trait GovernmentGatewayProxyStubs {
              |        <Identifier IdentifierType="AgentReferenceNumber">${arn.value}</Identifier>
              |      </Identifiers>
              |      <CredentialIdentifiers>
-             |        <CredentialIdentifier>${credentialIdentifier}</CredentialIdentifier>
+             |        <CredentialIdentifier>$credentialIdentifier</CredentialIdentifier>
              |      </CredentialIdentifiers>
              |    </CredentialAndIdentifiersSet>
              |  </CredentialAndIdentifiersSets>
@@ -55,7 +55,7 @@ trait GovernmentGatewayProxyStubs {
 
   private def getAgentCodeFor(credentialIdentifier: String) = {
     post(urlPathEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetUserDetails"))
-      .withRequestBody(matching(s".*>${credentialIdentifier}<.*"))
+      .withRequestBody(matching(s".*>$credentialIdentifier<.*"))
       .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
   }
 
@@ -71,7 +71,7 @@ trait GovernmentGatewayProxyStubs {
              |  <RegistrationCategory>Agent</RegistrationCategory>
              |  <CredentialRole>User</CredentialRole>
              |  <AgentDetails>
-             |    <AgentCode>${agentCode}</AgentCode>
+             |    <AgentCode>$agentCode</AgentCode>
              |    <AgentFriendlyName>Friendly Name</AgentFriendlyName>
              |  </AgentDetails>
              |</GsoAdminGetUserDetailsXmlOutput>
@@ -95,14 +95,14 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  private def getAssignedAgentsFor(mtditid: String) = {
+  private def getAssignedAgentsFor(mtdItId: String) = {
     post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetAssignedAgents"))
-      .withRequestBody(matching(s".*>$mtditid<.*"))
+      .withRequestBody(matching(s".*>$mtdItId<.*"))
       .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
   }
 
-  def givenAgentIsAllocatedAndAssignedToClient(mtditid: String, agentCode: String): GovernmentGatewayProxyStubs = {
-    stubFor(getAssignedAgentsFor(mtditid)
+  def givenAgentIsAllocatedAndAssignedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(mtdItId)
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -143,8 +143,8 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentIsAllocatedButNotAssignedToClient(mtditid: String, agentCode: String): GovernmentGatewayProxyStubs = {
-    stubFor(getAssignedAgentsFor(mtditid)
+  def givenAgentIsAllocatedButNotAssignedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(mtdItId)
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -185,8 +185,8 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentIsNotAllocatedToClient(mtditid: String): GovernmentGatewayProxyStubs = {
-    stubFor(getAssignedAgentsFor(mtditid)
+  def givenAgentIsNotAllocatedToClient(mtdItId: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(mtdItId)
       .willReturn(aResponse()
         .withBody(
           s"""

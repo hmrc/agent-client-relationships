@@ -1,4 +1,4 @@
-package uk.gov.hmrc.support
+package uk.gov.hmrc.agentrelationships.support
 
 import java.net.URL
 

@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
 
-import play.api.mvc.Action
+import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
@@ -29,21 +29,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 @Singleton
 class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends BaseController {
 
-  def check(arn: Arn, mtditid: MtdItId) = Action.async { implicit request =>
+  def check(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
     val result = for {
       credentialIdentifier <- gg.getCredIdFor(arn)
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
-      allocatedAgents <- gg.getAllocatedAgentCodes(mtditid)
+      allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode)
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
-    result map {
-      case _ => Ok("")
-    } recover {
+    result map (_ => Ok("")) recover {
       case RelationshipNotFound(errorCode) => NotFound(toJson(errorCode))
     }
-
   }
 }

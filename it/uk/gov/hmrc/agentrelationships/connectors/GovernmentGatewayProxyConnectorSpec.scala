@@ -8,10 +8,10 @@ import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
+import uk.gov.hmrc.agentrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.support.WireMockSupport
 
 class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs {
 
@@ -71,6 +71,5 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       givenAgentIsNotAllocatedToClient("foo")
       await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should not contain AgentCode("bar")
     }
-
   }
 }

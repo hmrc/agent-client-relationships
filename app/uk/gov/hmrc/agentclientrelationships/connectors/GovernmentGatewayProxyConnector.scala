@@ -61,9 +61,9 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentCodes(mtditid: MtdItId)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
+  def getAllocatedAgentCodes(mtdItid: MtdItId)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
     monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
-      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(mtditid), Seq(CONTENT_TYPE -> XML))
+      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(mtdItid), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml: Elem = toXmlElement(response.body)
       val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"
@@ -77,7 +77,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     factory.setFeature(SAX_FEATURE_PREFIX + EXTERNAL_PARAMETER_ENTITIES_FEATURE, false)
     factory.setFeature(XERCES_FEATURE_PREFIX + DISALLOW_DOCTYPE_DECL_FEATURE, true)
     factory.setFeature(FEATURE_SECURE_PROCESSING, true)
-    withSAXParser(factory.newSAXParser())loadString(xmlString)
+    withSAXParser(factory.newSAXParser())loadString xmlString
   }
 
   private def GsoAdminGetCredentialsForDirectEnrolmentsXmlInput(arn: Arn): String =
