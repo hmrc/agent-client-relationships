@@ -143,7 +143,7 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentIsAllocatedButNotAssignedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+  def givenAgentIsAllocatedButNotAssignedToClient(mtdItId: String): GovernmentGatewayProxyStubs = {
     stubFor(getAssignedAgentsFor(mtdItId)
       .willReturn(aResponse()
         .withBody(
@@ -152,7 +152,7 @@ trait GovernmentGatewayProxyStubs {
              |	<AllocatedAgents>
              |		<AgentDetails>
              |			<AgentId>GGWCESAtests</AgentId>
-             |			<AgentCode>$agentCode</AgentCode>
+             |			<AgentCode>other</AgentCode>
              |			<AgentFriendlyName>GGWCESA tests</AgentFriendlyName>
              |			<AssignedCredentials>
              |				<Credential>

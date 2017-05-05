@@ -63,8 +63,11 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
     }
 
     "return set containing agent code if agent is allocated but not assigned for a client" in {
-      givenAgentIsAllocatedButNotAssignedToClient("foo", "bar")
-      await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should contain(AgentCode("bar"))
+      givenAgentIsAllocatedButNotAssignedToClient("foo")
+      val result = await(connector.getAllocatedAgentCodes(MtdItId("foo")))
+      result should not contain AgentCode("bar")
+      result should contain(AgentCode("other"))
+      result should contain(AgentCode("123ABCD12345"))
     }
 
     "return set without expected agent code if agent is not allocated for a client" in {
