@@ -16,7 +16,7 @@ trait GovernmentGatewayProxyStubs {
       .willReturn(aResponse()
         .withBody(
           s"""
-             |<GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" RequestID="6D261BCBD2374B6593B89357E162B15F" xmlns="urn:GSO-System-" Services:external:1.67:GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput="">
+             |<GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" RequestID="6D261BCBD2374B6593B89357E162B15F" xmlns="urn:GSO-System-Services:external:1.67:GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput">
              |  <ServiceName>HMRC-AS-AGENT</ServiceName>
              |  <CredentialAndIdentifiersSets>
              |    <CredentialAndIdentifiersSet>
@@ -37,7 +37,7 @@ trait GovernmentGatewayProxyStubs {
       .willReturn(aResponse()
         .withBody(
           s"""
-             |<GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" RequestID="6D261BCBD2374B6593B89357E162B15F" xmlns="urn:GSO-System-" Services:external:1.67:GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput="">
+             |<GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" RequestID="6D261BCBD2374B6593B89357E162B15F" xmlns="urn:GSO-System-Services:external:1.67:GsoAdminGetCredentialsForDirectEnrolmentsXmlOutput">
              |  <ServiceName>HMRC-AS-AGENT</ServiceName>
              |  <CredentialAndIdentifiersSets>
              |    <CredentialAndIdentifiersSet>
@@ -85,11 +85,6 @@ trait GovernmentGatewayProxyStubs {
         .withBody(
           s"""
              |<GsoAdminGetUserDetailsXmlOutput xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" RequestID="650EC864CCD14B3EAB866F7876250D28" xmlns="urn:GSO-SystemServices:external:2.13.3:GsoAdminGetUserDetailsXmlOutput">
-             |  <CredentialName>Some Agency</CredentialName>
-             |  <Description />
-             |  <EmailAddress />
-             |  <RegistrationCategory>Individual</RegistrationCategory>
-             |  <CredentialRole>User</CredentialRole>
              |</GsoAdminGetUserDetailsXmlOutput>
              |""".stripMargin)))
     this
