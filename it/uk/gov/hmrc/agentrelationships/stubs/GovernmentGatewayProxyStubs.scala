@@ -64,7 +64,7 @@ trait GovernmentGatewayProxyStubs {
       .willReturn(aResponse()
         .withBody(
           s"""
-             |<GsoAdminGetUserDetailsXmlOutput xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" RequestID="650EC864CCD14B3EAB866F7876250D28" xmlns="urn:GSO-SystemServices:external:2.13.3:GsoAdminGetUserDetailsXmlOutput">
+             |<GsoAdminGetUserDetailsXmlOutput xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" RequestID="650EC864CCD14B3EAB866F7876250D28" xmlns="urn:GSO-SystemServices:external:2.14.4:GsoAdminGetUserDetailsXmlOutput">
              |  <CredentialName>Some Agency</CredentialName>
              |  <Description />
              |  <EmailAddress />
@@ -84,7 +84,7 @@ trait GovernmentGatewayProxyStubs {
       .willReturn(aResponse()
         .withBody(
           s"""
-             |<GsoAdminGetUserDetailsXmlOutput xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" RequestID="650EC864CCD14B3EAB866F7876250D28" xmlns="urn:GSO-SystemServices:external:2.13.3:GsoAdminGetUserDetailsXmlOutput">
+             |<GsoAdminGetUserDetailsXmlOutput xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" RequestID="650EC864CCD14B3EAB866F7876250D28" xmlns="urn:GSO-SystemServices:external:2.14.4:GsoAdminGetUserDetailsXmlOutput">
              |</GsoAdminGetUserDetailsXmlOutput>
              |""".stripMargin)))
     this

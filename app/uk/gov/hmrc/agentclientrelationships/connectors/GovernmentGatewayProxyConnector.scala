@@ -93,7 +93,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     </GsoAdminGetCredentialsForDirectEnrolmentsXmlInput>.toString()
 
   private def GsoAdminGetUserDetailsXmlInput(credentialIdentifier: String): String =
-    <GsoAdminGetUserDetailsXmlInput xmlns="urn:GSO-System-Services:external:2.13.3:GsoAdminGetUserDetailsXmlInput">
+    <GsoAdminGetUserDetailsXmlInput xmlns="urn:GSO-System-Services:external:2.14.4:GsoAdminGetUserDetailsXmlInput">
       <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
       <CredentialIdentifier>{credentialIdentifier}</CredentialIdentifier>
     </GsoAdminGetUserDetailsXmlInput>.toString()
