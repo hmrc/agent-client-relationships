@@ -63,13 +63,23 @@ class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSuppor
       await(desConnector.getCesaAgentReferencesFor(nino)) should contain theSameElementsAs agentIds
     }
 
-    "return empty set when client has no active relationship with an agent" in {
+    "return empty seq when client has no active relationship with an agent" in {
       givenClientHasNoActiveRelationshipWithAgent(nino)
       await(desConnector.getCesaAgentReferencesFor(nino)) shouldBe empty
     }
 
-    "return empty set when client has/had no relationship with any agent" in {
+    "return empty seq when client has/had no relationship with any agent" in {
       givenClientHasNoRelationshipWithAnyAgent(nino)
+      await(desConnector.getCesaAgentReferencesFor(nino)) shouldBe empty
+    }
+
+    "return empty seq when client relationship with agent ceased" in {
+      givenClientRelationshipWithAgentCeased(nino, "foo")
+      await(desConnector.getCesaAgentReferencesFor(nino)) shouldBe empty
+    }
+
+    "return empty seq when all client's relationships with agents ceased" in {
+      givenAllClientRelationshipsWithAgentsCeased(nino, Seq("001","002","003","004","005","005","007"))
       await(desConnector.getCesaAgentReferencesFor(nino)) shouldBe empty
     }
 

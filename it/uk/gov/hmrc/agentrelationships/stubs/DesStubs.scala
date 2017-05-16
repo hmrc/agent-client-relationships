@@ -53,6 +53,22 @@ trait DesStubs {
     )
   }
 
+  def givenClientRelationshipWithAgentCeased(nino: Nino, agentId: String) = {
+    stubFor(
+      get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
+        .willReturn(aResponse().withStatus(200)
+          .withBody(s"""{"agents":[{"hasAgent":true,"agentId":"$agentId","agentCeasedDate":"2010-01-01"}]}"""))
+    )
+  }
+
+  def givenAllClientRelationshipsWithAgentsCeased(nino: Nino, agentIds: Seq[String]) = {
+    stubFor(
+      get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
+        .willReturn(aResponse().withStatus(200)
+          .withBody(s"""{"agents":[${agentIds.map(id =>s"""{"hasAgent":true,"agentId":"$id","agentCeasedDate":"2020-12-31"}""").mkString(",")}]}"""))
+    )
+  }
+
   def givenClientHasNoActiveRelationshipWithAgent(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
