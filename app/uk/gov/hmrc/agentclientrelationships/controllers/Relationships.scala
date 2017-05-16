@@ -20,9 +20,8 @@ import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue, _}
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
@@ -40,27 +39,32 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       credentialIdentifier <- gg.getCredIdFor(arn)
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
       allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
-      result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode)
-                else checkCesaForRelationship(arn,mtdItId)
+      result <- if (allocatedAgents.contains(agentCode)) returnValue(true)
+                else checkCesaForOldRelationship(arn, mtdItId)
     } yield result
 
-    result map (_ => Ok ) recover {
+    result map {
+      case true => Ok
+      case false => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+    } recover {
       case RelationshipNotFound(errorCode) => NotFound(toJson(errorCode))
     }
   }
 
-  def checkCesaForRelationship(arn:Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Set[SaAgentReference]] = {
+  def checkCesaForOldRelationship(arn: Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Boolean] = {
 
-    def commonReferences[A](a: Seq[A], b:Seq[A]) = returnValue(b.toSet.intersect(a.toSet))
+    def intersection[A](a: Seq[A], b:Seq[A]) = returnValue(b.toSet.intersect(a.toSet))
 
-    for{
+    val result = for {
       nino <- des.getNinoFor(mtdItId)
       agentSaReferences <- mapping.getSaAgentReferencesFor(arn)
       clientAgentsSaReferences <- des.getClientAgentsSaReferences(nino)
-      references <- commonReferences(agentSaReferences, clientAgentsSaReferences)
-      result <- if (references.nonEmpty) returnValue(references)
-                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
-    } yield result
+      references <- intersection(agentSaReferences, clientAgentsSaReferences)
+    } yield references.nonEmpty
+
+    result recover {
+      case _ => false
+    }
 
   }
 }
