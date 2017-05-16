@@ -10,7 +10,7 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs {
+class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs {
 
   private implicit val hc = HeaderCarrier()
 

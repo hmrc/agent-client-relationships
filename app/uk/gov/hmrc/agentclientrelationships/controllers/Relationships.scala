@@ -46,8 +46,9 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
 
   private def checkCesaForRelationship(arn:Arn, mtdItId: MtdItId) = {
     raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
-    // 1. translate mtditid to nino using GetRegistrationBusinessDetails
-    // 2. ask for agent's CESA references /mappings/:arn
-    // 3. query DES for agent-client relationships GetStatusAgentRelationship
+    // #1. translate mtditid to nino using GetRegistrationBusinessDetails
+    // 2. ask for agent's CESA references using /mappings/:arn
+    // #3. query DES for agent-client relationships GetStatusAgentRelationship
+    // 4. check if returned CESA list contains agent's CESA
   }
 }
