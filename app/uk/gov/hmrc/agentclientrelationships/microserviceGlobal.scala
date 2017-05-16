@@ -42,6 +42,7 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     bind(classOf[AuditConnector]).toInstance(MicroserviceGlobal.auditConnector)
     bindBaseUrl("government-gateway-proxy")
     bindBaseUrl("des")
+    bindBaseUrl("agent-mapping")
     bindProperty("des.environment", "des.environment")
     bindProperty("des.authorizationToken", "des.authorization-token")
   }

@@ -22,7 +22,7 @@ import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.logging.Authorization
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpReads}
 
@@ -34,7 +34,7 @@ case class BusinessDetails(nino: Nino)
 
 case class ClientRelationship(agents: Option[Seq[Agent]])
 
-case class Agent(hasAgent: Boolean, agentId: Option[String], agentCeasedDate: Option[String])
+case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeasedDate: Option[String])
 
 object BusinessDetails {
   implicit val reads = Json.reads[BusinessDetails]
@@ -56,7 +56,7 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
     getWithDesHeaders[BusinessDetails](url).map(_.nino)
   }
 
-  def getCesaAgentReferencesFor(nino: Nino)(implicit hc: HeaderCarrier): Future[Seq[String]] = {
+  def getClientAgentsSaReferences(nino: Nino)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/registration/relationship/nino/${encodePathSegment(nino.value)}")
     getWithDesHeaders[ClientRelationship](url).map(_.agents.map(_.collect {
       case Agent(true, Some(agentId), None) => agentId

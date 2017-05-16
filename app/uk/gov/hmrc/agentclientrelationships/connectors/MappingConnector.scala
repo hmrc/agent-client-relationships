@@ -39,8 +39,7 @@ object Mappings {
 @Singleton
 class MappingConnector @Inject()(@Named("agent-mapping-baseUrl") baseUrl: URL, httpGet: HttpGet) {
 
-  def getSaAgentReferencesFor(arn: Arn)
-                             (implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
+  def getSaAgentReferencesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/agent-mapping/mappings/${arn.value}")
     httpGet.GET[Mappings](url.toString).map(_.mappings.map(_.saAgentReference))
   }

@@ -19,12 +19,12 @@ package uk.gov.hmrc.agentrelationships.controllers
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{Resource, WireMockSupport}
 import uk.gov.hmrc.play.test.UnitSpec
 
-class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs {
+class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs with DesStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -33,6 +33,8 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.government-gateway-proxy.port" -> wireMockPort,
+        "microservice.services.des.port" -> wireMockPort,
+        "microservice.services.agent-mapping.port" -> wireMockPort,
         "auditing.enabled" -> false
       )
 
@@ -68,6 +70,7 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient("ABCDEF123456789")
+      givenNinoIsUnknownFor(MtdItId("ABCDEF123456789"))
       val result = await(doAgentRequest())
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"

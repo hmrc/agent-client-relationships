@@ -19,15 +19,20 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue, _}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 @Singleton
-class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends BaseController {
+class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
+                              val des: DesConnector,
+                              val mapping: MappingConnector) extends BaseController {
 
   def check(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
@@ -44,11 +49,18 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
     }
   }
 
-  private def checkCesaForRelationship(arn:Arn, mtdItId: MtdItId) = {
-    raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
-    // #1. translate mtditid to nino using GetRegistrationBusinessDetails
-    // 2. ask for agent's CESA references using /mappings/:arn
-    // #3. query DES for agent-client relationships GetStatusAgentRelationship
-    // 4. check if returned CESA list contains agent's CESA
+  def checkCesaForRelationship(arn:Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Set[SaAgentReference]] = {
+
+    def commonReferences[A](a: Seq[A], b:Seq[A]) = returnValue(b.toSet.intersect(a.toSet))
+
+    for{
+      nino <- des.getNinoFor(mtdItId)
+      agentSaReferences <- mapping.getSaAgentReferencesFor(arn)
+      clientAgentsSaReferences <- des.getClientAgentsSaReferences(nino)
+      references <- commonReferences(agentSaReferences, clientAgentsSaReferences)
+      result <- if (references.nonEmpty) returnValue(references)
+                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+    } yield result
+
   }
 }
