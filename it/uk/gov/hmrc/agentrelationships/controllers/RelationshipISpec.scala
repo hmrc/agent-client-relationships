@@ -20,11 +20,12 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs}
+import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{Resource, WireMockSupport}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.test.UnitSpec
 
-class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs with DesStubs {
+class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs with DesStubs with MappingStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -48,6 +49,19 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       result.status shouldBe 200
     }
 
+    "return 200 when relationship exists only in CESA" in {
+      val arn = Arn("AARN0000002")
+      val nino = Nino("AB123456C")
+      givenAgentCredentialsAreNotFoundFor(arn)
+      givenNinoIsKnownFor(MtdItId("ABCDEF123456789"), nino)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(nino, "foo")
+      val result = await(doAgentRequest())
+      result.status shouldBe 200
+    }
+
+    //UNHAPPY PATHS
+
     "return 404 when credentials are not found in GG" in {
       givenAgentCredentialsAreNotFoundFor(Arn("AARN0000002"))
       givenAgentCodeIsFoundFor("foo", "bar")
@@ -66,7 +80,7 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
     }
 
-    "return 404 when agent not allocated to client in GG" in {
+    "return 404 when agent not allocated to client in GG nor CESA" in {
       givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient("ABCDEF123456789")

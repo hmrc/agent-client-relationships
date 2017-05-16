@@ -26,7 +26,6 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 @Singleton
 class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
@@ -39,19 +38,22 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       credentialIdentifier <- gg.getCredIdFor(arn)
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
       allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
-      result <- if (allocatedAgents.contains(agentCode)) returnValue(true)
-                else checkCesaForOldRelationship(arn, mtdItId)
+      result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(agentCode))
+      else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
-    result map {
-      case true => Ok
-      case false => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-    } recover {
-      case RelationshipNotFound(errorCode) => NotFound(toJson(errorCode))
+    result recoverWith {
+      case RelationshipNotFound(errorCode) =>
+        checkCesaForOldRelationship(arn, mtdItId) recover {
+          case _ => Left(errorCode)
+        }
+    } map {
+      case Left(errorCode) => NotFound(toJson(errorCode))
+      case Right(_) => Ok
     }
   }
 
-  def checkCesaForOldRelationship(arn: Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Boolean] = {
+  def checkCesaForOldRelationship(arn: Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier) = {
 
     def intersection[A](a: Seq[A], b:Seq[A]) = returnValue(b.toSet.intersect(a.toSet))
 
@@ -62,9 +64,7 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       references <- intersection(agentSaReferences, clientAgentsSaReferences)
     } yield references.nonEmpty
 
-    result recover {
-      case _ => false
-    }
+    result map Right.apply
 
   }
 }
