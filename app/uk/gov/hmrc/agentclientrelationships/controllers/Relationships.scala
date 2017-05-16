@@ -36,11 +36,18 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector) extends B
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
       allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(agentCode)
-                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+                else checkCesaForRelationship(arn,mtdItId)
     } yield result
 
     result map (_ => Ok ) recover {
       case RelationshipNotFound(errorCode) => NotFound(toJson(errorCode))
     }
+  }
+
+  private def checkCesaForRelationship(arn:Arn, mtdItId: MtdItId) = {
+    raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+    // 1. translate mitditid to nino using GetRegistrationBusinessDetails
+    // 2. ask for agent's CESA references /mappings/:arn
+    // 3. query DES for agent-client relationships GetStatusAgentRelationship
   }
 }
