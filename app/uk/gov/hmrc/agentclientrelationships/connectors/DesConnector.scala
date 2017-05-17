@@ -56,7 +56,7 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
     getWithDesHeaders[BusinessDetails](url).map(_.nino)
   }
 
-  def getClientAgentsSaReferences(nino: Nino)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
+  def getClientSaAgentSaReferences(nino: Nino)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/registration/relationship/nino/${encodePathSegment(nino.value)}")
     getWithDesHeaders[ClientRelationship](url).map(_.agents.map(_.collect {
       case Agent(true, Some(agentId), None) => agentId

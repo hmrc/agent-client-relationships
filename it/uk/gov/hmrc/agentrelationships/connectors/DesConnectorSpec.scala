@@ -54,53 +54,53 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     "return a CESA identifier when client has an active agent" in {
       val agentId = "bar"
       givenClientHasRelationshipWithAgent(nino, agentId)
-      await(desConnector.getClientAgentsSaReferences(nino)) shouldBe Seq(SaAgentReference(agentId))
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe Seq(SaAgentReference(agentId))
     }
 
     "return multiple CESA identifiers when client has multiple active agents" in {
       val agentIds = Seq("001","002","003","004","005","005","007")
       givenClientHasRelationshipWithMultipleAgents(nino, agentIds)
-      await(desConnector.getClientAgentsSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
+      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
     }
 
     "return empty seq when client has no active relationship with an agent" in {
       givenClientHasNoActiveRelationshipWithAgent(nino)
-      await(desConnector.getClientAgentsSaReferences(nino)) shouldBe empty
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "return empty seq when client has/had no relationship with any agent" in {
       givenClientHasNoRelationshipWithAnyAgent(nino)
-      await(desConnector.getClientAgentsSaReferences(nino)) shouldBe empty
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "return empty seq when client relationship with agent ceased" in {
       givenClientRelationshipWithAgentCeased(nino, "foo")
-      await(desConnector.getClientAgentsSaReferences(nino)) shouldBe empty
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "return empty seq when all client's relationships with agents ceased" in {
       givenAllClientRelationshipsWithAgentsCeased(nino, Seq("001","002","003","004","005","005","007"))
-      await(desConnector.getClientAgentsSaReferences(nino)) shouldBe empty
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "fail when client's nino is invalid" in {
       givenNinoIsInvalid(nino)
-      an[Exception] should be thrownBy await(desConnector.getClientAgentsSaReferences(nino))
+      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
     }
 
     "fail when client is unknown" in {
       givenClientIsUnknownFor(nino)
-      an[Exception] should be thrownBy await(desConnector.getClientAgentsSaReferences(nino))
+      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
     }
 
     "fail when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[Exception] should be thrownBy await(desConnector.getClientAgentsSaReferences(nino))
+      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
     }
 
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
-      an[Exception] should be thrownBy await(desConnector.getClientAgentsSaReferences(nino))
+      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
     }
   }
 }

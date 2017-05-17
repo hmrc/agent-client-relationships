@@ -26,6 +26,7 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 @Singleton
 class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
@@ -39,7 +40,7 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
       allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(agentCode))
-      else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
     result recoverWith {
@@ -55,14 +56,18 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
 
   def checkCesaForOldRelationship(arn: Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier) = {
 
-    def intersection[A](a: Seq[A], b:Seq[A]) = returnValue(b.toSet.intersect(a.toSet))
+    def intersection[A](a: Seq[A], b: => Future[Seq[A]]) = {
+      val sa = a.toSet
+      if (sa.isEmpty) Future.successful(Seq.empty) else b.map(_.toSet.intersect(sa))
+    }
 
     val result = for {
       nino <- des.getNinoFor(mtdItId)
-      agentSaReferences <- mapping.getSaAgentReferencesFor(arn)
-      clientAgentsSaReferences <- des.getClientAgentsSaReferences(nino)
-      references <- intersection(agentSaReferences, clientAgentsSaReferences)
-    } yield references.nonEmpty
+      references <- des.getClientSaAgentSaReferences(nino)
+      matching <- intersection(references, {
+        mapping.getSaAgentReferencesFor(arn)
+      })
+    } yield matching.nonEmpty
 
     result map Right.apply
 
