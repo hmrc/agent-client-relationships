@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import java.net.URL
 import javax.inject.{Inject, Named, Singleton}
 
-import play.api.libs.json.Json
+import play.api.libs.json._
+import play.api.libs.json.Reads._
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
@@ -32,7 +33,7 @@ import scala.concurrent.Future
 
 case class BusinessDetails(nino: Nino)
 
-case class ClientRelationship(agents: Option[Seq[Agent]])
+case class ClientRelationship(agents: Seq[Agent])
 
 case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeasedDate: Option[String])
 
@@ -42,7 +43,10 @@ object BusinessDetails {
 
 object ClientRelationship {
   implicit val agentReads = Json.reads[Agent]
-  implicit val reads = Json.reads[ClientRelationship]
+
+  implicit val readClientRelationship =
+    (JsPath \ "agents").readNullable[Seq[Agent]]
+      .map(optionalAgents => ClientRelationship(optionalAgents.getOrElse(Seq.empty)))
 }
 
 @Singleton
@@ -52,15 +56,16 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
                              httpGet: HttpGet) {
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier): Future[Nino] = {
-    val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
+    val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${ encodePathSegment(mtdbsa.value) }")
     getWithDesHeaders[BusinessDetails](url).map(_.nino)
   }
 
   def getClientSaAgentSaReferences(nino: Nino)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
-    val url = new URL(baseUrl, s"/registration/relationship/nino/${encodePathSegment(nino.value)}")
-    getWithDesHeaders[ClientRelationship](url).map(_.agents.map(_.collect {
-      case Agent(true, Some(agentId), None) => agentId
-    }).getOrElse(Seq.empty))
+    val url = new URL(baseUrl, s"/registration/relationship/nino/${ encodePathSegment(nino.value) }")
+    getWithDesHeaders[ClientRelationship](url).map(_.agents.flatMap {
+      case Agent(true, Some(agentId), None) => Some(agentId)
+      case _ => None
+    })
   }
 
   private def getWithDesHeaders[A: HttpReads](url: URL)(implicit hc: HeaderCarrier): Future[A] = {
