@@ -39,52 +39,79 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
         "auditing.enabled" -> false
       )
 
+  val arn = "AARN0000002"
+  val mtditid = "ABCDEF123456789"
+  val nino = "AB123456C"
+
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    "return 200 when relationship exists in GG" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+    "return 200 when relationship exists in gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 200
     }
 
-    "return 200 when relationship exists only in CESA" in {
-      val arn = Arn("AARN0000002")
-      val nino = Nino("AB123456C")
-      givenAgentCredentialsAreNotFoundFor(arn)
-      givenNinoIsKnownFor(MtdItId("ABCDEF123456789"), nino)
-      givenArnIsKnownFor(arn, SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(nino, "foo")
+    "return 200 when relationship exists only in cesa" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       val result = await(doAgentRequest())
       result.status shouldBe 200
     }
 
     //UNHAPPY PATHS
 
-    "return 404 when credentials are not found in GG" in {
-      givenAgentCredentialsAreNotFoundFor(Arn("AARN0000002"))
+    "return 404 when credentials are not found in gg" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"
     }
 
-    "return 404 when agent code is not found in GG" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+    "return 404 when agent code is not found in gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
     }
 
-    "return 404 when agent not allocated to client in GG nor CESA" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+    //CESA CHECK UNHAPPY PATHS
+
+    "return 404 when agent not allocated to client in gg nor nino not found in des" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient("ABCDEF123456789")
-      givenNinoIsUnknownFor(MtdItId("ABCDEF123456789"))
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenNinoIsUnknownFor(MtdItId(mtditid))
+      val result = await(doAgentRequest())
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in gg nor cesa" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenNinoIsKnownFor(MtdItId(mtditid),Nino(nino))
+      givenClientHasNoActiveRelationshipWithAgent(Nino(nino))
+      val result = await(doAgentRequest())
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenNinoIsKnownFor(MtdItId(mtditid),Nino(nino))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenArnIsUnknownFor(Arn(arn))
       val result = await(doAgentRequest())
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -95,21 +122,21 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
     "return 502 when GsoAdminGetCredentialsForDirectEnrolments returns 5xx" in {
       whenGetCredentialsReturns(500)
       givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 502
     }
 
     "return 502 when GsoAdminGetUserDetails returns 5xx" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       whenGetUserDetailReturns(500)
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 502
     }
 
     "return 502 when GsoAdminGetAssignedAgents returns 5xx" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       whenGetAssignedAgentsReturns(500)
       val result = await(doAgentRequest())
@@ -119,21 +146,21 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
     "return 400 when GsoAdminGetCredentialsForDirectEnrolments returns 4xx" in {
       whenGetCredentialsReturns(400)
       givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 400
     }
 
     "return 400 when GsoAdminGetUserDetails returns 4xx" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       whenGetUserDetailReturns(400)
-      givenAgentIsAllocatedAndAssignedToClient("ABCDEF123456789", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       val result = await(doAgentRequest())
       result.status shouldBe 400
     }
 
     "return 400 when GsoAdminGetAssignedAgents returns 4xx" in {
-      givenAgentCredentialsAreFoundFor(Arn("AARN0000002"), "foo")
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       whenGetAssignedAgentsReturns(400)
       val result = await(doAgentRequest())
@@ -141,6 +168,6 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
     }
   }
 
-  private def doAgentRequest() = new Resource(s"/agent-client-relationships/agent/AARN0000002/service/HMRC-MTD-IT/client/MTDITID/ABCDEF123456789", port).get()
+  private def doAgentRequest() = new Resource(s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid", port).get()
 
 }

@@ -39,7 +39,7 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       credentialIdentifier <- gg.getCredIdFor(arn)
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
       allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
-      result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(agentCode))
+      result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
@@ -50,7 +50,8 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
         }
     } map {
       case Left(errorCode) => NotFound(toJson(errorCode))
-      case Right(_) => Ok
+      case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      case Right(true) => Ok
     }
   }
 
