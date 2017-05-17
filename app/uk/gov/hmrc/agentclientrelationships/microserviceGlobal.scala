@@ -41,6 +41,10 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     bind(classOf[HttpPost]).toInstance(WSHttp)
     bind(classOf[AuditConnector]).toInstance(MicroserviceGlobal.auditConnector)
     bindBaseUrl("government-gateway-proxy")
+    bindBaseUrl("des")
+    bindBaseUrl("agent-mapping")
+    bindProperty("des.environment", "des.environment")
+    bindProperty("des.authorizationToken", "des.authorization-token")
   }
 
   private def bindBaseUrl(serviceName: String) =
@@ -52,6 +56,13 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
 
   private class ConfigPropertyProvider(propertyName: String) extends Provider[String] {
     override lazy val get = getConfString(propertyName, throw new RuntimeException(s"No configuration value found for '$propertyName'"))
+  }
+
+  private def bindProperty(objectName: String, propertyName: String) =
+    bind(classOf[String]).annotatedWith(Names.named(objectName)).toProvider(new PropertyProvider(propertyName))
+
+  private class PropertyProvider(confKey: String) extends Provider[String] {
+    override lazy val get = getConfString(confKey, throw new IllegalStateException(s"No value found for configuration property $confKey"))
   }
 }
 
