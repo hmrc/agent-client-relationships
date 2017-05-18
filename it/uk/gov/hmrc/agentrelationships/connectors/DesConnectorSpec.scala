@@ -59,6 +59,11 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       givenDesReturnsServerError()
       an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
     }
+
+    "record metrics for GetRegistrationBusinessDetailsByMtdbsa" in {
+      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET").getCount should be >= 1L
+    }
   }
 
   "DesConnector GetStatusAgentRelationship" should {
@@ -115,6 +120,11 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
       an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
+    }
+
+    "record metrics for GetStatusAgentRelationship" in {
+      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetStatusAgentRelationship-GET").getCount should be >= 1L
     }
   }
 }

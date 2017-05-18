@@ -74,5 +74,12 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       givenAgentIsNotAllocatedToClient("foo")
       await(connector.getAllocatedAgentCodes(MtdItId("foo"))) should not contain AgentCode("bar")
     }
+
+    "record metrics" in {
+      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetCredentialsForDirectEnrolments-POST").getCount should be >= 1L
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetUserDetails-POST").getCount should be >= 1L
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST").getCount should be >= 1L
+    }
   }
 }
