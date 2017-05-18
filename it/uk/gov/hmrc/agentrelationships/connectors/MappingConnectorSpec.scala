@@ -1,6 +1,9 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
+import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -12,9 +15,20 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs {
 
+  override implicit lazy val app: Application = appBuilder
+    .build()
+
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .configure(
+        "microservice.services.agent-mapping.port" -> wireMockPort,
+        "auditing.consumer.baseUri.host" -> wireMockHost,
+        "auditing.consumer.baseUri.port" -> wireMockPort
+      )
+
   private implicit val hc = HeaderCarrier()
 
-  val mappingConnector = new MappingConnector(wireMockBaseUrl, WSHttp)
+  val mappingConnector = new MappingConnector(wireMockBaseUrl, WSHttp, app.injector.instanceOf[Metrics])
 
   "MappingConnector" should {
 

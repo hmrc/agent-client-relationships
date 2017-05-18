@@ -19,7 +19,10 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import java.net.URL
 import javax.inject.{Inject, Named, Singleton}
 
+import com.codahale.metrics.MetricRegistry
+import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json._
+import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http._
@@ -37,11 +40,17 @@ object Mappings {
 }
 
 @Singleton
-class MappingConnector @Inject()(@Named("agent-mapping-baseUrl") baseUrl: URL, httpGet: HttpGet) {
+class MappingConnector @Inject()(
+                                  @Named("agent-mapping-baseUrl") baseUrl: URL,
+                                  httpGet: HttpGet,
+                                  metrics: Metrics)
+  extends HttpAPIMonitor {
+  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getSaAgentReferencesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/agent-mapping/mappings/${arn.value}")
-    httpGet.GET[Mappings](url.toString).map(_.mappings.map(_.saAgentReference))
+    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[Mappings](url.toString)}
+      .map(_.mappings.map(_.saAgentReference))
   }
 
 }
