@@ -61,6 +61,8 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "record metrics for GetRegistrationBusinessDetailsByMtdbsa" in {
+      givenNinoIsKnownFor(mtdItId, Nino("AB123456C"))
+      await(desConnector.getNinoFor(mtdItId))
       val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
       metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET").getCount should be >= 1L
     }
@@ -123,6 +125,8 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "record metrics for GetStatusAgentRelationship" in {
+      givenClientHasRelationshipWithAgent(nino, "bar")
+      await(desConnector.getClientSaAgentSaReferences(nino))
       val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
       metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetStatusAgentRelationship-GET").getCount should be >= 1L
     }

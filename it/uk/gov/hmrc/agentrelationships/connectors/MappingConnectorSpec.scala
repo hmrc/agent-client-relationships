@@ -61,6 +61,8 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
     }
 
     "record metrics for Mappings" in {
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      await(mappingConnector.getSaAgentReferencesFor(arn))
       val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
       metricsRegistry.getTimers.get("Timer-ConsumedAPI-Digital-Mappings-GET").getCount should be >= 1L
     }
