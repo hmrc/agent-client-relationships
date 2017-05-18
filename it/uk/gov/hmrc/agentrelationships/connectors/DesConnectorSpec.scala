@@ -1,6 +1,9 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
+import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
@@ -12,9 +15,20 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs {
 
+  override implicit lazy val app: Application = appBuilder
+    .build()
+
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .configure(
+        "microservice.services.des.port" -> wireMockPort,
+        "auditing.consumer.baseUri.host" -> wireMockHost,
+        "auditing.consumer.baseUri.port" -> wireMockPort
+      )
+
   private implicit val hc = HeaderCarrier()
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp)
+  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, app.injector.instanceOf[Metrics])
 
   "DesConnector GetRegistrationBusinessDetails" should {
 
@@ -44,6 +58,13 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
       an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
+    }
+
+    "record metrics for GetRegistrationBusinessDetailsByMtdbsa" in {
+      givenNinoIsKnownFor(mtdItId, Nino("AB123456C"))
+      await(desConnector.getNinoFor(mtdItId))
+      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET").getCount should be >= 1L
     }
   }
 
@@ -101,6 +122,13 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
       an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
+    }
+
+    "record metrics for GetStatusAgentRelationship" in {
+      givenClientHasRelationshipWithAgent(nino, "bar")
+      await(desConnector.getClientSaAgentSaReferences(nino))
+      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetStatusAgentRelationship-GET").getCount should be >= 1L
     }
   }
 }
