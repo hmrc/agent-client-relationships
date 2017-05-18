@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, stubFor, urlMatching}
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -68,6 +69,7 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenNinoIsUnknownFor(MtdItId(mtditid))
       val result = await(doAgentRequest())
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"
@@ -77,6 +79,7 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenNinoIsUnknownFor(MtdItId(mtditid))
       val result = await(doAgentRequest())
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
