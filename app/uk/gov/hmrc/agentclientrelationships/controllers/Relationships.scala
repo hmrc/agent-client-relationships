@@ -59,9 +59,16 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
 
     def intersection[A](a: Seq[A], b: => Future[Seq[A]]) = {
       val sa = a.toSet
-      if (sa.isEmpty) Future.successful(Seq.empty) else b.map(_.toSet.intersect(sa))
+      if (sa.isEmpty) Future.successful(Seq.empty)
+      else {
+        System.err.println("get mappings for for arn " + arn )
+        b.map( mappings => {
+          val set: Set[A] = mappings.toSet
+          System.err.println("got mappings for for arn " + set )
+          set.intersect(sa)
+        })
+      }
     }
-
     val result = for {
       nino <- des.getNinoFor(mtdItId)
       references <- des.getClientSaAgentSaReferences(nino)
