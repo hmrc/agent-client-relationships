@@ -16,17 +16,19 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import java.lang.System.out
 import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-import scala.concurrent.Future
+import scala.concurrent.Future.successful
 
 @Singleton
 class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
@@ -57,19 +59,47 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
 
   def checkCesaForOldRelationship(arn: Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier) = {
 
-    def intersection[A](a: Seq[A], b: => Future[Seq[A]]) = {
+    def intersection[A](a: Seq[A], b: => Seq[A]) = {
+      out.println("intersection for " + arn)
       val sa = a.toSet
-      if (sa.isEmpty) Future.successful(Seq.empty) else b.map(_.toSet.intersect(sa))
+      out.println("from cesa for " + arn + " : " + sa)
+      out.println("from mapping for " + arn + " : " + b)
+      //if (sa.isEmpty) {
+      //  System.out.println("cesa empty for " + arn )
+      //  successful(Seq.empty)
+      //} else {
+      val intersect = b.toSet.intersect(sa)
+      out.println("intersect for " + arn + " : " + intersect)
+      successful(intersect)
+      //}
     }
     val result = for {
+      mappings: Seq[SaAgentReference] <-  mapping.getSaAgentReferencesFor(arn)
       nino <- des.getNinoFor(mtdItId)
       references <- des.getClientSaAgentSaReferences(nino)
-      matching <- intersection(references, {
-        mapping.getSaAgentReferencesFor(arn)
-      })
+      matching <- intersection(references, mappings)
     } yield matching.nonEmpty
 
+    out.println("checkCesaForOldRelationship for " + arn)
     result map Right.apply
 
   }
+
+//  def checkCesaForOldRelationship(arn: Arn, mtdItId: MtdItId)(implicit hc: HeaderCarrier) = {
+//
+//    def intersection[A](a: Seq[A], b: => Future[Seq[A]]) = {
+//      val sa = a.toSet
+//      if (sa.isEmpty) Future.successful(Seq.empty) else b.map(_.toSet.intersect(sa))
+//    }
+//    val result = for {
+//      nino <- des.getNinoFor(mtdItId)
+//      references <- des.getClientSaAgentSaReferences(nino)
+//      matching <- intersection(references, {
+//        mapping.getSaAgentReferencesFor(arn)
+//      })
+//    } yield matching.nonEmpty
+//
+//    result map Right.apply
+//
+//  }
 }
