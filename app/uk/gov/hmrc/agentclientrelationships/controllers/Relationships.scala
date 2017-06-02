@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
+import play.api.Logger
 
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
@@ -70,9 +71,13 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
   private def intersection[A](a: Seq[A])(b: => Future[Seq[A]])(implicit hc: HeaderCarrier): Future[Set[A]] = {
     val sa = a.toSet
 
-    if (sa.isEmpty)
+    if (sa.isEmpty) {
+      Logger.warn("The sa references are empty.")
       Future.successful(Set.empty)
-    else
-      b.map(_.toSet.intersect(sa))
+    } else
+      b.map { x =>
+        Logger.warn(s"The contents of sa reference are $x")
+        x.toSet.intersect(sa)
+      }
   }
 }
