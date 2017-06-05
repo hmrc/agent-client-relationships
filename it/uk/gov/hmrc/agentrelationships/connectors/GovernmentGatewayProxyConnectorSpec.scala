@@ -9,7 +9,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyCon
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
-import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -94,6 +94,19 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       await(connector.getAllocatedAgentCodes(MtdItId("foo")))
       val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
       metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST").getCount should be >= 1L
+    }
+
+    "return set containing agent code if agent is allocated and assigned for a client with NINO" in {
+      givenAgentIsAllocatedAndAssignedToClient("CE321007A", "bar")
+      await(connector.getAllocatedAgentCodes(Nino("CE321007A"))) should contain(AgentCode("bar"))
+    }
+
+    "return set containing agent code if agent is allocated but not assigned for a client with NINO" in {
+      givenAgentIsAllocatedButNotAssignedToClient("CE321007A")
+      val result = await(connector.getAllocatedAgentCodes(Nino("CE321007A")))
+      result should not contain AgentCode("bar")
+      result should contain(AgentCode("other"))
+      result should contain(AgentCode("123ABCD12345"))
     }
   }
 }
