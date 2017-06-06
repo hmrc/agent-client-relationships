@@ -17,13 +17,14 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future
 import play.api.Logger
-
 import play.api.mvc.{Action, AnyContent}
+import scala.concurrent.Future
+
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
@@ -33,19 +34,23 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
                               val des: DesConnector,
                               val mapping: MappingConnector) extends BaseController {
 
-  def check(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId)
+
+  def checkWithNino(arn: Arn, nino: Nino) = check(arn, nino)
+
+  private def check(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async { implicit request =>
 
     val result = for {
       credentialIdentifier <- gg.getCredIdFor(arn)
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
-      allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
+      allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
-                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+      else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        checkCesaForOldRelationship(arn, mtdItId).map(Right.apply) recover {
+        checkCesaForOldRelationship(arn, identifier).map(Right.apply) recover {
           case _ => Left(errorCode)
         }
     }.map {
@@ -57,15 +62,23 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
 
   private def checkCesaForOldRelationship(
     arn: Arn,
-    mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Boolean] = {
+    identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Boolean] = {
 
     for {
-      nino <- des.getNinoFor(mtdItId)
+      nino <- getNinoFor(identifier)
       references <- des.getClientSaAgentSaReferences(nino)
       matching <- intersection(references) {
         mapping.getSaAgentReferencesFor(arn)
       }
     } yield matching.nonEmpty
+  }
+
+  private def getNinoFor(identifier: TaxIdentifier)
+                        (implicit hc: HeaderCarrier): Future[Nino] = identifier match {
+    case mtditid@MtdItId(_) =>
+      des.getNinoFor(mtditid)
+    case nino@Nino(_) =>
+      returnValue(nino)
   }
 
   private def intersection[A](a: Seq[A])(b: => Future[Seq[A]])(implicit hc: HeaderCarrier): Future[Set[A]] = {

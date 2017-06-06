@@ -26,10 +26,10 @@ import com.kenshoo.play.metrics.Metrics
 import org.apache.xerces.impl.Constants._
 import play.api.http.ContentTypes.XML
 import play.api.http.HeaderNames.CONTENT_TYPE
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.{AgentCode, Nino, TaxIdentifier}
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost}
 
 import scala.concurrent.Future
@@ -61,9 +61,19 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentCodes(mtdItid: MtdItId)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
+  def getAllocatedAgentCodes(identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
     monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
-      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(mtdItid), Seq(CONTENT_TYPE -> XML))
+      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(identifier), Seq(CONTENT_TYPE -> XML))
+    }.map({ response =>
+      val xml: Elem = toXmlElement(response.body)
+      val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"
+      agentDetails.map(agency => (agency \ "AgentCode").text).filterNot(_.isEmpty).map(AgentCode(_)).toSet
+    })
+  }
+
+  def getAllocatedAgentCodes(nino: Nino)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
+    monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
+      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(nino), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml: Elem = toXmlElement(response.body)
       val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"
@@ -98,14 +108,25 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       <CredentialIdentifier>{credentialIdentifier}</CredentialIdentifier>
     </GsoAdminGetUserDetailsXmlInput>.toString()
 
-  private def GsoAdminGetAssignedAgentsXmlInput(mtditid: MtdItId):String =
+  private def GsoAdminGetAssignedAgentsXmlInput(identifier: TaxIdentifier):String =
     <GsoAdminGetAssignedAgentsXmlInput xmlns="urn:GSO-System-Services:external:2.13.3:GsoAdminGetAssignedAgentsXmlInput">
       <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
       <ServiceName>HMRC-MTD-IT</ServiceName>
-      <Identifiers>
-        <Identifier IdentifierType="MTDITID">{mtditid.value}</Identifier>
-      </Identifiers>
+      {xmlClientIdentifiers(identifier)}
     </GsoAdminGetAssignedAgentsXmlInput>.toString()
+
+  private def xmlClientIdentifiers(identifier: TaxIdentifier) = identifier match {
+    case MtdItId(value) =>
+      <Identifiers>
+        <Identifier IdentifierType="MTDITID">{value}</Identifier>
+      </Identifiers>
+
+    case Nino(value) =>
+      <Identifiers>
+        <Identifier IdentifierType="NINO">{value}</Identifier>
+      </Identifiers>
+  }
+
 }
 
 case class RelationshipNotFound(errorCode: String) extends Exception

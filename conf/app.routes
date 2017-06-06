@@ -1,1 +1,2 @@
-GET     /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId  @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.check(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
+GET     /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId  @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.checkWithMtdItId(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
+GET     /agent/:arn/service/IR-SA/client/ni/:nino                @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.checkWithNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
