@@ -85,12 +85,13 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
     val sa = a.toSet
 
     if (sa.isEmpty) {
-      Logger.warn("The sa references are empty.")
-      Future.successful(Set.empty)
+      Logger.warn("The sa references in mapping store are empty.")
+      returnValue(Set.empty)
     } else
       b.map { x =>
-        Logger.warn(s"The contents of sa reference are $x")
-        x.toSet.intersect(sa)
+        val intersected = x.toSet.intersect(sa)
+        Logger.warn(s"The sa references in mapping store are $x. The intersected value between mapping store and DES is $intersected")
+        intersected
       }
   }
 }
