@@ -81,16 +81,17 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       returnValue(nino)
   }
 
-  private def intersection[A](a: Seq[A])(b: => Future[Seq[A]])(implicit hc: HeaderCarrier): Future[Set[A]] = {
-    val sa = a.toSet
+  private def intersection[A](cesaIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit hc: HeaderCarrier): Future[Set[A]] = {
+    val cesaIdSet = cesaIds.toSet
 
-    if (sa.isEmpty) {
-      Logger.warn("The sa references are empty.")
-      Future.successful(Set.empty)
+    if (cesaIdSet.isEmpty) {
+      Logger.warn("The sa references in cesa are empty.")
+      returnValue(Set.empty)
     } else
-      b.map { x =>
-        Logger.warn(s"The contents of sa reference are $x")
-        x.toSet.intersect(sa)
+      mappingServiceCall.map { mappingServiceIds =>
+        val intersected = mappingServiceIds.toSet.intersect(cesaIdSet)
+        Logger.warn(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
+        intersected
       }
   }
 }
