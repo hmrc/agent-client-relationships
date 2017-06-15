@@ -39,6 +39,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "domain" % domainVersion,
     "uk.gov.hmrc" %% "agent-mtd-identifiers" % mtdIdentifiersVersion,
     "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "2.3.0",
+    "uk.gov.hmrc" %% "play-reactivemongo" % "5.2.0",
     "org.typelevel" %% "cats" % "0.9.0"
   )
 
@@ -71,7 +72,8 @@ private object AppDependencies {
         "org.scalatestplus.play" %% "scalatestplus-play" % scalaTestPlusVersion % scope,
         "org.pegdown" % "pegdown" % pegdownVersion % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-        "com.github.tomakehurst" % "wiremock" % wiremockVersion % scope
+        "com.github.tomakehurst" % "wiremock" % wiremockVersion % scope,
+        "uk.gov.hmrc" %% "reactivemongo-test" % "2.0.0" % scope
       )
     }.test
   }
