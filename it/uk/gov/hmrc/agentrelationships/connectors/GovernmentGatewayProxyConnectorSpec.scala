@@ -8,12 +8,12 @@ import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
-import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentrelationships.support.{MongoApp, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs {
+class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuite with MongoApp with WireMockSupport with GovernmentGatewayProxyStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -25,6 +25,7 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort
       )
+      .configure(mongoConfiguration)
 
   implicit val hc = HeaderCarrier()
 
@@ -86,7 +87,7 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       givenAgentCodeIsFoundFor("foo", "bar")
       await(connector.getAgentCodeFor("foo"))
       val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-       metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetUserDetails-POST").getCount should be >= 1L
+      metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetUserDetails-POST").getCount should be >= 1L
     }
 
     "record metrics GsoAdminGetAssignedAgents" in {
@@ -107,6 +108,17 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       result should not contain AgentCode("bar")
       result should contain(AgentCode("other"))
       result should contain(AgentCode("123ABCD12345"))
+    }
+
+    "allocate agent for valid identifiers" in {
+      givenAgentCanBeAllocatedToClient("foo", "bar")
+      val result = await(connector.allocateAgent(AgentCode("bar"), MtdItId("foo")))
+      result shouldBe true
+    }
+
+    "fail if cannot allocate agent" in {
+      givenAgentCannotBeAllocatedToClient("foo", "bar")
+      an[Exception] should be thrownBy await(connector.allocateAgent(AgentCode("bar"), MtdItId("foo")))
     }
   }
 }

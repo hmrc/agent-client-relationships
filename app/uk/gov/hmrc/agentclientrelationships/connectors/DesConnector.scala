@@ -25,11 +25,11 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.logging.Authorization
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpReads}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpPost, HttpReads}
 
 import scala.concurrent.Future
 
@@ -57,6 +57,7 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
                              @Named("des.authorizationToken") authorizationToken: String,
                              @Named("des.environment") environment: String,
                              httpGet: HttpGet,
+                             httpPost: HttpPost,
                              metrics: Metrics)
   extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
@@ -74,6 +75,11 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
     })
   }
 
+  def createAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier): Future[Option[JsValue]] = {
+    val url = new URL(baseUrl, s"/registration/relationship")
+    postWithDesHeaders[JsValue,Option[JsValue]]("CreateAgentRelationship", url, createAgentRelationshipInputJson(mtdbsa.value,arn.value))
+  }
+
   private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(implicit hc: HeaderCarrier): Future[A] = {
     val desHeaderCarrier = hc.copy(
       authorization = Some(Authorization(s"Bearer $authorizationToken")),
@@ -82,4 +88,25 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
       httpGet.GET[A](url.toString)(implicitly[HttpReads[A]], desHeaderCarrier)
     }
   }
+
+  private def postWithDesHeaders[A: Writes, B: HttpReads](apiName: String, url: URL, body: A)(implicit hc: HeaderCarrier): Future[B] = {
+    val desHeaderCarrier = hc.copy(
+      authorization = Some(Authorization(s"Bearer $authorizationToken")),
+      extraHeaders = hc.extraHeaders :+ "Environment" -> environment)
+    monitor(s"ConsumedAPI-DES-$apiName-POST") {
+      httpPost.POST[A,B](url.toString, body)(implicitly[Writes[A]], implicitly[HttpReads[B]], desHeaderCarrier)
+    }
+  }
+
+  private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String) = Json.parse(
+    s"""{
+         "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.substring(0,32)}",
+          "refNumber": "$refNum",
+          "agentReferenceNumber": "$agentRefNum",
+          "regime": "ITSA",
+          "authorisation": {
+            "action": "Authorise",
+            "isExclusiveAgent": true
+          }
+       }""")
 }

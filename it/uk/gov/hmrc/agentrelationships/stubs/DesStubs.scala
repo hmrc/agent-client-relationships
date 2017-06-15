@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, stubFor, urlEqualTo, urlMatching}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.Nino
 
@@ -41,7 +41,7 @@ trait DesStubs {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
-        .withBody(s"""{"agents":[$someCeasedAgent,{"hasAgent":true,"agentId":"$agentId"}, $someAlienAgent]}"""))
+          .withBody(s"""{"agents":[$someCeasedAgent,{"hasAgent":true,"agentId":"$agentId"}, $someAlienAgent]}"""))
     )
   }
 
@@ -104,6 +104,22 @@ trait DesStubs {
       get(urlMatching(s"/registration/.*"))
         .willReturn(aResponse().withStatus(503))
     )
+  }
+
+  def givenAgentCanBeAllocatedInDes(mtdItId: String, arn: String) = {
+    stubFor(
+      post(urlEqualTo(s"/registration/relationship"))
+        .withRequestBody(containing(mtdItId))
+        .withRequestBody(containing(arn))
+        .willReturn(aResponse().withStatus(200)
+        .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}"""))
+    )
+  }
+
+  def givenAgentCanNotBeAllocatedInDes = {
+    stubFor(
+      post(urlEqualTo(s"/registration/relationship"))
+        .willReturn(aResponse().withStatus(404)))
   }
 
 }

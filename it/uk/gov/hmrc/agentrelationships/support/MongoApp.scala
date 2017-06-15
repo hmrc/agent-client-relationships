@@ -16,7 +16,7 @@ trait MongoApp extends MongoSpecSupport with ResetMongoBeforeTest with OneServer
 trait ResetMongoBeforeTest extends BeforeAndAfterEach {
   me: Suite with MongoSpecSupport =>
 
-  override def beforeEach(): Unit = {
+  override protected def beforeEach(): Unit = {
     super.beforeEach()
     dropMongoDb()
   }

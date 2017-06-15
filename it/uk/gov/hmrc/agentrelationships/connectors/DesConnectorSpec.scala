@@ -6,14 +6,14 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.DesStubs
-import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentrelationships.support.{MongoApp, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs {
+class DesConnectorSpec extends UnitSpec with OneAppPerSuite with MongoApp with WireMockSupport with DesStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -25,10 +25,11 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort
       )
+      .configure(mongoConfiguration)
 
   private implicit val hc = HeaderCarrier()
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, app.injector.instanceOf[Metrics])
+  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
 
   "DesConnector GetRegistrationBusinessDetails" should {
 
@@ -100,7 +101,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "return empty seq when all client's relationships with agents ceased" in {
-      givenAllClientRelationshipsWithAgentsCeased(nino, Seq("001","002","003","004","005","005","007"))
+      givenAllClientRelationshipsWithAgentsCeased(nino, Seq("001", "002", "003", "004", "005", "005", "007"))
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
@@ -129,6 +130,18 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       await(desConnector.getClientSaAgentSaReferences(nino))
       val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
       metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetStatusAgentRelationship-GET").getCount should be >= 1L
+    }
+  }
+
+  "DesConnector CreateAgentRelationship" should {
+    "create relationship between agent and client and return 200" in {
+      givenAgentCanBeAllocatedInDes("foo","bar")
+      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).isDefined shouldBe true
+    }
+
+    "not create relationship between agent and client and return 200" in {
+      givenAgentCanNotBeAllocatedInDes
+      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).isDefined shouldBe false
     }
   }
 }
