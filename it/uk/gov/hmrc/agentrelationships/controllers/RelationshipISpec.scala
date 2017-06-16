@@ -21,12 +21,18 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
-import uk.gov.hmrc.agentrelationships.support.{Resource, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HttpResponse
 import uk.gov.hmrc.play.test.UnitSpec
 
-class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs with DesStubs with MappingStubs {
+class RelationshipISpec extends UnitSpec
+  with OneServerPerSuite
+  with MongoApp
+  with WireMockSupport
+  with GovernmentGatewayProxyStubs
+  with DesStubs
+  with MappingStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -37,8 +43,8 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
         "microservice.services.government-gateway-proxy.port" -> wireMockPort,
         "microservice.services.des.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.enabled" -> false
-      )
+        "auditing.enabled" -> false)
+      .configure(mongoConfiguration)
 
   val arn = "AARN0000002"
   val mtditid = "ABCDEF123456789"
