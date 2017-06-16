@@ -11,13 +11,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp{
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
-
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(mongoConfiguration)
-
   val arn1 = Arn("ARN00001")
 
   def repo: RelationshipCopyRecordRepository = app.injector.instanceOf[RelationshipCopyRecordRepository]

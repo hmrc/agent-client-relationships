@@ -44,7 +44,6 @@ class RelationshipISpec extends UnitSpec
         "microservice.services.des.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
         "auditing.enabled" -> false)
-      .configure(mongoConfiguration)
 
   val arn = "AARN0000002"
   val mtditid = "ABCDEF123456789"

@@ -25,7 +25,6 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort
       )
-      .configure(mongoConfiguration)
 
   implicit val hc = HeaderCarrier()
 

@@ -25,7 +25,6 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with MongoApp with W
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort
       )
-      .configure(mongoConfiguration)
 
   private implicit val hc = HeaderCarrier()
 
