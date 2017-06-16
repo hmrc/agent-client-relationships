@@ -28,7 +28,6 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 class RelationshipISpec extends UnitSpec
   with OneServerPerSuite
-  with MongoApp
   with WireMockSupport
   with GovernmentGatewayProxyStubs
   with DesStubs

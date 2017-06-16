@@ -8,12 +8,12 @@ import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.stubs.MappingStubs
-import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs {
+class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -62,9 +62,9 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
 
     "record metrics for Mappings" in {
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenCleanMetricRegistry()
       await(mappingConnector.getSaAgentReferencesFor(arn))
-      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-      metricsRegistry.getTimers.get("Timer-ConsumedAPI-Digital-Mappings-GET").getCount should be >= 1L
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-Digital-Mappings-GET")
     }
 
 
