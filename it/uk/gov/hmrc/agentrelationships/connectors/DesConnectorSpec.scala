@@ -8,12 +8,12 @@ import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentrelationships.stubs.DesStubs
-import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs {
+class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs with MetricTestSupport{
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -126,9 +126,9 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
     "record metrics for GetStatusAgentRelationship" in {
       givenClientHasRelationshipWithAgent(nino, "bar")
+      givenCleanMetricRegistry()
       await(desConnector.getClientSaAgentSaReferences(nino))
-      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-      metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetStatusAgentRelationship-GET").getCount should be >= 1L
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
     }
   }
 }
