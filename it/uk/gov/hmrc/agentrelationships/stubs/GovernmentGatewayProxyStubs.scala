@@ -90,14 +90,14 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  private def getAssignedAgentsFor(mtdItId: String) = {
+  private def getAssignedAgentsFor(identifier: String) = {
     post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetAssignedAgents"))
-      .withRequestBody(matching(s".*>$mtdItId<.*"))
+      .withRequestBody(matching(s".*>$identifier<.*"))
       .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
   }
 
-  def givenAgentIsAllocatedAndAssignedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
-    stubFor(getAssignedAgentsFor(mtdItId)
+  def givenAgentIsAllocatedAndAssignedToClient(identifier: String, agentCode: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(identifier)
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -138,8 +138,8 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentIsAllocatedButNotAssignedToClient(mtdItId: String): GovernmentGatewayProxyStubs = {
-    stubFor(getAssignedAgentsFor(mtdItId)
+  def givenAgentIsAllocatedButNotAssignedToClient(identifier: String): GovernmentGatewayProxyStubs = {
+    stubFor(getAssignedAgentsFor(identifier)
       .willReturn(aResponse()
         .withBody(
           s"""
