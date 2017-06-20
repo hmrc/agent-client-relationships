@@ -34,15 +34,21 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpPost, HttpReads}
 import scala.concurrent.Future
 
 
-case class BusinessDetails(nino: Nino)
+case class NinoBusinessDetails(nino: Nino)
+
+object NinoBusinessDetails {
+  implicit val reads = Json.reads[NinoBusinessDetails]
+}
+
+case class MtdItIdBusinessDetails(mtdbsa: MtdItId)
+
+object MtdItIdBusinessDetails {
+  implicit val reads = Json.reads[MtdItIdBusinessDetails]
+}
 
 case class ClientRelationship(agents: Seq[Agent])
 
 case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeasedDate: Option[String])
-
-object BusinessDetails {
-  implicit val reads = Json.reads[BusinessDetails]
-}
 
 object ClientRelationship {
   implicit val agentReads = Json.reads[Agent]
@@ -64,7 +70,12 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier): Future[Nino] = {
     val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${ encodePathSegment(mtdbsa.value) }")
-    getWithDesHeaders[BusinessDetails]("GetRegistrationBusinessDetailsByMtdbsa", url).map(_.nino)
+    getWithDesHeaders[NinoBusinessDetails]("GetRegistrationBusinessDetailsByMtdbsa", url).map(_.nino)
+  }
+
+  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier): Future[MtdItId] = {
+    val url = new URL(baseUrl, s"/registration/business-details/nino/${ encodePathSegment(nino.value) }")
+    getWithDesHeaders[MtdItIdBusinessDetails]("GetRegistrationBusinessDetailsByNino", url).map(_.mtdbsa)
   }
 
   def getClientSaAgentSaReferences(nino: Nino)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {

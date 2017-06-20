@@ -27,6 +27,20 @@ trait DesStubs {
     )
   }
 
+  def givenMtdItIdIsKnownFor(mtdbsa: MtdItId, nino: Nino) = {
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
+        .willReturn(aResponse().withStatus(200).withBody(s"""{ "mtdbsa": "${mtdbsa.value}" }"""))
+    )
+  }
+
+  def givenMtdItIdIsUnKnownFor(nino: Nino) = {
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
+        .willReturn(aResponse().withStatus(404))
+    )
+  }
+
   def givenNinoIsInvalid(nino: Nino) = {
     stubFor(
       get(urlMatching(s"/registration/.*?/nino/${nino.value}"))

@@ -2,8 +2,8 @@ package uk.gov.hmrc.agentrelationships.repository
 
 import java.util.UUID
 
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.support.MongoApp
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -22,25 +22,44 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp {
 
   "createRelationshipCopyRecord" should {
     "create a createRelationshipCopyRecord" in {
-      val uuid = UUID.randomUUID().toString
-      val clientId = "client-"+uuid.substring(0,8)
-      val service = "service-"+uuid.substring(8,16)
-      await(repo.createRelationshipCopyRecord(arn1, service, clientId))
+      val uuid = UUID.randomUUID().toString.substring(0, 8)
+      val mtdItId = s"client-$uuid"
+      await(repo.create(relationshipCopyRecord(arn1, mtdItId, "MTDITID")))
 
-      val resultByClientId = await(repo.find("clientId" -> clientId))
+      val resultByClientId = await(repo.find("clientIdentifier" -> mtdItId, "clientIdentifierType" -> "MTDITID"))
       resultByClientId.size shouldBe 1
       resultByClientId.head.arn shouldBe arn1.value
-      resultByClientId.head.service shouldBe service
-      resultByClientId.head.clientId shouldBe clientId
-
-      val resultByService = await(repo.find("service" -> service))
-      resultByService.size shouldBe 1
-      resultByService.head.arn shouldBe arn1.value
-      resultByService.head.service shouldBe service
-      resultByService.head.clientId shouldBe clientId
+      resultByClientId.head.clientIdentifier shouldBe mtdItId
+      resultByClientId.head.clientIdentifierType shouldBe "MTDITID"
 
       val resultByArn = await(repo.find("arn" -> arn1.value))
       resultByArn should not be empty
     }
+
+    "find a particular RelationshipCopyRecord" in {
+      val uuid = UUID.randomUUID().toString.substring(0, 8)
+      val mtdItId = MtdItId(s"client-$uuid")
+      await(repo.insert(relationshipCopyRecord(arn1, mtdItId.value, "MTDITID")))
+
+      val result =  await(repo.findBy(arn1, mtdItId))
+
+      result should not be empty
+      val record = result.get
+      record.arn shouldBe arn1.value
+      record.clientIdentifier shouldBe mtdItId.value
+      record.clientIdentifierType shouldBe "MTDITID"
+    }
+
+    "return empty result when relationshipCopyRecord does not exist" in {
+      val mtdItId = MtdItId("")
+      val result =  await(repo.findBy(arn1, mtdItId))
+
+      result shouldBe empty
+    }
   }
+
+  private def relationshipCopyRecord(
+    arn: Arn,
+    clientIdentifier: String,
+    clientIdentifierType: String) = RelationshipCopyRecord(arn.value, clientIdentifier, clientIdentifierType)
 }

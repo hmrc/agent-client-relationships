@@ -18,22 +18,18 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
 
-import play.api.Logger
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
+import uk.gov.hmrc.agentclientrelationships.services.RelationshipService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
-import scala.concurrent.Future
-
 @Singleton
-class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
-                              val des: DesConnector,
-                              val mapping: MappingConnector) extends BaseController {
+class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
+                              service: RelationshipService) extends BaseController {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId)
 
@@ -41,9 +37,13 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
 
   private def check(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async { implicit request =>
 
-    val result = for {
+    val agentCode = for {
       credentialIdentifier <- gg.getCredIdFor(arn)
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
+    } yield agentCode
+
+    val result = for {
+      agentCode <- agentCode
       allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
@@ -51,7 +51,7 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        checkForOldRelationship(arn, identifier)
+        service.checkForOldRelationship(arn, identifier, agentCode)
           .map(Right.apply)
           .recover { case _ => Left(errorCode) }
     }.map {
@@ -59,53 +59,5 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       case Right(true) => Ok
     }
-  }
-
-  private def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier)
-                                     (implicit hc: HeaderCarrier): Future[Boolean] = {
-    //#1 check mongodb for existing record using (arn,clientIdentifierType, clientIdentifier)
-    //#2 if record exists return remembered response (true or false)
-    //#3 if record do not exist then checkCesaForOldRelationship
-    //#4 store checkCesaForOldRelationship response in mongodb
-    // (arn, clientIdentifierType, clientIdentifier, response (true/false), responseDetails (saAgentReferences), time, regime (fixed to "SA"),
-    // syncToEMTPStatus (TBD,InProgress,Success,Failed), syncToGGStatus(TBD,InProgress,Success,Failed))
-    //#5 start (?async) task to sync data to EMPTP and GG
-    //#6 return checkCesaForOldRelationship response (true or false)
-    checkCesaForOldRelationship(arn,identifier)
-  }
-
-  private def checkCesaForOldRelationship(
-    arn: Arn,
-    identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Boolean] = {
-
-    for {
-      nino <- getNinoFor(identifier)
-      references <- des.getClientSaAgentSaReferences(nino)
-      matching <- intersection(references) {
-        mapping.getSaAgentReferencesFor(arn)
-      }
-    } yield matching.nonEmpty
-  }
-
-  private def getNinoFor(identifier: TaxIdentifier)
-                        (implicit hc: HeaderCarrier): Future[Nino] = identifier match {
-    case mtdItId@MtdItId(_) =>
-      des.getNinoFor(mtdItId)
-    case nino@Nino(_) =>
-      returnValue(nino)
-  }
-
-  private def intersection[A](cesaIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit hc: HeaderCarrier): Future[Set[A]] = {
-    val cesaIdSet = cesaIds.toSet
-
-    if (cesaIdSet.isEmpty) {
-      Logger.warn("The sa references in cesa are empty.")
-      returnValue(Set.empty)
-    } else
-      mappingServiceCall.map { mappingServiceIds =>
-        val intersected = mappingServiceIds.toSet.intersect(cesaIdSet)
-        Logger.warn(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
-        intersected
-      }
   }
 }

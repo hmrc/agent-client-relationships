@@ -33,9 +33,9 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   "DesConnector GetRegistrationBusinessDetails" should {
 
     val mtdItId = MtdItId("foo")
+    val nino = Nino("AB123456C")
 
     "return some nino when agent's mtdbsa identifier is known to ETMP" in {
-      val nino = Nino("AB123456C")
       givenNinoIsKnownFor(mtdItId, nino)
       await(desConnector.getNinoFor(mtdItId)) shouldBe nino
     }
@@ -65,6 +65,17 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       givenCleanMetricRegistry()
       await(desConnector.getNinoFor(mtdItId))
       timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET")
+    }
+
+    "return MtdItId when agent's nino is known to ETMP" in {
+
+      givenMtdItIdIsKnownFor(mtdItId, nino)
+      await(desConnector.getMtdIdFor(nino)) shouldBe mtdItId
+    }
+
+    "return nothing when agent's nino identifier is unknown to ETMP" in {
+      givenMtdItIdIsUnKnownFor(nino)
+      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
     }
   }
 
