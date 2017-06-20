@@ -17,10 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
+
 import play.api.Logger
 import play.api.mvc.{Action, AnyContent}
-import scala.concurrent.Future
-
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
@@ -28,6 +27,8 @@ import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
+
+import scala.concurrent.Future
 
 @Singleton
 class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
@@ -45,19 +46,32 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
       allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
-      else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        checkCesaForOldRelationship(arn, identifier).map(Right.apply) recover {
-          case _ => Left(errorCode)
-        }
+        checkForOldRelationship(arn, identifier)
+          .map(Right.apply)
+          .recover { case _ => Left(errorCode) }
     }.map {
       case Left(errorCode) => NotFound(toJson(errorCode))
       case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       case Right(true) => Ok
     }
+  }
+
+  private def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier)
+                                     (implicit hc: HeaderCarrier): Future[Boolean] = {
+    //#1 check mongodb for existing record using (arn,clientIdentifierType, clientIdentifier)
+    //#2 if record exists return remembered response (true or false)
+    //#3 if record do not exist then checkCesaForOldRelationship
+    //#4 store checkCesaForOldRelationship response in mongodb
+    // (arn, clientIdentifierType, clientIdentifier, response (true/false), responseDetails (saAgentReferences), time, regime (fixed to "SA"),
+    // syncToEMTPStatus (TBD,InProgress,Success,Failed), syncToGGStatus(TBD,InProgress,Success,Failed))
+    //#5 start (?async) task to sync data to EMPTP and GG
+    //#6 return checkCesaForOldRelationship response (true or false)
+    checkCesaForOldRelationship(arn,identifier)
   }
 
   private def checkCesaForOldRelationship(
@@ -75,8 +89,8 @@ class Relationships @Inject()(val gg: GovernmentGatewayProxyConnector,
 
   private def getNinoFor(identifier: TaxIdentifier)
                         (implicit hc: HeaderCarrier): Future[Nino] = identifier match {
-    case mtditid@MtdItId(_) =>
-      des.getNinoFor(mtditid)
+    case mtdItId@MtdItId(_) =>
+      des.getNinoFor(mtdItId)
     case nino@Nino(_) =>
       returnValue(nino)
   }
