@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.concurrent.Eventually._
+import org.scalatest.time.{Millis, Seconds, Span}
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
@@ -105,6 +107,7 @@ class RelationshipISpec extends UnitSpec
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
 
     val identifier: String = if (isMtdItId) mtditid else nino
+    val identifierType: String = if (isMtdItId) "MTDITID" else "NINO"
 
     //HAPPY PATHS :-)
 
@@ -124,16 +127,15 @@ class RelationshipISpec extends UnitSpec
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> "MTDITID")
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
       await(query) shouldBe empty
       val result = await(doRequest)
-
+      result.status shouldBe 200
       eventually {
-        result.status shouldBe 200
         await(query).head should have (
           'arn (arn),
-          'clientIdentifier (mtditid),
-          'clientIdentifierType ("MTDITID"),
+          'clientIdentifier (identifier),
+          'clientIdentifierType (identifierType),
           'syncToETMPStatus (Some(SyncStatus.Success)),
           'syncToGGStatus (Some(SyncStatus.MissingData))
         )
@@ -150,7 +152,7 @@ class RelationshipISpec extends UnitSpec
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> "MTDITID")
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
       await(query) shouldBe empty
       val result = await(doRequest)
 
@@ -158,8 +160,8 @@ class RelationshipISpec extends UnitSpec
         result.status shouldBe 200
         await(query).head should have (
           'arn (arn),
-          'clientIdentifier (mtditid),
-          'clientIdentifierType ("MTDITID"),
+          'clientIdentifier (identifier),
+          'clientIdentifierType (identifierType),
           'syncToETMPStatus (Some(SyncStatus.Success)),
           'syncToGGStatus (Some(SyncStatus.Success))
         )
