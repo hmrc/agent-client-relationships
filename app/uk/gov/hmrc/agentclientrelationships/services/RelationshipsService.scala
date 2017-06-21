@@ -40,7 +40,8 @@ class RelationshipsService @Inject()(
                                      (implicit hc: HeaderCarrier): Future[Boolean] = {
 
     repository.findBy(arn, identifier).flatMap {
-      case Some(_) => Future.successful(true)
+      case Some(_) =>
+        Future.successful(true)
       case None =>
         checkCesaForOldRelationship(arn,identifier).flatMap { matchingReferences =>
           if(matchingReferences.nonEmpty) {

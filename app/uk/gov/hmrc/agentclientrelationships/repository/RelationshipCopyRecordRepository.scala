@@ -61,7 +61,7 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
     mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats) with AtomicUpdate[RelationshipCopyRecord] {
 
   override def indexes = Seq(
-    Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true)
+    Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("foo"), unique = true)
   )
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Unit] = {
