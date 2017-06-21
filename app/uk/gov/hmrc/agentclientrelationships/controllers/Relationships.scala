@@ -21,7 +21,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
-import uk.gov.hmrc.agentclientrelationships.services.RelationshipService
+import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
@@ -29,7 +29,7 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 
 @Singleton
 class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
-                              service: RelationshipService) extends BaseController {
+                              service: RelationshipsService) extends BaseController {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId)
 

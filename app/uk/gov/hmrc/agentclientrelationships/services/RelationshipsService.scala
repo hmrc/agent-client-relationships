@@ -30,7 +30,7 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 @Singleton
-class RelationshipService @Inject()(
+class RelationshipsService @Inject()(
     gg: GovernmentGatewayProxyConnector,
     des: DesConnector,
     mapping: MappingConnector,

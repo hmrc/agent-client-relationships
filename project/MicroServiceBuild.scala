@@ -27,6 +27,7 @@ private object AppDependencies {
   private val wiremockVersion = "2.3.1"
   private val scalaTestPlusVersion = "1.5.1"
   private val mtdIdentifiersVersion = "0.5.0"
+  private val mockitoVersion = "2.7.11"
 
   val compile = Seq(
     ws,
@@ -55,6 +56,7 @@ private object AppDependencies {
         "uk.gov.hmrc" %% "reactivemongo-test" % "2.0.0" % scope,
         "org.scalatest" %% "scalatest" % scalaTestVersion % scope,
         "org.scalatestplus.play" %% "scalatestplus-play" % scalaTestPlusVersion % scope,
+        "org.mockito" % "mockito-core" % mockitoVersion % scope,
         "org.pegdown" % "pegdown" % pegdownVersion % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
       )
