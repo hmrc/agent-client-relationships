@@ -200,7 +200,7 @@ trait GovernmentGatewayProxyStubs {
   }
 
 
-  def givenAgentCanBeAllocatedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+  def givenAgentCanBeAllocatedInGovernmentGateway(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
     stubFor(allocateAgentForClient(mtdItId, agentCode)
       .willReturn(aResponse()
         .withBody(

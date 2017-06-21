@@ -110,7 +110,7 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
     }
 
     "allocate agent for valid identifiers" in {
-      givenAgentCanBeAllocatedToClient("foo", "bar")
+      givenAgentCanBeAllocatedInGovernmentGateway("foo", "bar")
       val result = await(connector.allocateAgent(AgentCode("bar"), MtdItId("foo")))
       result shouldBe true
     }

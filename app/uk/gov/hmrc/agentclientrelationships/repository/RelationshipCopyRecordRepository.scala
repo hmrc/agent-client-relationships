@@ -35,7 +35,7 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 object SyncStatus extends Enumeration {
   type SyncStatus = Value
-  val InProgress, Success, Failed = Value
+  val InProgress, MissingData, Success, Failed = Value
 
   implicit val formats = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes.enumNameWrites)
 }
@@ -61,7 +61,7 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
     mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats) with AtomicUpdate[RelationshipCopyRecord] {
 
   override def indexes = Seq(
-    Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("foo"), unique = true)
+    Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true)
   )
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Unit] = {
@@ -81,7 +81,7 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
     val (identifier, identifierType) = identifierData(taxIdentifier)
     atomicUpdate(
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType),
-      modifierBson = BSONDocument("syncToETMPStatus" -> status.toString)
+      modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
     ).map(_.foreach { update =>
         update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
     })
@@ -91,7 +91,7 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
     val (identifier, identifierType) = identifierData(taxIdentifier)
     atomicUpdate(
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType),
-      modifierBson = BSONDocument("syncToGGStatus" -> status.toString)
+      modifierBson = BSONDocument("$set" -> BSONDocument("syncToGGStatus" -> status.toString))
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating GG sync status ($status) failed: $error"))
     })

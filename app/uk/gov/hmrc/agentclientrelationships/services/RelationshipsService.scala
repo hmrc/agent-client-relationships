@@ -17,10 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
-import scala.concurrent.Future
 
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector}
+import play.api.Logger
+
+import scala.concurrent.Future
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
@@ -101,6 +102,9 @@ class RelationshipsService @Inject()(
       _ <- updateGgSyncStatus(SyncStatus.Success)
     } yield ())
       .recoverWith {
+        case RelationshipNotFound(errorCode) =>
+          Logger.warn(s"Creating GG record failed because of missing data with error code: $errorCode")
+          updateGgSyncStatus(SyncStatus.MissingData)
         case ex =>
           Logger.warn(s"Creating GG record failed", ex)
           updateGgSyncStatus(SyncStatus.Failed)
