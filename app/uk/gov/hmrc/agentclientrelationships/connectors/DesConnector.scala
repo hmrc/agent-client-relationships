@@ -21,6 +21,7 @@ import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+import org.joda.time.DateTime
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
@@ -49,6 +50,12 @@ object MtdItIdBusinessDetails {
 case class ClientRelationship(agents: Seq[Agent])
 
 case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeasedDate: Option[String])
+
+case class CreateAgentRelationshipResponse(processingDate: String)
+
+object CreateAgentRelationshipResponse {
+  implicit val reads = Json.reads[CreateAgentRelationshipResponse]
+}
 
 object ClientRelationship {
   implicit val agentReads = Json.reads[Agent]
@@ -86,9 +93,9 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
     })
   }
 
-  def createAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier): Future[Option[JsValue]] = {
+  def createAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier): Future[CreateAgentRelationshipResponse] = {
     val url = new URL(baseUrl, s"/registration/relationship")
-    postWithDesHeaders[JsValue,Option[JsValue]]("CreateAgentRelationship", url, createAgentRelationshipInputJson(mtdbsa.value,arn.value))
+    postWithDesHeaders[JsValue,CreateAgentRelationshipResponse]("CreateAgentRelationship", url, createAgentRelationshipInputJson(mtdbsa.value,arn.value))
   }
 
   private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(implicit hc: HeaderCarrier): Future[A] = {

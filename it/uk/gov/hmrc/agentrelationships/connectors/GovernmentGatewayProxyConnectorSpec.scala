@@ -116,7 +116,7 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
     }
 
     "fail if cannot allocate agent" in {
-      givenAgentCannotBeAllocatedToClient("foo", "bar")
+      givenAgentCannotBeAllocatedInGovernmentGateway("foo", "bar")
       an[Exception] should be thrownBy await(connector.allocateAgent(AgentCode("bar"), MtdItId("foo")))
     }
   }

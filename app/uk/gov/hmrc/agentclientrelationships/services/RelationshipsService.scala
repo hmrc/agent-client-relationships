@@ -46,9 +46,9 @@ class RelationshipsService @Inject()(
       case None =>
         checkCesaForOldRelationship(arn,identifier).flatMap { matchingReferences =>
           if(matchingReferences.nonEmpty) {
-            Future.successful(true).andThen {
-              case _ => copyRelationship(arn, identifier, agentCode, matchingReferences)
-            }
+            copyRelationship(arn, identifier, agentCode, matchingReferences)
+              .map(_ => true)
+              .recover {case _ => true}
           } else Future.successful(false)
         }
     }
@@ -92,6 +92,7 @@ class RelationshipsService @Inject()(
         case ex =>
           Logger.warn(s"Creating ETMP record failed", ex)
           updateEtmpSyncStatus(SyncStatus.Failed)
+            .flatMap(_ => Future.failed(ex))
       }
 
     def createGgRecord = (for {

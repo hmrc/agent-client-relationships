@@ -146,12 +146,12 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   "DesConnector CreateAgentRelationship" should {
     "create relationship between agent and client and return 200" in {
       givenAgentCanBeAllocatedInDes("foo","bar")
-      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).isDefined shouldBe true
+      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }
 
     "not create relationship between agent and client and return 200" in {
       givenAgentCanNotBeAllocatedInDes
-      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).isDefined shouldBe false
+      an[Exception] should be thrownBy await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
   }
 }

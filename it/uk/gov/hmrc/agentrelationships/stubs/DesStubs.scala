@@ -133,7 +133,8 @@ trait DesStubs {
   def givenAgentCanNotBeAllocatedInDes = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
-        .willReturn(aResponse().withStatus(404)))
+        .willReturn(aResponse().withStatus(404)
+          .withBody(s"""{"reason": "Service unavailable"}""")))
   }
 
 }

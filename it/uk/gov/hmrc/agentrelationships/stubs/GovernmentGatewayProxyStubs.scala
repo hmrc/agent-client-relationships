@@ -212,7 +212,7 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-  def givenAgentCannotBeAllocatedToClient(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+  def givenAgentCannotBeAllocatedInGovernmentGateway(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
     stubFor(allocateAgentForClient(mtdItId, agentCode)
       .willReturn(aResponse().withStatus(404)))
     this
