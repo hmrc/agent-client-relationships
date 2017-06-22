@@ -71,28 +71,35 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                        agentCode: Future[AgentCode],
                        references: Set[SaAgentReference])(implicit hc: HeaderCarrier): Future[Unit] = {
 
-    val identifierData: Future[(String, String)] = taxIdentifier match {
-      case MtdItId(m) => Future.successful(m -> "MTDITID")
-      case Nino(n) => Future.successful(n -> "NINO")
-      case _ => Future.failed(new Exception("Invalid tax identifier found."))
+    case class Identifiers(mtdItId: Future[MtdItId], nino: Future[Nino]) {
+
+      def secondIdentifierFor(first: TaxIdentifier): Future[TaxIdentifier] = first match {
+        case MtdItId(_) => nino
+        case Nino(_)    => mtdItId
+      }
     }
 
-    val mtdItId: Future[MtdItId] = identifierData.flatMap { case (identifier, identifierType) =>
-      if (identifierType == "MTDITID")
-        Future.successful(MtdItId(identifier))
-      else
-        des.getMtdIdFor(Nino(identifier))
+    def identifiers: Identifiers = taxIdentifier match {
+      case m@MtdItId(_) => Identifiers(Future.successful(m), des.getNinoFor(m))
+      case n@Nino(_)    => Identifiers(des.getMtdIdFor(n), Future.successful(n))
+      case _            => throw new Exception("Invalid tax identifier found.")
     }
 
-    def createRelationshipRecord: Future[Unit] = (for {
-      (identifier, identifierType) <- identifierData
-      record = RelationshipCopyRecord(arn.value, identifier, identifierType, Some(references))
-      _ <- repository.create(record)
-    } yield ()).recoverWith {
-      case ex =>
-        Logger.warn(s"Inserting relationship record into mongo failed", ex)
-        Future.failed(ex)
+    def typeOf(taxIdentifier: TaxIdentifier) = taxIdentifier match {
+      case MtdItId(_) => "MTDITID"
+      case Nino(_)    => "NINO"
     }
+
+    def createDatabaseRecord(syncToETMPStatus: Option[SyncStatus], syncToGGStatus: Option[SyncStatus])
+                            (taxIdentifier: TaxIdentifier): Future[Unit] =
+      repository.create(
+        RelationshipCopyRecord(arn.value, taxIdentifier.value, typeOf(taxIdentifier), Some(references), syncToETMPStatus, syncToGGStatus)
+      )
+        .recoverWith {
+          case ex =>
+            Logger.warn(s"Inserting relationship record into mongo failed", ex)
+            Future.failed(ex)
+        }
 
     val updateEtmpSyncStatus = repository.updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
     val updateGgSyncStatus = repository.updateGgSyncStatus(arn, taxIdentifier, _: SyncStatus)
@@ -124,12 +131,30 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           updateGgSyncStatus(SyncStatus.Failed)
       }
 
-    for {
-      mtdItId <- mtdItId
-      _ <- createRelationshipRecord
-      _ <- createEtmpRecord(mtdItId)
-      _ <- createGgRecord(mtdItId)
-    } yield ()
+    val createRecordForMainIdentifier: Future[MtdItId] = for {
+      mtdItId <- identifiers.mtdItId
+      _ <- createDatabaseRecord(None, None)(taxIdentifier)
+    } yield mtdItId
+
+    createRecordForMainIdentifier.flatMap { mtdItId =>
+
+      val allocateAgent: Future[Unit] = for {
+        _ <- createEtmpRecord(mtdItId)
+        _ <- createGgRecord(mtdItId)
+      } yield ()
+
+      def createRecordForSecondIdentifier =
+        repository.findBy(arn, taxIdentifier).flatMap {
+          case None         => identifiers.secondIdentifierFor(taxIdentifier)
+            .flatMap(createDatabaseRecord(None, None))
+          case Some(record) => identifiers.secondIdentifierFor(taxIdentifier)
+            .flatMap(createDatabaseRecord(record.syncToETMPStatus, record.syncToGGStatus))
+        }
+
+      allocateAgent
+        .flatMap(_ => createRecordForSecondIdentifier)
+        .recoverWith { case _ => createRecordForSecondIdentifier }
+    }
   }
 
   private def getNinoFor(identifier: TaxIdentifier)
