@@ -41,7 +41,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
     repository.findBy(arn, identifier).flatMap {
       case Some(_) =>
-        Future.successful(true)
+        Logger.warn(s"Relationship has been already copied from CESA to MTD")
+        Future.failed(new Exception())
       case None =>
         checkCesaForOldRelationship(arn, identifier).flatMap { matchingReferences =>
           if (matchingReferences.nonEmpty) {
@@ -53,14 +54,26 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     }
   }
 
-  def copyRelationship(arn: Arn,
+  private def checkCesaForOldRelationship(arn: Arn,
+                                          identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[SaAgentReference]] = {
+
+    for {
+      nino <- getNinoFor(identifier)
+      references <- des.getClientSaAgentSaReferences(nino)
+      matching <- intersection(references) {
+        mapping.getSaAgentReferencesFor(arn)
+      }
+    } yield matching
+  }
+
+  private def copyRelationship(arn: Arn,
                        taxIdentifier: TaxIdentifier,
                        agentCode: Future[AgentCode],
                        references: Set[SaAgentReference])(implicit hc: HeaderCarrier): Future[Unit] = {
 
     val identifierData: Future[(String, String)] = taxIdentifier match {
-      case MtdItId(mtdItId) => Future.successful(mtdItId -> "MTDITID")
-      case Nino(nino) => Future.successful(nino -> "NINO")
+      case MtdItId(m) => Future.successful(m -> "MTDITID")
+      case Nino(n) => Future.successful(n -> "NINO")
       case _ => Future.failed(new Exception("Invalid tax identifier found."))
     }
 
@@ -84,8 +97,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     val updateEtmpSyncStatus = repository.updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
     val updateGgSyncStatus = repository.updateGgSyncStatus(arn, taxIdentifier, _: SyncStatus)
 
-    def createEtmpRecord: Future[Unit] = (for {
-      mtdItId <- mtdItId
+    def createEtmpRecord(mtdItId: MtdItId): Future[Unit] = (for {
       _ <- updateEtmpSyncStatus(SyncStatus.InProgress)
       _ <- des.createAgentRelationship(mtdItId, arn)
       _ <- updateEtmpSyncStatus(SyncStatus.Success)
@@ -97,8 +109,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
             .flatMap(_ => Future.failed(ex))
       }
 
-    def createGgRecord: Future[Unit] = (for {
-      mtdItId <- mtdItId
+    def createGgRecord(mtdItId: MtdItId): Future[Unit] = (for {
       _ <- updateGgSyncStatus(SyncStatus.InProgress)
       agentCode <- agentCode
       _ <- gg.allocateAgent(agentCode, mtdItId)
@@ -114,22 +125,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       }
 
     for {
+      mtdItId <- mtdItId
       _ <- createRelationshipRecord
-      _ <- createEtmpRecord
-      _ <- createGgRecord
+      _ <- createEtmpRecord(mtdItId)
+      _ <- createGgRecord(mtdItId)
     } yield ()
-  }
-
-  private def checkCesaForOldRelationship(arn: Arn,
-                                          identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[SaAgentReference]] = {
-
-    for {
-      nino <- getNinoFor(identifier)
-      references <- des.getClientSaAgentSaReferences(nino)
-      matching <- intersection(references) {
-        mapping.getSaAgentReferencesFor(arn)
-      }
-    } yield matching
   }
 
   private def getNinoFor(identifier: TaxIdentifier)

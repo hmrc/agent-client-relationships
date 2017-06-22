@@ -69,7 +69,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
     "return MtdItId when agent's nino is known to ETMP" in {
 
-      givenMtdItIdIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
       await(desConnector.getMtdIdFor(nino)) shouldBe mtdItId
     }
 

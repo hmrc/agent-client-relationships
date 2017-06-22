@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentrelationships.controllers
 
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
@@ -65,7 +65,21 @@ class RelationshipISpec extends UnitSpec
 
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
 
-    behave like aCheckEndpoint(false, doAgentRequest(s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"))
+    def doRequest = doAgentRequest(s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino")
+
+    behave like aCheckEndpoint(false, doRequest)
+
+    "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenMtdItIdIsUnKnownFor(Nino(nino))
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+      await(query) shouldBe empty
+      val result = await(doRequest)
+      result.status shouldBe 200
+      await(query) shouldBe empty
+    }
   }
 
   private def doAgentRequest(route: String) = new Resource(route, port).get()
@@ -81,8 +95,11 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+      await(query) shouldBe empty
       val result = await(doRequest)
       result.status shouldBe 200
+      await(query) shouldBe empty
     }
 
     //UNHAPPY PATHS
@@ -107,14 +124,32 @@ class RelationshipISpec extends UnitSpec
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
     }
 
+    "return 404 when relationship is not found in gg but relationship copy was made before" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(identifier)
+      await(repo.insert(RelationshipCopyRecord(arn,identifier,identifierType)))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when credentials are not found but relationship copy was made before" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      await(repo.insert(RelationshipCopyRecord(arn,identifier,identifierType)))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+    }
+
     //HAPPY PATHS WHEN CHECKING CESA
 
-    "return 200 when relationship exists only in cesa with agent credentials" in {
+    "return 200 when agent not allocated to client in gg but relationship exists in cesa" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
@@ -137,10 +172,10 @@ class RelationshipISpec extends UnitSpec
       )
     }
 
-    "return 200 when relationship exists only in cesa without agent credentials" in {
+    "return 200 when agent credentials unknown but relationship exists in cesa" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
@@ -162,11 +197,11 @@ class RelationshipISpec extends UnitSpec
       )
     }
 
-    "return 200 when relationship exists only in cesa without agent code" in {
+    "return 200 when agent code unknown but relationship exists in cesa" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
@@ -196,7 +231,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanNotBeAllocatedInDes
@@ -224,7 +259,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
@@ -249,7 +284,7 @@ class RelationshipISpec extends UnitSpec
 
     //CESA CHECK UNHAPPY PATHS
 
-    "return 404 when agent not allocated to client in gg nor nino not found in des" in {
+    "return 404 when agent not allocated to client in gg nor identifier not found in des" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)

@@ -27,7 +27,7 @@ trait DesStubs {
     )
   }
 
-  def givenMtdItIdIsKnownFor(mtdbsa: MtdItId, nino: Nino) = {
+  def givenMtdItIdIsKnownFor(nino: Nino, mtdbsa: MtdItId) = {
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200).withBody(s"""{ "mtdbsa": "${mtdbsa.value}" }"""))
