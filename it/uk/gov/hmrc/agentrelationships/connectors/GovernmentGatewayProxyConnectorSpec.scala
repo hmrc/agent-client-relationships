@@ -8,12 +8,12 @@ import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.GovernmentGatewayProxyStubs
-import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs {
+class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -77,23 +77,23 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
 
     "record metrics GsoAdminGetCredentialsForDirectEnrolments" in {
       givenAgentCredentialsAreFoundFor(Arn("foo"), "bar")
+      givenCleanMetricRegistry()
       await(connector.getCredIdFor(Arn("foo")))
-      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-      metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetCredentialsForDirectEnrolments-POST").getCount should be >= 1L
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-GGW-GsoAdminGetCredentialsForDirectEnrolments-POST")
     }
 
     "record metrics GsoAdminGetUserDetails" in {
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenCleanMetricRegistry()
       await(connector.getAgentCodeFor("foo"))
-      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-       metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetUserDetails-POST").getCount should be >= 1L
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-GGW-GsoAdminGetUserDetails-POST")
     }
 
     "record metrics GsoAdminGetAssignedAgents" in {
       givenAgentIsAllocatedAndAssignedToClient("foo", "bar")
+      givenCleanMetricRegistry()
       await(connector.getAllocatedAgentCodes(MtdItId("foo")))
-      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-      metricsRegistry.getTimers.get("Timer-ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST").getCount should be >= 1L
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST")
     }
 
     "return set containing agent code if agent is allocated and assigned for a client with NINO" in {
@@ -107,6 +107,17 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       result should not contain AgentCode("bar")
       result should contain(AgentCode("other"))
       result should contain(AgentCode("123ABCD12345"))
+    }
+
+    "allocate agent for valid identifiers" in {
+      givenAgentCanBeAllocatedInGovernmentGateway("foo", "bar")
+      val result = await(connector.allocateAgent(AgentCode("bar"), MtdItId("foo")))
+      result shouldBe true
+    }
+
+    "fail if cannot allocate agent" in {
+      givenAgentCannotBeAllocatedInGovernmentGateway("foo", "bar")
+      an[Exception] should be thrownBy await(connector.allocateAgent(AgentCode("bar"), MtdItId("foo")))
     }
   }
 }

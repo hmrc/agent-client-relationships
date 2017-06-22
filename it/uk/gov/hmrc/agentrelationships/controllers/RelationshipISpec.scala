@@ -16,17 +16,24 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
-import uk.gov.hmrc.agentrelationships.support.{Resource, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HttpResponse
 import uk.gov.hmrc.play.test.UnitSpec
 
-class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs with DesStubs with MappingStubs {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class RelationshipISpec extends UnitSpec
+  with MongoApp
+  with WireMockSupport
+  with GovernmentGatewayProxyStubs
+  with DesStubs
+  with MappingStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -37,8 +44,15 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
         "microservice.services.government-gateway-proxy.port" -> wireMockPort,
         "microservice.services.des.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.enabled" -> false
-      )
+        "auditing.enabled" -> false)
+      .configure(mongoConfiguration)
+
+  def repo = app.injector.instanceOf[RelationshipCopyRecordRepository]
+
+  override def beforeEach() {
+    super.beforeEach()
+    await(repo.ensureIndexes)
+  }
 
   val arn = "AARN0000002"
   val mtditid = "ABCDEF123456789"
@@ -50,7 +64,7 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
   }
 
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
-    
+
     behave like aCheckEndpoint(false, doAgentRequest(s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"))
   }
 
@@ -59,20 +73,14 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
 
     val identifier: String = if (isMtdItId) mtditid else nino
+    val identifierType: String = if (isMtdItId) "MTDITID" else "NINO"
+
+    //HAPPY PATH :-)
 
     "return 200 when relationship exists in gg" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      val result = await(doRequest)
-      result.status shouldBe 200
-    }
-
-    "return 200 when relationship exists only in cesa" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       val result = await(doRequest)
       result.status shouldBe 200
     }
@@ -99,6 +107,146 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
     }
 
+    //HAPPY PATHS WHEN CHECKING CESA
+
+    "return 200 when relationship exists only in cesa with agent credentials" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(identifier)
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier),
+        'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.Success))
+      )
+    }
+
+    "return 200 when relationship exists only in cesa without agent credentials" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier),
+        'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+      )
+    }
+
+    "return 200 when relationship exists only in cesa without agent code" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier),
+        'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+      )
+    }
+
+    //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
+
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(identifier)
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenAgentCanNotBeAllocatedInDes
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier),
+        'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Failed)),
+        'syncToGGStatus (None)
+      )
+    }
+
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(identifier)
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier),
+        'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.Failed))
+      )
+    }
+
     //CESA CHECK UNHAPPY PATHS
 
     "return 404 when agent not allocated to client in gg nor nino not found in des" in {
@@ -115,7 +263,7 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
-      givenNinoIsKnownFor(MtdItId(mtditid),Nino(nino))
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenClientHasNoActiveRelationshipWithAgent(Nino(nino))
       val result = await(doRequest)
       result.status shouldBe 404
@@ -126,7 +274,7 @@ class RelationshipISpec extends UnitSpec with OneServerPerSuite with WireMockSup
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
-      givenNinoIsKnownFor(MtdItId(mtditid),Nino(nino))
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenArnIsUnknownFor(Arn(arn))
       val result = await(doRequest)

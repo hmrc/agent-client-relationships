@@ -6,14 +6,14 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.DesStubs
-import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs {
+class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -28,14 +28,14 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
   private implicit val hc = HeaderCarrier()
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, app.injector.instanceOf[Metrics])
+  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
 
   "DesConnector GetRegistrationBusinessDetails" should {
 
     val mtdItId = MtdItId("foo")
+    val nino = Nino("AB123456C")
 
     "return some nino when agent's mtdbsa identifier is known to ETMP" in {
-      val nino = Nino("AB123456C")
       givenNinoIsKnownFor(mtdItId, nino)
       await(desConnector.getNinoFor(mtdItId)) shouldBe nino
     }
@@ -62,9 +62,20 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
     "record metrics for GetRegistrationBusinessDetailsByMtdbsa" in {
       givenNinoIsKnownFor(mtdItId, Nino("AB123456C"))
+      givenCleanMetricRegistry()
       await(desConnector.getNinoFor(mtdItId))
-      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-      metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET").getCount should be >= 1L
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET")
+    }
+
+    "return MtdItId when agent's nino is known to ETMP" in {
+
+      givenMtdItIdIsKnownFor(mtdItId, nino)
+      await(desConnector.getMtdIdFor(nino)) shouldBe mtdItId
+    }
+
+    "return nothing when agent's nino identifier is unknown to ETMP" in {
+      givenMtdItIdIsUnKnownFor(nino)
+      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
     }
   }
 
@@ -100,7 +111,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "return empty seq when all client's relationships with agents ceased" in {
-      givenAllClientRelationshipsWithAgentsCeased(nino, Seq("001","002","003","004","005","005","007"))
+      givenAllClientRelationshipsWithAgentsCeased(nino, Seq("001", "002", "003", "004", "005", "005", "007"))
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
@@ -126,9 +137,21 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
     "record metrics for GetStatusAgentRelationship" in {
       givenClientHasRelationshipWithAgent(nino, "bar")
+      givenCleanMetricRegistry()
       await(desConnector.getClientSaAgentSaReferences(nino))
-      val metricsRegistry = app.injector.instanceOf[Metrics].defaultRegistry
-      metricsRegistry.getTimers.get("Timer-ConsumedAPI-DES-GetStatusAgentRelationship-GET").getCount should be >= 1L
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+    }
+  }
+
+  "DesConnector CreateAgentRelationship" should {
+    "create relationship between agent and client and return 200" in {
+      givenAgentCanBeAllocatedInDes("foo","bar")
+      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
+    }
+
+    "not create relationship between agent and client and return 200" in {
+      givenAgentCanNotBeAllocatedInDes
+      an[Exception] should be thrownBy await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
   }
 }
