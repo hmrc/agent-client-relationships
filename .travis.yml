@@ -19,3 +19,4 @@ addons:
     - mongodb-3.0-precise
     packages:
     - mongodb-org-server
+script: sbt ++$TRAVIS_SCALA_VERSION test it:test
