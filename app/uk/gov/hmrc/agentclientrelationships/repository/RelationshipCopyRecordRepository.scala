@@ -17,39 +17,39 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
 
-import scala.concurrent.{ExecutionContext, Future}
 import org.joda.time.DateTime
-import play.api.libs.json.{Format, Reads, Writes}
+import play.api.Logger
 import play.api.libs.json.Json.format
+import play.api.libs.json.{Format, Reads, Writes}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 object SyncStatus extends Enumeration {
   type SyncStatus = Value
-  val InProgress, MissingData, Success, Failed = Value
+  val InProgress, IncompleteInputParams, Success, Failed = Value
 
   implicit val formats = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes.enumNameWrites)
 }
 
-import SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 
-case class RelationshipCopyRecord(
-  arn: String,
-  clientIdentifier: String,
-  clientIdentifierType: String,
-  dateTime: DateTime = DateTime.now(),
-  responseDetails: Option[String] = None,
-  syncToETMPStatus: Option[SyncStatus] = None,
-  syncToGGStatus: Option[SyncStatus] = None)
+case class RelationshipCopyRecord(arn: String,
+                                  clientIdentifier: String,
+                                  clientIdentifierType: String,
+                                  references: Option[Set[SaAgentReference]] = None,
+                                  dateTime: DateTime = DateTime.now(),
+                                  syncToETMPStatus: Option[SyncStatus] = None,
+                                  syncToGGStatus: Option[SyncStatus] = None)
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
   implicit val formats: Format[RelationshipCopyRecord] = format[RelationshipCopyRecord]
@@ -83,7 +83,7 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
     ).map(_.foreach { update =>
-        update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
+      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
     })
   }
 

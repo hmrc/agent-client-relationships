@@ -16,20 +16,17 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.scalatest.concurrent.Eventually._
-import org.scalatest.time.{Millis, Seconds, Span}
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HttpResponse
 import uk.gov.hmrc.play.test.UnitSpec
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipISpec extends UnitSpec
   with MongoApp
@@ -61,41 +58,6 @@ class RelationshipISpec extends UnitSpec
   val mtditid = "ABCDEF123456789"
   val nino = "AB123456C"
 
-   "it" should {
-
-      val identifier: String = mtditid
-     val identifierType: String = "MTDITID"
-
-      def doRequest = doAgentRequest(s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid")
-
-     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
-       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-       givenAgentCodeIsFoundFor("foo", "bar")
-       givenAgentIsNotAllocatedToClient(identifier)
-       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-       givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
-       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
-       givenAgentCanBeAllocatedInDes(mtditid, arn)
-       givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
-
-       def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
-
-       await(query) shouldBe empty
-
-       val result = await(doRequest)
-       result.status shouldBe 200
-
-       await(query).head should have(
-         'arn (arn),
-         'clientIdentifier (identifier),
-         'clientIdentifierType (identifierType),
-         'syncToETMPStatus (Some(SyncStatus.Success)),
-         'syncToGGStatus (Some(SyncStatus.Failed))
-       )
-     }
-    }
-
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
     behave like aCheckEndpoint(true, doAgentRequest(s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"))
@@ -113,7 +75,7 @@ class RelationshipISpec extends UnitSpec
     val identifier: String = if (isMtdItId) mtditid else nino
     val identifierType: String = if (isMtdItId) "MTDITID" else "NINO"
 
-    //HAPPY PATHS :-)
+    //HAPPY PATH :-)
 
     "return 200 when relationship exists in gg" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
@@ -123,29 +85,29 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
     }
 
-    "return 200 when relationship exists only in cesa without agent credentials" in {
+    //UNHAPPY PATHS
+
+    "return 404 when credentials are not found in gg" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
-
-      await(query) shouldBe empty
-
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenNinoIsUnknownFor(MtdItId(mtditid))
       val result = await(doRequest)
-      result.status shouldBe 200
-
-      await(query).head should have(
-        'arn (arn),
-        'clientIdentifier (identifier),
-        'clientIdentifierType (identifierType),
-        'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.MissingData))
-      )
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
     }
+
+    "return 404 when agent code is not found in gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenNinoIsUnknownFor(MtdItId(mtditid))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+    }
+
+    //HAPPY PATHS WHEN CHECKING CESA
 
     "return 200 when relationship exists only in cesa with agent credentials" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
@@ -169,23 +131,19 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (identifier),
         'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Success))
       )
     }
 
-    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(identifier)
+    "return 200 when relationship exists only in cesa without agent credentials" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-
-      mongo().connection.close()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
 
@@ -198,10 +156,40 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (identifier),
         'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Success))
+        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
       )
     }
+
+    "return 200 when relationship exists only in cesa without agent code" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier),
+        'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+      )
+    }
+
+    //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
@@ -225,6 +213,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (identifier),
         'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
         'syncToGGStatus (None)
       )
@@ -252,31 +241,10 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (identifier),
         'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Failed))
       )
-    }
-
-    //UNHAPPY PATHS
-
-    "return 404 when credentials are not found in gg" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenNinoIsUnknownFor(MtdItId(mtditid))
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
-    }
-
-    "return 404 when agent code is not found in gg" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsNotInTheResponseFor("foo")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenNinoIsUnknownFor(MtdItId(mtditid))
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
     }
 
     //CESA CHECK UNHAPPY PATHS

@@ -19,58 +19,50 @@ package uk.gov.hmrc.agentclientrelationships.services
 import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
-
-import scala.concurrent.Future
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+
+import scala.concurrent.Future
 
 @Singleton
-class RelationshipsService @Inject()(
-    gg: GovernmentGatewayProxyConnector,
-    des: DesConnector,
-    mapping: MappingConnector,
-    repository: RelationshipCopyRecordRepository) {
+class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
+                                     des: DesConnector,
+                                     mapping: MappingConnector,
+                                     repository: RelationshipCopyRecordRepository) {
 
   def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode])
-                                     (implicit hc: HeaderCarrier): Future[Boolean] = {
+                             (implicit hc: HeaderCarrier): Future[Boolean] = {
 
     repository.findBy(arn, identifier).flatMap {
       case Some(_) =>
         Future.successful(true)
       case None =>
-        checkCesaForOldRelationship(arn,identifier).flatMap { matchingReferences =>
-          if(matchingReferences.nonEmpty) {
+        checkCesaForOldRelationship(arn, identifier).flatMap { matchingReferences =>
+          if (matchingReferences.nonEmpty) {
             copyRelationship(arn, identifier, agentCode, matchingReferences)
               .map(_ => true)
-              .recover {case _ => true}
+              .recover { case _ => true }
           } else Future.successful(false)
         }
     }
   }
 
-  def copyRelationship(
-    arn: Arn,
-    taxIdentifier: TaxIdentifier,
-    agentCode: Future[AgentCode],
-    references: Set[SaAgentReference])(implicit hc: HeaderCarrier): Future[Unit] = {
+  def copyRelationship(arn: Arn,
+                       taxIdentifier: TaxIdentifier,
+                       agentCode: Future[AgentCode],
+                       references: Set[SaAgentReference])(implicit hc: HeaderCarrier): Future[Unit] = {
 
     val identifierData: Future[(String, String)] = taxIdentifier match {
       case MtdItId(mtdItId) => Future.successful(mtdItId -> "MTDITID")
       case Nino(nino) => Future.successful(nino -> "NINO")
       case _ => Future.failed(new Exception("Invalid tax identifier found."))
     }
-
-    val createRelationshipRecord = for {
-      (identifier, identifierType) <- identifierData
-      record = RelationshipCopyRecord(arn.value, identifier, identifierType)
-      _ <- repository.create(record)
-    } yield ()
 
     val mtdItId: Future[MtdItId] = identifierData.flatMap { case (identifier, identifierType) =>
       if (identifierType == "MTDITID")
@@ -79,10 +71,20 @@ class RelationshipsService @Inject()(
         des.getMtdIdFor(Nino(identifier))
     }
 
+    def createRelationshipRecord: Future[Unit] = (for {
+      (identifier, identifierType) <- identifierData
+      record = RelationshipCopyRecord(arn.value, identifier, identifierType, Some(references))
+      _ <- repository.create(record)
+    } yield ()).recoverWith {
+      case ex =>
+        Logger.warn(s"Inserting relationship record into mongo failed", ex)
+        Future.failed(ex)
+    }
+
     val updateEtmpSyncStatus = repository.updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
     val updateGgSyncStatus = repository.updateGgSyncStatus(arn, taxIdentifier, _: SyncStatus)
 
-    def createEtmpRecord = (for {
+    def createEtmpRecord: Future[Unit] = (for {
       mtdItId <- mtdItId
       _ <- updateEtmpSyncStatus(SyncStatus.InProgress)
       _ <- des.createAgentRelationship(mtdItId, arn)
@@ -95,7 +97,7 @@ class RelationshipsService @Inject()(
             .flatMap(_ => Future.failed(ex))
       }
 
-    def createGgRecord = (for {
+    def createGgRecord: Future[Unit] = (for {
       mtdItId <- mtdItId
       _ <- updateGgSyncStatus(SyncStatus.InProgress)
       agentCode <- agentCode
@@ -105,7 +107,7 @@ class RelationshipsService @Inject()(
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
           Logger.warn(s"Creating GG record failed because of missing data with error code: $errorCode")
-          updateGgSyncStatus(SyncStatus.MissingData)
+          updateGgSyncStatus(SyncStatus.IncompleteInputParams)
         case ex =>
           Logger.warn(s"Creating GG record failed", ex)
           updateGgSyncStatus(SyncStatus.Failed)
@@ -116,12 +118,10 @@ class RelationshipsService @Inject()(
       _ <- createEtmpRecord
       _ <- createGgRecord
     } yield ()
-
   }
 
-  private def checkCesaForOldRelationship(
-    arn: Arn,
-    identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[SaAgentReference]] = {
+  private def checkCesaForOldRelationship(arn: Arn,
+                                          identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[SaAgentReference]] = {
 
     for {
       nino <- getNinoFor(identifier)

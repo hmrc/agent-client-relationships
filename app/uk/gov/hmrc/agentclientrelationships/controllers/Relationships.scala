@@ -46,7 +46,7 @@ class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
       agentCode <- agentCode
       allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
-                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+      else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
     result.recoverWith {
