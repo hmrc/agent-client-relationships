@@ -89,6 +89,9 @@ class RelationshipISpec extends UnitSpec
     val identifier: String = if (isMtdItId) mtditid else nino
     val identifierType: String = if (isMtdItId) "MTDITID" else "NINO"
 
+    val identifier2: String = if (isMtdItId) nino else mtditid
+    val identifierType2: String = if (isMtdItId) "NINO" else "MTDITID"
+
     //HAPPY PATH :-)
 
     "return 200 when relationship exists in gg" in {
@@ -156,8 +159,10 @@ class RelationshipISpec extends UnitSpec
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+      def query2 = repo.find("arn" -> arn, "clientIdentifier" -> identifier2, "clientIdentifierType" -> identifierType2)
 
       await(query) shouldBe empty
+      await(query2) shouldBe empty
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -166,6 +171,15 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (identifier),
         'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.Success))
+      )
+
+      await(query2).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier2),
+        'clientIdentifierType (identifierType2),
         'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Success))
@@ -238,8 +252,10 @@ class RelationshipISpec extends UnitSpec
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+      def query2 = repo.find("arn" -> arn, "clientIdentifier" -> identifier2, "clientIdentifierType" -> identifierType2)
 
       await(query) shouldBe empty
+      await(query2) shouldBe empty
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -248,6 +264,14 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (identifier),
         'clientIdentifierType (identifierType),
+        'references (Some(Set(SaAgentReference("foo")))),
+        'syncToETMPStatus (Some(SyncStatus.Failed)),
+        'syncToGGStatus (None)
+      )
+      await(query2).head should have(
+        'arn (arn),
+        'clientIdentifier (identifier2),
+        'clientIdentifierType (identifierType2),
         'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
         'syncToGGStatus (None)
