@@ -2,6 +2,8 @@ package uk.gov.hmrc.agentrelationships.repository
 
 import java.util.UUID
 
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.support.MongoApp
@@ -12,6 +14,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp {
 
   val arn1 = Arn("ARN00001")
+
+  override implicit lazy val app: Application = appBuilder
+    .build()
+
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .configure(mongoConfiguration)
 
   def repo: RelationshipCopyRecordRepository = app.injector.instanceOf[RelationshipCopyRecordRepository]
 
