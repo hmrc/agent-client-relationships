@@ -41,7 +41,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
     repository.findBy(arn, identifier).flatMap {
       case Some(_) =>
-        Future.successful(true)
+        Logger.warn(s"Relationship has been already copied from CESA to MTD")
+        Future.failed(new Exception())
       case None =>
         checkCesaForOldRelationship(arn, identifier).flatMap { matchingReferences =>
           if (matchingReferences.nonEmpty) {

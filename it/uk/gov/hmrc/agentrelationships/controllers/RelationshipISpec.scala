@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentrelationships.controllers
 
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
@@ -105,6 +105,24 @@ class RelationshipISpec extends UnitSpec
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+    }
+
+    "return 404 when relationship is not found in gg but relationship copy was made before" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(identifier)
+      await(repo.insert(RelationshipCopyRecord(arn,identifier,identifierType)))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when credentials are not found but relationship copy was made before" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      await(repo.insert(RelationshipCopyRecord(arn,identifier,identifierType)))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
     }
 
     //HAPPY PATHS WHEN CHECKING CESA

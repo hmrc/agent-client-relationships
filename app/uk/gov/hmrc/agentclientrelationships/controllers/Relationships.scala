@@ -53,7 +53,9 @@ class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
       case RelationshipNotFound(errorCode) =>
         service.checkForOldRelationship(arn, identifier, agentCode)
           .map(Right.apply)
-          .recover { case _ => Left(errorCode) }
+          .recover {
+            case _ => Left(errorCode)
+          }
     }.map {
       case Left(errorCode) => NotFound(toJson(errorCode))
       case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
