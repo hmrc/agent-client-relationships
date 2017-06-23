@@ -43,7 +43,13 @@ object SyncStatus extends Enumeration {
 
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 
-case class RelationshipCopyRecord(arn: String, clientIdentifier: String, clientIdentifierType: String, references: Option[Set[SaAgentReference]] = None, syncToETMPStatus: Option[SyncStatus] = None, syncToGGStatus: Option[SyncStatus] = None, dateTime: DateTime = DateTime.now())
+case class RelationshipCopyRecord(arn: String,
+                                  clientIdentifier: String,
+                                  clientIdentifierType: String,
+                                  references: Option[Set[SaAgentReference]] = None,
+                                  dateTime: DateTime = DateTime.now(),
+                                  syncToETMPStatus: Option[SyncStatus] = None,
+                                  syncToGGStatus: Option[SyncStatus] = None)
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
   implicit val formats: Format[RelationshipCopyRecord] = format[RelationshipCopyRecord]
