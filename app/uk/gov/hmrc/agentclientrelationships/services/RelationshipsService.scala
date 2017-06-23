@@ -19,6 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
+import play.api.mvc.Request
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
@@ -34,12 +36,13 @@ import scala.concurrent.Future
 class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      des: DesConnector,
                                      mapping: MappingConnector,
-                                     repository: RelationshipCopyRecordRepository) {
+                                     repository: RelationshipCopyRecordRepository,
+                                     auditService: AuditService) {
 
   private val MtdItIdType = "MTDITID"
 
   def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode])
-                             (implicit hc: HeaderCarrier): Future[Boolean] = {
+                             (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] = {
     identifier match {
       case mtdItId@MtdItId(_) => checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
       case nino@Nino(_) => checkCesaForOldRelationship(arn, nino).map(_.nonEmpty)
@@ -47,7 +50,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
   def checkCesaForOldRelationshipAndCopy(arn: Arn, mtdItId: MtdItId, agentCode: Future[AgentCode])
-                                        (implicit hc: HeaderCarrier): Future[Boolean] = {
+                                        (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] = {
+
+    auditData.set("regime", "mtd-it")
+    auditData.set("regimeId", mtdItId)
+
     repository.findBy(arn, mtdItId).flatMap {
       case Some(_) =>
         Logger.warn(s"Relationship has been already copied from CESA to MTD")
@@ -56,29 +63,41 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         checkCesaForOldRelationship(arn, mtdItId).flatMap {
           case references if references.nonEmpty =>
             copyRelationship(arn, mtdItId, agentCode, references)
-              .map(_ => true)
-              .recover { case _ => true }
+              .map { _ =>
+                auditService.sendCopyRelationshipAuditEvent
+                true
+              }
+              .recover { case _ =>
+                auditService.sendCopyRelationshipAuditEvent
+                true
+              }
           case _ => Future.successful(false)
         }
     }
   }
 
   private def checkCesaForOldRelationship(arn: Arn,
-                                          identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[SaAgentReference]] = {
+                                          identifier: TaxIdentifier)(implicit hc: HeaderCarrier, auditData: AuditData): Future[Set[SaAgentReference]] = {
 
     for {
       nino <- getNinoFor(identifier)
+      _ = auditData.set("nino", nino)
       references <- des.getClientSaAgentSaReferences(nino)
       matching <- intersection(references) {
         mapping.getSaAgentReferencesFor(arn)
       }
+      _ = auditData.set("saAgentRef", matching.mkString(","))
+      _ = auditData.set("CESARelationship", matching.nonEmpty)
     } yield matching
   }
 
   private def copyRelationship(arn: Arn,
                                mtdItId: MtdItId,
                                agentCode: Future[AgentCode],
-                               references: Set[SaAgentReference])(implicit hc: HeaderCarrier): Future[Unit] = {
+                               references: Set[SaAgentReference])(implicit hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+
+    auditData.set("enrolmentDelegated", false)
+    auditData.set("etmpRelationshipCreated", false)
 
     def createRelationshipRecord: Future[Unit] = {
       val record = RelationshipCopyRecord(arn.value, mtdItId.value, MtdItIdType, Some(references))
@@ -95,6 +114,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     def createEtmpRecord(mtdItId: MtdItId): Future[Unit] = (for {
       _ <- updateEtmpSyncStatus(SyncStatus.InProgress)
       _ <- des.createAgentRelationship(mtdItId, arn)
+      _ = auditData.set("etmpRelationshipCreated", true)
       _ <- updateEtmpSyncStatus(SyncStatus.Success)
     } yield ())
       .recoverWith {
@@ -108,6 +128,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       _ <- updateGgSyncStatus(SyncStatus.InProgress)
       agentCode <- agentCode
       _ <- gg.allocateAgent(agentCode, mtdItId)
+      _ = auditData.set("enrolmentDelegated", true)
       _ <- updateGgSyncStatus(SyncStatus.Success)
     } yield ())
       .recoverWith {

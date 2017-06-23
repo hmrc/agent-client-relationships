@@ -16,20 +16,20 @@
 
 package uk.gov.hmrc.agentclientrelationships.audit
 
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 import com.google.inject.Singleton
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.connectors.AuthConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
+import scala.collection.JavaConversions
 import scala.concurrent.Future
 import scala.util.Try
 
@@ -38,48 +38,59 @@ object AgentClientRelationshipEvent extends Enumeration {
   type AgentClientRelationshipEvent = Value
 }
 
-@Singleton
-class AuditService @Inject()(val auditConnector: AuditConnector, val authConnector: AuthConnector) {
+class AuditData {
 
-  def sendCopyRelationshipAuditEvent(arn: Arn,
-                                     credentialIdentifier: String,
-                                     agentCode: AgentCode,
-                                     saAgentRef: Option[SaAgentReference],
-                                     regime: String,
-                                     regimeId: String,
-                                     nino: Nino,
-                                     CESARelationship: Boolean,
-                                     etmpRelationshipCreated: Boolean,
-                                     enrolmentDelegated: Boolean
-                                    )
-                                    (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
+  private val details = new ConcurrentHashMap[String,Any]
+
+  def set(key: String, value: Any): Unit = {
+    details.put(key,value)
+  }
+
+  def getDetails(): Map[String,Any] = {
+    JavaConversions.mapAsScalaMap(details).toMap
+  }
+
+}
+
+@Singleton
+class AuditService @Inject()(val auditConnector: AuditConnector) {
+
+  private def collectDetails(data:Map[String,Any], fields: Seq[String]): Seq[(String,Any)] = fields.map { f =>
+    (f, data.getOrElse(f, ""))
+  }
+
+  val copyRelationshipDetailsFields =  Seq(
+        "agentCode",
+        "credId",
+        "arn",
+        "saAgentRef",
+        "regime",
+        "regimeId",
+        "CESARelationship",
+        "etmpRelationshipCreated",
+        "enrolmentDelegated",
+        "nino"
+      )
+
+  def sendCopyRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CopyRelationship, "copy-relationship",
-      Seq(
-        "agentCode" -> agentCode.value,
-        "credId" -> credentialIdentifier,
-        "arn" -> arn.value,
-        "saAgentRef" -> saAgentRef.map(_.value).getOrElse(""),
-        "regime" -> regime,
-        "regimeId" -> regimeId,
-        "CESARelationship" -> CESARelationship,
-        "etmpRelationshipCreated" -> etmpRelationshipCreated,
-        "enrolmentDelegated" -> enrolmentDelegated,
-        "nino" -> nino.value
-      ))
+      collectDetails(auditData.getDetails(), copyRelationshipDetailsFields))
   }
 
   private[audit] def auditEvent(event: AgentClientRelationshipEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)
                                (implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {
-    authConnector.currentAuthDetails() flatMap {
-      case authDetailsOpt =>
-        send(createEvent(event, transactionName, authDetailsOpt.flatMap(_.ggCredentialId), details: _*))
-    }
+    send(createEvent(event, transactionName, details: _*))
   }
 
-  private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, authCredId: Option[String], details: (String, Any)*)
+  private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, details: (String, Any)*)
                          (implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
 
-    val detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2.toString): _*) ++ authCredId.map(id => Map("authProviderId" -> id)).getOrElse(Map.empty)
+    def toString(x: Any): String = x match {
+      case t: TaxIdentifier => t.value
+      case _ => x.toString
+    }
+
+    val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
     val tags = hc.toAuditTags(transactionName, request.path)
     DataEvent(auditSource = "agent-client-relationships",
       auditType = event.toString,

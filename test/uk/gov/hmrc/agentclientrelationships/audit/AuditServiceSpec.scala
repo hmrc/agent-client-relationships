@@ -23,7 +23,6 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Span}
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.connectors.{AuthConnector, AuthDetails}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -38,10 +37,8 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
   "auditEvent" should {
     "send an event with the correct fields" in {
       val mockConnector = mock[AuditConnector]
-      val mockAuthConnector = mock[AuthConnector]
-      val service = new AuditService(mockConnector, mockAuthConnector)
+      val service = new AuditService(mockConnector)
 
-      when(mockAuthConnector.currentAuthDetails()(any(), any())).thenReturn(Future.successful(Some(AuthDetails(Some("testCredId")))))
 
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
@@ -49,20 +46,22 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         requestId = Some(RequestId("dummy request id"))
       )
 
+      val auditData = new AuditData()
+      auditData.set("arn",Arn("1234").value)
+      auditData.set("credId", "0000001234567890")
+      auditData.set("agentCode",AgentCode("GG1234567890").value)
+      auditData.set("saAgentRef", "12313")
+      auditData.set("regime","mtd-it")
+      auditData.set("regimeId","XX1234")
+      auditData.set("nino",Nino("KS969148D").value)
+      auditData.set("CESARelationship", true)
+      auditData.set("etmpRelationshipCreated",true)
+      auditData.set("enrolmentDelegated",true)
+
       await(service.sendCopyRelationshipAuditEvent(
-        arn = Arn("1234"),
-        credentialIdentifier = "0000001234567890",
-        agentCode = AgentCode("GG1234567890"),
-        saAgentRef = Some(SaAgentReference("12313")),
-        regime = "mtd-it",
-        regimeId = "XX1234",
-        nino = Nino("KS969148D"),
-        CESARelationship = true,
-        etmpRelationshipCreated = true,
-        enrolmentDelegated = true
-      )(
         hc,
-        FakeRequest("GET", "/path"))
+        FakeRequest("GET", "/path"),
+        auditData)
       )
 
       eventually {
