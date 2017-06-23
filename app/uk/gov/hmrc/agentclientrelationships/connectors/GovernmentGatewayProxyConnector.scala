@@ -83,7 +83,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
 
   def allocateAgent(agentCode: AgentCode, mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Boolean] = {
     monitor("ConsumedAPI-GGW-GsoAdminAllocateAgent-POST") {
-      httpPost.POSTString(path("GsoAdminAllocateAgent"), GsoAdminAllocateAgentXmlInput(mtdItId.value, "MTDITID", agentCode.value), Seq(CONTENT_TYPE -> XML))
+      httpPost.POSTString(path("GsoAdminAllocateAgent"), GsoAdminAllocateAgentXmlInput(mtdItId.value,"MTDITID",agentCode.value), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml: Elem = toXmlElement(response.body)
       (xml \ "PrincipalEnrolmentAlreadyExisted").text.toBoolean
@@ -96,7 +96,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     factory.setFeature(SAX_FEATURE_PREFIX + EXTERNAL_PARAMETER_ENTITIES_FEATURE, false)
     factory.setFeature(XERCES_FEATURE_PREFIX + DISALLOW_DOCTYPE_DECL_FEATURE, true)
     factory.setFeature(FEATURE_SECURE_PROCESSING, true)
-    withSAXParser(factory.newSAXParser()) loadString xmlString
+    withSAXParser(factory.newSAXParser())loadString xmlString
   }
 
   private def GsoAdminGetCredentialsForDirectEnrolmentsXmlInput(arn: Arn): String =
@@ -105,9 +105,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       <IdentifierSets>
         <IdentifierSet>
           <Identifiers>
-            <Identifier IdentifierType="AgentReferenceNumber">
-              {arn.value}
-            </Identifier>
+            <Identifier IdentifierType="AgentReferenceNumber">{arn.value}</Identifier>
           </Identifiers>
         </IdentifierSet>
       </IdentifierSets>
@@ -116,30 +114,25 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
   private def GsoAdminGetUserDetailsXmlInput(credentialIdentifier: String): String =
     <GsoAdminGetUserDetailsXmlInput xmlns="urn:GSO-System-Services:external:2.14.4:GsoAdminGetUserDetailsXmlInput">
       <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
-      <CredentialIdentifier>
-        {credentialIdentifier}
-      </CredentialIdentifier>
+      <CredentialIdentifier>{credentialIdentifier}</CredentialIdentifier>
     </GsoAdminGetUserDetailsXmlInput>.toString()
 
-  private def GsoAdminGetAssignedAgentsXmlInput(identifier: TaxIdentifier): String =
+  private def GsoAdminGetAssignedAgentsXmlInput(identifier: TaxIdentifier):String =
     <GsoAdminGetAssignedAgentsXmlInput xmlns="urn:GSO-System-Services:external:2.13.3:GsoAdminGetAssignedAgentsXmlInput">
       <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
-      <ServiceName>HMRC-MTD-IT</ServiceName>{xmlClientIdentifiers(identifier)}
+      <ServiceName>HMRC-MTD-IT</ServiceName>
+      {xmlClientIdentifiers(identifier)}
     </GsoAdminGetAssignedAgentsXmlInput>.toString()
 
   private def xmlClientIdentifiers(identifier: TaxIdentifier) = identifier match {
     case MtdItId(value) =>
       <Identifiers>
-        <Identifier IdentifierType="MTDITID">
-          {value}
-        </Identifier>
+        <Identifier IdentifierType="MTDITID">{value}</Identifier>
       </Identifiers>
 
     case Nino(value) =>
       <Identifiers>
-        <Identifier IdentifierType="NINO">
-          {value}
-        </Identifier>
+        <Identifier IdentifierType="NINO">{value}</Identifier>
       </Identifiers>
   }
 
@@ -147,13 +140,9 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     <GsoAdminAllocateAgentXmlInput xmlns="urn:GSO-System-Services:external:1.65:GsoAdminAllocateAgentXmlInput">
       <ServiceName>HMRC-MTD-IT</ServiceName>
       <Identifiers>
-        <Identifier IdentifierType={identifierType}>
-          {identifier}
-        </Identifier>
+        <Identifier IdentifierType={identifierType}>{identifier}</Identifier>
       </Identifiers>
-      <AgentCode>
-        {agentCode}
-      </AgentCode>
+      <AgentCode>{agentCode}</AgentCode>
     </GsoAdminAllocateAgentXmlInput>.toString()
 }
 
