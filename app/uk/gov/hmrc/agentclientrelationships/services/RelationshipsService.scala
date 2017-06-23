@@ -36,7 +36,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      mapping: MappingConnector,
                                      repository: RelationshipCopyRecordRepository) {
 
-  def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode])
+  def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode], copy: Boolean)
                              (implicit hc: HeaderCarrier): Future[Boolean] = {
 
     repository.findBy(arn, identifier).flatMap {
@@ -44,12 +44,12 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         Logger.warn(s"Relationship has been already copied from CESA to MTD")
         Future.failed(new Exception())
       case None =>
-        checkCesaForOldRelationship(arn, identifier).flatMap { matchingReferences =>
-          if (matchingReferences.nonEmpty) {
-            copyRelationship(arn, identifier, agentCode, matchingReferences)
+        checkCesaForOldRelationship(arn, identifier).flatMap {
+          case references if references.nonEmpty && copy =>
+            copyRelationship(arn, identifier, agentCode, references)
               .map(_ => true)
               .recover { case _ => true }
-          } else Future.successful(false)
+          case references => Future.successful(references.nonEmpty)
         }
     }
   }
