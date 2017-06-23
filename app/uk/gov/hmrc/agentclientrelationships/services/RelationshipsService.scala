@@ -36,20 +36,29 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      mapping: MappingConnector,
                                      repository: RelationshipCopyRecordRepository) {
 
-  def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode], copy: Boolean)
-                             (implicit hc: HeaderCarrier): Future[Boolean] = {
+  private val MtdItIdType = "MTDITID"
 
-    repository.findBy(arn, identifier).flatMap {
+  def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode])
+                             (implicit hc: HeaderCarrier): Future[Boolean] = {
+    identifier match {
+      case mtdItId@MtdItId(_) => checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
+      case nino@Nino(_) => checkCesaForOldRelationship(arn, nino).map(_.nonEmpty)
+    }
+  }
+
+  def checkCesaForOldRelationshipAndCopy(arn: Arn, mtdItId: MtdItId, agentCode: Future[AgentCode])
+                                        (implicit hc: HeaderCarrier): Future[Boolean] = {
+    repository.findBy(arn, mtdItId).flatMap {
       case Some(_) =>
         Logger.warn(s"Relationship has been already copied from CESA to MTD")
         Future.failed(new Exception())
       case None =>
-        checkCesaForOldRelationship(arn, identifier).flatMap {
-          case references if references.nonEmpty && copy =>
-            copyRelationship(arn, identifier, agentCode, references)
+        checkCesaForOldRelationship(arn, mtdItId).flatMap {
+          case references if references.nonEmpty =>
+            copyRelationship(arn, mtdItId, agentCode, references)
               .map(_ => true)
               .recover { case _ => true }
-          case references => Future.successful(references.nonEmpty)
+          case _ => Future.successful(false)
         }
     }
   }
@@ -67,35 +76,21 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
   private def copyRelationship(arn: Arn,
-                       taxIdentifier: TaxIdentifier,
-                       agentCode: Future[AgentCode],
-                       references: Set[SaAgentReference])(implicit hc: HeaderCarrier): Future[Unit] = {
+                               mtdItId: MtdItId,
+                               agentCode: Future[AgentCode],
+                               references: Set[SaAgentReference])(implicit hc: HeaderCarrier): Future[Unit] = {
 
-    val identifierData: Future[(String, String)] = taxIdentifier match {
-      case MtdItId(m) => Future.successful(m -> "MTDITID")
-      case Nino(n) => Future.successful(n -> "NINO")
-      case _ => Future.failed(new Exception("Invalid tax identifier found."))
+    def createRelationshipRecord: Future[Unit] = {
+      val record = RelationshipCopyRecord(arn.value, mtdItId.value, MtdItIdType, Some(references))
+      repository.create(record).recoverWith {
+        case ex =>
+          Logger.warn(s"Inserting relationship record into mongo failed", ex)
+          Future.failed(ex)
+      }
     }
 
-    val mtdItId: Future[MtdItId] = identifierData.flatMap { case (identifier, identifierType) =>
-      if (identifierType == "MTDITID")
-        Future.successful(MtdItId(identifier))
-      else
-        des.getMtdIdFor(Nino(identifier))
-    }
-
-    def createRelationshipRecord: Future[Unit] = (for {
-      (identifier, identifierType) <- identifierData
-      record = RelationshipCopyRecord(arn.value, identifier, identifierType, Some(references))
-      _ <- repository.create(record)
-    } yield ()).recoverWith {
-      case ex =>
-        Logger.warn(s"Inserting relationship record into mongo failed", ex)
-        Future.failed(ex)
-    }
-
-    val updateEtmpSyncStatus = repository.updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
-    val updateGgSyncStatus = repository.updateGgSyncStatus(arn, taxIdentifier, _: SyncStatus)
+    val updateEtmpSyncStatus = repository.updateEtmpSyncStatus(arn, mtdItId, _: SyncStatus)
+    val updateGgSyncStatus = repository.updateGgSyncStatus(arn, mtdItId, _: SyncStatus)
 
     def createEtmpRecord(mtdItId: MtdItId): Future[Unit] = (for {
       _ <- updateEtmpSyncStatus(SyncStatus.InProgress)
@@ -125,7 +120,6 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       }
 
     for {
-      mtdItId <- mtdItId
       _ <- createRelationshipRecord
       _ <- createEtmpRecord(mtdItId)
       _ <- createGgRecord(mtdItId)

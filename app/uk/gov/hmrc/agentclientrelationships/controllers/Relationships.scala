@@ -31,11 +31,11 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
                               service: RelationshipsService) extends BaseController {
 
-  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId, true)
+  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId)
 
-  def checkWithNino(arn: Arn, nino: Nino) = check(arn, nino, false)
+  def checkWithNino(arn: Arn, nino: Nino) = check(arn, nino)
 
-  private def check(arn: Arn, identifier: TaxIdentifier, copy: Boolean): Action[AnyContent] = Action.async { implicit request =>
+  private def check(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async { implicit request =>
 
     val agentCode = for {
       credentialIdentifier <- gg.getCredIdFor(arn)
@@ -51,7 +51,7 @@ class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        service.checkForOldRelationship(arn, identifier, agentCode, copy)
+        service.checkForOldRelationship(arn, identifier, agentCode)
           .map(Right.apply)
           .recover {
             case _ => Left(errorCode)

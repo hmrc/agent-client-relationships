@@ -28,7 +28,7 @@ import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
@@ -60,6 +60,8 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
   ReactiveRepository[RelationshipCopyRecord, BSONObjectID]("relationship-copy-record",
     mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats) with AtomicUpdate[RelationshipCopyRecord] {
 
+  private val MtdItIdType = "MTDITID"
+
   override def indexes = Seq(
     Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true)
   )
@@ -70,37 +72,28 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
     }
   }
 
-  def findBy(arn: Arn, taxIdentifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
-    val (identifier, identifierType) = identifierData(taxIdentifier)
+  def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
 
-    find("arn" -> arn.value, "clientIdentifierType" -> identifierType, "clientIdentifier" -> identifier)
+    find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType)
       .map(_.headOption)
   }
 
-  def updateEtmpSyncStatus(arn: Arn, taxIdentifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
-    val (identifier, identifierType) = identifierData(taxIdentifier)
+  def updateEtmpSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
-      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType),
+      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
     })
   }
 
-  def updateGgSyncStatus(arn: Arn, taxIdentifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
-    val (identifier, identifierType) = identifierData(taxIdentifier)
+  def updateGgSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
-      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType),
+      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToGGStatus" -> status.toString))
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating GG sync status ($status) failed: $error"))
     })
-  }
-
-  private def identifierData(identifier: TaxIdentifier): (String, String) = identifier match {
-    case MtdItId(mtdItId) => (mtdItId, "MTDITID")
-    case Nino(nino) => (nino, "NINO")
-    case _ => ("-", "UNKNOWN")
   }
 
   override def isInsertion(newRecordId: BSONObjectID, oldRecord: RelationshipCopyRecord): Boolean = false
