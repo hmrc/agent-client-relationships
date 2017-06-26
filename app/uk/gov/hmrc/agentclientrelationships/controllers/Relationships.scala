@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Singleton}
 
 import play.api.mvc.{Action, AnyContent}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
@@ -37,9 +38,14 @@ class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
 
   private def check(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async { implicit request =>
 
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
+
     val agentCode = for {
       credentialIdentifier <- gg.getCredIdFor(arn)
+      _ = auditData.set("credId", credentialIdentifier)
       agentCode <- gg.getAgentCodeFor(credentialIdentifier)
+      _ = auditData.set("agentCode", agentCode)
     } yield agentCode
 
     val result = for {

@@ -18,9 +18,10 @@ package uk.gov.hmrc.agentrelationships.controllers
 
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
+import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HttpResponse
@@ -33,7 +34,8 @@ class RelationshipISpec extends UnitSpec
   with WireMockSupport
   with GovernmentGatewayProxyStubs
   with DesStubs
-  with MappingStubs {
+  with MappingStubs
+  with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -43,8 +45,10 @@ class RelationshipISpec extends UnitSpec
       .configure(
         "microservice.services.government-gateway-proxy.port" -> wireMockPort,
         "microservice.services.des.port" -> wireMockPort,
+        "microservice.services.auth.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.enabled" -> false)
+        "auditing.consumer.baseUri.host" -> wireMockHost,
+        "auditing.consumer.baseUri.port" -> wireMockPort)
       .configure(mongoConfiguration)
 
   def repo = app.injector.instanceOf[RelationshipCopyRecordRepository]
@@ -60,7 +64,9 @@ class RelationshipISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    def doRequest = doAgentRequest(s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid")
+    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+
+    def doRequest = doAgentRequest(requestPath)
 
     behave like aCheckEndpoint(true, doRequest)
 
@@ -78,6 +84,7 @@ class RelationshipISpec extends UnitSpec
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
@@ -94,6 +101,26 @@ class RelationshipISpec extends UnitSpec
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Success))
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CopyRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "regime" -> "mtd-it",
+          "regimeId" -> mtditid,
+          "CESARelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"copy-relationship",
+          "path" -> requestPath
+        )
+      )
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
@@ -103,6 +130,7 @@ class RelationshipISpec extends UnitSpec
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
@@ -118,6 +146,26 @@ class RelationshipISpec extends UnitSpec
         'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CopyRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "regime" -> "mtd-it",
+          "regimeId" -> mtditid,
+          "CESARelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "false"
+        ),
+        tags = Map(
+          "transactionName"->"copy-relationship",
+          "path" -> requestPath
+        )
       )
     }
 
@@ -130,6 +178,7 @@ class RelationshipISpec extends UnitSpec
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
@@ -146,6 +195,27 @@ class RelationshipISpec extends UnitSpec
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CopyRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "regime" -> "mtd-it",
+          "regimeId" -> mtditid,
+          "CESARelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "false"
+        ),
+        tags = Map(
+          "transactionName"->"copy-relationship",
+          "path" -> requestPath
+        )
+      )
+
     }
 
     //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
@@ -160,6 +230,7 @@ class RelationshipISpec extends UnitSpec
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanNotBeAllocatedInDes
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
@@ -176,6 +247,26 @@ class RelationshipISpec extends UnitSpec
         'syncToETMPStatus (Some(SyncStatus.Failed)),
         'syncToGGStatus (None)
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CopyRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "regime" -> "mtd-it",
+          "regimeId" -> mtditid,
+          "CESARelationship" -> "true",
+          "etmpRelationshipCreated" -> "false",
+          "enrolmentDelegated" -> "false"
+        ),
+        tags = Map(
+          "transactionName"->"copy-relationship",
+          "path" -> requestPath
+        )
+      )
     }
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
@@ -188,6 +279,7 @@ class RelationshipISpec extends UnitSpec
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
@@ -203,6 +295,26 @@ class RelationshipISpec extends UnitSpec
         'references (Some(Set(SaAgentReference("foo")))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Failed))
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CopyRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "regime" -> "mtd-it",
+          "regimeId" -> mtditid,
+          "CESARelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "false"
+        ),
+        tags = Map(
+          "transactionName"->"copy-relationship",
+          "path" -> requestPath
+        )
       )
     }
   }
