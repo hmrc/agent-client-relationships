@@ -34,7 +34,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
-  val CopyRelationship = Value
+  val CopyRelationship, CheckCESA = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -60,21 +60,35 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   }
 
   val copyRelationshipDetailsFields =  Seq(
-        "agentCode",
-        "credId",
-        "arn",
-        "saAgentRef",
-        "regime",
-        "regimeId",
-        "CESARelationship",
-        "etmpRelationshipCreated",
-        "enrolmentDelegated",
-        "nino"
-      )
+    "agentCode",
+    "credId",
+    "arn",
+    "saAgentRef",
+    "regime",
+    "regimeId",
+    "CESARelationship",
+    "etmpRelationshipCreated",
+    "enrolmentDelegated",
+    "nino"
+  )
+
+  val CheckCESADetailsFields =  Seq(
+    "agentCode",
+    "credId",
+    "arn",
+    "saAgentRef",
+    "CESARelationship",
+    "nino"
+  )
 
   def sendCopyRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CopyRelationship, "copy-relationship",
       collectDetails(auditData.getDetails(), copyRelationshipDetailsFields))
+  }
+
+  def sendCheckCESAAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
+    auditEvent(AgentClientRelationshipEvent.CheckCESA, "check-cesa",
+      collectDetails(auditData.getDetails(), CheckCESADetailsFields))
   }
 
   private[audit] def auditEvent(event: AgentClientRelationshipEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)
