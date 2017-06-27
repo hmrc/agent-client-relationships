@@ -60,28 +60,28 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         Logger.warn(s"Relationship has been already copied from CESA to MTD")
         Future.failed(new Exception())
       case None =>
-        checkCesaForOldRelationship(arn, mtdItId).flatMap {
-          case references if references.nonEmpty =>
-            copyRelationship(arn, mtdItId, agentCode, references)
-              .map { _ =>
-                auditService.sendCopyRelationshipAuditEvent
-                true
-              }
-              .recover { case _ =>
-                auditService.sendCopyRelationshipAuditEvent
-                true
-              }
-          case _ => Future.successful(false)
-        }
+        for {
+          nino <- des.getNinoFor(mtdItId)
+          references <- checkCesaForOldRelationship(arn, nino)
+          result <- if(references.nonEmpty) {
+                      copyRelationship(arn, mtdItId, agentCode, references)
+                        .map { _ =>
+                          auditService.sendCopyRelationshipAuditEvent
+                          true
+                        }
+                        .recover { case _ =>
+                          auditService.sendCopyRelationshipAuditEvent
+                          true
+                        }
+                    } else Future.successful(false)
+        } yield result
     }
   }
 
-  private def checkCesaForOldRelationship(arn: Arn,
-                                          identifier: TaxIdentifier)(implicit hc: HeaderCarrier, auditData: AuditData): Future[Set[SaAgentReference]] = {
-
+  private def checkCesaForOldRelationship(arn: Arn, nino: Nino)
+                                         (implicit hc: HeaderCarrier, auditData: AuditData): Future[Set[SaAgentReference]] = {
+    auditData.set("nino", nino)
     for {
-      nino <- getNinoFor(identifier)
-      _ = auditData.set("nino", nino)
       references <- des.getClientSaAgentSaReferences(nino)
       matching <- intersection(references) {
         mapping.getSaAgentReferencesFor(arn)
@@ -145,14 +145,6 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       _ <- createEtmpRecord(mtdItId)
       _ <- createGgRecord(mtdItId)
     } yield ()
-  }
-
-  private def getNinoFor(identifier: TaxIdentifier)
-                        (implicit hc: HeaderCarrier): Future[Nino] = identifier match {
-    case mtdItId@MtdItId(_) =>
-      des.getNinoFor(mtdItId)
-    case nino@Nino(_) =>
-      returnValue(nino)
   }
 
   private def intersection[A](cesaIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit hc: HeaderCarrier): Future[Set[A]] = {
