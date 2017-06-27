@@ -79,7 +79,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
   private def checkCesaForOldRelationship(arn: Arn, nino: Nino)
-                                         (implicit hc: HeaderCarrier, auditData: AuditData): Future[Set[SaAgentReference]] = {
+                                         (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
     auditData.set("nino", nino)
     for {
       references <- des.getClientSaAgentSaReferences(nino)
@@ -88,7 +88,10 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       }
       _ = auditData.set("saAgentRef", matching.mkString(","))
       _ = auditData.set("CESARelationship", matching.nonEmpty)
-    } yield matching
+    } yield {
+      auditService.sendCheckCESAAuditEvent
+      matching
+    }
   }
 
   private def copyRelationship(arn: Arn,

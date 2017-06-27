@@ -121,6 +121,22 @@ class RelationshipISpec extends UnitSpec
           "path" -> requestPath
         )
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
@@ -164,6 +180,22 @@ class RelationshipISpec extends UnitSpec
         ),
         tags = Map(
           "transactionName"->"copy-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
           "path" -> requestPath
         )
       )
@@ -212,6 +244,22 @@ class RelationshipISpec extends UnitSpec
         ),
         tags = Map(
           "transactionName"->"copy-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
           "path" -> requestPath
         )
       )
@@ -267,6 +315,22 @@ class RelationshipISpec extends UnitSpec
           "path" -> requestPath
         )
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
@@ -316,13 +380,29 @@ class RelationshipISpec extends UnitSpec
           "path" -> requestPath
         )
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
   }
 
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
 
-
-    def doRequest = doAgentRequest(s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino")
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"
+    def doRequest = doAgentRequest(requestPath)
 
     behave like aCheckEndpoint(false, doRequest)
 
@@ -335,6 +415,22 @@ class RelationshipISpec extends UnitSpec
 
       val result = await(doRequest)
       result.status shouldBe 200
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
@@ -344,6 +440,22 @@ class RelationshipISpec extends UnitSpec
 
       val result = await(doRequest)
       result.status shouldBe 200
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
 
     "return 200 when agent code unknown but relationship exists in cesa" in {
@@ -354,6 +466,22 @@ class RelationshipISpec extends UnitSpec
 
       val result = await(doRequest)
       result.status shouldBe 200
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
 
     "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
@@ -366,6 +494,22 @@ class RelationshipISpec extends UnitSpec
       val result = await(doRequest)
       result.status shouldBe 200
       await(query) shouldBe empty
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName"->"check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
   }
 
