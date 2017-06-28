@@ -59,7 +59,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     (f, data.getOrElse(f, ""))
   }
 
-  val copyRelationshipDetailsFields = Seq(
+  val createRelationshipDetailsFields = Seq(
     "agentCode",
     "credId",
     "arn",
@@ -83,9 +83,9 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "nino"
   )
 
-  def sendCopyRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
+  def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
-      collectDetails(auditData.getDetails(), copyRelationshipDetailsFields))
+      collectDetails(auditData.getDetails(), createRelationshipDetailsFields))
   }
 
   def sendCheckCESAAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {

@@ -60,7 +60,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("Journey", "CopyExistingCESARelationship")
       auditData.set("AgentDBRecord",true)
 
-      await(service.sendCopyRelationshipAuditEvent(
+      await(service.sendCreateRelationshipAuditEvent(
         hc,
         FakeRequest("GET", "/path"),
         auditData)

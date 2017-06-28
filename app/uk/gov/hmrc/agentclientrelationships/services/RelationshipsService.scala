@@ -67,11 +67,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           result <- if (references.nonEmpty) {
             copyRelationship(arn, mtdItId, agentCode, references)
               .map { _ =>
-                auditService.sendCopyRelationshipAuditEvent
+                auditService.sendCreateRelationshipAuditEvent
                 true
               }
               .recover { case _ =>
-                auditService.sendCopyRelationshipAuditEvent
+                auditService.sendCreateRelationshipAuditEvent
                 true
               }
           } else Future.successful(false)
