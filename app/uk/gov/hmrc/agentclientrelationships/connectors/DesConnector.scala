@@ -117,7 +117,7 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
 
   private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String) = Json.parse(
     s"""{
-         "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.substring(0,32)}",
+         "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
           "regime": "ITSA",
