@@ -18,24 +18,24 @@ package uk.gov.hmrc.agentclientrelationships.audit
 
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers._
-import org.mockito.Mockito.{verify, _}
+import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Span}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{AuditEvent, DataEvent}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.{Authorization, RequestId, SessionId}
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
   "auditEvent" should {
-    "send an CopyRelationship event with the correct fields" in {
+    "send an CreateRelationship event with the correct fields" in {
       val mockConnector = mock[AuditConnector]
       val service = new AuditService(mockConnector)
 
@@ -57,8 +57,10 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("CESARelationship", true)
       auditData.set("etmpRelationshipCreated",true)
       auditData.set("enrolmentDelegated",true)
+      auditData.set("Journey", "CopyExistingCESARelationship")
+      auditData.set("AgentDBRecord",true)
 
-      await(service.sendCopyRelationshipAuditEvent(
+      await(service.sendCreateRelationshipAuditEvent(
         hc,
         FakeRequest("GET", "/path"),
         auditData)
@@ -70,7 +72,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         captor.getValue shouldBe an[DataEvent]
         val sentEvent = captor.getValue.asInstanceOf[DataEvent]
 
-        sentEvent.auditType shouldBe "CopyRelationship"
+        sentEvent.auditType shouldBe "CreateRelationship"
         sentEvent.auditSource shouldBe "agent-client-relationships"
         sentEvent.detail("arn") shouldBe "1234"
         sentEvent.detail("agentCode") shouldBe "GG1234567890"
@@ -80,11 +82,13 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sentEvent.detail("CESARelationship") shouldBe "true"
         sentEvent.detail("etmpRelationshipCreated") shouldBe "true"
         sentEvent.detail("enrolmentDelegated") shouldBe "true"
+        sentEvent.detail("Journey") shouldBe "CopyExistingCESARelationship"
+        sentEvent.detail("AgentDBRecord") shouldBe "true"
 
         sentEvent.tags.contains("Authorization") shouldBe false
         sentEvent.detail("Authorization") shouldBe "dummy bearer token"
 
-        sentEvent.tags("transactionName") shouldBe "copy-relationship"
+        sentEvent.tags("transactionName") shouldBe "create-relationship"
         sentEvent.tags("path") shouldBe "/path"
         sentEvent.tags("X-Session-ID") shouldBe "dummy session id"
         sentEvent.tags("X-Request-ID") shouldBe "dummy request id"

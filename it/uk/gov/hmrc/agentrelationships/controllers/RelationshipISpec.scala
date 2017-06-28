@@ -103,7 +103,7 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CopyRelationship,
+        event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn,
           "credId" -> "foo",
@@ -114,10 +114,12 @@ class RelationshipISpec extends UnitSpec
           "regimeId" -> mtditid,
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "true"
+          "enrolmentDelegated" -> "true",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingCESARelationship"
         ),
         tags = Map(
-          "transactionName"->"copy-relationship",
+          "transactionName" -> "create-relationship",
           "path" -> requestPath
         )
       )
@@ -133,7 +135,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -165,7 +167,7 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CopyRelationship,
+        event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn,
           "credId" -> "",
@@ -176,10 +178,12 @@ class RelationshipISpec extends UnitSpec
           "regimeId" -> mtditid,
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false"
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingCESARelationship"
         ),
         tags = Map(
-          "transactionName"->"copy-relationship",
+          "transactionName" -> "create-relationship",
           "path" -> requestPath
         )
       )
@@ -195,7 +199,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -229,7 +233,7 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CopyRelationship,
+        event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn,
           "credId" -> "foo",
@@ -240,10 +244,12 @@ class RelationshipISpec extends UnitSpec
           "regimeId" -> mtditid,
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false"
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingCESARelationship"
         ),
         tags = Map(
-          "transactionName"->"copy-relationship",
+          "transactionName" -> "create-relationship",
           "path" -> requestPath
         )
       )
@@ -259,7 +265,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -296,41 +302,7 @@ class RelationshipISpec extends UnitSpec
         'syncToGGStatus (None)
       )
 
-      verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CopyRelationship,
-        detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
-          "agentCode" -> "bar",
-          "nino" -> nino,
-          "saAgentRef" -> "foo",
-          "regime" -> "mtd-it",
-          "regimeId" -> mtditid,
-          "CESARelationship" -> "true",
-          "etmpRelationshipCreated" -> "false",
-          "enrolmentDelegated" -> "false"
-        ),
-        tags = Map(
-          "transactionName"->"copy-relationship",
-          "path" -> requestPath
-        )
-      )
 
-      verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
-          "agentCode" -> "bar",
-          "nino" -> nino,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
-        tags = Map(
-          "transactionName"->"check-cesa",
-          "path" -> requestPath
-        )
-      )
     }
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
@@ -362,7 +334,7 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CopyRelationship,
+        event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn,
           "credId" -> "foo",
@@ -373,10 +345,12 @@ class RelationshipISpec extends UnitSpec
           "regimeId" -> mtditid,
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false"
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingCESARelationship"
         ),
         tags = Map(
-          "transactionName"->"copy-relationship",
+          "transactionName" -> "create-relationship",
           "path" -> requestPath
         )
       )
@@ -392,7 +366,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -402,6 +376,7 @@ class RelationshipISpec extends UnitSpec
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
 
     val requestPath = s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"
+
     def doRequest = doAgentRequest(requestPath)
 
     behave like aCheckEndpoint(false, doRequest)
@@ -427,7 +402,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -452,7 +427,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -478,7 +453,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -489,7 +464,9 @@ class RelationshipISpec extends UnitSpec
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenMtdItIdIsUnKnownFor(Nino(nino))
+
       def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+
       await(query) shouldBe empty
       val result = await(doRequest)
       result.status shouldBe 200
@@ -506,7 +483,7 @@ class RelationshipISpec extends UnitSpec
           "CESARelationship" -> "true"
         ),
         tags = Map(
-          "transactionName"->"check-cesa",
+          "transactionName" -> "check-cesa",
           "path" -> requestPath
         )
       )
@@ -526,7 +503,9 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+
       def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+
       await(query) shouldBe empty
       val result = await(doRequest)
       result.status shouldBe 200
@@ -559,7 +538,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
-      await(repo.insert(RelationshipCopyRecord(arn,identifier,identifierType)))
+      await(repo.insert(RelationshipCopyRecord(arn, identifier, identifierType)))
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -567,7 +546,7 @@ class RelationshipISpec extends UnitSpec
 
     "return 404 when credentials are not found but relationship copy was made before" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      await(repo.insert(RelationshipCopyRecord(arn,identifier,identifierType)))
+      await(repo.insert(RelationshipCopyRecord(arn, identifier, identifierType)))
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"

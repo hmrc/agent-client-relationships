@@ -52,6 +52,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   def checkCesaForOldRelationshipAndCopy(arn: Arn, mtdItId: MtdItId, agentCode: Future[AgentCode])
                                         (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] = {
 
+    auditData.set("Journey", "CopyExistingCESARelationship")
     auditData.set("regime", "mtd-it")
     auditData.set("regimeId", mtdItId)
 
@@ -63,17 +64,17 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         for {
           nino <- des.getNinoFor(mtdItId)
           references <- checkCesaForOldRelationship(arn, nino)
-          result <- if(references.nonEmpty) {
-                      copyRelationship(arn, mtdItId, agentCode, references)
-                        .map { _ =>
-                          auditService.sendCopyRelationshipAuditEvent
-                          true
-                        }
-                        .recover { case _ =>
-                          auditService.sendCopyRelationshipAuditEvent
-                          true
-                        }
-                    } else Future.successful(false)
+          result <- if (references.nonEmpty) {
+            copyRelationship(arn, mtdItId, agentCode, references)
+              .map { _ =>
+                auditService.sendCreateRelationshipAuditEvent
+                true
+              }
+              .recover { case _ =>
+                auditService.sendCreateRelationshipAuditEvent
+                true
+              }
+          } else Future.successful(false)
         } yield result
     }
   }
@@ -99,16 +100,19 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                agentCode: Future[AgentCode],
                                references: Set[SaAgentReference])(implicit hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
+    auditData.set("AgentDBRecord", false)
     auditData.set("enrolmentDelegated", false)
     auditData.set("etmpRelationshipCreated", false)
 
     def createRelationshipRecord: Future[Unit] = {
       val record = RelationshipCopyRecord(arn.value, mtdItId.value, MtdItIdType, Some(references))
-      repository.create(record).recoverWith {
-        case ex =>
-          Logger.warn(s"Inserting relationship record into mongo failed", ex)
-          Future.failed(ex)
-      }
+      repository.create(record)
+        .map(_ => auditData.set("AgentDBRecord", true))
+        .recoverWith {
+          case ex =>
+            Logger.warn(s"Inserting relationship record into mongo failed", ex)
+            Future.failed(ex)
+        }
     }
 
     val updateEtmpSyncStatus = repository.updateEtmpSyncStatus(arn, mtdItId, _: SyncStatus)

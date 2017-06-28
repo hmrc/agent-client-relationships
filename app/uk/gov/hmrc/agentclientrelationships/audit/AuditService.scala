@@ -34,19 +34,19 @@ import scala.concurrent.Future
 import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
-  val CopyRelationship, CheckCESA = Value
+  val CreateRelationship, CheckCESA = Value
   type AgentClientRelationshipEvent = Value
 }
 
 class AuditData {
 
-  private val details = new ConcurrentHashMap[String,Any]
+  private val details = new ConcurrentHashMap[String, Any]
 
   def set(key: String, value: Any): Unit = {
-    details.put(key,value)
+    details.put(key, value)
   }
 
-  def getDetails(): Map[String,Any] = {
+  def getDetails(): Map[String, Any] = {
     JavaConversions.mapAsScalaMap(details).toMap
   }
 
@@ -55,11 +55,11 @@ class AuditData {
 @Singleton
 class AuditService @Inject()(val auditConnector: AuditConnector) {
 
-  private def collectDetails(data:Map[String,Any], fields: Seq[String]): Seq[(String,Any)] = fields.map { f =>
+  private def collectDetails(data: Map[String, Any], fields: Seq[String]): Seq[(String, Any)] = fields.map { f =>
     (f, data.getOrElse(f, ""))
   }
 
-  val copyRelationshipDetailsFields =  Seq(
+  val createRelationshipDetailsFields = Seq(
     "agentCode",
     "credId",
     "arn",
@@ -69,10 +69,12 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "CESARelationship",
     "etmpRelationshipCreated",
     "enrolmentDelegated",
-    "nino"
+    "nino",
+    "AgentDBRecord",
+    "Journey"
   )
 
-  val CheckCESADetailsFields =  Seq(
+  val CheckCESADetailsFields = Seq(
     "agentCode",
     "credId",
     "arn",
@@ -81,9 +83,9 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "nino"
   )
 
-  def sendCopyRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.CopyRelationship, "copy-relationship",
-      collectDetails(auditData.getDetails(), copyRelationshipDetailsFields))
+  def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
+    auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
+      collectDetails(auditData.getDetails(), createRelationshipDetailsFields))
   }
 
   def sendCheckCESAAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {

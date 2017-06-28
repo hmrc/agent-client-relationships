@@ -23,6 +23,19 @@ trait DataStreamStub extends Eventually {
     } (PatienceConfig(scaled(Span(2,Seconds)), scaled(Span(500,Millis))))
   }
 
+  def verifyAuditRequestNotSent(event: AgentClientRelationshipEvent) = {
+    eventually {
+      verify(0, postRequestedFor(urlPathEqualTo(auditUrl))
+        .withRequestBody(similarToJson(
+          s"""{
+             |  "auditSource": "agent-client-relationships",
+             |  "auditType": "$event"
+             |}"""
+        ))
+      )
+    } (PatienceConfig(scaled(Span(2,Seconds)), scaled(Span(500,Millis))))
+  }
+
   def givenAuditConnector() = {
     stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(200)))
   }
