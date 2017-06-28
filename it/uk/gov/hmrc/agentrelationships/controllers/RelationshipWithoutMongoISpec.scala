@@ -22,12 +22,12 @@ import com.google.inject.AbstractModule
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
+import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.agentrelationships.stubs.{DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.play.http.HttpResponse
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -45,7 +45,8 @@ class RelationshipWithoutMongoISpec extends UnitSpec
   with WireMockSupport
   with GovernmentGatewayProxyStubs
   with DesStubs
-  with MappingStubs {
+  with MappingStubs
+  with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -55,8 +56,10 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       .configure(
         "microservice.services.government-gateway-proxy.port" -> wireMockPort,
         "microservice.services.des.port" -> wireMockPort,
+        "microservice.services.auth.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.enabled" -> false)
+        "auditing.consumer.baseUri.host" -> wireMockHost,
+        "auditing.consumer.baseUri.port" -> wireMockPort)
       .configure(mongoConfiguration)
       .overrides(new AbstractModule {
         override def configure(): Unit = {
@@ -78,20 +81,10 @@ class RelationshipWithoutMongoISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    behave like aCheckEndpoint(true, doAgentRequest(s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"))
-  }
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
-  "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
-
-    behave like aCheckEndpoint(false, doAgentRequest(s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"))
-  }
-
-  private def doAgentRequest(route: String) = new Resource(route, port).get()
-
-  private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
-
-    val identifier: String = if (isMtdItId) mtditid else nino
-    val identifierType: String = if (isMtdItId) "MTDITID" else "NINO"
+    val identifier: String = mtditid
+    val identifierType: String = "MTDITID"
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
@@ -103,16 +96,105 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       givenClientHasRelationshipWithAgent(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 
-      val result = await(doRequest)
+      val result = await(doAgentRequest(requestPath))
       result.status shouldBe 200
 
       await(query) shouldBe empty
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CreateRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "regime" -> "mtd-it",
+          "regimeId" -> mtditid,
+          "CESARelationship" -> "true",
+          "etmpRelationshipCreated" -> "false",
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "false",
+          "Journey" -> "CopyExistingCESARelationship"
+        ),
+        tags = Map(
+          "transactionName" -> "create-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-cesa",
+          "path" -> requestPath
+        )
+      )
     }
   }
+
+  "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
+
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"
+
+    val identifier: String = nino
+    val identifierType: String = "NINO"
+
+    "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(identifier)
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenAuditConnector()
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doAgentRequest(requestPath))
+      result.status shouldBe 200
+
+      await(query) shouldBe empty
+
+      verifyAuditRequestNotSent(
+        event = AgentClientRelationshipEvent.CreateRelationship
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-cesa",
+          "path" -> requestPath
+        )
+      )
+    }
+  }
+
+  private def doAgentRequest(route: String) = new Resource(route, port).get()
+
 }
 
