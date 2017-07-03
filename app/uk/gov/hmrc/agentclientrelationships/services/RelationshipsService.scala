@@ -22,7 +22,7 @@ import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
@@ -41,11 +41,28 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
   private val MtdItIdType = "MTDITID"
 
+  def getAgentCodeFor(arn: Arn)
+                     (implicit hc: HeaderCarrier, auditData: AuditData): Future[AgentCode] =
+    for {
+      credentialIdentifier <- gg.getCredIdFor(arn)
+      _ = auditData.set("credId", credentialIdentifier)
+      agentCode <- gg.getAgentCodeFor(credentialIdentifier)
+      _ = auditData.set("agentCode", agentCode)
+    } yield agentCode
+
+  def checkForRelationship(identifier: TaxIdentifier, agentCode: AgentCode)
+                          (implicit hc: HeaderCarrier, auditData: AuditData): Future[Either[String, Boolean]] =
+    for {
+      allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
+      result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
+                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+    } yield result
+
   def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode])
                              (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] = {
     identifier match {
       case mtdItId@MtdItId(_) => checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
-      case nino@Nino(_) => checkCesaForOldRelationship(arn, nino).map(_.nonEmpty)
+      case nino@Nino(_)       => checkCesaForOldRelationship(arn, nino).map(_.nonEmpty)
     }
   }
 
@@ -60,7 +77,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       case Some(_) =>
         Logger.warn(s"Relationship has been already copied from CESA to MTD")
         Future.failed(new Exception())
-      case None =>
+      case None    =>
         for {
           nino <- des.getNinoFor(mtdItId)
           references <- checkCesaForOldRelationship(arn, nino)
@@ -142,7 +159,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         case RelationshipNotFound(errorCode) =>
           Logger.warn(s"Creating GG record failed because of missing data with error code: $errorCode")
           updateGgSyncStatus(SyncStatus.IncompleteInputParams)
-        case ex =>
+        case ex                              =>
           Logger.warn(s"Creating GG record failed", ex)
           updateGgSyncStatus(SyncStatus.Failed)
       }
@@ -161,10 +178,10 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       Logger.warn("The sa references in cesa are empty.")
       returnValue(Set.empty)
     } else
-      mappingServiceCall.map { mappingServiceIds =>
-        val intersected = mappingServiceIds.toSet.intersect(cesaIdSet)
-        Logger.warn(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
-        intersected
-      }
+        mappingServiceCall.map { mappingServiceIds =>
+          val intersected = mappingServiceIds.toSet.intersect(cesaIdSet)
+          Logger.warn(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
+          intersected
+        }
   }
 }
