@@ -21,7 +21,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{returnValue, _}
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -29,8 +29,7 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 @Singleton
-class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
-                              service: RelationshipsService) extends BaseController {
+class Relationships @Inject()(service: RelationshipsService) extends BaseController {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId)
 
@@ -41,18 +40,11 @@ class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    val agentCode = for {
-      credentialIdentifier <- gg.getCredIdFor(arn)
-      _ = auditData.set("credId", credentialIdentifier)
-      agentCode <- gg.getAgentCodeFor(credentialIdentifier)
-      _ = auditData.set("agentCode", agentCode)
-    } yield agentCode
+    val agentCode = service.getAgentCodeFor(arn)
 
     val result = for {
       agentCode <- agentCode
-      allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
-      result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
-      else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+      result <- service.checkForRelationship(identifier, agentCode)
     } yield result
 
     result.recoverWith {
@@ -64,8 +56,8 @@ class Relationships @Inject()(gg: GovernmentGatewayProxyConnector,
           }
     }.map {
       case Left(errorCode) => NotFound(toJson(errorCode))
-      case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-      case Right(true) => Ok
+      case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      case Right(true)     => Ok
     }
   }
 }
