@@ -96,6 +96,15 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     }
   }
 
+  def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
+    implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
+    for {
+      agentCode <- getAgentCodeFor(arn)
+      _ <- des.deleteAgentRelationship(mtdItId, arn)
+      _ <- gg.deallocateAgent(agentCode, mtdItId)
+    } yield ()
+  }
+
   private def checkCesaForOldRelationship(arn: Arn, nino: Nino)
                                          (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
     auditData.set("nino", nino)

@@ -18,9 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{Inject, Singleton}
 
+import play.api.Logger
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.connectors.{GovernmentGatewayProxyConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
@@ -34,6 +35,18 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId)
 
   def checkWithNino(arn: Arn, nino: Nino) = check(arn, nino)
+
+  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+    implicit val auditData = new AuditData()
+
+    service.deleteRelationship(arn, mtdItId)
+      .map(_ => NoContent)
+      .recover {
+        case ex =>
+          Logger.warn(s"Could not delete relationship: ${ex.getMessage}")
+          NotFound
+    }
+  }
 
   private def check(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async { implicit request =>
 

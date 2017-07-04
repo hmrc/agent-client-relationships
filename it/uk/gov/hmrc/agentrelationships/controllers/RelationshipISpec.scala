@@ -22,9 +22,9 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support.{Http, MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.play.http.HttpResponse
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -514,7 +514,62 @@ class RelationshipISpec extends UnitSpec
     }
   }
 
+  "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+
+    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+
+    "return 204 for a valid arn - mtditid combination" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
+    "return 404 for an invalid arn" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
+    }
+
+    "return 404 for an invalid agent code" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
+    }
+
+    "return 404 when de allocation fails in des" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCanNotBeDeallocatedInDes
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
+    }
+
+    "return 404 when de allocation fails in gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCannotBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
+    }
+  }
+
   private def doAgentRequest(route: String) = new Resource(route, port).get()
+  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
 
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
 
