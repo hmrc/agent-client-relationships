@@ -21,20 +21,67 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 @Singleton
 class Relationships @Inject()(service: RelationshipsService) extends BaseController {
 
-  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = check(arn, mtdItId)
+  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = Action.async { implicit request =>
 
-  def checkWithNino(arn: Arn, nino: Nino) = check(arn, nino)
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
+
+    val agentCode = service.getAgentCodeFor(arn)
+
+    val result = for {
+      agentCode <- agentCode
+      result <- service.checkForRelationship(mtdItId, agentCode)
+    } yield result
+
+    result.recoverWith {
+      case RelationshipNotFound(errorCode) =>
+        service.checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
+          .map(Right.apply)
+          .recover {
+            case _ => Left(errorCode)
+          }
+    }.map {
+      case Left(errorCode) => NotFound(toJson(errorCode))
+      case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      case Right(true)     => Ok
+    }
+  }
+
+  def checkWithNino(arn: Arn, nino: Nino) = Action.async { implicit request =>
+
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
+
+    val result = for {
+      agentCode <- service.getAgentCodeFor(arn)
+      result <- service.checkForRelationship(nino, agentCode)
+    } yield result
+
+    result.recoverWith {
+      case RelationshipNotFound(errorCode) =>
+        service.checkCesaForOldRelationship(arn, nino)
+          .map(_.nonEmpty)
+          .map(Right.apply)
+          .recover {
+            case _ => Left(errorCode)
+          }
+    }.map {
+      case Left(errorCode) => NotFound(toJson(errorCode))
+      case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      case Right(true)     => Ok
+    }
+  }
 
   def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
     implicit val auditData = new AuditData()
@@ -45,32 +92,6 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
         case ex =>
           Logger.warn(s"Could not delete relationship: ${ex.getMessage}")
           NotFound
-    }
-  }
-
-  private def check(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async { implicit request =>
-
-    implicit val auditData = new AuditData()
-    auditData.set("arn", arn)
-
-    val agentCode = service.getAgentCodeFor(arn)
-
-    val result = for {
-      agentCode <- agentCode
-      result <- service.checkForRelationship(identifier, agentCode)
-    } yield result
-
-    result.recoverWith {
-      case RelationshipNotFound(errorCode) =>
-        service.checkForOldRelationship(arn, identifier, agentCode)
-          .map(Right.apply)
-          .recover {
-            case _ => Left(errorCode)
-          }
-    }.map {
-      case Left(errorCode) => NotFound(toJson(errorCode))
-      case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-      case Right(true)     => Ok
-    }
+      }
   }
 }
