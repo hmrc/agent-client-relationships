@@ -125,6 +125,7 @@ trait DesStubs {
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing(mtdItId))
         .withRequestBody(containing(arn))
+        .withRequestBody(containing("\"Authorise\""))
         .willReturn(aResponse().withStatus(200)
         .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}"""))
     )
@@ -133,6 +134,26 @@ trait DesStubs {
   def givenAgentCanNotBeAllocatedInDes = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
+        .withRequestBody(containing("\"Authorise\""))
+        .willReturn(aResponse().withStatus(404)
+          .withBody(s"""{"reason": "Service unavailable"}""")))
+  }
+
+  def givenAgentCanBeDeallocatedInDes(mtdItId: String, arn: String) = {
+    stubFor(
+      post(urlEqualTo(s"/registration/relationship"))
+        .withRequestBody(containing(mtdItId))
+        .withRequestBody(containing(arn))
+        .withRequestBody(containing("\"De-Authorise\""))
+        .willReturn(aResponse().withStatus(200)
+          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}"""))
+    )
+  }
+
+  def givenAgentCanNotBeDeallocatedInDes = {
+    stubFor(
+      post(urlEqualTo(s"/registration/relationship"))
+        .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(aResponse().withStatus(404)
           .withBody(s"""{"reason": "Service unavailable"}""")))
   }

@@ -50,18 +50,18 @@ case class ClientRelationship(agents: Seq[Agent])
 
 case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeasedDate: Option[String])
 
-case class CreateAgentRelationshipResponse(processingDate: String)
-
-object CreateAgentRelationshipResponse {
-  implicit val reads = Json.reads[CreateAgentRelationshipResponse]
-}
-
 object ClientRelationship {
   implicit val agentReads = Json.reads[Agent]
 
   implicit val readClientRelationship =
     (JsPath \ "agents").readNullable[Seq[Agent]]
       .map(optionalAgents => ClientRelationship(optionalAgents.getOrElse(Seq.empty)))
+}
+
+case class RegistrationRelationshipResponse(processingDate: String)
+
+object RegistrationRelationshipResponse {
+  implicit val reads = Json.reads[RegistrationRelationshipResponse]
 }
 
 @Singleton
@@ -75,26 +75,31 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier): Future[Nino] = {
-    val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${ encodePathSegment(mtdbsa.value) }")
+    val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
     getWithDesHeaders[NinoBusinessDetails]("GetRegistrationBusinessDetailsByMtdbsa", url).map(_.nino)
   }
 
   def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier): Future[MtdItId] = {
-    val url = new URL(baseUrl, s"/registration/business-details/nino/${ encodePathSegment(nino.value) }")
+    val url = new URL(baseUrl, s"/registration/business-details/nino/${encodePathSegment(nino.value)}")
     getWithDesHeaders[MtdItIdBusinessDetails]("GetRegistrationBusinessDetailsByNino", url).map(_.mtdbsa)
   }
 
   def getClientSaAgentSaReferences(nino: Nino)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
-    val url = new URL(baseUrl, s"/registration/relationship/nino/${ encodePathSegment(nino.value) }")
+    val url = new URL(baseUrl, s"/registration/relationship/nino/${encodePathSegment(nino.value)}")
     getWithDesHeaders[ClientRelationship]("GetStatusAgentRelationship", url).map(_.agents.flatMap {
       case Agent(true, Some(agentId), None) => Some(agentId)
-      case _ => None
+      case _                                => None
     })
   }
 
-  def createAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier): Future[CreateAgentRelationshipResponse] = {
+  def createAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier): Future[RegistrationRelationshipResponse] = {
     val url = new URL(baseUrl, s"/registration/relationship")
-    postWithDesHeaders[JsValue,CreateAgentRelationshipResponse]("CreateAgentRelationship", url, createAgentRelationshipInputJson(mtdbsa.value,arn.value))
+    postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, createAgentRelationshipInputJson(mtdbsa.value, arn.value))
+  }
+
+  def deleteAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier): Future[RegistrationRelationshipResponse] = {
+    val url = new URL(baseUrl, s"/registration/relationship")
+    postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("DeleteAgentRelationship", url, deleteAgentRelationshipInputJson(mtdbsa.value, arn.value))
   }
 
   private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(implicit hc: HeaderCarrier): Future[A] = {
@@ -111,7 +116,7 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
       authorization = Some(Authorization(s"Bearer $authorizationToken")),
       extraHeaders = hc.extraHeaders :+ "Environment" -> environment)
     monitor(s"ConsumedAPI-DES-$apiName-POST") {
-      httpPost.POST[A,B](url.toString, body)(implicitly[Writes[A]], implicitly[HttpReads[B]], desHeaderCarrier)
+      httpPost.POST[A, B](url.toString, body)(implicitly[Writes[A]], implicitly[HttpReads[B]], desHeaderCarrier)
     }
   }
 
@@ -126,4 +131,15 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
             "isExclusiveAgent": true
           }
        }""")
+
+  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String) = Json.parse(
+    s"""{
+         "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
+          "refNumber": "$refNum",
+          "agentReferenceNumber": "$agentRefNum",
+          "regime": "ITSA",
+          "authorisation": {
+            "action": "De-Authorise"
+          }
+     }""")
 }
