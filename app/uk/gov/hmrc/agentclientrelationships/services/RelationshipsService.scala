@@ -58,14 +58,6 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
-  def checkForOldRelationship(arn: Arn, identifier: TaxIdentifier, agentCode: Future[AgentCode])
-                             (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] = {
-    identifier match {
-      case mtdItId@MtdItId(_) => checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
-      case nino@Nino(_)       => checkCesaForOldRelationship(arn, nino).map(_.nonEmpty)
-    }
-  }
-
   def checkCesaForOldRelationshipAndCopy(arn: Arn, mtdItId: MtdItId, agentCode: Future[AgentCode])
                                         (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] = {
 
@@ -80,7 +72,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       case None    =>
         for {
           nino <- des.getNinoFor(mtdItId)
-          references <- checkCesaForOldRelationship(arn, nino)
+          references <- lookupCesaForOldRelationship(arn, nino)
           result <- if (references.nonEmpty) {
             copyRelationship(arn, mtdItId, agentCode, references)
               .map { _ =>
@@ -96,8 +88,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     }
   }
 
-  def checkCesaForOldRelationship(arn: Arn, nino: Nino)
-                                         (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
+  def lookupCesaForOldRelationship(arn: Arn, nino: Nino)
+                                  (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
     auditData.set("nino", nino)
     for {
       references <- des.getClientSaAgentSaReferences(nino)

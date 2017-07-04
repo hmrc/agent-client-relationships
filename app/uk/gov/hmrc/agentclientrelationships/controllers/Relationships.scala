@@ -32,7 +32,7 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 @Singleton
 class Relationships @Inject()(service: RelationshipsService) extends BaseController {
 
-  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId) = Action.async { implicit request =>
+  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
@@ -58,7 +58,7 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
     }
   }
 
-  def checkWithNino(arn: Arn, nino: Nino) = Action.async { implicit request =>
+  def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
 
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
@@ -70,9 +70,8 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        service.checkCesaForOldRelationship(arn, nino)
-          .map(_.nonEmpty)
-          .map(Right.apply)
+        service.lookupCesaForOldRelationship(arn, nino)
+          .map(references => Right(references.nonEmpty))
           .recover {
             case _ => Left(errorCode)
           }
@@ -89,9 +88,12 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
     service.deleteRelationship(arn, mtdItId)
       .map(_ => NoContent)
       .recover {
+        case RelationshipNotFound(errorCode) =>
+          Logger.warn(s"Could not delete relationship: $errorCode")
+          NotFound(toJson(errorCode))
         case ex =>
           Logger.warn(s"Could not delete relationship: ${ex.getMessage}")
-          NotFound
+          NotFound(toJson("DEALLOCATE_FAILED"))
       }
   }
 }
