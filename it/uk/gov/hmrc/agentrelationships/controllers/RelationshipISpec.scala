@@ -81,7 +81,7 @@ class RelationshipISpec extends UnitSpec
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
@@ -146,7 +146,7 @@ class RelationshipISpec extends UnitSpec
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAuditConnector()
 
@@ -211,7 +211,7 @@ class RelationshipISpec extends UnitSpec
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
@@ -281,7 +281,7 @@ class RelationshipISpec extends UnitSpec
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAgentCanNotBeAllocatedInDes
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
@@ -312,7 +312,7 @@ class RelationshipISpec extends UnitSpec
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
@@ -371,6 +371,26 @@ class RelationshipISpec extends UnitSpec
         )
       )
     }
+
+    "return 404 when relationship is not found in gg but relationship copy was made before" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAuditConnector()
+      await(repo.insert(RelationshipCopyRecord(arn, mtditid, "MTDITID")))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when credentials are not found but relationship copy was made before" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenAuditConnector()
+      await(repo.insert(RelationshipCopyRecord(arn, mtditid, "MTDITID")))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+    }
   }
 
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
@@ -386,7 +406,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(nino)
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -411,7 +432,8 @@ class RelationshipISpec extends UnitSpec
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -437,7 +459,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -462,8 +485,9 @@ class RelationshipISpec extends UnitSpec
     "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenMtdItIdIsUnKnownFor(Nino(nino))
+      givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
 
@@ -503,6 +527,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
 
@@ -519,6 +544,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
       givenNinoIsUnknownFor(MtdItId(mtditid))
+      givenClientIsUnknownInCESAFor(Nino(nino))
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"
@@ -529,27 +556,11 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
       givenNinoIsUnknownFor(MtdItId(mtditid))
+      givenClientIsUnknownInCESAFor(Nino(nino))
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
-    }
-
-    "return 404 when relationship is not found in gg but relationship copy was made before" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(identifier)
-      await(repo.insert(RelationshipCopyRecord(arn, identifier, identifierType)))
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-    }
-
-    "return 404 when credentials are not found but relationship copy was made before" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      await(repo.insert(RelationshipCopyRecord(arn, identifier, identifierType)))
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
     }
 
     //CESA CHECK UNHAPPY PATHS
@@ -559,6 +570,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
       givenNinoIsUnknownFor(MtdItId(mtditid))
+      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -569,7 +582,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasNoActiveRelationshipWithAgent(Nino(nino))
+      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -580,8 +594,9 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenArnIsUnknownFor(Arn(arn))
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -594,6 +609,7 @@ class RelationshipISpec extends UnitSpec
       whenGetCredentialsReturns(500)
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -602,6 +618,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       whenGetUserDetailReturns(500)
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -609,6 +626,7 @@ class RelationshipISpec extends UnitSpec
     "return 502 when GsoAdminGetAssignedAgents returns 5xx" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAuditConnector()
       whenGetAssignedAgentsReturns(500)
       val result = await(doRequest)
       result.status shouldBe 502
@@ -618,6 +636,7 @@ class RelationshipISpec extends UnitSpec
       whenGetCredentialsReturns(400)
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -626,6 +645,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       whenGetUserDetailReturns(400)
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -634,6 +654,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       whenGetAssignedAgentsReturns(400)
+      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 400
     }

@@ -92,38 +92,38 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
     "return a CESA identifier when client has an active agent" in {
       val agentId = "bar"
-      givenClientHasRelationshipWithAgent(nino, agentId)
+      givenClientHasRelationshipWithAgentInCESA(nino, agentId)
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe Seq(SaAgentReference(agentId))
     }
 
     "return multiple CESA identifiers when client has multiple active agents" in {
       val agentIds = Seq("001","002","003","004","005","005","007")
-      givenClientHasRelationshipWithMultipleAgents(nino, agentIds)
+      givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
     }
 
     "return empty seq when client has no active relationship with an agent" in {
-      givenClientHasNoActiveRelationshipWithAgent(nino)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "return empty seq when client has/had no relationship with any agent" in {
-      givenClientHasNoRelationshipWithAnyAgent(nino)
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "return empty seq when client relationship with agent ceased" in {
-      givenClientRelationshipWithAgentCeased(nino, "foo")
+      givenClientRelationshipWithAgentCeasedInCESA(nino, "foo")
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "return empty seq when all client's relationships with agents ceased" in {
-      givenAllClientRelationshipsWithAgentsCeased(nino, Seq("001", "002", "003", "004", "005", "005", "007"))
+      givenAllClientRelationshipsWithAgentsCeasedInCESA(nino, Seq("001", "002", "003", "004", "005", "005", "007"))
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
@@ -135,7 +135,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "fail when client is unknown" in {
-      givenClientIsUnknownFor(nino)
+      givenClientIsUnknownInCESAFor(nino)
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
     }
@@ -153,7 +153,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "record metrics for GetStatusAgentRelationship" in {
-      givenClientHasRelationshipWithAgent(nino, "bar")
+      givenClientHasRelationshipWithAgentInCESA(nino, "bar")
       givenCleanMetricRegistry()
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino))

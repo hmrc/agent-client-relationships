@@ -51,7 +51,7 @@ trait DesStubs {
   val someAlienAgent = """{"hasAgent":false,"agentId":"alien"}"""
   val someCeasedAgent = """{"hasAgent":true,"agentId":"ex-agent","agentCeasedDate":"someDate"}"""
 
-  def givenClientHasRelationshipWithAgent(nino: Nino, agentId: String) = {
+  def givenClientHasRelationshipWithAgentInCESA(nino: Nino, agentId: String) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
@@ -59,7 +59,7 @@ trait DesStubs {
     )
   }
 
-  def givenClientHasRelationshipWithMultipleAgents(nino: Nino, agentIds: Seq[String]) = {
+  def givenClientHasRelationshipWithMultipleAgentsInCESA(nino: Nino, agentIds: Seq[String]) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
@@ -67,7 +67,7 @@ trait DesStubs {
     )
   }
 
-  def givenClientRelationshipWithAgentCeased(nino: Nino, agentId: String) = {
+  def givenClientRelationshipWithAgentCeasedInCESA(nino: Nino, agentId: String) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
@@ -75,7 +75,7 @@ trait DesStubs {
     )
   }
 
-  def givenAllClientRelationshipsWithAgentsCeased(nino: Nino, agentIds: Seq[String]) = {
+  def givenAllClientRelationshipsWithAgentsCeasedInCESA(nino: Nino, agentIds: Seq[String]) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
@@ -83,7 +83,7 @@ trait DesStubs {
     )
   }
 
-  def givenClientHasNoActiveRelationshipWithAgent(nino: Nino) = {
+  def givenClientHasNoActiveRelationshipWithAgentInCESA(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
@@ -91,7 +91,7 @@ trait DesStubs {
     )
   }
 
-  def givenClientHasNoRelationshipWithAnyAgent(nino: Nino) = {
+  def givenClientHasNoRelationshipWithAnyAgentInCESA(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
@@ -99,7 +99,7 @@ trait DesStubs {
     )
   }
 
-  def givenClientIsUnknownFor(nino: Nino) = {
+  def givenClientIsUnknownInCESAFor(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(404))
