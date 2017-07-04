@@ -7,13 +7,13 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentrelationships.stubs.MappingStubs
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs with MetricTestSupport {
+class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs with DataStreamStub with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -36,33 +36,39 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
 
     "return CESA agent reference for some known ARN" in {
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenAuditConnector()
       await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe Seq(SaAgentReference("foo"))
     }
 
     "return multiple CESA agent reference for some known ARN" in {
       val references = Seq(SaAgentReference("001"), SaAgentReference("002"))
       givenArnIsKnownFor(arn, references)
+      givenAuditConnector()
       await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe references
     }
 
     "fail when arn is unknown in " in {
       givenArnIsUnknownFor(arn)
+      givenAuditConnector()
       an[Exception] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
     }
 
     "fail when mapping service is unavailable" in {
       givenServiceReturnsServiceUnavailable()
+      givenAuditConnector()
       an[Exception] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
     }
 
     "fail when mapping service is throwing errors" in {
       givenServiceReturnsServerError()
+      givenAuditConnector()
       an[Exception] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
     }
 
     "record metrics for Mappings" in {
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenCleanMetricRegistry()
+      givenAuditConnector()
       await(mappingConnector.getSaAgentReferencesFor(arn))
       timerShouldExistsAndBeenUpdated("ConsumedAPI-Digital-Mappings-GET")
     }
