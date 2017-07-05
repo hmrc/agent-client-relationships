@@ -93,7 +93,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
@@ -160,7 +160,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(identifier)
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgent(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAuditConnector()
 
       def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)

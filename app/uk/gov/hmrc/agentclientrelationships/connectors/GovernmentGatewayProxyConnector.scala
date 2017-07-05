@@ -85,10 +85,19 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     monitor("ConsumedAPI-GGW-GsoAdminAllocateAgent-POST") {
       httpPost.POSTString(path("GsoAdminAllocateAgent"), GsoAdminAllocateAgentXmlInput(mtdItId.value,"MTDITID",agentCode.value), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
-      val xml: Elem = toXmlElement(response.body)
+      val xml: Elem = toXmlElement(response.body) ensuring (_.label == "GsoAdminAllocateAgentXmlOutput")
       (xml \ "PrincipalEnrolmentAlreadyExisted").text.toBoolean
     })
   }
+
+  def deallocateAgent(agentCode: AgentCode, mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Unit] = {
+    monitor("ConsumedAPI-GGW-GsoAdminDeallocateAgent-POST") {
+      httpPost.POSTString(path("GsoAdminDeallocateAgent"), GsoAdminDeallocateAgentXmlInput(mtdItId.value,"MTDITID",agentCode.value), Seq(CONTENT_TYPE -> XML))
+    }.map({ response =>
+      toXmlElement(response.body) ensuring (_.label == "GsoAdminDeallocateAgentXmlOutput")
+    })
+  }
+
 
   private def toXmlElement(xmlString: String): Elem = {
     val factory = SAXParserFactory.newInstance("org.apache.xerces.jaxp.SAXParserFactoryImpl", this.getClass.getClassLoader)
@@ -144,6 +153,15 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       </Identifiers>
       <AgentCode>{agentCode}</AgentCode>
     </GsoAdminAllocateAgentXmlInput>.toString()
+
+  private def GsoAdminDeallocateAgentXmlInput(identifier: String, identifierType: String, agentCode: String): String =
+    <GsoAdminDeallocateAgentXmlInput xmlns="urn:GSO-System-Services:external:1.65:GsoAdminDeallocateAgentXmlInput">
+      <ServiceName>HMRC-MTD-IT</ServiceName>
+      <Identifiers>
+        <Identifier IdentifierType={identifierType}>{identifier}</Identifier>
+      </Identifiers>
+      <AgentCode>{agentCode}</AgentCode>
+    </GsoAdminDeallocateAgentXmlInput>.toString()
 }
 
 case class RelationshipNotFound(errorCode: String) extends Exception

@@ -194,11 +194,11 @@ trait GovernmentGatewayProxyStubs {
 
   private def allocateAgentForClient(mtdItId: String, agentCode: String) = {
     post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminAllocateAgent"))
+      .withRequestBody(containing("GsoAdminAllocateAgentXmlInput"))
       .withRequestBody(matching(s".*>$mtdItId<.*"))
       .withRequestBody(matching(s".*<AgentCode>$agentCode</AgentCode>.*"))
       .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
   }
-
 
   def givenAgentCanBeAllocatedInGovernmentGateway(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
     stubFor(allocateAgentForClient(mtdItId, agentCode)
@@ -214,6 +214,29 @@ trait GovernmentGatewayProxyStubs {
 
   def givenAgentCannotBeAllocatedInGovernmentGateway(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
     stubFor(allocateAgentForClient(mtdItId, agentCode)
+      .willReturn(aResponse().withStatus(404)))
+    this
+  }
+
+  private def deallocateAgentForClient(mtdItId: String, agentCode: String) = {
+    post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminDeallocateAgent"))
+      .withRequestBody(containing("GsoAdminDeallocateAgentXmlInput"))
+      .withRequestBody(matching(s".*>$mtdItId<.*"))
+      .withRequestBody(matching(s".*<AgentCode>$agentCode</AgentCode>.*"))
+      .withHeader("Content-Type", equalTo("application/xml; charset=utf-8"))
+  }
+
+  def givenAgentCanBeDeallocatedInGovernmentGateway(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+    stubFor(deallocateAgentForClient(mtdItId, agentCode)
+      .willReturn(aResponse()
+        .withBody(
+          s"""<GsoAdminDeallocateAgentXmlOutput xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" RequestID="00598B2790D24E718F810004E8E95AA5" xmlns="urn:GSO-System- Services:external:1.65:GsoAdminDeallocateAgentXmlInput">
+             |</GsoAdminDeallocateAgentXmlOutput>""".stripMargin)))
+    this
+  }
+
+  def givenAgentCannotBeDeallocatedInGovernmentGateway(mtdItId: String, agentCode: String): GovernmentGatewayProxyStubs = {
+    stubFor(deallocateAgentForClient(mtdItId, agentCode)
       .willReturn(aResponse().withStatus(404)))
     this
   }
