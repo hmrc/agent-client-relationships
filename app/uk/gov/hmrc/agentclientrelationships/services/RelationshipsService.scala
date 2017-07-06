@@ -30,7 +30,7 @@ import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
@@ -184,5 +184,16 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           Logger.warn(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
           intersected
         }
+  }
+
+  def cleanCopyStatusRecord(arn:Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] = {
+    repository.remove(arn,mtdItId).flatMap { n =>
+      if(n==0) {
+        Future.failed(new Exception("Nothing has been removed from db."))
+      } else {
+        Logger.warn(s"Copy status record(s) has been removed: $n")
+        Future.successful(())
+      }
+    }
   }
 }

@@ -61,6 +61,7 @@ class RelationshipISpec extends UnitSpec
   val arn = "AARN0000002"
   val mtditid = "ABCDEF123456789"
   val nino = "AB123456C"
+  val mtdItIdType = "MTDITID"
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
@@ -69,8 +70,6 @@ class RelationshipISpec extends UnitSpec
     def doRequest = doAgentRequest(requestPath)
 
     behave like aCheckEndpoint(true, doRequest)
-
-    val mtdItIdType: String = "MTDITID"
 
     //HAPPY PATHS WHEN CHECKING CESA
 
@@ -712,6 +711,18 @@ class RelationshipISpec extends UnitSpec
       givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 400
+    }
+  }
+
+  "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+
+    val requestPath: String = s"/test-only/db/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+
+    "return 404 for any call" in {
+      givenAuditConnector()
+      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
     }
   }
 }
