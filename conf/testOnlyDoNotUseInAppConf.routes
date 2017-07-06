@@ -10,4 +10,5 @@
 # Failing to follow this rule may result in test routes deployed in production.
 
 # Add all the application routes to the prod.routes file
-->         /                          prod.Routes
+->         /                                                                  prod.Routes
+DELETE     /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId  @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.cleanCopyStatusRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)

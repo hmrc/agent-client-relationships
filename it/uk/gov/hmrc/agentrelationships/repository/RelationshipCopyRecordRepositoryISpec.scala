@@ -29,7 +29,8 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp {
     await(repo.ensureIndexes)
   }
 
-  "createRelationshipCopyRecord" should {
+  "RelationshipCopyRecordRepository" should {
+
     "create a createRelationshipCopyRecord" in {
       val uuid = UUID.randomUUID().toString.substring(0, 8)
       val mtdItId = s"client-$uuid"
@@ -65,6 +66,27 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp {
 
       result shouldBe empty
     }
+
+    "clean copy status record" in {
+      val uuid = UUID.randomUUID().toString.substring(0, 8)
+      val mtdItId1 = s"client1-$uuid"
+      await(repo.create(relationshipCopyRecord(arn1, mtdItId1, "MTDITID")))
+      val mtdItId2 = s"client2-$uuid"
+      await(repo.create(relationshipCopyRecord(arn1, mtdItId2, "MTDITID")))
+
+      val resultBefore = await(repo.find("arn" -> arn1.value, "clientIdentifier" -> mtdItId1, "clientIdentifierType" -> "MTDITID"))
+      resultBefore.size shouldBe 1
+
+      val result = await(repo.remove(arn1,MtdItId(mtdItId1)))
+      result shouldBe 1
+
+      val result1After = await(repo.find("arn" -> arn1.value, "clientIdentifier" -> mtdItId1, "clientIdentifierType" -> "MTDITID"))
+      result1After.size shouldBe 0
+
+      val result2After = await(repo.find("arn" -> arn1.value, "clientIdentifier" -> mtdItId2, "clientIdentifierType" -> "MTDITID"))
+      result2After.size shouldBe 1
+    }
+
   }
 
   private def relationshipCopyRecord(

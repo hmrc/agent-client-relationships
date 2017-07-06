@@ -96,4 +96,13 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
           NotFound(toJson("DEALLOCATE_FAILED"))
       }
   }
+
+  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+
+    service.cleanCopyStatusRecord(arn,mtdItId)
+      .map(_ => NoContent)
+      .recover {
+        case ex => NotFound(ex.getMessage)
+      }
+  }
 }

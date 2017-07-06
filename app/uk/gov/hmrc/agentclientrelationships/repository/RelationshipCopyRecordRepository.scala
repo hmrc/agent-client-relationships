@@ -66,9 +66,10 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
     Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true)
   )
 
-  def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Unit] = {
+  def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
     insert(record).map { result =>
       result.errmsg.foreach(error => s"Creating RelationshipCopyRecord failed: $error")
+      result.n
     }
   }
 
@@ -94,6 +95,11 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating GG sync status ($status) failed: $error"))
     })
+  }
+
+  def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int] = {
+    remove("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType)
+      .map(_.n)
   }
 
   override def isInsertion(newRecordId: BSONObjectID, oldRecord: RelationshipCopyRecord): Boolean = false
