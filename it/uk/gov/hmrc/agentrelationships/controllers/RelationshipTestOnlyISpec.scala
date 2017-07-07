@@ -101,6 +101,7 @@ class RelationshipTestOnlyISpec extends UnitSpec
     "return 201 for a valid arn and mtdItId" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
@@ -108,9 +109,34 @@ class RelationshipTestOnlyISpec extends UnitSpec
       result.status shouldBe 201
     }
 
+    "return 201 for an existing db record" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      val result = await(doAgentPostRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 404 for an existing relationship" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid,"bar")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      val result = await(doAgentPostRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_ALREADY_EXISTS"
+    }
+
     "return 404 for a invalid arn and valid mtdItId" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
@@ -122,22 +148,25 @@ class RelationshipTestOnlyISpec extends UnitSpec
     "return 404 for when allocation in des fails" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
       givenAgentCanNotBeAllocatedInDes
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
       val result = await(doAgentPostRequest(requestPath))
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_CREATE_FAILED"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_CREATE_FAILED_DES"
     }
 
     "return 404 for when allocation in gg fails" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
       val result = await(doAgentPostRequest(requestPath))
-      result.status shouldBe 201 //TODO discuss this status with JP
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_CREATE_FAILED_GG"
     }
 
   }

@@ -74,7 +74,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           nino <- des.getNinoFor(mtdItId)
           references <- lookupCesaForOldRelationship(arn, nino)
           result <- if (references.nonEmpty) {
-            createRelationship(arn, mtdItId, agentCode, references)
+            createRelationship(arn, mtdItId, agentCode, references, true, false)
               .map { _ =>
                 auditService.sendCreateRelationshipAuditEvent
                 true
@@ -107,7 +107,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   def createRelationship(arn: Arn,
                          mtdItId: MtdItId,
                          agentCode: Future[AgentCode],
-                         oldReferences: Set[SaAgentReference])(implicit hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+                         oldReferences: Set[SaAgentReference],
+                         failIfCreateRecordFails: Boolean,
+                         failIfAllocateAgentInGGFails: Boolean
+                        )
+                        (implicit hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     auditData.set("AgentDBRecord", false)
     auditData.set("enrolmentDelegated", false)
@@ -120,7 +124,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         .recoverWith {
           case ex =>
             Logger.warn(s"Inserting relationship record into mongo failed", ex)
-            Future.failed(ex)
+            if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
+            else Future.successful(())
         }
     }
 
@@ -137,7 +142,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         case ex =>
           Logger.warn(s"Creating ETMP record failed", ex)
           updateEtmpSyncStatus(SyncStatus.Failed)
-            .flatMap(_ => Future.failed(ex))
+            .flatMap(_ => Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DES")))
       }
 
     def createGgRecord(mtdItId: MtdItId): Future[Unit] = (for {
@@ -149,11 +154,13 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          Logger.warn(s"Creating GG record failed because of missing data with error code: $errorCode")
+          Logger.warn(s"Creating GG record not possible because of incomplete data: $errorCode")
           updateGgSyncStatus(SyncStatus.IncompleteInputParams)
         case ex                              =>
           Logger.warn(s"Creating GG record failed", ex)
           updateGgSyncStatus(SyncStatus.Failed)
+          if (failIfAllocateAgentInGGFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_GG"))
+          else Future.successful(())
       }
 
     for {
