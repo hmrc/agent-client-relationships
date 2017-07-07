@@ -74,7 +74,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           nino <- des.getNinoFor(mtdItId)
           references <- lookupCesaForOldRelationship(arn, nino)
           result <- if (references.nonEmpty) {
-            copyRelationship(arn, mtdItId, agentCode, references)
+            createRelationship(arn, mtdItId, agentCode, references)
               .map { _ =>
                 auditService.sendCreateRelationshipAuditEvent
                 true
@@ -104,26 +104,17 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     }
   }
 
-  def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
-    implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
-    for {
-      agentCode <- getAgentCodeFor(arn)
-      _ <- des.deleteAgentRelationship(mtdItId, arn)
-      _ <- gg.deallocateAgent(agentCode, mtdItId)
-    } yield ()
-  }
-
-  private def copyRelationship(arn: Arn,
-                               mtdItId: MtdItId,
-                               agentCode: Future[AgentCode],
-                               references: Set[SaAgentReference])(implicit hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+  def createRelationship(arn: Arn,
+                         mtdItId: MtdItId,
+                         agentCode: Future[AgentCode],
+                         oldReferences: Set[SaAgentReference])(implicit hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     auditData.set("AgentDBRecord", false)
     auditData.set("enrolmentDelegated", false)
     auditData.set("etmpRelationshipCreated", false)
 
     def createRelationshipRecord: Future[Unit] = {
-      val record = RelationshipCopyRecord(arn.value, mtdItId.value, MtdItIdType, Some(references))
+      val record = RelationshipCopyRecord(arn.value, mtdItId.value, MtdItIdType, Some(oldReferences))
       repository.create(record)
         .map(_ => auditData.set("AgentDBRecord", true))
         .recoverWith {
@@ -186,9 +177,18 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         }
   }
 
-  def cleanCopyStatusRecord(arn:Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] = {
-    repository.remove(arn,mtdItId).flatMap { n =>
-      if(n==0) {
+  def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
+    implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
+    for {
+      agentCode <- getAgentCodeFor(arn)
+      _ <- des.deleteAgentRelationship(mtdItId, arn)
+      _ <- gg.deallocateAgent(agentCode, mtdItId)
+    } yield ()
+  }
+
+  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] = {
+    repository.remove(arn, mtdItId).flatMap { n =>
+      if (n == 0) {
         Future.failed(new Exception("Nothing has been removed from db."))
       } else {
         Logger.warn(s"Copy status record(s) has been removed: $n")

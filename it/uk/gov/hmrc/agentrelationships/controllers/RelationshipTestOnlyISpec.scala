@@ -66,6 +66,7 @@ class RelationshipTestOnlyISpec extends UnitSpec
   val mtdItIdType = "MTDITID"
 
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
+  private def doAgentPostRequest(route: String) = Http.post(s"http://localhost:$port$route","",Seq())(HeaderCarrier())
 
   "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
@@ -89,6 +90,54 @@ class RelationshipTestOnlyISpec extends UnitSpec
       givenAuditConnector()
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 404
+    }
+
+  }
+
+  "POST /test-only/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+
+    val requestPath: String = s"/test-only/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+
+    "return 201 for a valid arn and mtdItId" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      val result = await(doAgentPostRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 404 for a invalid arn and valid mtdItId" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      val result = await(doAgentPostRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+    }
+
+    "return 404 for when allocation in des fails" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCanNotBeAllocatedInDes
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      val result = await(doAgentPostRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_CREATE_FAILED"
+    }
+
+    "return 404 for when allocation in gg fails" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      val result = await(doAgentPostRequest(requestPath))
+      result.status shouldBe 201 //TODO discuss this status with JP
     }
 
   }

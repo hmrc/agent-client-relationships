@@ -29,6 +29,8 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
+import scala.concurrent.Future
+
 @Singleton
 class Relationships @Inject()(service: RelationshipsService) extends BaseController {
 
@@ -82,8 +84,28 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
     }
   }
 
+  def create(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
+
+    (for {
+      agentCode <- service.getAgentCodeFor(arn)
+      _ <- service.createRelationship(arn, mtdItId, Future.successful(agentCode), Set())
+    } yield ())
+      .map(_ => Created)
+      .recover {
+        case RelationshipNotFound(errorCode) =>
+          Logger.warn(s"Could not create relationship: $errorCode")
+          NotFound(toJson(errorCode))
+        case ex                              =>
+          Logger.warn(s"Could not create relationship: ${ex.getMessage}")
+          NotFound(toJson("RELATIONSHIP_CREATE_FAILED"))
+      }
+  }
+
   def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
     implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
 
     service.deleteRelationship(arn, mtdItId)
       .map(_ => NoContent)
@@ -91,15 +113,15 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
         case RelationshipNotFound(errorCode) =>
           Logger.warn(s"Could not delete relationship: $errorCode")
           NotFound(toJson(errorCode))
-        case ex =>
+        case ex                              =>
           Logger.warn(s"Could not delete relationship: ${ex.getMessage}")
-          NotFound(toJson("DEALLOCATE_FAILED"))
+          NotFound(toJson("RELATIONSHIP_DELETE_FAILED"))
       }
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
-    service.cleanCopyStatusRecord(arn,mtdItId)
+    service.cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
       .recover {
         case ex => NotFound(ex.getMessage)
