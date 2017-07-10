@@ -164,4 +164,4 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     </GsoAdminDeallocateAgentXmlInput>.toString()
 }
 
-case class RelationshipNotFound(errorCode: String) extends Exception
+case class RelationshipNotFound(errorCode: String) extends Exception(errorCode)

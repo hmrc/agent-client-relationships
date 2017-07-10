@@ -90,16 +90,18 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
 
     (for {
       agentCode <- service.getAgentCodeFor(arn)
-      _ <- service.createRelationship(arn, mtdItId, Future.successful(agentCode), Set())
+      _ <- service.checkForRelationship(mtdItId, agentCode)
+        .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
+        .recover {
+          case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
+        }
+      _ <- service.createRelationship(arn, mtdItId, Future.successful(agentCode), Set(), false, true)
     } yield ())
       .map(_ => Created)
       .recover {
-        case RelationshipNotFound(errorCode) =>
-          Logger.warn(s"Could not create relationship: $errorCode")
-          NotFound(toJson(errorCode))
-        case ex                              =>
+        case ex =>
           Logger.warn(s"Could not create relationship: ${ex.getMessage}")
-          NotFound(toJson("RELATIONSHIP_CREATE_FAILED"))
+          NotFound(toJson(ex.getMessage))
       }
   }
 
@@ -107,15 +109,16 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    service.deleteRelationship(arn, mtdItId)
+    (for {
+      agentCode <- service.getAgentCodeFor(arn)
+      _ <- service.checkForRelationship(mtdItId, agentCode)
+      _ <- service.deleteRelationship(arn, mtdItId)
+    } yield ())
       .map(_ => NoContent)
       .recover {
-        case RelationshipNotFound(errorCode) =>
-          Logger.warn(s"Could not delete relationship: $errorCode")
-          NotFound(toJson(errorCode))
-        case ex                              =>
+        case ex =>
           Logger.warn(s"Could not delete relationship: ${ex.getMessage}")
-          NotFound(toJson("RELATIONSHIP_DELETE_FAILED"))
+          NotFound(toJson(ex.getMessage))
       }
   }
 

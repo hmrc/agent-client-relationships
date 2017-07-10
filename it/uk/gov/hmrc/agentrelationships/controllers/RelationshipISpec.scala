@@ -67,7 +67,7 @@ class RelationshipISpec extends UnitSpec
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
-    def doRequest = doAgentRequest(requestPath)
+    def doRequest = doAgentGetRequest(requestPath)
 
     behave like aCheckEndpoint(true, doRequest)
 
@@ -396,7 +396,7 @@ class RelationshipISpec extends UnitSpec
 
     val requestPath = s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"
 
-    def doRequest = doAgentRequest(requestPath)
+    def doRequest = doAgentGetRequest(requestPath)
 
     behave like aCheckEndpoint(false, doRequest)
 
@@ -520,6 +520,7 @@ class RelationshipISpec extends UnitSpec
     "return 204 for a valid arn - mtditid combination" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       givenAgentCanBeDeallocatedInDes(mtditid, arn)
       givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
 
@@ -546,9 +547,21 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 404
     }
 
+    "return 404 for non-existent relationship" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
+    }
+
     "return 404 when de allocation fails in des" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       givenAgentCanNotBeDeallocatedInDes
       givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
 
@@ -559,6 +572,7 @@ class RelationshipISpec extends UnitSpec
     "return 404 when de allocation fails in gg" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       givenAgentCanBeDeallocatedInDes(mtditid, arn)
       givenAgentCannotBeDeallocatedInGovernmentGateway(mtditid, "bar")
 
@@ -567,13 +581,13 @@ class RelationshipISpec extends UnitSpec
     }
   }
 
-  private def doAgentRequest(route: String) = new Resource(route, port).get()
+  private def doAgentGetRequest(route: String) = new Resource(route, port).get()
+  private def doAgentPostRequest(route: String) = Http.post(s"http://localhost:$port$route","",Seq())(HeaderCarrier())
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
 
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
 
     val identifier: String = if (isMtdItId) mtditid else nino
-    val identifierType: String = if (isMtdItId) "MTDITID" else "NINO"
 
     //HAPPY PATH :-)
 
@@ -722,6 +736,22 @@ class RelationshipISpec extends UnitSpec
       givenAuditConnector()
       await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
+    }
+  }
+
+  "POST /test-only/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+
+    val requestPath: String = s"/test-only/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+
+    "return 404 for any call" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      val result = await(doAgentPostRequest(requestPath))
       result.status shouldBe 404
     }
   }
