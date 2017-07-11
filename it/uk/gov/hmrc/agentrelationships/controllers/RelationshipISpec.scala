@@ -582,7 +582,7 @@ class RelationshipISpec extends UnitSpec
   }
 
   private def doAgentGetRequest(route: String) = new Resource(route, port).get()
-  private def doAgentPostRequest(route: String) = Http.post(s"http://localhost:$port$route","",Seq())(HeaderCarrier())
+  private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")(HeaderCarrier())
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
 
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
@@ -740,19 +740,82 @@ class RelationshipISpec extends UnitSpec
     }
   }
 
-  "POST /test-only/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+  "PUT /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    val requestPath: String = s"/test-only/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
-    "return 404 for any call" in {
+    "return 201 for a valid arn - mtditid combination" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
-      val result = await(doAgentPostRequest(requestPath))
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 for an existing db record" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 404 if relationship already exists" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenAuditConnector()
+
+      val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_ALREADY_EXISTS"
+    }
+
+    "return 404 if relationship could not be created in gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_CREATE_FAILED_GG"
+    }
+
+    "return 404 if relationship could not be created in des" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAuditConnector()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_CREATE_FAILED_DES"
+    }
+
+    "return 404 for a invalid arn and valid mtdItId" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
     }
   }
 }
