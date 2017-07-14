@@ -61,9 +61,9 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentCodes(identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
+  def getAllocatedAgentCodes(mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
     monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
-      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(identifier), Seq(CONTENT_TYPE -> XML))
+      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(mtdItId), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml: Elem = toXmlElement(response.body)
       val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"

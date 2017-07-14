@@ -55,8 +55,8 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
           }
     }.map {
       case Left(errorCode) => NotFound(toJson(errorCode))
-      case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-      case Right(true)     => Ok
+      case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      case Right(true) => Ok
     }
   }
 
@@ -65,22 +65,12 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    val result = for {
-      agentCode <- service.getAgentCodeFor(arn)
-      result <- service.checkForRelationship(nino, agentCode)
-    } yield result
-
-    result.recoverWith {
-      case RelationshipNotFound(errorCode) =>
-        service.lookupCesaForOldRelationship(arn, nino)
-          .map(references => Right(references.nonEmpty))
-          .recover {
-            case _ => Left(errorCode)
-          }
-    }.map {
-      case Left(errorCode) => NotFound(toJson(errorCode))
-      case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-      case Right(true)     => Ok
+    service.lookupCesaForOldRelationship(arn, nino)
+      .map {
+        case references if references.nonEmpty => Ok
+        case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      }.recover {
+      case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
     }
   }
 

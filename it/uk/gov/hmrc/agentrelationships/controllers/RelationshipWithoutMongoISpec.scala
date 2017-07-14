@@ -156,9 +156,6 @@ class RelationshipWithoutMongoISpec extends UnitSpec
     val identifierType: String = "NINO"
 
     "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(identifier)
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
       givenAuditConnector()
@@ -180,8 +177,6 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn,
-          "credId" -> "foo",
-          "agentCode" -> "bar",
           "nino" -> nino,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
