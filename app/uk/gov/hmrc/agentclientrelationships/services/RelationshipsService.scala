@@ -50,10 +50,10 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       _ = auditData.set("agentCode", agentCode)
     } yield agentCode
 
-  def checkForRelationship(identifier: TaxIdentifier, agentCode: AgentCode)
+  def checkForRelationship(mtdItId: MtdItId, agentCode: AgentCode)
                           (implicit hc: HeaderCarrier, auditData: AuditData): Future[Either[String, Boolean]] =
     for {
-      allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
+      allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
