@@ -22,17 +22,20 @@ import play.api.Logger
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.controllers.actions.AuthActions
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.connectors.AuthConnector
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
 
 @Singleton
-class Relationships @Inject()(service: RelationshipsService) extends BaseController {
+class Relationships @Inject()(service: RelationshipsService,
+                              override val authConnector: AuthConnector) extends BaseController with AuthActions {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
@@ -74,7 +77,7 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
     }
   }
 
-  def create(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+  def create(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = agentOrClient.async { implicit request =>
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
@@ -95,7 +98,7 @@ class Relationships @Inject()(service: RelationshipsService) extends BaseControl
       }
   }
 
-  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = agentOrClient.async { implicit request =>
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 

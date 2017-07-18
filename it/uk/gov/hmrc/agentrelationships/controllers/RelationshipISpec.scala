@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support.{Http, MongoApp, Resource, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
@@ -35,7 +35,8 @@ class RelationshipISpec extends UnitSpec
   with GovernmentGatewayProxyStubs
   with DesStubs
   with MappingStubs
-  with DataStreamStub {
+  with DataStreamStub
+  with AuthStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -500,8 +501,13 @@ class RelationshipISpec extends UnitSpec
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
     "return 204 for a valid arn - mtditid combination" in {
+
+      requestIsAuthenticated()
+      //andIsAnAgent()
+      andHasEnrolments()
+
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentCodeIsFoundFor("foo", "bar") // bar: agentCode
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
       givenAgentCanBeDeallocatedInDes(mtditid, arn)
       givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
@@ -564,7 +570,9 @@ class RelationshipISpec extends UnitSpec
   }
 
   private def doAgentGetRequest(route: String) = new Resource(route, port).get()
+
   private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")(HeaderCarrier())
+
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
 
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
@@ -716,7 +724,7 @@ class RelationshipISpec extends UnitSpec
 
     "return 404 for any call" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 404
     }
@@ -745,7 +753,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
