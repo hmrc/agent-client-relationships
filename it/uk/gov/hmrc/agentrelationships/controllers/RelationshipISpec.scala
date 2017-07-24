@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support.{Http, MongoApp, Resource, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
@@ -35,7 +35,8 @@ class RelationshipISpec extends UnitSpec
   with GovernmentGatewayProxyStubs
   with DesStubs
   with MappingStubs
-  with DataStreamStub {
+  with DataStreamStub
+  with AuthStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -500,6 +501,7 @@ class RelationshipISpec extends UnitSpec
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
     "return 204 for a valid arn - mtditid combination" in {
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -510,7 +512,73 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 204
     }
 
+    "return 204 for a valid arn" in {
+      givenRequestIsAuthenticated().andAgentIsSubscribedClientIsNotSubscribed(Arn(arn))
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
+    "return 204 for a valid mtdItId" in {
+      givenRequestIsAuthenticated.andAgentNotSubscribedClientIsSubscribed(MtdItId(mtditid))
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
+    "return 401 for a invalid arn and invalid mtditid" in {
+      givenRequestIsAuthenticated().andAgentClientNotSubscribed
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 401
+    }
+
+    "return 204 for user permitted as agent" in {
+      val unmatchedMtdItId = "ABC"
+
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(unmatchedMtdItId))
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
+    "return 403 for user not permitted as agent neither as client" in {
+      val unmatchedArn = "123"
+      val unmatchedMtdItId = "ABC"
+
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(unmatchedArn), MtdItId(unmatchedMtdItId))
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 403
+    }
+
     "return 404 for an invalid arn" in {
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAgentCanBeDeallocatedInDes(mtditid, arn)
       givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
@@ -520,6 +588,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 for an invalid agent code" in {
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenAgentCanBeDeallocatedInDes(mtditid, arn)
@@ -530,6 +599,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 for non-existent relationship" in {
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -541,6 +611,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 when de allocation fails in des" in {
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -552,6 +623,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 when de allocation fails in gg" in {
+      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -564,7 +636,9 @@ class RelationshipISpec extends UnitSpec
   }
 
   private def doAgentGetRequest(route: String) = new Resource(route, port).get()
+
   private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")(HeaderCarrier())
+
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
 
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
@@ -716,7 +790,7 @@ class RelationshipISpec extends UnitSpec
 
     "return 404 for any call" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 404
     }
@@ -727,6 +801,7 @@ class RelationshipISpec extends UnitSpec
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
     "return 201 for a valid arn - mtditid combination" in {
+      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -739,19 +814,21 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 201 for an existing db record" in {
+      givenRequestIsAuthenticated.andAgentIsSubscribedClientIsNotSubscribed(Arn(arn))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
     }
 
     "return 404 if relationship already exists" in {
+      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -763,6 +840,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 if relationship could not be created in gg" in {
+      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -776,6 +854,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 if relationship could not be created in des" in {
+      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -788,6 +867,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 for a invalid arn and valid mtdItId" in {
+      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
