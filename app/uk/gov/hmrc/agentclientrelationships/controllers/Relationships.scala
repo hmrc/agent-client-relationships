@@ -123,9 +123,10 @@ class Relationships @Inject()(
 
   private[controllers] def forThisAgentOrClient(requiredArn: Arn, requiredMtdItId: MtdItId)
     (block: => Future[Result])(implicit request: AgentOrClientRequest[_]) = {
-    (requiredArn != request.arn.getOrElse(""), requiredMtdItId != request.mtdItId.getOrElse("")) match {
-      case (true, true) => Future successful NoPermissionOnAgencyOrClient
-      case (_, _) => block
+    (request.arn, request.mtdItId) match {
+      case (Some(`requiredArn`), _) => block
+      case (_, Some(`requiredMtdItId`)) => block
+      case _ => Future successful NoPermissionOnAgencyOrClient
     }
   }
 
