@@ -21,22 +21,23 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
-import uk.gov.hmrc.agentclientrelationships.controllers.actions.{AgentOrClient, AuthActions}
+import uk.gov.hmrc.agentclientrelationships.connectors.{AuthConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
+import uk.gov.hmrc.agentclientrelationships.controllers.actions.{AgentOrClientRequest, AuthActions}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.agentclientrelationships.connectors.AuthConnector
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{NoPermissionOnAgencyOrClient}
 
 import scala.concurrent.Future
 
 @Singleton
-class Relationships @Inject()(service: RelationshipsService,
-                              override val authConnector: AuthConnector) extends BaseController with AuthActions {
+class Relationships @Inject()(
+  service: RelationshipsService,
+  override val authConnector: AuthConnector
+) extends BaseController with AuthActions {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
@@ -120,9 +121,9 @@ class Relationships @Inject()(service: RelationshipsService,
     }
   }
 
-  private def forThisAgentOrClient(arn: Arn, mtdItId: MtdItId)
-                                  (block: => Future[Result])(implicit request: AgentOrClient[_]) = {
-    (arn != request.arn.getOrElse(""), mtdItId != request.mtdItId.getOrElse("")) match {
+  private[controllers] def forThisAgentOrClient(requiredArn: Arn, requiredMtdItId: MtdItId)
+    (block: => Future[Result])(implicit request: AgentOrClientRequest[_]) = {
+    (requiredArn != request.arn.getOrElse(""), requiredMtdItId != request.mtdItId.getOrElse("")) match {
       case (true, true) => Future successful NoPermissionOnAgencyOrClient
       case (_, _) => block
     }

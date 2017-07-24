@@ -17,12 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers.actions
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
-import uk.gov.hmrc.agentclientrelationships.connectors.{AuthConnector, Authority}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.http.Upstream4xxResponse
 import play.api.mvc._
+import uk.gov.hmrc.agentclientrelationships.connectors.{AuthConnector, Authority}
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.play.http.{HeaderCarrier, Upstream4xxResponse}
 
 import scala.concurrent.Future
 
@@ -40,15 +39,15 @@ trait AuthActions {
     }
   }
 
-  protected val agentOrClient = withAuthority andThen new ActionRefiner[RequestWithAuthority, AgentOrClient] {
-    protected def refine[A](request: RequestWithAuthority[A]): Future[Either[Result, AgentOrClient[A]]] = {
+  protected val agentOrClient = withAuthority andThen new ActionRefiner[RequestWithAuthority, AgentOrClientRequest] {
+    protected def refine[A](request: RequestWithAuthority[A]): Future[Either[Result, AgentOrClientRequest[A]]] = {
       implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers, None)
       (for {
         opArn <- authConnector.currentArn(request.authority.enrolmentsUrl)
         opMtdItId <- authConnector.currentMtdItId(request.authority.enrolmentsUrl)
       } yield (opArn, opMtdItId) match {
         case (None, None) => Left(NoAgentOrClient)
-        case (optArn, optMtdItId) => Right(AgentOrClient(optArn, optMtdItId, request))
+        case (optArn, optMtdItId) => Right(AgentOrClientRequest(optArn, optMtdItId, request))
       }).recover({
         case e: Upstream4xxResponse if e.upstreamResponseCode == 401 =>
           Left(GenericUnauthorized)
@@ -59,4 +58,4 @@ trait AuthActions {
 
 class RequestWithAuthority[A](val authority: Authority, request: Request[A]) extends WrappedRequest[A](request)
 
-case class AgentOrClient[A](arn: Option[Arn], mtdItId: Option[MtdItId], request: Request[A]) extends WrappedRequest[A](request)
+case class AgentOrClientRequest[A](arn: Option[Arn], mtdItId: Option[MtdItId], request: Request[A]) extends WrappedRequest[A](request)
