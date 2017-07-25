@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.mvc.{Result, Results}
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
-import uk.gov.hmrc.agentclientrelationships.controllers.actions.AgentOrClientRequest
+import uk.gov.hmrc.agentclientrelationships.auth.AgentOrClientRequest
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.play.test.UnitSpec
@@ -26,7 +26,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.Future
 
 class RelationshipsControllerSpec extends UnitSpec with ResettingMockitoSugar with Results {
-  private val controller = new Relationships(null, null)
+  private val controller = new Relationships(null)
 
   private val blockThatShouldBeCalled = Future successful Ok
   private val blockThatShouldNotCalled = Future failed new RuntimeException("Permission to call this block should be denied")

@@ -18,10 +18,12 @@ package uk.gov.hmrc.agentclientrelationships
 
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, LoadAuditingConfig}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.auth.microservice.connectors.AuthConnector
 import uk.gov.hmrc.play.config.{AppName, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.http.hooks.HttpHook
 import uk.gov.hmrc.play.http.ws._
+import javax.inject.Singleton
+
+import uk.gov.hmrc.auth.core.PlayAuthConnector
 
 object WSHttp extends WSGet with WSPut with WSPost with WSDelete with WSPatch with AppName {
   override val hooks: Seq[HttpHook] = NoneRequired
@@ -31,6 +33,9 @@ object MicroserviceAuditConnector extends AuditConnector with RunMode {
   override lazy val auditingConfig: AuditingConfig = LoadAuditingConfig(s"auditing")
 }
 
-object MicroserviceAuthConnector extends AuthConnector with ServicesConfig {
-  override val authBaseUrl: String = baseUrl("auth")
+@Singleton
+class MicroserviceAuthConnector extends PlayAuthConnector with ServicesConfig {
+  val serviceUrl = baseUrl("auth")
+  lazy val http = WSHttp
+
 }

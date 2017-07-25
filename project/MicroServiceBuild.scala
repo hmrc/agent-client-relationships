@@ -15,7 +15,6 @@ private object AppDependencies {
   import play.core.PlayVersion
 
   private val microserviceBootstrapVersion = "5.15.0"
-  private val playAuthVersion = "4.3.0"
   private val playHealthVersion = "2.1.0"
   private val logbackJsonLoggerVersion = "3.1.0"
   private val playUiVersion = "7.4.0"
@@ -27,11 +26,11 @@ private object AppDependencies {
   private val wiremockVersion = "2.6.0"
   private val scalaTestPlusVersion = "1.5.1"
   private val mtdIdentifiersVersion = "0.5.0"
+  private val playAuthVersion = "1.0.0"
 
   val compile = Seq(
     ws,
     "uk.gov.hmrc" %% "microservice-bootstrap" % microserviceBootstrapVersion,
-    "uk.gov.hmrc" %% "play-authorisation" % playAuthVersion,
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
     "uk.gov.hmrc" %% "play-ui" % playUiVersion,
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
@@ -40,6 +39,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "agent-mtd-identifiers" % mtdIdentifiersVersion,
     "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "2.3.0",
     "uk.gov.hmrc" %% "play-reactivemongo" % "5.2.0",
+    "uk.gov.hmrc" %% "play-auth" % playAuthVersion,
     "org.typelevel" %% "cats" % "0.9.0"
   )
 
@@ -56,7 +56,8 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % scalaTestVersion % scope,
         "org.scalatestplus.play" %% "scalatestplus-play" % scalaTestPlusVersion % scope,
         "org.pegdown" % "pegdown" % pegdownVersion % scope,
-        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
+        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
+        "org.mockito" % "mockito-core" % "2.7.22" % scope
       )
     }.test
   }
@@ -74,7 +75,7 @@ private object AppDependencies {
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.github.tomakehurst" % "wiremock" % wiremockVersion % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "2.0.0" % scope,
-        "org.mockito" % "mockito-core" % "1.9.0" % "test"
+        "org.mockito" % "mockito-core" % "2.7.22" % scope
       )
     }.test
   }
