@@ -10,32 +10,100 @@ trait AuthStub {
   val oid: String = "556737e15500005500eaf68f"
 
   def requestIsNotAuthenticated(): AuthStub = {
-    stubFor(get(urlEqualTo("/auth/authority")).willReturn(aResponse().withStatus(401)))
+    stubFor(post(urlEqualTo("/auth/authorise")).willReturn(aResponse().withStatus(401)))
     this
   }
 
-  def givenRequestIsAuthenticated(): AuthStub = {
-    stubFor(get(urlEqualTo("/auth/authority"))
+  def requestIsNotAAgentOrClient(): AuthStub = {
+    stubFor(post(urlEqualTo("/auth/authorise")).willReturn(aResponse().withStatus(200)
+      .withBody(
+        s"""
+        {
+           |	"affinityGroup": "Agent",
+           |	"allEnrolments": [{
+           |		"key": "HMRC-sdfsdf-asdasd",
+           |		"identifiers": [{
+           |			"key": "AgentReferenceNumber",
+           |			"value": "123123123"
+           |		}],
+           |		"state": "Activated"
+           |	}, {
+           |		"key": "asdasd-asasdasd-IT",
+           |		"identifiers": [{
+           |			"key": "AgentReferenceNumber",
+           |			"value": "123132321"
+           |		}],
+           |		"state": "Activated"
+           |	}, {
+           |		"key": "HMCE-VAT-AGNT",
+           |		"identifiers": [{
+           |			"key": "AgentRefNo",
+           |			"value": "V3264H"
+           |		}],
+           |		"state": "Activated"
+           |	}, {
+           |		"key": "HMRC-AGENT-AGENT",
+           |		"identifiers": [{
+           |			"key": "AgentRefNumber",
+           |			"value": "JARN1234567"
+           |		}],
+           |		"state": "Activated"
+           |	}, {
+           |		"key": "IR-SA-AGENT",
+           |		"identifiers": [{
+           |			"key": "IRAgentReference",
+           |			"value": "V3264H"
+           |		}],
+           |		"state": "Activated"
+           |	}]
+           |}
+       """.stripMargin)))
+    this
+  }
+  def givenRequestIsAuthenticated(arn:String,mtdItId:String): AuthStub = {
+    stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(
           s"""
              |{
-             |  "new-session":"/auth/oid/$oid/session",
-             |  "enrolments":"/auth/oid/$oid/enrolments",
-             |  "uri":"/auth/oid/$oid",
-             |  "loggedInAt":"2016-06-20T10:44:29.634Z",
-             |  "credentials":{
-             |    "gatewayId":"0000001234567890"
-             |  },
-             |  "accounts":{
-             |  },
-             |  "lastUpdated":"2016-06-20T10:44:29.634Z",
-             |  "credentialStrength":"strong",
-             |  "confidenceLevel":50,
-             |  "userDetailsLink":"$wireMockBaseUrl/user-details/id/$oid",
-             |  "levelOfAssurance":"1",
-             |  "previouslyLoggedInAt":"2016-06-20T09:48:37.112Z"
+             |	"affinityGroup": "Agent",
+             |	"allEnrolments": [{
+             |		"key": "HMRC-AS-AGENT",
+             |		"identifiers": [{
+             |			"key": "AgentReferenceNumber",
+             |			"value": "$arn"
+             |		}],
+             |		"state": "Activated"
+             |	}, {
+             |		"key": "HMRC-MTD-IT",
+             |		"identifiers": [{
+             |			"key": "AgentReferenceNumber",
+             |			"value": "$mtdItId"
+             |		}],
+             |		"state": "Activated"
+             |	}, {
+             |		"key": "HMCE-VAT-AGNT",
+             |		"identifiers": [{
+             |			"key": "AgentRefNo",
+             |			"value": "V3264H"
+             |		}],
+             |		"state": "Activated"
+             |	}, {
+             |		"key": "HMRC-AGENT-AGENT",
+             |		"identifiers": [{
+             |			"key": "AgentRefNumber",
+             |			"value": "JARN1234567"
+             |		}],
+             |		"state": "Activated"
+             |	}, {
+             |		"key": "IR-SA-AGENT",
+             |		"identifiers": [{
+             |			"key": "IRAgentReference",
+             |			"value": "V3264H"
+             |		}],
+             |		"state": "Activated"
+             |	}]
              |}
        """.stripMargin)))
     this
@@ -50,6 +118,12 @@ trait AuthStub {
              |[]
         """.stripMargin)))
     this
+  }
+  def writeAuditSucceeds(): Unit = {
+    stubFor(post(urlEqualTo("/write/audit"))
+      .willReturn(aResponse()
+        .withStatus(200)
+      ))
   }
 
   def andAgentClientAreSubscribed(arn: Arn, mtdItId: MtdItId): AuthStub = {

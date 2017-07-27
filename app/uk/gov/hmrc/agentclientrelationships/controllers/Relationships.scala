@@ -20,13 +20,15 @@ import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
 import play.api.mvc.{Action, AnyContent, Result}
+import uk.gov.hmrc.agentclientrelationships.MicroserviceAuthConnector
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.connectors.{AuthConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
-import uk.gov.hmrc.agentclientrelationships.controllers.actions.{AgentOrClientRequest, AuthActions}
+import uk.gov.hmrc.agentclientrelationships.auth.{AgentOrClientRequest, AuthActions}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
@@ -35,10 +37,9 @@ import scala.concurrent.Future
 
 @Singleton
 class Relationships @Inject()(
-  service: RelationshipsService,
-  override val authConnector: AuthConnector
-) extends BaseController with AuthActions {
+  service: RelationshipsService) extends BaseController with AuthActions {
 
+  def authConnector: AuthConnector =  new MicroserviceAuthConnector
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
     implicit val auditData = new AuditData()
@@ -79,7 +80,8 @@ class Relationships @Inject()(
     }
   }
 
-  def create(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = agentOrClient.async { implicit request =>
+  def create(arn: Arn, mtdItId: MtdItId) = AuthorisedAgent {
+    implicit request => implicit agent =>
     forThisAgentOrClient(arn, mtdItId) {
       implicit val auditData = new AuditData()
       auditData.set("arn", arn)
@@ -102,7 +104,7 @@ class Relationships @Inject()(
     }
   }
 
-  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = agentOrClient.async { implicit request =>
+  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgent { implicit request => implicit agent =>
     forThisAgentOrClient(arn, mtdItId) {
       implicit val auditData = new AuditData()
       auditData.set("arn", arn)
@@ -126,7 +128,8 @@ class Relationships @Inject()(
     (request.arn, request.mtdItId) match {
       case (Some(`requiredArn`), _) => block
       case (_, Some(`requiredMtdItId`)) => block
-      case _ => Future successful NoPermissionOnAgencyOrClient
+      case _ =>
+        Future successful NoPermissionOnAgencyOrClient
     }
   }
 
@@ -138,4 +141,5 @@ class Relationships @Inject()(
         case ex => NotFound(ex.getMessage)
       }
   }
+
 }

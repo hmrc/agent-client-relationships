@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
+import org.scalatest.mock.MockitoSugar
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
@@ -23,6 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
+import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
@@ -36,8 +38,10 @@ class RelationshipISpec extends UnitSpec
   with DesStubs
   with MappingStubs
   with DataStreamStub
-  with AuthStub {
+  with AuthStub
+  with MockitoSugar{
 
+  lazy val mockAuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
     .build()
 
@@ -495,13 +499,14 @@ class RelationshipISpec extends UnitSpec
       )
     }
   }
-
   "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
     "return 204 for a valid arn - mtditid combination" in {
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+
+      givenRequestIsAuthenticated(arn,mtditid)
+      writeAuditSucceeds()
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -513,7 +518,8 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 204 for a valid arn" in {
-      givenRequestIsAuthenticated().andAgentIsSubscribedClientIsNotSubscribed(Arn(arn))
+      givenRequestIsAuthenticated(arn,mtditid)
+      writeAuditSucceeds()
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -525,7 +531,8 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 204 for a valid mtdItId" in {
-      givenRequestIsAuthenticated.andAgentNotSubscribedClientIsSubscribed(MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid)
+      writeAuditSucceeds()
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -537,7 +544,10 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 401 for a invalid arn and invalid mtditid" in {
-      givenRequestIsAuthenticated().andAgentClientNotSubscribed
+      val arnUnmatched = "not Valid"
+      val mtdItIdUnmatched ="not Valid"
+      givenRequestIsAuthenticated(arnUnmatched,mtdItIdUnmatched)
+      writeAuditSucceeds()
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -551,7 +561,8 @@ class RelationshipISpec extends UnitSpec
     "return 204 for user permitted as agent" in {
       val unmatchedMtdItId = "ABC"
 
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(unmatchedMtdItId))
+      givenRequestIsAuthenticated(arn,mtditid)
+      writeAuditSucceeds()
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -563,10 +574,8 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 403 for user not permitted as agent neither as client" in {
-      val unmatchedArn = "123"
-      val unmatchedMtdItId = "ABC"
-
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(unmatchedArn), MtdItId(unmatchedMtdItId))
+      requestIsNotAAgentOrClient()
+      writeAuditSucceeds()
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -578,7 +587,8 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 for an invalid arn" in {
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated("Not valid",mtditid)
+      writeAuditSucceeds()
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAgentCanBeDeallocatedInDes(mtditid, arn)
       givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
@@ -588,7 +598,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 for an invalid agent code" in {
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid)
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenAgentCanBeDeallocatedInDes(mtditid, arn)
@@ -599,7 +609,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 for non-existent relationship" in {
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -611,7 +621,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 when de allocation fails in des" in {
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -623,7 +633,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 when de allocation fails in gg" in {
-      givenRequestIsAuthenticated().andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -801,7 +811,7 @@ class RelationshipISpec extends UnitSpec
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
     "return 201 for a valid arn - mtditid combination" in {
-      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -814,7 +824,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 201 for an existing db record" in {
-      givenRequestIsAuthenticated.andAgentIsSubscribedClientIsNotSubscribed(Arn(arn))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentIsSubscribedClientIsNotSubscribed(Arn(arn))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -828,7 +838,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 if relationship already exists" in {
-      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
@@ -840,7 +850,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 if relationship could not be created in gg" in {
-      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -854,7 +864,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 if relationship could not be created in des" in {
-      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -867,7 +877,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 for a invalid arn and valid mtdItId" in {
-      givenRequestIsAuthenticated.andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
+      givenRequestIsAuthenticated(arn,mtditid).andAgentClientAreSubscribed(Arn(arn), MtdItId(mtditid))
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
