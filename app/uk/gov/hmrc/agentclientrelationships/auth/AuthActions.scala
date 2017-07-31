@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.auth
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._
-import uk.gov.hmrc.agentclientrelationships.MicroserviceAuthConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AffinityGroup.Agent
