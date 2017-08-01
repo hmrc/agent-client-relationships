@@ -54,10 +54,6 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     override lazy val get = new URL(baseUrl(serviceName))
   }
 
-  private class ConfigPropertyProvider(propertyName: String) extends Provider[String] {
-    override lazy val get = getConfString(propertyName, throw new RuntimeException(s"No configuration value found for '$propertyName'"))
-  }
-
   private def bindProperty(objectName: String, propertyName: String) =
     bind(classOf[String]).annotatedWith(Names.named(objectName)).toProvider(new PropertyProvider(propertyName))
 
@@ -65,7 +61,6 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     override lazy val get = getConfString(confKey, throw new IllegalStateException(s"No value found for configuration property $confKey"))
   }
 }
-
 
 object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs: Config = Play.current.configuration.underlying.as[Config]("controllers")
