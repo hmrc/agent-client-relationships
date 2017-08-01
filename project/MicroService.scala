@@ -1,8 +1,7 @@
-import sbt.Keys._
-import play.sbt.PlayImport.PlayKeys._
-import play.sbt.routes.RoutesKeys._
 import play.routes.compiler.StaticRoutesGenerator
-import sbt.Tests.{SubProcess, Group}
+import play.sbt.routes.RoutesKeys._
+import sbt.Keys._
+import sbt.Tests.{Group, SubProcess}
 import sbt._
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
@@ -11,13 +10,11 @@ trait MicroService {
 
   import uk.gov.hmrc._
   import DefaultBuildSettings._
+  import TestPhases._
+  import scoverage.ScoverageKeys.coverageExcludedPackages
   import uk.gov.hmrc.SbtAutoBuildPlugin
   import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
   import uk.gov.hmrc.versioning.SbtGitVersioning
-  import scoverage.ScoverageKeys.{coverageExcludedPackages}
-
-
-  import TestPhases._
 
   val appName: String
 
@@ -38,7 +35,7 @@ trait MicroService {
       retrieveManaged := true,
       evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
       routesGenerator := StaticRoutesGenerator,
-      coverageExcludedPackages := """uk\.gov\.hmrc\.[a-zA-Z0-1]*;com\.kenshoo\.play\..*;.*\.Routes.*;.*\.Reverse.*;.*\.javascript\..*"""
+      coverageExcludedPackages := """uk\.gov\.hmrc\.BuildInfo;com\.kenshoo\.play\..*;.*\.Routes.*;.*\.Reverse.*;.*\.javascript\..*"""
     )
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
