@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
