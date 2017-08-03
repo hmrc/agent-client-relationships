@@ -17,10 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.mvc.{Result, Results}
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
 import uk.gov.hmrc.agentclientrelationships.auth.AgentOrClientRequest
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
@@ -37,41 +38,29 @@ class RelationshipsControllerSpec extends UnitSpec with ResettingMockitoSugar wi
   private val nonMatchingMtdItId = MtdItId("BBBBBBBBBBBBBBB")
 
   "forThisAgentOrClient" should {
-    "call the block when ARN matches but not MTDITID" in {
-      callShouldBeAllowed(Some(matchingArn), None)
-      callShouldBeAllowed(Some(matchingArn), Some(nonMatchingMtdItId))
+    "call the block when the logged in user's tax identifer matches the supplied arn or matdItId" in {
+      callShouldBeAllowed(matchingArn)
+      callShouldBeAllowed(matchingMtdItId)
     }
 
-    "call the block when MTDITID matches but not ARN" in {
-      callShouldBeAllowed(None, Some(matchingMtdItId))
-      callShouldBeAllowed(Some(nonMatchingArn), Some(matchingMtdItId))
-    }
-
-    "call the block when ARN and MTDITID both match" in {
-      callShouldBeAllowed(Some(matchingArn), Some(matchingMtdItId))
-    }
-
-    "return NoPermissionOnAgencyOrClient when neither ARN nor MTDITID match" in {
-      callShouldBeDenied(Some(nonMatchingArn), Some(nonMatchingMtdItId))
-    }
-
-    "return NoPermissionOnAgencyOrClient when ARN and MTDITID are both None" in {
-      callShouldBeDenied(None, None)
+    "return NoPermissionOnAgencyOrClient when logged in user's tax identifer do not match the supplied arn or matdItId" in {
+      callShouldBeDenied(nonMatchingArn)
+      callShouldBeDenied(nonMatchingMtdItId)
     }
   }
 
-  private def callShouldBeAllowed(callingArn: Option[Arn], callingMtdItId: Option[MtdItId]) = {
-    await(forThisAgentOrClient(blockThatShouldBeCalled)(callingArn, callingMtdItId)) shouldBe Ok
+  private def callShouldBeAllowed(taxIdentifier: TaxIdentifier) = {
+    await(forThisAgentOrClient(blockThatShouldBeCalled)(taxIdentifier)) shouldBe Ok
   }
 
-  private def callShouldBeDenied(callingArn: Option[Arn], callingMtdItId: Option[MtdItId]) = {
-    await(forThisAgentOrClient(blockThatShouldNotCalled)(callingArn, callingMtdItId)) shouldBe NoPermissionOnAgencyOrClient
+  private def callShouldBeDenied(taxIdentifier: TaxIdentifier) = {
+    await(forThisAgentOrClient(blockThatShouldNotCalled)(taxIdentifier)) shouldBe NoPermissionOnAgencyOrClient
   }
 
-  private def forThisAgentOrClient(block: Future[Result])(callingArn: Option[Arn], callingMtdItId: Option[MtdItId]) = {
-    controller.forThisAgentOrClient(matchingArn, matchingMtdItId)(block)(request(callingArn, callingMtdItId))
+  private def forThisAgentOrClient(block: Future[Result])(taxIdentifier: TaxIdentifier) = {
+    controller.forThisAgentOrClient(matchingArn, matchingMtdItId)(block)(request(taxIdentifier))
   }
 
-  private def request(arn: Option[Arn], mtdItId: Option[MtdItId]) =
-    AgentOrClientRequest[Unit](arn, mtdItId, null)
+  private def request(taxIdentifier: TaxIdentifier) =
+    AgentOrClientRequest[Unit](taxIdentifier, null)
 }

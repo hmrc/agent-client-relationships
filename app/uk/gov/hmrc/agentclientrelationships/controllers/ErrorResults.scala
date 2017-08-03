@@ -28,7 +28,6 @@ object ErrorResults {
     override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
   }
 
-  val NoAgentOrClient                   = Unauthorized(toJson(ErrorBody("UNAUTHORIZED", "The Agent is not subscribed to Agent Services, neither Client's MtdItId was found")))
-  val GenericUnauthorized               = Unauthorized(toJson(ErrorBody("UNAUTHORIZED", "Bearer token is missing or not authorized.")))
-  val NoPermissionOnAgencyOrClient      = Forbidden(toJson(ErrorBody("NO_PERMISSION_ON_AGENCY", "The logged in user is not permitted as agent neither as client.")))
+  val GenericUnauthorized               = Unauthorized(toJson(ErrorBody("UNAUTHENTICATED", "Bearer token is missing or not authorized.")))
+  val NoPermissionOnAgencyOrClient      = Forbidden(toJson(ErrorBody("NO_PERMISSION", "The logged in user is not permitted to perform the operation.")))
 }
