@@ -14,53 +14,15 @@ trait AuthStub {
     this
   }
 
-  def requestIsNotAAgentOrClient(): AuthStub = {
-    stubFor(post(urlEqualTo("/auth/authorise")).willReturn(aResponse().withStatus(200)
-      .withBody(
-        s"""
-        {
-           |	"affinityGroup": "Agent",
-           |	"allEnrolments": [{
-           |		"key": "HMRC-sdfsdf-asdasd",
-           |		"identifiers": [{
-           |			"key": "AgentReferenceNumber",
-           |			"value": "123123123"
-           |		}],
-           |		"state": "Activated"
-           |	}, {
-           |		"key": "asdasd-asasdasd-IT",
-           |		"identifiers": [{
-           |			"key": "AgentReferenceNumber",
-           |			"value": "123132321"
-           |		}],
-           |		"state": "Activated"
-           |	}, {
-           |		"key": "HMCE-VAT-AGNT",
-           |		"identifiers": [{
-           |			"key": "AgentRefNo",
-           |			"value": "V3264H"
-           |		}],
-           |		"state": "Activated"
-           |	}, {
-           |		"key": "HMRC-AGENT-AGENT",
-           |		"identifiers": [{
-           |			"key": "AgentRefNumber",
-           |			"value": "JARN1234567"
-           |		}],
-           |		"state": "Activated"
-           |	}, {
-           |		"key": "IR-SA-AGENT",
-           |		"identifiers": [{
-           |			"key": "IRAgentReference",
-           |			"value": "V3264H"
-           |		}],
-           |		"state": "Activated"
-           |	}]
-           |}
-       """.stripMargin)))
-    this
+  def writeAuditSucceeds(): Unit = {
+    stubFor(post(urlEqualTo("/write/audit"))
+      .willReturn(aResponse()
+        .withStatus(200)
+      ))
   }
-  def givenRequestIsAuthenticated(arn:String,mtdItId:String): AuthStub = {
+
+
+  def givenUserIsSubscribedAgent(arn: Arn): AuthStub = {
     stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
         .withStatus(200)
@@ -72,14 +34,70 @@ trait AuthStub {
              |		"key": "HMRC-AS-AGENT",
              |		"identifiers": [{
              |			"key": "AgentReferenceNumber",
-             |			"value": "$arn"
+             |			"value": "${arn.value}"
              |		}],
              |		"state": "Activated"
-             |	}, {
-             |		"key": "HMRC-MTD-IT",
+             |	}]
+             |}
+       """.stripMargin)))
+    this
+  }
+
+  def givenUserHasNoAgentEnrolments(arn: Arn): AuthStub = {
+    stubFor(post(urlEqualTo("/auth/authorise"))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(
+          s"""
+             |{
+             |	"affinityGroup": "Agent",
+             |	"allEnrolments": [{
+             |		"key": " ",
              |		"identifiers": [{
              |			"key": "AgentReferenceNumber",
-             |			"value": "$mtdItId"
+             |			"value": "${arn.value}"
+             |		}],
+             |		"state": "Activated"
+             |	}]
+             |}
+       """.stripMargin)))
+    this
+  }
+
+  def givenUserHasNoClientEnrolments: AuthStub = {
+    stubFor(post(urlEqualTo("/auth/authorise"))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(
+          s"""
+             |{
+             |	"affinityGroup": "Individual",
+             |	"allEnrolments": [{
+             |		"key": " ",
+             |		"identifiers": [{
+             |			"key": "MTDITID",
+             |			"value": "ID"
+             |		}],
+             |		"state": "Activated"
+             |	}]
+             |}
+       """.stripMargin)))
+    this
+  }
+
+  def givenUserIsSubscribedClient(mtdItId: MtdItId): AuthStub = {
+    stubFor(post(urlEqualTo("/auth/authorise"))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(
+          s"""
+             |{
+             |"affinityGroup": "Individual",
+             |"allEnrolments": [{
+             |  "key": "HMRC-MTD-IT",
+             |  "identifiers": [{
+             |			"key": "MTDITID",
+             |			"value": "${mtdItId.value}"
              |		}],
              |		"state": "Activated"
              |	}, {
@@ -106,103 +124,6 @@ trait AuthStub {
              |	}]
              |}
        """.stripMargin)))
-    this
-  }
-
-  def andHasNoEnrolments(): AuthStub = {
-    stubFor(get(urlPathEqualTo(s"/auth/oid/$oid/enrolments"))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(
-          s"""
-             |[]
-        """.stripMargin)))
-    this
-  }
-  def writeAuditSucceeds(): Unit = {
-    stubFor(post(urlEqualTo("/write/audit"))
-      .willReturn(aResponse()
-        .withStatus(200)
-      ))
-  }
-
-  def andAgentClientAreSubscribed(arn: Arn, mtdItId: MtdItId): AuthStub = {
-    stubFor(get(urlPathEqualTo(s"/auth/oid/$oid/enrolments"))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(
-          s"""
-             |[{"key": "HMRC-AS-AGENT",
-             |  "identifiers": [{"key": "AgentReferenceNumber", "value": "${arn.value}"},
-             |                  {"key": "AnotherIdentifier", "value": "Not Arn"}],
-             |  "state": "Activated"
-             |},
-             |{"key": "HMRC-MTD-IT",
-             |  "identifiers": [{"key": "AgentReferenceNumber", "value": "${mtdItId.value}"},
-             |                  {"key": "AnotherIdentifier", "value": "Not MtdItId"}],
-             |  "state": "Activated"
-             |}]
-        """.stripMargin)))
-    this
-  }
-
-  def andAgentIsSubscribedClientIsNotSubscribed(arn: Arn): AuthStub = {
-    stubFor(get(urlPathEqualTo(s"/auth/oid/$oid/enrolments"))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(
-          s"""
-             |[{"key": "HMRC-AS-AGENT",
-             |  "identifiers": [{"key": "AgentReferenceNumber", "value": "${arn.value}"},
-             |                  {"key": "AnotherIdentifier", "value": "Not Arn"}],
-             |  "state": "Activated"
-             |},
-             |{"key": "HMRC-MTD-IT",
-             |  "identifiers": [{"key": "AnotherIdentifier", "value": "Not MtdItId"},
-             |                  {"key": "AnotherIdentifier", "value": "Not MtdItId"}],
-             |  "state": "Activated"
-             |}]
-        """.stripMargin)))
-    this
-  }
-
-  def andAgentNotSubscribedClientIsSubscribed(mtdItId: MtdItId): AuthStub = {
-    stubFor(get(urlPathEqualTo(s"/auth/oid/$oid/enrolments"))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(
-          s"""
-             |[{"key": "HMRC-AS-AGENT",
-             |  "identifiers": [{"key": "AnotherIdentifier", "value": "Not Arn"},
-             |                  {"key": "AnotherIdentifier", "value": "Not Arn"}],
-             |  "state": "Activated"
-             |},
-             |{"key": "HMRC-MTD-IT",
-             |  "identifiers": [{"key": "AgentReferenceNumber", "value": "${mtdItId.value}"},
-             |                  {"key": "AnotherIdentifier", "value": "Not MtdItId"}],
-             |  "state": "Activated"
-             |}]
-        """.stripMargin)))
-    this
-  }
-
-  def andAgentClientNotSubscribed(): AuthStub = {
-    stubFor(get(urlPathEqualTo(s"/auth/oid/$oid/enrolments"))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(
-          s"""
-             |[{"key": "HMRC-AS-AGENT",
-             |  "identifiers": [{"key": "AnotherIdentifier", "value": "Not Arn"},
-             |                  {"key": "AnotherIdentifier", "value": "Not Arn"}],
-             |  "state": "Activated"
-             |},
-             |{"key": "HMRC-MTD-IT",
-             |  "identifiers": [{"key": "AnotherIdentifier", "value": "Not MtdItId"},
-             |                  {"key": "AnotherIdentifier", "value": "Not MtdItId"}],
-             |  "state": "Activated"
-             |}]
-        """.stripMargin)))
     this
   }
 }

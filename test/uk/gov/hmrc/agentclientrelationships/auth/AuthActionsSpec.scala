@@ -25,31 +25,22 @@ import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{NoAgentOrClient, NoPermissionOnAgencyOrClient}
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
 
 import scala.concurrent.Future
-
 
 class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results with OneAppPerSuite {
 
   lazy val mockAuthConnector = mock[PlayAuthConnector]
 
-  lazy val arn = "TARN0000001"
-  lazy val invalidArn = "Not Valid"
+  private lazy val arn = "TARN0000001"
+  private lazy val mtdItId = "ABCDEFGH"
 
-  lazy val mtdItId = "ABCDEFGH"
-  lazy val invalidMtdItId = "Not Valid"
-
-  val agentEnrolment = Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("AgentReferenceNumber", arn)), confidenceLevel = ConfidenceLevel.L200,
+  private val agentEnrolment = Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("AgentReferenceNumber", arn)), confidenceLevel = ConfidenceLevel.L200,
     state = "", delegatedAuthRule = None)
 
-  val mtdItIdEnrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("AgentReferenceNumber", mtdItId)), confidenceLevel = ConfidenceLevel.L200,
+  private val mtdItIdEnrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)), confidenceLevel = ConfidenceLevel.L200,
     state = "", delegatedAuthRule = None)
-
-  val agentWithEnrolmentSet = Set(
-    agentEnrolment, mtdItIdEnrolment
-  )
-
 
   class TestAuth() extends AuthActions with BaseController {
     def testAuthActions() = AuthorisedAgent {
@@ -57,67 +48,61 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
         implicit agent =>
           Future.successful(Ok)
     }
+
     override def authConnector: AuthConnector = mockAuthConnector
   }
 
-  def mockAuth(affinityGroup: AffinityGroup = AffinityGroup.Agent, enrolment: Set[Enrolment]) = when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any()))
-    .thenReturn(Future successful new ~[Enrolments, Option[AffinityGroup]](Enrolments(enrolment), Some(affinityGroup)))
+  def mockAgentAuth(affinityGroup: AffinityGroup = AffinityGroup.Agent, enrolment: Set[Enrolment]) =
+    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any()))
+      .thenReturn(Future successful new ~[Enrolments, Option[AffinityGroup]](Enrolments(enrolment), Some(affinityGroup)))
+
+  def mockClientAuth(affinityGroup: AffinityGroup = AffinityGroup.Individual, enrolment: Set[Enrolment]) =
+    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any()))
+      .thenReturn(Future successful new ~[Enrolments, Option[AffinityGroup]](Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")
 
   val testAuthImpl = new TestAuth
 
   "AuthorisedAgent" should {
-    "should return Ok if Agent has valid Arn and MtdItId " in {
-      mockAuth(enrolment = Set(
-        agentEnrolment, mtdItIdEnrolment
+    "should return Ok if Agent has Arn" in {
+      mockAgentAuth(enrolment = Set(
+        agentEnrolment
       ))
       val result: Future[Result] = testAuthImpl.testAuthActions().apply(fakeRequest)
       await(result) shouldBe Ok
     }
-    "should return NoAgentOrClient if AffinityGroup is an Individual" in {
-      mockAuth(AffinityGroup.Individual, enrolment = Set(
-        agentEnrolment, mtdItIdEnrolment
+
+    "should return Ok if Client has MtdItId " in {
+      mockClientAuth(enrolment = Set(
+        mtdItIdEnrolment
       ))
       val result: Future[Result] = testAuthImpl.testAuthActions().apply(fakeRequest)
-      await(result) shouldBe NoAgentOrClient
+      await(result) shouldBe Ok
     }
+
     "should return NoPermissionOnAgencyOrClient if it doesn't have the correct enrolment" in {
-      mockAuth(enrolment = Set(
+      mockAgentAuth(enrolment = Set(
         agentEnrolment.copy(key = "In valid").copy(key = "Invalid")
       ))
       val result: Future[Result] = testAuthImpl.testAuthActions().apply(fakeRequest)
       await(result) shouldBe NoPermissionOnAgencyOrClient
     }
-    "should return NoAgentOrClient if does not contain have both enrolment " in {
-      mockAuth(AffinityGroup.Individual, enrolment = Set(
+
+    "should return NoPermissionOnAgencyOrClient for client's Auth with Agent's enrolments" in {
+      mockClientAuth(AffinityGroup.Individual, enrolment = Set(
         agentEnrolment
       ))
       val result: Future[Result] = testAuthImpl.testAuthActions().apply(fakeRequest)
-      await(result) shouldBe NoAgentOrClient
-    }
-    "should return NotFound if the arn is invalid " in {
-      mockAuth(enrolment = Set(
-        agentEnrolment.copy(identifiers = Seq(EnrolmentIdentifier("AgentReferenceNumber", invalidArn))), mtdItIdEnrolment
-      ))
-      val result: Future[Result] = testAuthImpl.testAuthActions().apply(fakeRequest)
-      await(result) shouldBe NotFound
-    }
-    "should return NotFound if the mtdit is invalid " in {
-      mockAuth(enrolment = Set(
-        agentEnrolment, mtdItIdEnrolment.copy(identifiers = Seq(EnrolmentIdentifier("AgentReferenceNumber", invalidMtdItId)))
-      ))
-      val result: Future[Result] = testAuthImpl.testAuthActions().apply(fakeRequest)
-      await(result) shouldBe NotFound
+      await(result) shouldBe NoPermissionOnAgencyOrClient
     }
 
-    "should return NoAgentOrClient if the mtdit is invalid and the arn is invalid" in {
-      mockAuth(enrolment = Set(
-        agentEnrolment.copy(identifiers = Seq(EnrolmentIdentifier("AgentReferenceNumber", invalidArn))),
-        mtdItIdEnrolment.copy(identifiers = Seq(EnrolmentIdentifier("AgentReferenceNumber", invalidMtdItId)))
+    "should return NoPermissionOnAgencyOrClient for Agent's Auth with Client's enrolments" in {
+      mockAgentAuth(AffinityGroup.Agent, enrolment = Set(
+        mtdItIdEnrolment
       ))
       val result: Future[Result] = testAuthImpl.testAuthActions().apply(fakeRequest)
-      await(result) shouldBe NoAgentOrClient
+      await(result) shouldBe NoPermissionOnAgencyOrClient
     }
   }
 }

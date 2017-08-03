@@ -22,9 +22,9 @@ import play.api.Logger
 import play.api.mvc.{Action, AnyContent, Result}
 import uk.gov.hmrc.agentclientrelationships.MicroserviceAuthConnector
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.auth.{AgentOrClientRequest, AuthActions}
 import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
-import uk.gov.hmrc.agentclientrelationships.auth.{AgentOrClientRequest, AuthActions}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
@@ -125,21 +125,17 @@ class Relationships @Inject()(
 
   private[controllers] def forThisAgentOrClient(requiredArn: Arn, requiredMtdItId: MtdItId)
     (block: => Future[Result])(implicit request: AgentOrClientRequest[_]) = {
-    (request.arn, request.mtdItId) match {
-      case (Some(`requiredArn`), _) => block
-      case (_, Some(`requiredMtdItId`)) => block
-      case _ =>
-        Future successful NoPermissionOnAgencyOrClient
-    }
+    val taxId: String = request.taxIdentifier.value
+
+    if (requiredArn.value.equals(taxId) || requiredMtdItId.value.equals(taxId)) block
+    else Future successful NoPermissionOnAgencyOrClient
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
-
     service.cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
       .recover {
         case ex => NotFound(ex.getMessage)
       }
   }
-
 }
