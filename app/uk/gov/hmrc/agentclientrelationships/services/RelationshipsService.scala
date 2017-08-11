@@ -36,10 +36,10 @@ import scala.concurrent.{ExecutionContext, Future}
 class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      des: DesConnector,
                                      mapping: MappingConnector,
-                                     repository: RelationshipCopyRecordRepository,
+                                     relationshipCopyRepository: RelationshipCopyRecordRepository,
                                      auditService: AuditService) {
 
-  private val MtdItIdType = "MTDITID"
+  private[services] val MtdItIdType = "MTDITID"
 
   def getAgentCodeFor(arn: Arn)
                      (implicit hc: HeaderCarrier, auditData: AuditData): Future[AgentCode] =
@@ -65,11 +65,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     auditData.set("regime", "mtd-it")
     auditData.set("regimeId", mtdItId)
 
-    repository.findBy(arn, mtdItId).flatMap {
-      case Some(_) =>
+    relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
+      case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         Logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
         Future.failed(new Exception())
-      case None    =>
+      case _    =>
         for {
           nino <- des.getNinoFor(mtdItId)
           references <- lookupCesaForOldRelationship(arn, nino)
@@ -104,6 +104,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     }
   }
 
+  //noinspection ScalaStyle
   def createRelationship(arn: Arn,
                          mtdItId: MtdItId,
                          agentCode: Future[AgentCode],
@@ -119,7 +120,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
     def createRelationshipRecord: Future[Unit] = {
       val record = RelationshipCopyRecord(arn.value, mtdItId.value, MtdItIdType, Some(oldReferences))
-      repository.create(record)
+      relationshipCopyRepository.create(record)
         .map(_ => auditData.set("AgentDBRecord", true))
         .recoverWith {
           case ex =>
@@ -129,8 +130,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         }
     }
 
-    val updateEtmpSyncStatus = repository.updateEtmpSyncStatus(arn, mtdItId, _: SyncStatus)
-    val updateGgSyncStatus = repository.updateGgSyncStatus(arn, mtdItId, _: SyncStatus)
+    val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, mtdItId, _: SyncStatus)
+    val updateGgSyncStatus = relationshipCopyRepository.updateGgSyncStatus(arn, mtdItId, _: SyncStatus)
 
     def createEtmpRecord(mtdItId: MtdItId): Future[Unit] = (for {
       _ <- updateEtmpSyncStatus(SyncStatus.InProgress)
@@ -194,7 +195,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] = {
-    repository.remove(arn, mtdItId).flatMap { n =>
+    relationshipCopyRepository.remove(arn, mtdItId).flatMap { n =>
       if (n == 0) {
         Future.failed(new Exception("Nothing has been removed from db."))
       } else {

@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
+import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support.{Http, MongoApp, WireMockSupport}
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -28,6 +29,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipTestOnlyISpec extends UnitSpec
   with MongoApp
+  with OneServerPerSuite
   with WireMockSupport
   with GovernmentGatewayProxyStubs
   with DesStubs
@@ -50,7 +52,7 @@ class RelationshipTestOnlyISpec extends UnitSpec
       )
       .configure(mongoConfiguration)
 
-  def repo = app.injector.instanceOf[RelationshipCopyRecordRepository]
+  def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
   override def beforeEach() {
     super.beforeEach()

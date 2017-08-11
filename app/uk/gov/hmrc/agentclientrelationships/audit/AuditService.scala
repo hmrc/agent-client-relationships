@@ -46,6 +46,8 @@ class AuditData {
     details.put(key, value)
   }
 
+  def get(key: String): Any = details.get(key)
+
   def getDetails(): Map[String, Any] = {
     JavaConversions.mapAsScalaMap(details).toMap
   }

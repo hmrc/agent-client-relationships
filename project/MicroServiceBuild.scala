@@ -57,7 +57,7 @@ private object AppDependencies {
         "org.scalatestplus.play" %% "scalatestplus-play" % scalaTestPlusVersion % scope,
         "org.pegdown" % "pegdown" % pegdownVersion % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-        "org.mockito" % "mockito-core" % "2.7.22" % scope
+        "org.mockito" % "mockito-core" % "2.8.47" % scope
       )
     }.test
   }
@@ -75,7 +75,7 @@ private object AppDependencies {
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.github.tomakehurst" % "wiremock" % wiremockVersion % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "2.0.0" % scope,
-        "org.mockito" % "mockito-core" % "2.7.22" % scope
+        "org.mockito" % "mockito-core" % "2.8.47" % scope
       )
     }.test
   }
