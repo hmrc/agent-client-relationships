@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
@@ -67,7 +67,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
     repository.findBy(arn, mtdItId).flatMap {
       case Some(_) =>
-        Logger.warn(s"Relationship has been already copied from CESA to MTD")
+        Logger.warn(s"Relationship has been already been checked for in CESA - not checking again")
         Future.failed(new Exception())
       case None    =>
         for {
