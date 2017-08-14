@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import javax.inject.{Inject, Singleton}
 
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json.{Format, Reads, Writes}
@@ -47,7 +47,7 @@ case class RelationshipCopyRecord(arn: String,
                                   clientIdentifier: String,
                                   clientIdentifierType: String,
                                   references: Option[Set[SaAgentReference]] = None,
-                                  dateTime: DateTime = DateTime.now(),
+                                  dateTime: DateTime = DateTime.now(DateTimeZone.UTC),
                                   syncToETMPStatus: Option[SyncStatus] = None,
                                   syncToGGStatus: Option[SyncStatus] = None)
 
