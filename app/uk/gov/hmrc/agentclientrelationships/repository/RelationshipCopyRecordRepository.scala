@@ -50,7 +50,7 @@ case class RelationshipCopyRecord(arn: String,
                                   dateTime: DateTime = DateTime.now(DateTimeZone.UTC),
                                   syncToETMPStatus: Option[SyncStatus] = None,
                                   syncToGGStatus: Option[SyncStatus] = None) {
-  def actionRequired: Boolean = syncToETMPStatus.isEmpty
+  def actionRequired: Boolean = syncToETMPStatus != Some(Success)
 }
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
