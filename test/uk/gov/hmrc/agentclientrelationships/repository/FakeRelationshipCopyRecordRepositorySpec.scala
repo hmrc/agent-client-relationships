@@ -55,6 +55,16 @@ class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec {
     }
   }
 
+  "updateGgSyncStatus" should {
+    "update the record" in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(relationshipCopyRecord)
+      await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe None
+
+      await(relationshipCopyRepository.updateGgSyncStatus(arn, mtdItId, SyncStatus.Success))
+      await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe Some(SyncStatus.Success)
+    }
+  }
+
   // remove implicit
   override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
 }

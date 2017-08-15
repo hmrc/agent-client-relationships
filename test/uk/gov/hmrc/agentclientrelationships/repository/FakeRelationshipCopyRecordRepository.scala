@@ -44,7 +44,15 @@ class FakeRelationshipCopyRecordRepository(var record: RelationshipCopyRecord) e
     )
   }
 
-  def updateGgSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = ???
+  def updateGgSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+    Future.successful(
+      if (arn.value == record.arn && mtdItId.value == record.clientIdentifier) {
+        record = record.copy(syncToGGStatus = Some(status))
+      } else {
+        throw new IllegalArgumentException(s"Unexpected arn and mtdItId $arn, $mtdItId")
+      }
+    )
+  }
 
   def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int] = ???
 

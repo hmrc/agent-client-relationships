@@ -54,7 +54,7 @@ class RelationshipsServiceSpec extends UnitSpec
   val hc = HeaderCarrier()
 
   "checkCesaForOldRelationshipAndCopy" should {
-    "create ETMP relationship and return true if RelationshipCopyRecord exists with syncToETMPStatus = None" in {
+    "create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = None" in {
       val record = defaultRecord.copy(syncToETMPStatus = None)
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
       val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, auditService)
@@ -66,7 +66,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
       val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(hc, request, auditData)
 
-      await(check) shouldBe true
+      await(check) shouldBe FoundAndCopied
 
       verifyEtmpRecordCreated()
       verifyAuditEventSent()
@@ -84,7 +84,7 @@ class RelationshipsServiceSpec extends UnitSpec
       cesaRelationshipDoesNotExist()
 
       val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(hc, request, auditData)
-      await(check) shouldBe false
+      await(check) shouldBe NotFound
 
       verifyEtmpRecordNotCreated()
     }
@@ -101,9 +101,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
       val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(hc, request, auditData)
 
-      intercept[Exception] {
-        await(check)
-      }
+      await(check) shouldBe AlreadyCopiedDidNotCheck
 
       verifyEtmpRecordNotCreated()
     }

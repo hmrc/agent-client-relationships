@@ -32,6 +32,26 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.{ExecutionContext, Future}
 
+sealed trait CesaCheckAndCopyResult {
+  val relationshipExists: Boolean
+}
+
+final case object AlreadyCopiedDidNotCheck extends CesaCheckAndCopyResult {
+  override val relationshipExists = true
+}
+
+final case object FoundAndCopied extends CesaCheckAndCopyResult {
+  override val relationshipExists = true
+}
+
+final case object FoundAndFailedToCopy extends CesaCheckAndCopyResult {
+  override val relationshipExists = true
+}
+
+final case object NotFound extends CesaCheckAndCopyResult {
+  override val relationshipExists = false
+}
+
 @Singleton
 class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      des: DesConnector,
@@ -59,7 +79,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } yield result
 
   def checkCesaForOldRelationshipAndCopy(arn: Arn, mtdItId: MtdItId, agentCode: Future[AgentCode])
-                                        (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] = {
+                                        (implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CesaCheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
     auditData.set("regime", "mtd-it")
@@ -68,7 +88,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         Logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
-        Future.failed(new Exception())
+        Future successful AlreadyCopiedDidNotCheck
       case _    =>
         for {
           nino <- des.getNinoFor(mtdItId)
@@ -77,13 +97,15 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
             createRelationship(arn, mtdItId, agentCode, references, true, false)
               .map { _ =>
                 auditService.sendCreateRelationshipAuditEvent
-                true
+                FoundAndCopied
               }
-              .recover { case _ =>
+              .recover { case ex =>
+                Logger.warn(s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value}", ex)
+                //TODO why send the audit even though something failed?
                 auditService.sendCreateRelationshipAuditEvent
-                true
+                FoundAndFailedToCopy
               }
-          } else Future.successful(false)
+          } else Future.successful(NotFound)
         } yield result
     }
   }
@@ -124,6 +146,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         .map(_ => auditData.set("AgentDBRecord", true))
         .recoverWith {
           case ex =>
+            //TODO log identifiers
             Logger.warn(s"Inserting relationship record into mongo failed", ex)
             if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
             else Future.successful(())
@@ -141,6 +164,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } yield ())
       .recoverWith {
         case ex =>
+            //TODO log identifiers
           Logger.warn(s"Creating ETMP record failed", ex)
           updateEtmpSyncStatus(SyncStatus.Failed)
             .flatMap(_ => Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DES")))
@@ -155,9 +179,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
+            //TODO log identifiers
           Logger.warn(s"Creating GG record not possible because of incomplete data: $errorCode")
           updateGgSyncStatus(SyncStatus.IncompleteInputParams)
         case ex                              =>
+            //TODO log identifiers
           Logger.warn(s"Creating GG record failed", ex)
           updateGgSyncStatus(SyncStatus.Failed)
           if (failIfAllocateAgentInGGFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_GG"))
