@@ -31,6 +31,7 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 sealed trait CesaCheckAndCopyResult {
   val relationshipExists: Boolean
@@ -99,7 +100,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                 auditService.sendCreateRelationshipAuditEvent
                 FoundAndCopied
               }
-              .recover { case ex =>
+              .recover { case NonFatal(ex) =>
                 Logger.warn(s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value}", ex)
                 //TODO why send the audit even though something failed?
                 auditService.sendCreateRelationshipAuditEvent
@@ -145,9 +146,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       relationshipCopyRepository.create(record)
         .map(_ => auditData.set("AgentDBRecord", true))
         .recoverWith {
-          case ex =>
-            //TODO log identifiers
-            Logger.warn(s"Inserting relationship record into mongo failed", ex)
+          case NonFatal(ex) =>
+            Logger.warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${mtdItId.value}", ex)
             if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
             else Future.successful(())
         }
@@ -163,9 +163,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       _ <- updateEtmpSyncStatus(SyncStatus.Success)
     } yield ())
       .recoverWith {
-        case ex =>
-            //TODO log identifiers
-          Logger.warn(s"Creating ETMP record failed", ex)
+        case NonFatal(ex) =>
+          Logger.warn(s"Creating ETMP record failed for ${arn.value}, ${mtdItId.value}", ex)
           updateEtmpSyncStatus(SyncStatus.Failed)
             .flatMap(_ => Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DES")))
       }
@@ -179,12 +178,10 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-            //TODO log identifiers
-          Logger.warn(s"Creating GG record not possible because of incomplete data: $errorCode")
+          Logger.warn(s"Creating GG record for ${arn.value}, ${mtdItId.value} not possible because of incomplete data: $errorCode")
           updateGgSyncStatus(SyncStatus.IncompleteInputParams)
-        case ex                              =>
-            //TODO log identifiers
-          Logger.warn(s"Creating GG record failed", ex)
+        case NonFatal(ex) =>
+          Logger.warn(s"Creating GG record failed for ${arn.value}, ${mtdItId.value}", ex)
           updateGgSyncStatus(SyncStatus.Failed)
           if (failIfAllocateAgentInGGFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_GG"))
           else Future.successful(())
@@ -206,6 +203,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } else
         mappingServiceCall.map { mappingServiceIds =>
           val intersected = mappingServiceIds.toSet.intersect(cesaIdSet)
+          // TODO this should probably be Logger.info (and we need to make sure info is turned on in prod)
           Logger.warn(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
           intersected
         }
@@ -223,9 +221,9 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] = {
     relationshipCopyRepository.remove(arn, mtdItId).flatMap { n =>
       if (n == 0) {
-        Future.failed(new Exception("Nothing has been removed from db."))
+        Future.failed(new RelationshipNotFound("Nothing has been removed from db."))
       } else {
-        Logger.warn(s"Copy status record(s) has been removed: $n")
+        Logger.warn(s"Copy status record(s) has been removed for ${arn.value}, ${mtdItId.value}: $n")
         Future.successful(())
       }
     }

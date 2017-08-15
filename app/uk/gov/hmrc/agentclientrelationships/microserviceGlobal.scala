@@ -25,6 +25,7 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
@@ -39,6 +40,7 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     bind(classOf[HttpGet]).toInstance(WSHttp)
     bind(classOf[HttpPost]).toInstance(WSHttp)
     bind(classOf[AuditConnector]).toInstance(MicroserviceGlobal.auditConnector)
+    bind(classOf[AuthConnector]).to(classOf[MicroserviceAuthConnector])
     bind(classOf[RelationshipCopyRecordRepository]).to(classOf[MongoRelationshipCopyRecordRepository])
     bindBaseUrl("government-gateway-proxy")
     bindBaseUrl("des")
