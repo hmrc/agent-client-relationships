@@ -30,7 +30,7 @@ import uk.gov.hmrc.auth.core.{AuthConnector, Predicate, Retrieval}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class RelationshipsControllerDeleteSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
@@ -47,7 +47,7 @@ class RelationshipsControllerDeleteSpec extends UnitSpec with ResettingMockitoSu
 
   "delete" should {
     "return NotFound when the service throws a RelationshipNotFound" in {
-      when(service.getAgentCodeFor(any[Arn])(any[HeaderCarrier], any[AuditData]))
+      when(service.getAgentCodeFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
         .thenReturn(Future failed new RelationshipNotFound("NOT_FOUND_CODE"))
 
       val result = await(controller.delete(arn, mtdItId)(FakeRequest()))
@@ -55,7 +55,7 @@ class RelationshipsControllerDeleteSpec extends UnitSpec with ResettingMockitoSu
     }
 
     "propagate other exceptions" in {
-      when(service.getAgentCodeFor(any[Arn])(any[HeaderCarrier], any[AuditData]))
+      when(service.getAgentCodeFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
         .thenReturn(Future failed new IllegalArgumentException("other exception"))
 
       intercept[IllegalArgumentException] {

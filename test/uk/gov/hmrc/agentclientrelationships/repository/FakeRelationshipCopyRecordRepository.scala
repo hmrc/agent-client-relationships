@@ -22,9 +22,12 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import scala.concurrent.{ExecutionContext, Future}
 
 class FakeRelationshipCopyRecordRepository(var record: RelationshipCopyRecord) extends RelationshipCopyRecordRepository {
+  var recordCreated: Boolean = false
 
-  override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
+  override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
+    recordCreated = true
     Future successful 1
+  }
 
   override def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
     Future.successful(if (arn.value == record.arn && mtdItId.value == record.clientIdentifier) {
