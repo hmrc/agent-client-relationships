@@ -56,8 +56,11 @@ class Relationships @Inject()(
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
         service.checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
-          .map { cesaResult =>
-            Right(cesaResult.grantAccess)
+          .map {
+            case AlreadyCopiedDidNotCheck =>
+              Left(errorCode)
+            case cesaResult =>
+              Right(cesaResult.grantAccess)
           }.recover {
             case NonFatal(ex) =>
               Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${mtdItId.value}", ex)
