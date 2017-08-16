@@ -68,6 +68,14 @@ class RelationshipISpec extends UnitSpec
   val nino = "AB123456C"
   val mtdItIdType = "MTDITID"
 
+  val relationshipCopiedSuccessfully = RelationshipCopyRecord(
+    arn,
+    mtditid,
+    "MTDITID",
+    syncToETMPStatus = Some(SyncStatus.Success),
+    syncToGGStatus = Some(SyncStatus.Success)
+  )
+
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
@@ -381,7 +389,28 @@ class RelationshipISpec extends UnitSpec
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
       givenAuditConnector()
-      await(repo.insert(RelationshipCopyRecord(arn, mtditid, "MTDITID")))
+      await(repo.insert(relationshipCopiedSuccessfully))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when relationship was previously copied from CESA to ETMP & GG but has since been deleted from ETMP & GG " +
+    "(even though the relationship upon which the copy was based still exists in CESA)" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+
+      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenAuditConnector()
+
+      await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -390,7 +419,7 @@ class RelationshipISpec extends UnitSpec
     "return 404 when credentials are not found but relationship copy was made before" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
       givenAuditConnector()
-      await(repo.insert(RelationshipCopyRecord(arn, mtditid, "MTDITID")))
+      await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"
