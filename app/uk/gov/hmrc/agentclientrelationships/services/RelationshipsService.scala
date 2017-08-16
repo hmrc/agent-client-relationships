@@ -102,7 +102,6 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
               }
               .recover { case NonFatal(ex) =>
                 Logger.warn(s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value}", ex)
-                //TODO why send the audit even though something failed?
                 auditService.sendCreateRelationshipAuditEvent
                 FoundAndFailedToCopy
               }
