@@ -57,11 +57,7 @@ class Relationships @Inject()(
       case RelationshipNotFound(errorCode) =>
         service.checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
           .map { cesaResult =>
-            if (cesaResult == AlreadyCopiedDidNotCheck) {
-              Logger.warn(s"CESA result for ${arn.value}, ${mtdItId.value} was already copied, so relationship should have existed in GG/ETMP" +
-                          s" - but it didn't or we wouldn't have checked CESA")
-            }
-            Right(cesaResult.relationshipExists)
+            Right(cesaResult.grantAccess)
           }.recover {
             case NonFatal(ex) =>
               Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${mtdItId.value}", ex)

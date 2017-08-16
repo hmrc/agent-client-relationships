@@ -207,7 +207,9 @@ class RelationshipsServiceSpec extends UnitSpec
 
       val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
 
-      await(check) shouldBe AlreadyCopiedDidNotCheck
+      val checkAndCopyResult = await(check)
+      checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
+      checkAndCopyResult.grantAccess shouldBe false
 
       verifyGgRecordNotCreated()
       verifyEtmpRecordNotCreated()

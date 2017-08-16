@@ -33,23 +33,23 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 sealed trait CesaCheckAndCopyResult {
-  val relationshipExists: Boolean
+  val grantAccess: Boolean
 }
 
 final case object AlreadyCopiedDidNotCheck extends CesaCheckAndCopyResult {
-  override val relationshipExists = true
+  override val grantAccess = false
 }
 
 final case object FoundAndCopied extends CesaCheckAndCopyResult {
-  override val relationshipExists = true
+  override val grantAccess = true
 }
 
 final case object FoundAndFailedToCopy extends CesaCheckAndCopyResult {
-  override val relationshipExists = true
+  override val grantAccess = true
 }
 
 final case object NotFound extends CesaCheckAndCopyResult {
-  override val relationshipExists = false
+  override val grantAccess = false
 }
 
 @Singleton
