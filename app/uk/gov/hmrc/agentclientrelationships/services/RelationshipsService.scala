@@ -57,6 +57,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      des: DesConnector,
                                      mapping: MappingConnector,
                                      relationshipCopyRepository: RelationshipCopyRecordRepository,
+                                     lockService: RelationshipRecoveryLockService,
                                      auditService: AuditService) {
 
   private[services] val MtdItIdType = "MTDITID"
@@ -208,26 +209,28 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     arn: Arn, mtdItId: MtdItId,
     eventualAgentCode: Future[AgentCode])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
-    def recoverEtmpRecord() = createEtmpRecord(arn, mtdItId)
+    lockService.tryToAcquireOrRenew(arn, mtdItId) {
+      def recoverEtmpRecord() = createEtmpRecord(arn, mtdItId)
 
-    def recoverGgRecord() = createGgRecord(arn, mtdItId, eventualAgentCode, failIfAllocateAgentInGGFails = false)
+      def recoverGgRecord() = createGgRecord(arn, mtdItId, eventualAgentCode, failIfAllocateAgentInGGFails = false)
 
-    (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateGgRecord) match {
-      case (true, true) =>
-        for {
-          _ <- recoverEtmpRecord()
-          _ <- recoverGgRecord()
-        } yield ()
-      case (false, true) =>
-        recoverGgRecord()
-      case (true, false) =>
-        Logger.warn(s"GG relationship existed without ETMP relationship for ${arn.value}, ${mtdItId.value}. " +
-                    s"This should not happen because we always create the ETMP relationship first,")
-        recoverEtmpRecord()
-      case (false, false) =>
-        Logger.warn(s"recoverRelationshipCreation called for ${arn.value}, ${mtdItId.value} when no recovery needed")
-        Future.successful(())
-    }
+      (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateGgRecord) match {
+        case (true, true) =>
+          for {
+            _ <- recoverEtmpRecord()
+            _ <- recoverGgRecord()
+          } yield ()
+        case (false, true) =>
+          recoverGgRecord()
+        case (true, false) =>
+          Logger.warn(s"GG relationship existed without ETMP relationship for ${arn.value}, ${mtdItId.value}. " +
+                      s"This should not happen because we always create the ETMP relationship first,")
+          recoverEtmpRecord()
+        case (false, false) =>
+          Logger.warn(s"recoverRelationshipCreation called for ${arn.value}, ${mtdItId.value} when no recovery needed")
+          Future.successful(())
+      }
+    }.map(_ => ())
 
   }
 

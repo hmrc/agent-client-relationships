@@ -46,9 +46,7 @@ class AuditData {
     details.put(key, value)
   }
 
-  def get(key: String): Any = details.get(key)
-
-  def getDetails(): Map[String, Any] = {
+  def getDetails: Map[String, Any] = {
     JavaConversions.mapAsScalaMap(details).toMap
   }
 
@@ -87,12 +85,12 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
 
   def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
-      collectDetails(auditData.getDetails(), createRelationshipDetailsFields))
+      collectDetails(auditData.getDetails, createRelationshipDetailsFields))
   }
 
   def sendCheckCESAAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CheckCESA, "check-cesa",
-      collectDetails(auditData.getDetails(), CheckCESADetailsFields))
+      collectDetails(auditData.getDetails, CheckCESADetailsFields))
   }
 
   private[audit] def auditEvent(event: AgentClientRelationshipEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)

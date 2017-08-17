@@ -27,7 +27,7 @@ private object AppDependencies {
   private val scalaTestPlusVersion = "1.5.1"
   private val mtdIdentifiersVersion = "0.5.0"
   private val playAuthVersion = "1.0.0"
-
+  private val mongoLockVersion = "4.1.0"
   val compile = Seq(
     ws,
     "uk.gov.hmrc" %% "microservice-bootstrap" % microserviceBootstrapVersion,
@@ -40,7 +40,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "2.3.0",
     "uk.gov.hmrc" %% "play-reactivemongo" % "5.2.0",
     "uk.gov.hmrc" %% "play-auth" % playAuthVersion,
-    "org.typelevel" %% "cats" % "0.9.0"
+    "org.typelevel" %% "cats" % "0.9.0",
+    "uk.gov.hmrc" %% "mongo-lock" % mongoLockVersion
   )
 
   trait TestDependencies {
