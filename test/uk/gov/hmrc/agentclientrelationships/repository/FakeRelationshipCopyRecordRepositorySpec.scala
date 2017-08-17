@@ -23,6 +23,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+// TODO merge with MongoRelationshipCopyRecordRepositoryISpec - make them both extend a trait which contains most of the tests
 class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec {
   val arn = Arn("AARN0000002")
   val otherArn = Arn("TARN0000001")

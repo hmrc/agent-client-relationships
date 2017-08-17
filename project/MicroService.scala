@@ -29,7 +29,8 @@ trait MicroService {
       ScoverageKeys.coverageMinimum := 80.00,
       ScoverageKeys.coverageFailOnMinimum := false,
       ScoverageKeys.coverageHighlighting := true,
-      parallelExecution in Test := false
+      parallelExecution in Test := false,
+      unmanagedSourceDirectories in Test += baseDirectory.value / "testcommon"
     )
   }
   lazy val microservice = Project(appName, file("."))
@@ -52,7 +53,8 @@ trait MicroService {
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
-      parallelExecution in IntegrationTest := false
+      parallelExecution in IntegrationTest := false,
+      unmanagedSourceDirectories in IntegrationTest += baseDirectory.value / "testcommon"
     )
     .settings(
       resolvers += Resolver.bintrayRepo("hmrc", "releases"),
