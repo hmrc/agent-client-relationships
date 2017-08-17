@@ -16,14 +16,23 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import javax.inject.{Inject, Singleton}
+
+import org.joda.time
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.lock.{LockKeeper, LockRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeLockService(alreadyLocked: Set[(Arn, MtdItId)]) extends RecoveryLockService {
-
+@Singleton
+class MongoRecoveryLockService @Inject() (lockRepository: LockRepository) extends RecoveryLockService {
   override def tryLock[T](arn: Arn, mtdItId: MtdItId)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
-    if (alreadyLocked.contains((arn, mtdItId))) Future.successful(None)
-    else body.map(Some.apply)
+    new LockKeeper {
+    override def repo = lockRepository
 
+    override def lockId: String = s"recovery-${arn.value}-${mtdItId.value}"
+
+    //TODO consider timeout
+    override val forceLockReleaseAfter: time.Duration =  time.Duration.standardMinutes(5)
+  }.tryLock(body)
 }

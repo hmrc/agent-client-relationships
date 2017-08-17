@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.services
+package uk.gov.hmrc.agentclientrelationships.repository
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import javax.inject.{Inject, Singleton}
 
-import scala.concurrent.{ExecutionContext, Future}
+import play.modules.reactivemongo.ReactiveMongoComponent
+import uk.gov.hmrc.lock.LockRepository
 
-trait RelationshipRecoveryLockService {
-
-  def tryToAcquireOrRenew[T](arn: Arn, mtdItId: MtdItId)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
-
-}
+@Singleton
+class MongoLockRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent) extends LockRepository()(mongoComponent.mongoConnector.db)

@@ -57,7 +57,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      des: DesConnector,
                                      mapping: MappingConnector,
                                      relationshipCopyRepository: RelationshipCopyRecordRepository,
-                                     lockService: RelationshipRecoveryLockService,
+                                     lockService: RecoveryLockService,
                                      auditService: AuditService) {
 
   private[services] val MtdItIdType = "MTDITID"
@@ -209,7 +209,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     arn: Arn, mtdItId: MtdItId,
     eventualAgentCode: Future[AgentCode])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
-    lockService.tryToAcquireOrRenew(arn, mtdItId) {
+    lockService.tryLock(arn, mtdItId) {
       def recoverEtmpRecord() = createEtmpRecord(arn, mtdItId)
 
       def recoverGgRecord() = createGgRecord(arn, mtdItId, eventualAgentCode, failIfAllocateAgentInGGFails = false)

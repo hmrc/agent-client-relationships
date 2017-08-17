@@ -32,15 +32,15 @@ class FakeLockServiceSpec extends UnitSpec {
 
   val fakeLockService = new FakeLockService(Set((lockedArn, lockedMtdItId)))
 
-  "tryToAcquireOrRenew" should {
+  "tryLock" should {
     "call the body if a lock is not held for the (Arn, MtdItId) pair" in {
-      await(fakeLockService.tryToAcquireOrRenew(notLockedArn, notLockedMtdItId) {
+      await(fakeLockService.tryLock(notLockedArn, notLockedMtdItId) {
         Future successful "hello world"
       }) shouldBe Some("hello world")
     }
 
     "not call the body if a lock is held for the (Arn, MtdItId) pair" in {
-      await(fakeLockService.tryToAcquireOrRenew(lockedArn, lockedMtdItId) {
+      await(fakeLockService.tryLock(lockedArn, lockedMtdItId) {
         fail("body should not be called")
       }) shouldBe None
     }

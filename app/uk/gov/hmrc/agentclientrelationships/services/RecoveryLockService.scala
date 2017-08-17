@@ -20,10 +20,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeLockService(alreadyLocked: Set[(Arn, MtdItId)]) extends RecoveryLockService {
+trait RecoveryLockService {
 
-  override def tryLock[T](arn: Arn, mtdItId: MtdItId)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
-    if (alreadyLocked.contains((arn, mtdItId))) Future.successful(None)
-    else body.map(Some.apply)
+  def tryLock[T](arn: Arn, mtdItId: MtdItId)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
 
 }
