@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
+import org.scalatest.BeforeAndAfterEach
 import play.api.mvc.Request
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -35,7 +36,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class RelationshipsServiceSpec extends UnitSpec
-  with ResettingMockitoSugar {
+  with BeforeAndAfterEach with ResettingMockitoSugar {
 
   val testDataGenerator = new Generator()
   val arn = Arn("AARN0000002")
@@ -51,9 +52,6 @@ class RelationshipsServiceSpec extends UnitSpec
   val mapping = resettingMock[MappingConnector]
   val auditService = resettingMock[AuditService]
 
-  val noLockHeldLockService = new FakeLockService(Set.empty)
-  val lockHeldLockService = new FakeLockService(Set((arn, mtdItId)))
-
   val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(SyncStatus.InProgress), Some(SyncStatus.IncompleteInputParams), Some(SyncStatus.Failed))
 
   val hc = HeaderCarrier()
@@ -65,7 +63,8 @@ class RelationshipsServiceSpec extends UnitSpec
       s"create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = None" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, noLockHeldLockService, auditService)
+        val lockService = new FakeLockService
+        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -89,8 +88,9 @@ class RelationshipsServiceSpec extends UnitSpec
       s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping,
-          relationshipCopyRepository, lockHeldLockService, auditService)
+          relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -98,9 +98,11 @@ class RelationshipsServiceSpec extends UnitSpec
         cesaRelationshipExists()
         relationshipWillBeCreated()
 
-        val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val maybeCheck: Option[CesaCheckAndCopyResult] = await(lockService.tryLock(arn, mtdItId) {
+          relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        })
 
-        await(check) shouldBe FoundAndCopied
+        maybeCheck.value shouldBe FoundAndCopied
 
         verifyEtmpRecordNotCreated()
         val auditDetails = verifyAuditEventSent()
@@ -118,7 +120,8 @@ class RelationshipsServiceSpec extends UnitSpec
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = None" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, noLockHeldLockService, auditService)
+        val lockService = new FakeLockService
+        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -138,7 +141,8 @@ class RelationshipsServiceSpec extends UnitSpec
         s"with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, noLockHeldLockService, auditService)
+        val lockService = new FakeLockService
+        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -164,7 +168,8 @@ class RelationshipsServiceSpec extends UnitSpec
       s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockHeldLockService, auditService)
+        val lockService = new FakeLockService
+        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -172,9 +177,11 @@ class RelationshipsServiceSpec extends UnitSpec
         cesaRelationshipExists()
         relationshipWillBeCreated()
 
-        val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val maybeCheck = await(lockService.tryLock(arn, mtdItId) {
+          relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        })
 
-        await(check) shouldBe FoundAndCopied
+        maybeCheck.value shouldBe FoundAndCopied
 
         verifyEtmpRecordNotCreated()
         verifyGgRecordNotCreated()
@@ -191,7 +198,8 @@ class RelationshipsServiceSpec extends UnitSpec
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, noLockHeldLockService, auditService)
+        val lockService = new FakeLockService
+        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -213,7 +221,8 @@ class RelationshipsServiceSpec extends UnitSpec
         s"even though we don't expect this to happen because we always create the ETMP record first" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(SyncStatus.Success))
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, noLockHeldLockService, auditService)
+        val lockService = new FakeLockService
+        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -242,7 +251,8 @@ class RelationshipsServiceSpec extends UnitSpec
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = Success" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(SyncStatus.Success))
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, noLockHeldLockService, auditService)
+        val lockService = new FakeLockService
+        val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -261,7 +271,8 @@ class RelationshipsServiceSpec extends UnitSpec
     "not create ETMP or GG relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
       val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = Some(SyncStatus.Success))
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
-      val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, noLockHeldLockService, auditService)
+      val lockService = new FakeLockService
+      val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
       val auditData = new AuditData()
       val request = FakeRequest()

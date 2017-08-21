@@ -18,12 +18,20 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeLockService(alreadyLocked: Set[(Arn, MtdItId)]) extends RecoveryLockService {
+class FakeLockService extends RecoveryLockService {
+  val locked: mutable.Set[(Arn, MtdItId)] = mutable.Set.empty[(Arn, MtdItId)]
 
   override def tryLock[T](arn: Arn, mtdItId: MtdItId)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
-    if (alreadyLocked.contains((arn, mtdItId))) Future.successful(None)
-    else body.map(Some.apply)
+    if (locked.contains((arn, mtdItId))) Future.successful(None)
+    else {
+      locked.add((arn, mtdItId))
+      body.map(Some.apply).map { result =>
+        locked.remove((arn, mtdItId))
+        result
+      }
+    }
 
 }

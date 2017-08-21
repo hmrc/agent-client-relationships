@@ -16,34 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.play.test.UnitSpec
+class FakeLockServiceSpec extends RecoveryLockServiceSpec {
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-class FakeLockServiceSpec extends UnitSpec {
-
-  val lockedArn = Arn("locked")
-  val lockedMtdItId = MtdItId("locked")
-
-  val notLockedArn = Arn("not-locked")
-  val notLockedMtdItId = MtdItId("not-locked")
-
-  val fakeLockService = new FakeLockService(Set((lockedArn, lockedMtdItId)))
-
-  "tryLock" should {
-    "call the body if a lock is not held for the (Arn, MtdItId) pair" in {
-      await(fakeLockService.tryLock(notLockedArn, notLockedMtdItId) {
-        Future successful "hello world"
-      }) shouldBe Some("hello world")
-    }
-
-    "not call the body if a lock is held for the (Arn, MtdItId) pair" in {
-      await(fakeLockService.tryLock(lockedArn, lockedMtdItId) {
-        fail("body should not be called")
-      }) shouldBe None
-    }
-  }
+  override val lockService: RecoveryLockService = new FakeLockService
 
 }
