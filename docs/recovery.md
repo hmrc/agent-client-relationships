@@ -55,19 +55,12 @@ The fact that we only continue to `createGgRecord` if `createEtmpRecord` does
 not fail ensures that we meet success criterion (4) (if a relationship exists 
 in GG then the corresponding ETMP relationship also exists.).
 
-However `createEtmpRecord` will fail in the APB-1108 scenario because the DES 
-API to create a relationship in ETMP returns a 400 status code if the 
-relationship already exists.  We would usually treat this as an error and 
-therefore not continue to create the GG relationship (thus not meeting success 
-criterion (2)).
-
-So why don't we treat a 400 status code as success and continue to create the 
-relationship in GG? 400 is also returned in other circumstances, e.g. when the 
-format of the ARN is invalid, so we can't tell why the DES call failed.
-However what we can do is when we receive a 400 when calling DES to create an
-ETMP relationship call DES to *check for the existence of the relationship* and
-if it exists treat this as a success and continue. If it does not exist we 
-treat it as a failure.
+Note that `createEtmpRecord` will succeed even if the ETMP relationship was
+created already. This is verified by the `DesRelationshipSpec."return 200 OK when we try to create the same relationship twice"`
+test in agent-client-relationships-contract-tests. This is important because
+otherwise in the APB-1108 scenario we would encounter an error when (re)creating
+the ETMP relationship and then would not continue to create the GG relationship,
+thus failing success criterion (2).
 
 ## Concurrency
 
