@@ -32,7 +32,6 @@ class MongoRecoveryLockService @Inject() (lockRepository: LockRepository) extend
 
     override def lockId: String = s"recovery-${arn.value}-${mtdItId.value}"
 
-    //TODO consider timeout
     override val forceLockReleaseAfter: time.Duration =  time.Duration.standardMinutes(5)
   }.tryLock(body)
 }

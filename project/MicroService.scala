@@ -1,4 +1,5 @@
 import play.routes.compiler.StaticRoutesGenerator
+import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys._
 import sbt.Keys._
 import sbt.Tests.{Group, SubProcess}
@@ -38,6 +39,7 @@ trait MicroService {
     .settings(playSettings ++ scoverageSettings: _*)
     .settings(scalaSettings: _*)
     .settings(publishingSettings: _*)
+    .settings(PlayKeys.playDefaultPort := 9434)
     .settings(defaultSettings(): _*)
     .settings(routesImport ++= Seq("uk.gov.hmrc.agentclientrelationships.binders.PathBinders._"))
     .settings(

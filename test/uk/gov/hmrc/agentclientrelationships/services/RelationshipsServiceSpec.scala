@@ -62,7 +62,7 @@ class RelationshipsServiceSpec extends UnitSpec
     needsRetryStatuses.foreach { status =>
       s"create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = None" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = None)
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
@@ -87,7 +87,8 @@ class RelationshipsServiceSpec extends UnitSpec
       s"with syncToETMPStatus = $status and syncToGGStatus = None " +
       s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = None)
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
+        relationshipCopyRepository.create(record)
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping,
           relationshipCopyRepository, lockService, auditService)
@@ -112,14 +113,13 @@ class RelationshipsServiceSpec extends UnitSpec
 
       }
     }
-
-    // TODO do we want this behaviour?
-    // TODO if so should we update syncToETMPStatus to Success to avoid continually redoing recovery?
+    // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
+    // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
       s"not create ETMP relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = None" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = None)
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
@@ -140,10 +140,10 @@ class RelationshipsServiceSpec extends UnitSpec
       s"create GG relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
-
+        await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
         val request = FakeRequest()
 
@@ -167,10 +167,10 @@ class RelationshipsServiceSpec extends UnitSpec
       s"with syncToETMPStatus = $status and syncToGGStatus = None " +
       s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
-
+        await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
         val request = FakeRequest()
 
@@ -197,7 +197,7 @@ class RelationshipsServiceSpec extends UnitSpec
       s"not create GG relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
@@ -220,7 +220,8 @@ class RelationshipsServiceSpec extends UnitSpec
         s"with syncToETMPStatus = $status and syncToGGStatus = Success " +
         s"even though we don't expect this to happen because we always create the ETMP record first" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(SyncStatus.Success))
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
+        await(relationshipCopyRepository.create(record))
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
@@ -244,13 +245,14 @@ class RelationshipsServiceSpec extends UnitSpec
       }
     }
 
-    // TODO do we want this behaviour?
-    // TODO if so should we update syncToGGStatus to Success to avoid continually redoing recovery?
+    // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
+    // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
       s"not create GG relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = Success" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(SyncStatus.Success))
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
+        await(relationshipCopyRepository.create(record))
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
@@ -270,7 +272,8 @@ class RelationshipsServiceSpec extends UnitSpec
 
     "not create ETMP or GG relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
       val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = Some(SyncStatus.Success))
-      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(record)
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository()
+      await(relationshipCopyRepository.create(record))
       val lockService = new FakeLockService
       val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
 
@@ -340,7 +343,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   def verifyRecordNotRecreated(repository: FakeRelationshipCopyRecordRepository, record: RelationshipCopyRecord): Unit = {
-    repository.recordCreated shouldBe false
+    repository.findBy(Arn(record.arn),MtdItId(record.clientIdentifier))
   }
 
 

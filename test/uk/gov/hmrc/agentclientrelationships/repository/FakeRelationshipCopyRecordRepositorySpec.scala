@@ -16,56 +16,19 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.SaAgentReference
+import org.scalatest.BeforeAndAfterEach
+import uk.gov.hmrc.agentclientrelationships.services.RelationshipCopyRecordRepositorySpec
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-// TODO merge with MongoRelationshipCopyRecordRepositoryISpec - make them both extend a trait which contains most of the tests
-class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec {
-  val arn = Arn("AARN0000002")
-  val otherArn = Arn("TARN0000001")
-  val mtdItId = MtdItId("ABCDEF123456789")
-  val otherMtdItId = MtdItId("BBBBBB222222222")
-  val relationshipCopyRecord = RelationshipCopyRecord(
-    arn = arn.value,
-    clientIdentifier = mtdItId.value,
-    clientIdentifierType = "MTDITID",
-    references = Some(Set((SaAgentReference("T1113T")))),
-    syncToETMPStatus = Some(SyncStatus.InProgress), syncToGGStatus = None)
+class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec with RelationshipCopyRecordRepositorySpec with BeforeAndAfterEach{
 
-  "findBy" should {
-    "return the RelationshipCopyRecord passed on creation" in {
-      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(relationshipCopyRecord)
+  override val repo = new FakeRelationshipCopyRecordRepository()
 
-      await(relationshipCopyRepository.findBy(arn, mtdItId)) shouldBe Some(relationshipCopyRecord)
-      await(relationshipCopyRepository.findBy(otherArn, mtdItId)) shouldBe None
-      await(relationshipCopyRepository.findBy(arn, otherMtdItId)) shouldBe None
-    }
+  override protected def beforeEach(): Unit = {
+    repo.reset
   }
-
-  "updateEtmpSyncStatus" should {
-    "update the record" in {
-      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(relationshipCopyRecord)
-      await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(SyncStatus.InProgress)
-
-      await(relationshipCopyRepository.updateEtmpSyncStatus(arn, mtdItId, SyncStatus.Success))
-      await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(SyncStatus.Success)
-    }
-  }
-
-  "updateGgSyncStatus" should {
-    "update the record" in {
-      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(relationshipCopyRecord)
-      await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe None
-
-      await(relationshipCopyRepository.updateGgSyncStatus(arn, mtdItId, SyncStatus.Success))
-      await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe Some(SyncStatus.Success)
-    }
-  }
-
-  // remove implicit
   override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
+
 }
