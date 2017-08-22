@@ -22,16 +22,13 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-// TODO merge with MongoRelationshipCopyRecordRepositoryISpec - make them both extend a trait which contains most of the tests
 class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec with RelationshipCopyRecordRepositorySpec with BeforeAndAfterEach{
 
   override val repo = new FakeRelationshipCopyRecordRepository()
- // val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository(relationshipCopyRecord)
 
   override protected def beforeEach(): Unit = {
     repo.reset
   }
-  // remove implicit
   override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
 
 }

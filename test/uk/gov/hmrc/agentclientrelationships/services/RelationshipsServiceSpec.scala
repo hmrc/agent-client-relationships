@@ -113,9 +113,8 @@ class RelationshipsServiceSpec extends UnitSpec
 
       }
     }
-
-    // TODO do we want this behaviour?
-    // TODO if so should we update syncToETMPStatus to Success to avoid continually redoing recovery?
+    // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
+    // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
       s"not create ETMP relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = None" in {
@@ -246,8 +245,8 @@ class RelationshipsServiceSpec extends UnitSpec
       }
     }
 
-    // TODO do we want this behaviour?
-    // TODO if so should we update syncToGGStatus to Success to avoid continually redoing recovery?
+    // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
+    // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
       s"not create GG relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = Success" in {

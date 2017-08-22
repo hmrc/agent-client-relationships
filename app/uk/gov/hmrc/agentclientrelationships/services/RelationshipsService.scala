@@ -244,8 +244,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } else
         mappingServiceCall.map { mappingServiceIds =>
           val intersected = mappingServiceIds.toSet.intersect(cesaIdSet)
-          // TODO this should probably be Logger.info (and we need to make sure info is turned on in prod)
-          Logger.warn(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
+          Logger.info(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
           intersected
         }
   }
