@@ -13,6 +13,10 @@ This is a backend microservice whose domain is Agent Client Relationships.
     sm --start AGENT_MTD -f
     sm --stop AGENT_CLIENT_RELATIONSHIPS
     ./run-local
+    
+## Design Documentation
+
+[Recovery from Failures whilst Creating Relationships](docs/recovery.md).
 
 ## Proposed API
 

@@ -1,4 +1,5 @@
 import play.routes.compiler.StaticRoutesGenerator
+import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys._
 import sbt.Keys._
 import sbt.Tests.{Group, SubProcess}
@@ -29,7 +30,8 @@ trait MicroService {
       ScoverageKeys.coverageMinimum := 80.00,
       ScoverageKeys.coverageFailOnMinimum := false,
       ScoverageKeys.coverageHighlighting := true,
-      parallelExecution in Test := false
+      parallelExecution in Test := false,
+      unmanagedSourceDirectories in Test += baseDirectory.value / "testcommon"
     )
   }
   lazy val microservice = Project(appName, file("."))
@@ -37,6 +39,7 @@ trait MicroService {
     .settings(playSettings ++ scoverageSettings: _*)
     .settings(scalaSettings: _*)
     .settings(publishingSettings: _*)
+    .settings(PlayKeys.playDefaultPort := 9434)
     .settings(defaultSettings(): _*)
     .settings(routesImport ++= Seq("uk.gov.hmrc.agentclientrelationships.binders.PathBinders._"))
     .settings(
@@ -52,7 +55,8 @@ trait MicroService {
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
-      parallelExecution in IntegrationTest := false
+      parallelExecution in IntegrationTest := false,
+      unmanagedSourceDirectories in IntegrationTest += baseDirectory.value / "testcommon"
     )
     .settings(
       resolvers += Resolver.bintrayRepo("hmrc", "releases"),
