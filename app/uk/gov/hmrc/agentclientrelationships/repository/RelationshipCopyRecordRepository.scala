@@ -86,7 +86,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
     insert(record).map { result =>
-      result.errmsg.foreach(error => s"Creating RelationshipCopyRecord failed: $error")
+      result.errmsg.foreach(error => Logger.warn(s"Creating RelationshipCopyRecord failed: $error"))
       result.n
     }
   }
