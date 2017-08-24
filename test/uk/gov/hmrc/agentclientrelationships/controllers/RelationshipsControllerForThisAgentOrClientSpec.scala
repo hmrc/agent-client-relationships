@@ -26,8 +26,8 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-class RelationshipsControllerSpec extends UnitSpec with ResettingMockitoSugar with Results {
-  private val controller = new Relationships(null)
+class RelationshipsControllerForThisAgentOrClientSpec extends UnitSpec with ResettingMockitoSugar with Results {
+  private val controller = new Relationships(null, null)
 
   private val blockThatShouldBeCalled = Future successful Ok
   private val blockThatShouldNotCalled = Future failed new RuntimeException("Permission to call this block should be denied")
@@ -38,12 +38,12 @@ class RelationshipsControllerSpec extends UnitSpec with ResettingMockitoSugar wi
   private val nonMatchingMtdItId = MtdItId("BBBBBBBBBBBBBBB")
 
   "forThisAgentOrClient" should {
-    "call the block when the logged in user's tax identifer matches the supplied arn or matdItId" in {
+    "call the block when the logged in user's tax identifier matches the supplied arn or mtdItId" in {
       callShouldBeAllowed(matchingArn)
       callShouldBeAllowed(matchingMtdItId)
     }
 
-    "return NoPermissionOnAgencyOrClient when logged in user's tax identifer do not match the supplied arn or matdItId" in {
+    "return NoPermissionOnAgencyOrClient when logged in user's tax identifier do not match the supplied arn or mtdItId" in {
       callShouldBeDenied(nonMatchingArn)
       callShouldBeDenied(nonMatchingMtdItId)
     }

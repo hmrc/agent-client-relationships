@@ -49,16 +49,34 @@ case class RelationshipCopyRecord(arn: String,
                                   references: Option[Set[SaAgentReference]] = None,
                                   dateTime: DateTime = DateTime.now(DateTimeZone.UTC),
                                   syncToETMPStatus: Option[SyncStatus] = None,
-                                  syncToGGStatus: Option[SyncStatus] = None)
+                                  syncToGGStatus: Option[SyncStatus] = None) {
+  def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateGgRecord
+
+  def needToCreateEtmpRecord = !syncToETMPStatus.contains(Success)
+
+  def needToCreateGgRecord = !syncToGGStatus.contains(Success)
+}
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
   implicit val formats: Format[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 
+trait RelationshipCopyRecordRepository {
+  def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int]
+  def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
+  def updateEtmpSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
+
+  def updateGgSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
+
+  def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int]
+}
+
 @Singleton
-class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoComponent) extends
+class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoComponent) extends
   ReactiveRepository[RelationshipCopyRecord, BSONObjectID]("relationship-copy-record",
-    mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats) with AtomicUpdate[RelationshipCopyRecord] {
+    mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats)
+  with RelationshipCopyRecordRepository
+  with AtomicUpdate[RelationshipCopyRecord] {
 
   private val MtdItIdType = "MTDITID"
 
@@ -68,7 +86,7 @@ class RelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoCo
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
     insert(record).map { result =>
-      result.errmsg.foreach(error => s"Creating RelationshipCopyRecord failed: $error")
+      result.errmsg.foreach(error => Logger.warn(s"Creating RelationshipCopyRecord failed: $error"))
       result.n
     }
   }

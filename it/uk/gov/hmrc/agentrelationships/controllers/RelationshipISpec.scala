@@ -17,10 +17,11 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import org.scalatest.mock.MockitoSugar
+import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
@@ -33,13 +34,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipISpec extends UnitSpec
   with MongoApp
+  with OneServerPerSuite
   with WireMockSupport
   with GovernmentGatewayProxyStubs
   with DesStubs
   with MappingStubs
   with DataStreamStub
   with AuthStub
-  with MockitoSugar{
+  with MockitoSugar {
 
   lazy val mockAuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
@@ -56,7 +58,7 @@ class RelationshipISpec extends UnitSpec
         "auditing.consumer.baseUri.port" -> wireMockPort)
       .configure(mongoConfiguration)
 
-  def repo = app.injector.instanceOf[RelationshipCopyRecordRepository]
+  def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
   override def beforeEach() {
     super.beforeEach()
@@ -98,14 +100,14 @@ class RelationshipISpec extends UnitSpec
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
 
       val result = await(doRequest)
       result.status shouldBe 200
 
-      await(query).head should have(
+      await(query()).head should have(
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
@@ -162,14 +164,14 @@ class RelationshipISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
 
       val result = await(doRequest)
       result.status shouldBe 200
 
-      await(query).head should have(
+      await(query()).head should have(
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
@@ -228,14 +230,14 @@ class RelationshipISpec extends UnitSpec
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
 
       val result = await(doRequest)
       result.status shouldBe 200
 
-      await(query).head should have(
+      await(query()).head should have(
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
@@ -298,14 +300,14 @@ class RelationshipISpec extends UnitSpec
       givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
 
       val result = await(doRequest)
       result.status shouldBe 200
 
-      await(query).head should have(
+      await(query()).head should have(
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
@@ -329,14 +331,14 @@ class RelationshipISpec extends UnitSpec
       givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
 
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
 
       val result = await(doRequest)
       result.status shouldBe 200
 
-      await(query).head should have(
+      await(query()).head should have(
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
@@ -504,12 +506,12 @@ class RelationshipISpec extends UnitSpec
       givenMtdItIdIsUnKnownFor(Nino(nino))
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
 
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
       val result = await(doRequest)
       result.status shouldBe 200
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
@@ -613,12 +615,12 @@ class RelationshipISpec extends UnitSpec
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
 
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
       val result = await(doRequest)
       result.status shouldBe 200
-      await(query) shouldBe empty
+      await(query()) shouldBe empty
     }
 
     //UNHAPPY PATHS

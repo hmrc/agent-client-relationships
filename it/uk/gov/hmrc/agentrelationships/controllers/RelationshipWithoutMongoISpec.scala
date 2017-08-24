@@ -19,11 +19,12 @@ package uk.gov.hmrc.agentrelationships.controllers
 import javax.inject.Inject
 
 import com.google.inject.AbstractModule
+import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
@@ -34,7 +35,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: ReactiveMongoComponent)
-  extends RelationshipCopyRecordRepository(moduleComponent) {
+  extends MongoRelationshipCopyRecordRepository(moduleComponent) {
   override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
     Future.failed(new Exception("Could not connect the mongo db."))
   }
@@ -42,6 +43,7 @@ class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: ReactiveMo
 
 class RelationshipWithoutMongoISpec extends UnitSpec
   with MongoApp
+  with OneServerPerSuite
   with WireMockSupport
   with GovernmentGatewayProxyStubs
   with DesStubs
@@ -67,7 +69,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         }
       })
 
-  def repo = app.injector.instanceOf[RelationshipCopyRecordRepository]
+  def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
   override def beforeEach() {
     super.beforeEach()

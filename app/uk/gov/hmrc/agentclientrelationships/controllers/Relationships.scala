@@ -20,13 +20,12 @@ import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
 import play.api.mvc.{Action, AnyContent, Result}
-import uk.gov.hmrc.agentclientrelationships.MicroserviceAuthConnector
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.{AgentOrClientRequest, AuthActions}
 import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, RelationshipsService}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
@@ -34,12 +33,14 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 @Singleton
 class Relationships @Inject()(
-  service: RelationshipsService) extends BaseController with AuthActions {
+  override val authConnector: AuthConnector,
+  service: RelationshipsService)
+  extends BaseController with AuthActions {
 
-  def authConnector: AuthConnector =  new MicroserviceAuthConnector
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
 
     implicit val auditData = new AuditData()
@@ -55,9 +56,15 @@ class Relationships @Inject()(
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
         service.checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
-          .map(Right.apply)
-          .recover {
-            case _ => Left(errorCode)
+          .map {
+            case AlreadyCopiedDidNotCheck =>
+              Left(errorCode)
+            case cesaResult =>
+              Right(cesaResult.grantAccess)
+          }.recover {
+            case NonFatal(ex) =>
+              Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${mtdItId.value}", ex)
+              Left(errorCode)
           }
     }.map {
       case Left(errorCode) => NotFound(toJson(errorCode))
@@ -76,8 +83,10 @@ class Relationships @Inject()(
         case references if references.nonEmpty => Ok
         case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }.recover {
-      case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-    }
+        case NonFatal(ex) =>
+          Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for ${arn.value}, $nino", ex)
+          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      }
   }
 
   def create(arn: Arn, mtdItId: MtdItId) = AuthorisedAgent {
@@ -97,8 +106,8 @@ class Relationships @Inject()(
       } yield ())
         .map(_ => Created)
         .recover {
-          case ex =>
-            Logger.warn(s"Could not create relationship: ${ex.getMessage}")
+          case NonFatal(ex) =>
+            Logger.warn(s"Could not create relationship for ${arn.value}, ${mtdItId.value}", ex)
             NotFound(toJson(ex.getMessage))
         }
     }
@@ -116,8 +125,8 @@ class Relationships @Inject()(
       } yield ())
         .map(_ => NoContent)
         .recover {
-          case ex =>
-            Logger.warn(s"Could not delete relationship: ${ex.getMessage}")
+          case ex: RelationshipNotFound =>
+            Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
             NotFound(toJson(ex.getMessage))
         }
     }
@@ -135,7 +144,7 @@ class Relationships @Inject()(
     service.cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
       .recover {
-        case ex => NotFound(ex.getMessage)
+        case ex: RelationshipNotFound => NotFound(ex.getMessage)
       }
   }
 }
