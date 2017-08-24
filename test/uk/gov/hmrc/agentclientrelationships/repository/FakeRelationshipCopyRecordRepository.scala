@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import reactivemongo.bson.BSONDocument
-import reactivemongo.core.errors.DatabaseException
+import reactivemongo.core.errors.GenericDatabaseException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 
@@ -27,12 +26,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class FakeRelationshipCopyRecordRepository() extends RelationshipCopyRecordRepository {
   var data:scala.collection.mutable.Map[String,RelationshipCopyRecord] = mutable.Map.empty[String,RelationshipCopyRecord]
   override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
-    findBy(Arn(record.arn),MtdItId(record.clientIdentifier)).map(result => {
-      if(result.isDefined)throw new DatabaseException {override def code: Option[Int] = Some(2)
-
-        override def originalDocument: Option[BSONDocument] = None
-
-        override def message: String = "duplicate key error collection"
+    findBy(Arn(record.arn), MtdItId(record.clientIdentifier)).map(result => {
+      if (result.isDefined) {
+        throw GenericDatabaseException("duplicate key error collection", code = Some(2))
       } else {
         data += ((record.arn + record.clientIdentifier) → record)
         1
