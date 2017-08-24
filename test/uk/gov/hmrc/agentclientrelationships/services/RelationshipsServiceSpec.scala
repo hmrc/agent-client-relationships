@@ -80,7 +80,6 @@ class RelationshipsServiceSpec extends UnitSpec
         val auditDetails = verifyAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
         await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(SyncStatus.Success)
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
       }
 
       s"skip recovery of ETMP relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
@@ -109,8 +108,6 @@ class RelationshipsServiceSpec extends UnitSpec
         val auditDetails = verifyAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe status
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
-
       }
     }
     // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
@@ -132,7 +129,6 @@ class RelationshipsServiceSpec extends UnitSpec
         await(check) shouldBe NotFound
 
         verifyEtmpRecordNotCreated()
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
       }
     }
 
@@ -160,7 +156,6 @@ class RelationshipsServiceSpec extends UnitSpec
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails("enrolmentDelegated") shouldBe true
         await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe Some(SyncStatus.Success)
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
       }
 
       s"skip recovery of GG relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
@@ -189,7 +184,6 @@ class RelationshipsServiceSpec extends UnitSpec
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails.get("enrolmentDelegated") shouldBe None
         await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe status
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
       }
     }
 
@@ -211,7 +205,6 @@ class RelationshipsServiceSpec extends UnitSpec
 
         verifyGgRecordNotCreated()
         verifyEtmpRecordNotCreated()
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
       }
     }
 
@@ -241,7 +234,6 @@ class RelationshipsServiceSpec extends UnitSpec
         auditDetails("etmpRelationshipCreated") shouldBe true
         auditDetails.get("enrolmentDelegated") shouldBe None
         await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(SyncStatus.Success)
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
       }
     }
 
@@ -266,7 +258,6 @@ class RelationshipsServiceSpec extends UnitSpec
 
         verifyGgRecordNotCreated()
         verifyEtmpRecordNotCreated()
-        verifyRecordNotRecreated(relationshipCopyRepository, record)
       }
     }
 
@@ -291,7 +282,6 @@ class RelationshipsServiceSpec extends UnitSpec
 
       verifyGgRecordNotCreated()
       verifyEtmpRecordNotCreated()
-      verifyRecordNotRecreated(relationshipCopyRepository, record)
     }
   }
 
@@ -341,11 +331,6 @@ class RelationshipsServiceSpec extends UnitSpec
     auditDetails("nino") shouldBe nino
     auditDetails
   }
-
-  def verifyRecordNotRecreated(repository: FakeRelationshipCopyRecordRepository, record: RelationshipCopyRecord): Unit = {
-    repository.findBy(Arn(record.arn),MtdItId(record.clientIdentifier))
-  }
-
 
   // remove implicit
   override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
