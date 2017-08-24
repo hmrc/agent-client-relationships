@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import java.util.UUID
-
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterEach}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
@@ -51,12 +48,13 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
       resultFindBy shouldBe scala.Some(relationshipCopyRecord)
       resultFindBy.get.clientIdentifierType shouldBe "MTDITID"
     }
+
     "findBy should return None if the record is not in the db" in {
       await(repo.findBy(otherArn, mtdItId)) shouldBe None
       await(repo.findBy(arn, otherMtdItId)) shouldBe empty
     }
 
-    "create should  return the  number 1 if the record is created in the db" in {
+    "create should return the number 1 if the record is created in the db" in {
       val createResult: Int = await(repo.create(relationshipCopyRecord))
       createResult shouldBe 1
       val resultFindBy = await(repo.findBy(arn, mtdItId)).get
@@ -65,10 +63,10 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
       resultFindBy.clientIdentifierType shouldBe "MTDITID"
     }
 
-    "create should throw an exception if record already exists" in {
+    "create should throw an exception if a record already exists with the same identifiers even when other fields differ" in {
       await(repo.create(relationshipCopyRecord))
       intercept[DatabaseException] {
-        await(repo.create(relationshipCopyRecord))
+        await(repo.create(relationshipCopyRecord.copy(syncToETMPStatus = None)))
       }.getMessage.contains("duplicate key error collection") shouldBe true
     }
 
@@ -91,6 +89,7 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
       val result2After = await(repo.findBy(arn, otherMtdItId)).get
       result2After shouldBe relationshipCopyRecord.copy(clientIdentifier = otherMtdItId.value)
     }
+
     "updateEtmpSyncStatus" should {
       "update the record" in {
         await(repo.create(relationshipCopyRecord))
