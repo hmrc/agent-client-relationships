@@ -23,8 +23,9 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeRelationshipCopyRecordRepository() extends RelationshipCopyRecordRepository {
-  var data:scala.collection.mutable.Map[String,RelationshipCopyRecord] = mutable.Map.empty[String,RelationshipCopyRecord]
+class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordRepository {
+  private val data: mutable.Map[String, RelationshipCopyRecord] = mutable.Map()
+
   override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
     findBy(Arn(record.arn), MtdItId(record.clientIdentifier)).map(result => {
       if (result.isDefined) {
