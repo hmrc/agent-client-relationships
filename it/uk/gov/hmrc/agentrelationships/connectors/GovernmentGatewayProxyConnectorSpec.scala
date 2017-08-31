@@ -9,7 +9,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyCon
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, GovernmentGatewayProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.domain.{AgentCode, Nino}
+import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -104,21 +104,6 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       givenAuditConnector()
       await(connector.getAllocatedAgentCodes(MtdItId("foo")))
       timerShouldExistsAndBeenUpdated("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST")
-    }
-
-    "return set containing agent code if agent is allocated and assigned for a client with NINO" in {
-      givenAgentIsAllocatedAndAssignedToClient("CE321007A", "bar")
-      givenAuditConnector()
-      await(connector.getAllocatedAgentCodes(Nino("CE321007A"))) should contain(AgentCode("bar"))
-    }
-
-    "return set containing agent code if agent is allocated but not assigned for a client with NINO" in {
-      givenAgentIsAllocatedButNotAssignedToClient("CE321007A")
-      givenAuditConnector()
-      val result = await(connector.getAllocatedAgentCodes(Nino("CE321007A")))
-      result should not contain AgentCode("bar")
-      result should contain(AgentCode("other"))
-      result should contain(AgentCode("123ABCD12345"))
     }
 
     "allocate agent for valid identifiers" in {
