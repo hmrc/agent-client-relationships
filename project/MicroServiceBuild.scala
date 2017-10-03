@@ -26,7 +26,7 @@ private object AppDependencies {
   private val wiremockVersion = "2.6.0"
   private val scalaTestPlusVersion = "1.5.1"
   private val mtdIdentifiersVersion = "0.5.0"
-  private val playAuthVersion = "1.0.0"
+  private val playAuthVersion = "2.4.2"
   private val mongoLockVersion = "4.1.0"
   val compile = Seq(
     ws,
