@@ -20,12 +20,13 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.auth.core.AffinityGroup.Agent
-import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core.Retrievals._
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.auth.core.authorise.{AffinityGroup, Enrolment}
+import uk.gov.hmrc.auth.core.retrieve.{AuthProviders, ~}
+import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.retrieve.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.retrieve.Retrievals._
 
 import scala.concurrent.Future
 
@@ -45,7 +46,7 @@ trait AuthActions extends AuthorisedFunctions {
       authorised(AuthProviders(GovernmentGateway)).retrieve(allEnrolments and affinityGroup) {
         case enrol ~ affinityG =>
           val maybeIdentifier: Option[TaxIdentifier] = affinityG match {
-            case Some(Agent) => getEnrolmentInfo(enrol.enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber").map(arn => Arn(arn))
+            case Some(AffinityGroup.Agent) => getEnrolmentInfo(enrol.enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber").map(arn => Arn(arn))
             case _ => getEnrolmentInfo(enrol.enrolments, "HMRC-MTD-IT", "MTDITID").map(mtdItId => MtdItId(mtdItId))
           }
 

@@ -26,7 +26,9 @@ import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.{PermissiveAuthActions, ResettingMockitoSugar}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.auth.core.{AuthConnector, Predicate, Retrieval}
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.auth.core.authorise.Predicate
+import uk.gov.hmrc.auth.core.retrieve.Retrieval
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
