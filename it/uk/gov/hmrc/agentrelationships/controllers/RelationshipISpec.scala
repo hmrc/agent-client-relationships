@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global

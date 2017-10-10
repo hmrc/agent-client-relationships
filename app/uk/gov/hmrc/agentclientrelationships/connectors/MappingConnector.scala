@@ -29,6 +29,7 @@ import uk.gov.hmrc.play.http._
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet }
 
 case class Mappings(mappings: Seq[Mapping])
 

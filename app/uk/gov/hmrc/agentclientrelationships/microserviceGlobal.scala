@@ -28,13 +28,11 @@ import uk.gov.hmrc.agentclientrelationships.repository.{MongoLockRepository, Mon
 import uk.gov.hmrc.agentclientrelationships.services.{MongoRecoveryLockService, RecoveryLockService}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.lock.LockRepository
-import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
-import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
-import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
-import uk.gov.hmrc.play.http.{HttpGet, HttpPost}
 import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
+import uk.gov.hmrc.http.{ HttpGet, HttpPost }
+import uk.gov.hmrc.play.microservice.filters.{ AuditFilter, LoggingFilter, MicroserviceFilterSupport }
 
 class GuiceModule() extends AbstractModule with ServicesConfig {
 

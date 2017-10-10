@@ -29,10 +29,10 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.http.HeaderCarrier
 
 class RelationshipsControllerDeleteSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
@@ -41,7 +41,7 @@ class RelationshipsControllerDeleteSpec extends UnitSpec with ResettingMockitoSu
 
   val service = resettingMock[RelationshipsService]
   val authConnector = new AuthConnector {
-    override def authorise[A](predicate: Predicate, retrieval: Retrieval[A])(implicit hc: HeaderCarrier) = ???
+    override def authorise[A](predicate: Predicate, retrieval: Retrieval[A])(implicit hc: HeaderCarrier, ec: ExecutionContext) = ???
   }
   val controller = new Relationships(authConnector, service) with PermissiveAuthActions {
     override val taxIdentifier = arn

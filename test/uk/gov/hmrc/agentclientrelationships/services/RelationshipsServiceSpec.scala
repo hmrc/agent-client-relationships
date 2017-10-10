@@ -29,11 +29,11 @@ import uk.gov.hmrc.agentclientrelationships.repository.{FakeRelationshipCopyReco
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{AgentCode, Generator, Nino, SaAgentReference}
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.http.HeaderCarrier
 
 class RelationshipsServiceSpec extends UnitSpec
   with BeforeAndAfterEach with ResettingMockitoSugar {
@@ -286,28 +286,28 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def cesaRelationshipDoesNotExist(): Unit = {
-    when(des.getNinoFor(eqs(mtdItId))(eqs(hc))).thenReturn(Future successful nino)
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc))).thenReturn(Future successful Seq())
+    when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
+    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq())
   }
 
   private def cesaRelationshipExists(): Unit = {
-    when(des.getNinoFor(eqs(mtdItId))(eqs(hc))).thenReturn(Future successful nino)
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc))).thenReturn(Future successful Seq(saAgentRef))
+    when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
+    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq(saAgentRef))
   }
 
   private def relationshipWillBeCreated(): Unit = {
-    when(des.createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc))).thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
+    when(des.createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
     when(gg.allocateAgent(eqs(agentCode), eqs(mtdItId))(eqs(hc))).thenReturn(Future successful true)
   }
 
   def verifyEtmpRecordCreated(): Unit = {
-    verify(des).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc))
+    verify(des).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
   }
 
   def verifyEtmpRecordNotCreated(): Unit = {
-    verify(des, never()).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc))
+    verify(des, never()).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
   }
 
   def verifyGgRecordCreated(): Unit = {

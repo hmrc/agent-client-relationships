@@ -30,11 +30,11 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{AgentCode, Nino, TaxIdentifier}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpPost}
 
 import scala.concurrent.Future
 import scala.xml.Elem
 import scala.xml.XML.withSAXParser
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpPost }
 
 @Singleton
 class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy-baseUrl") baseUrl: URL, httpPost: HttpPost, metrics: Metrics)

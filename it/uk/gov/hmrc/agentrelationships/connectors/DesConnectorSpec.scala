@@ -10,8 +10,10 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
+
+import scala.concurrent.ExecutionContext
 
 class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs with DataStreamStub with MetricTestSupport {
 
@@ -27,6 +29,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       )
 
   private implicit val hc = HeaderCarrier()
+  private implicit val ec = ExecutionContext.global
 
   val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
 

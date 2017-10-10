@@ -20,15 +20,14 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.auth.core.authorise.{AffinityGroup, Enrolment}
-import uk.gov.hmrc.auth.core.retrieve.{AuthProviders, ~}
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.retrieve.Retrievals._
 
 import scala.concurrent.Future
+import uk.gov.hmrc.play.HeaderCarrierConverter
 
 trait AuthActions extends AuthorisedFunctions {
   me: Results =>
@@ -42,7 +41,7 @@ trait AuthActions extends AuthorisedFunctions {
 
   def AuthorisedAgent[A](body: AsyncPlayUserRequest): Action[AnyContent] = Action.async {
     implicit request =>
-      implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers, None)
+      implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       authorised(AuthProviders(GovernmentGateway)).retrieve(allEnrolments and affinityGroup) {
         case enrol ~ affinityG =>
           val maybeIdentifier: Option[TaxIdentifier] = affinityG match {
