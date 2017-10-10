@@ -23,8 +23,7 @@ import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.auth.core.authorise._
+import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.{Retrieval, ~}
 import uk.gov.hmrc.play.microservice.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
@@ -38,10 +37,10 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   private lazy val arn = "TARN0000001"
   private lazy val mtdItId = "ABCDEFGH"
 
-  private val agentEnrolment = Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("AgentReferenceNumber", arn)), confidenceLevel = ConfidenceLevel.L200,
+  private val agentEnrolment = Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("AgentReferenceNumber", arn)),
     state = "", delegatedAuthRule = None)
 
-  private val mtdItIdEnrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)), confidenceLevel = ConfidenceLevel.L200,
+  private val mtdItIdEnrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)),
     state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {
@@ -55,11 +54,11 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   }
 
   def mockAgentAuth(affinityGroup: AffinityGroup = AffinityGroup.Agent, enrolment: Set[Enrolment]) =
-    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any()))
+    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any(), any()))
       .thenReturn(Future successful new ~[Enrolments, Option[AffinityGroup]](Enrolments(enrolment), Some(affinityGroup)))
 
   def mockClientAuth(affinityGroup: AffinityGroup = AffinityGroup.Individual, enrolment: Set[Enrolment]) =
-    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any()))
+    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any(), any()))
       .thenReturn(Future successful new ~[Enrolments, Option[AffinityGroup]](Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")

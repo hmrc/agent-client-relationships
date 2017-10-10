@@ -10,7 +10,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, GovernmentGatewayProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuite with WireMockSupport with GovernmentGatewayProxyStubs with DataStreamStub with MetricTestSupport {

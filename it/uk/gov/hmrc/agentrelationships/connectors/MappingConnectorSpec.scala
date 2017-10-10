@@ -10,7 +10,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs with DataStreamStub with MetricTestSupport {

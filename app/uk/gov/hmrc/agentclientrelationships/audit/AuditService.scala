@@ -26,12 +26,12 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.collection.JavaConversions
 import scala.concurrent.Future
 import scala.util.Try
+import uk.gov.hmrc.http.HeaderCarrier
 
 object AgentClientRelationshipEvent extends Enumeration {
   val CreateRelationship, CheckCESA = Value
