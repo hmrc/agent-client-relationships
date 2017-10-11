@@ -43,7 +43,7 @@ object WSHttp extends WSHttp
 
 @Singleton
 class MicroserviceAuthConnector extends PlayAuthConnector with ServicesConfig with WSHttp {
-  override val serviceUrl: String = baseUrl("auth")
+  override lazy val serviceUrl: String = baseUrl("auth")
 
   lazy val http = new HttpPost with WSPost {
     override val hooks: Seq[HttpHook] = NoneRequired
