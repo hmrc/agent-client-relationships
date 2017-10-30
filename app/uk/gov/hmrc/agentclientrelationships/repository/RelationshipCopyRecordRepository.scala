@@ -18,7 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import javax.inject.{Inject, Singleton}
 
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.DateTime
+import org.joda.time.DateTime.now
+import org.joda.time.DateTimeZone.UTC
 import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json.{Format, Reads, Writes}
@@ -47,14 +49,14 @@ case class RelationshipCopyRecord(arn: String,
                                   clientIdentifier: String,
                                   clientIdentifierType: String,
                                   references: Option[Set[SaAgentReference]] = None,
-                                  dateTime: DateTime = DateTime.now(DateTimeZone.UTC),
+                                  dateTime: DateTime = now(UTC),
                                   syncToETMPStatus: Option[SyncStatus] = None,
                                   syncToGGStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateGgRecord
 
   def needToCreateEtmpRecord = !syncToETMPStatus.contains(Success)
 
-  def needToCreateGgRecord = !syncToGGStatus.contains(Success)
+  def needToCreateGgRecord = !(syncToGGStatus.contains(Success) || syncToGGStatus.contains(InProgress))
 }
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
