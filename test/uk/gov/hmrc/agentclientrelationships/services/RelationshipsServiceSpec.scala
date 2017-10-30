@@ -24,16 +24,16 @@ import play.api.mvc.Request
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RegistrationRelationshipResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
-import uk.gov.hmrc.agentclientrelationships.repository.{FakeRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.{FakeRelationshipCopyRecordRepository, RelationshipCopyRecord}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{AgentCode, Generator, Nino, SaAgentReference}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.http.HeaderCarrier
 
 class RelationshipsServiceSpec extends UnitSpec
   with BeforeAndAfterEach with ResettingMockitoSugar {
@@ -52,7 +52,7 @@ class RelationshipsServiceSpec extends UnitSpec
   val mapping = resettingMock[MappingConnector]
   val auditService = resettingMock[AuditService]
 
-  val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(SyncStatus.InProgress), Some(SyncStatus.IncompleteInputParams), Some(SyncStatus.Failed))
+  val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
 
   val hc = HeaderCarrier()
   val ec = implicitly[ExecutionContext]
@@ -79,7 +79,7 @@ class RelationshipsServiceSpec extends UnitSpec
         verifyEtmpRecordCreated()
         val auditDetails = verifyAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(SyncStatus.Success)
+        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(Success)
       }
 
       s"skip recovery of ETMP relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
@@ -132,10 +132,10 @@ class RelationshipsServiceSpec extends UnitSpec
       }
     }
 
-    needsRetryStatuses.foreach { status =>
+    needsRetryStatuses.filterNot(s => s.contains(InProgress) || s.contains(InProgress)) foreach { status =>
       s"create GG relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = Success and syncToGGStatus = $status" in {
-        val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
+        val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
@@ -155,13 +155,13 @@ class RelationshipsServiceSpec extends UnitSpec
         val auditDetails = verifyAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails("enrolmentDelegated") shouldBe true
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe Some(SyncStatus.Success)
+        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe Some(Success)
       }
 
       s"skip recovery of GG relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
       s"with syncToETMPStatus = $status and syncToGGStatus = None " +
       s"and recovery of this relationship is already in progress" in {
-        val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
+        val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
@@ -190,7 +190,7 @@ class RelationshipsServiceSpec extends UnitSpec
     needsRetryStatuses.foreach { status =>
       s"not create GG relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = $status" in {
-        val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = status)
+        val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
@@ -212,7 +212,7 @@ class RelationshipsServiceSpec extends UnitSpec
       s"create ETMP relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = $status and syncToGGStatus = Success " +
         s"even though we don't expect this to happen because we always create the ETMP record first" in {
-        val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(SyncStatus.Success))
+        val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(Success))
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         await(relationshipCopyRepository.create(record))
         val lockService = new FakeLockService
@@ -233,7 +233,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val auditDetails = verifyAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
         auditDetails.get("enrolmentDelegated") shouldBe None
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(SyncStatus.Success)
+        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(Success)
       }
     }
 
@@ -242,7 +242,7 @@ class RelationshipsServiceSpec extends UnitSpec
     needsRetryStatuses.foreach { status =>
       s"not create GG relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = Success" in {
-        val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(SyncStatus.Success))
+        val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(Success))
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         await(relationshipCopyRepository.create(record))
         val lockService = new FakeLockService
@@ -262,7 +262,33 @@ class RelationshipsServiceSpec extends UnitSpec
     }
 
     "not create ETMP or GG relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
-      val record = defaultRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToGGStatus = Some(SyncStatus.Success))
+      val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = Some(Success))
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      await(relationshipCopyRepository.create(record))
+      val lockService = new FakeLockService
+      val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      cesaRelationshipExists()
+      relationshipWillBeCreated()
+
+      val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+
+      val checkAndCopyResult = await(check)
+      checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
+      checkAndCopyResult.grantAccess shouldBe false
+
+      verifyGgRecordNotCreated()
+      verifyEtmpRecordNotCreated()
+    }
+
+    "not createGG relationship if RelationshipCopyRecord exists syncToGGStatus is In Progress because we can't tell " +
+      "whether the GG copy happened successfully but the the status update failed e.g. due to a container kill and in " +
+      "that case we would be re-copying a relationship that has been removed in GG. It is more important that we never " +
+      "copy to GG twice than that the synch works!" in {
+      val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = Some(InProgress))
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
       val lockService = new FakeLockService

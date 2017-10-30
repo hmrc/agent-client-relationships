@@ -23,14 +23,14 @@ import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import uk.gov.hmrc.http.HeaderCarrier
 
 sealed trait CesaCheckAndCopyResult {
   val grantAccess: Boolean
@@ -132,16 +132,15 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, mtdItId, _: SyncStatus)
 
     (for {
-      _ <- updateEtmpSyncStatus(SyncStatus.InProgress)
+      _ <- updateEtmpSyncStatus(InProgress)
       _ <- des.createAgentRelationship(mtdItId, arn)
       _ = auditData.set("etmpRelationshipCreated", true)
-      _ <- updateEtmpSyncStatus(SyncStatus.Success)
+      _ <- updateEtmpSyncStatus(Success)
     } yield ())
       .recoverWith {
         case NonFatal(ex) =>
           Logger.warn(s"Creating ETMP record failed for ${arn.value}, ${mtdItId.value}", ex)
-          updateEtmpSyncStatus(SyncStatus.Failed)
-            .flatMap(_ => Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DES")))
+          updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DES")))
       }
   }
 
@@ -154,19 +153,19 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
     val updateGgSyncStatus = relationshipCopyRepository.updateGgSyncStatus(arn, mtdItId, _: SyncStatus)
     (for {
-      _ <- updateGgSyncStatus(SyncStatus.InProgress)
+      _ <- updateGgSyncStatus(InProgress)
       agentCode <- eventualAgentCode
       _ <- gg.allocateAgent(agentCode, mtdItId)
       _ = auditData.set("enrolmentDelegated", true)
-      _ <- updateGgSyncStatus(SyncStatus.Success)
+      _ <- updateGgSyncStatus(Success)
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
           Logger.warn(s"Creating GG record for ${arn.value}, ${mtdItId.value} not possible because of incomplete data: $errorCode")
-          updateGgSyncStatus(SyncStatus.IncompleteInputParams)
+          updateGgSyncStatus(IncompleteInputParams)
         case NonFatal(ex) =>
           Logger.warn(s"Creating GG record failed for ${arn.value}, ${mtdItId.value}", ex)
-          updateGgSyncStatus(SyncStatus.Failed)
+          updateGgSyncStatus(Failed)
           if (failIfAllocateAgentInGGFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_GG"))
           else Future.successful(())
       }
