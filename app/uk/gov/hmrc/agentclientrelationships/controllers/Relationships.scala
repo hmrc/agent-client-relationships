@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.play.http.Upstream5xxResponse
+import uk.gov.hmrc.http.Upstream5xxResponse
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
@@ -84,7 +84,7 @@ class Relationships @Inject()(
         case references if references.nonEmpty => Ok
         case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }.recover {
-      case exx: Upstream5xxResponse =>
+      case _: Upstream5xxResponse =>
         BadGateway(toJson("Upstream5xxResponse"))
       case NonFatal(ex) =>
         Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for ${arn.value}, $nino", ex)
