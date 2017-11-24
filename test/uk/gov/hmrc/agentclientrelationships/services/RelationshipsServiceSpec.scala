@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{FakeRelationshipCopyReco
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{AgentCode, Generator, Nino, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -83,8 +83,8 @@ class RelationshipsServiceSpec extends UnitSpec
       }
 
       s"skip recovery of ETMP relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
-      s"with syncToETMPStatus = $status and syncToGGStatus = None " +
-      s"and recovery of this relationship is already in progress" in {
+        s"with syncToETMPStatus = $status and syncToGGStatus = None " +
+        s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         await(relationshipCopyRepository.create(record))
@@ -158,9 +158,10 @@ class RelationshipsServiceSpec extends UnitSpec
         await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToGGStatus shouldBe Some(Success)
       }
 
+
       s"skip recovery of GG relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
-      s"with syncToETMPStatus = $status and syncToGGStatus = None " +
-      s"and recovery of this relationship is already in progress" in {
+        s"with syncToETMPStatus = $status and syncToGGStatus = None " +
+        s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
@@ -261,6 +262,21 @@ class RelationshipsServiceSpec extends UnitSpec
       }
     }
 
+    "return Upstream5xxResponse, if the mapping service is unavailable" in {
+      val lockService = new FakeLockService
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      mappingServiceUnavailable()
+      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
+
+      an[Upstream5xxResponse] should be thrownBy await(check)
+      verifyGgRecordNotCreated()
+      verifyEtmpRecordNotCreated()
+    }
+
     "not create ETMP or GG relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
       val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = Some(Success))
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -317,6 +333,12 @@ class RelationshipsServiceSpec extends UnitSpec
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq())
   }
 
+  private def mappingServiceUnavailable(): Unit = {
+    when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
+    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
+  }
+
   private def cesaRelationshipExists(): Unit = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
@@ -357,7 +379,6 @@ class RelationshipsServiceSpec extends UnitSpec
     auditDetails("nino") shouldBe nino
     auditDetails
   }
-
   // remove implicit
   override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
 }

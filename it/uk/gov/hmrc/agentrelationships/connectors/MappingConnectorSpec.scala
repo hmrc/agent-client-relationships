@@ -10,7 +10,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs with DataStreamStub with MetricTestSupport {
@@ -56,7 +56,7 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
     "fail when mapping service is unavailable" in {
       givenServiceReturnsServiceUnavailable()
       givenAuditConnector()
-      an[Exception] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
+      an[Upstream5xxResponse] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
     }
 
     "fail when mapping service is throwing errors" in {

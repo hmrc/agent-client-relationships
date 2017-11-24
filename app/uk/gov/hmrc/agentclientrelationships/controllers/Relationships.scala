@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.Upstream5xxResponse
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
@@ -37,8 +38,8 @@ import scala.util.control.NonFatal
 
 @Singleton
 class Relationships @Inject()(
-  override val authConnector: AuthConnector,
-  service: RelationshipsService)
+                               override val authConnector: AuthConnector,
+                               service: RelationshipsService)
   extends BaseController with AuthActions {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
@@ -62,10 +63,10 @@ class Relationships @Inject()(
             case cesaResult =>
               Right(cesaResult.grantAccess)
           }.recover {
-            case NonFatal(ex) =>
-              Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${mtdItId.value}", ex)
-              Left(errorCode)
-          }
+          case NonFatal(ex) =>
+            Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${mtdItId.value}", ex)
+            Left(errorCode)
+        }
     }.map {
       case Left(errorCode) => NotFound(toJson(errorCode))
       case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
@@ -83,57 +84,61 @@ class Relationships @Inject()(
         case references if references.nonEmpty => Ok
         case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }.recover {
-        case NonFatal(ex) =>
-          Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for ${arn.value}, $nino", ex)
-          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-      }
+      case _: Upstream5xxResponse =>
+        BadGateway(toJson("Upstream5xxResponse"))
+      case NonFatal(ex) =>
+        Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for ${arn.value}, $nino", ex)
+        NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+    }
   }
 
   def create(arn: Arn, mtdItId: MtdItId) = AuthorisedAgent {
-    implicit request => implicit agent =>
-    forThisAgentOrClient(arn, mtdItId) {
-      implicit val auditData = new AuditData()
-      auditData.set("arn", arn)
+    implicit request =>
+      implicit agent =>
+        forThisAgentOrClient(arn, mtdItId) {
+          implicit val auditData = new AuditData()
+          auditData.set("arn", arn)
 
-      (for {
-        agentCode <- service.getAgentCodeFor(arn)
-        _ <- service.checkForRelationship(mtdItId, agentCode)
-          .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
-          .recover {
-            case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
-          }
-        _ <- service.createRelationship(arn, mtdItId, Future.successful(agentCode), Set(), false, true)
-      } yield ())
-        .map(_ => Created)
-        .recover {
-          case NonFatal(ex) =>
-            Logger.warn(s"Could not create relationship for ${arn.value}, ${mtdItId.value}", ex)
-            NotFound(toJson(ex.getMessage))
+          (for {
+            agentCode <- service.getAgentCodeFor(arn)
+            _ <- service.checkForRelationship(mtdItId, agentCode)
+              .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
+              .recover {
+                case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
+              }
+            _ <- service.createRelationship(arn, mtdItId, Future.successful(agentCode), Set(), false, true)
+          } yield ())
+            .map(_ => Created)
+            .recover {
+              case NonFatal(ex) =>
+                Logger.warn(s"Could not create relationship for ${arn.value}, ${mtdItId.value}", ex)
+                NotFound(toJson(ex.getMessage))
+            }
         }
-    }
   }
 
-  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgent { implicit request => implicit agent =>
-    forThisAgentOrClient(arn, mtdItId) {
-      implicit val auditData = new AuditData()
-      auditData.set("arn", arn)
+  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgent { implicit request =>
+    implicit agent =>
+      forThisAgentOrClient(arn, mtdItId) {
+        implicit val auditData = new AuditData()
+        auditData.set("arn", arn)
 
-      (for {
-        agentCode <- service.getAgentCodeFor(arn)
-        _ <- service.checkForRelationship(mtdItId, agentCode)
-        _ <- service.deleteRelationship(arn, mtdItId)
-      } yield ())
-        .map(_ => NoContent)
-        .recover {
-          case ex: RelationshipNotFound =>
-            Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
-            NotFound(toJson(ex.getMessage))
-        }
-    }
+        (for {
+          agentCode <- service.getAgentCodeFor(arn)
+          _ <- service.checkForRelationship(mtdItId, agentCode)
+          _ <- service.deleteRelationship(arn, mtdItId)
+        } yield ())
+          .map(_ => NoContent)
+          .recover {
+            case ex: RelationshipNotFound =>
+              Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
+              NotFound(toJson(ex.getMessage))
+          }
+      }
   }
 
   private[controllers] def forThisAgentOrClient(requiredArn: Arn, requiredMtdItId: MtdItId)
-    (block: => Future[Result])(implicit request: AgentOrClientRequest[_]) = {
+                                               (block: => Future[Result])(implicit request: AgentOrClientRequest[_]) = {
     val taxId: String = request.taxIdentifier.value
 
     if (requiredArn.value.equals(taxId) || requiredMtdItId.value.equals(taxId)) block

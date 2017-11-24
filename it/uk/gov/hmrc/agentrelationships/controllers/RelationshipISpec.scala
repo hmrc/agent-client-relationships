@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -78,7 +78,7 @@ class RelationshipISpec extends UnitSpec
     syncToGGStatus = Some(SyncStatus.Success)
   )
 
-  "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+  "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
@@ -458,6 +458,19 @@ class RelationshipISpec extends UnitSpec
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 5xx mapping is unavailable" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(nino)
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenServiceReturnsServiceUnavailable()
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 502
+      (result.json \ "code").as[String] shouldBe "Upstream5xxResponse"
     }
 
     "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
