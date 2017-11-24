@@ -78,7 +78,7 @@ class RelationshipISpec extends UnitSpec
     syncToGGStatus = Some(SyncStatus.Success)
   )
 
-  "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:nino" should {
+  "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
