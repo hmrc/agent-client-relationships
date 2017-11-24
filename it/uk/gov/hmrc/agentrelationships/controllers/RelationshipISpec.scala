@@ -469,7 +469,6 @@ class RelationshipISpec extends UnitSpec
       givenServiceReturnsServiceUnavailable()
       givenAuditConnector()
       val result = await(doRequest)
-      //an[Upstream5xxResponse] should be thrownBy result
       result.status shouldBe 502
       (result.json \ "code").as[String] shouldBe "Upstream5xxResponse"
     }

@@ -271,7 +271,10 @@ class RelationshipsServiceSpec extends UnitSpec
 
       mappingServiceUnavailable()
       val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
+
       an[Upstream5xxResponse] should be thrownBy await(check)
+      verifyGgRecordNotCreated()
+      verifyEtmpRecordNotCreated()
     }
 
     "not create ETMP or GG relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
@@ -323,7 +326,6 @@ class RelationshipsServiceSpec extends UnitSpec
       verifyEtmpRecordNotCreated()
     }
   }
-
 
   private def cesaRelationshipDoesNotExist(): Unit = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
@@ -377,7 +379,6 @@ class RelationshipsServiceSpec extends UnitSpec
     auditDetails("nino") shouldBe nino
     auditDetails
   }
-
   // remove implicit
   override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
 }

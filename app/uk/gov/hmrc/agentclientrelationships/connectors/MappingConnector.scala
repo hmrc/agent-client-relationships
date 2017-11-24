@@ -53,5 +53,4 @@ class MappingConnector @Inject()(
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[Mappings](url.toString)}
       .map(_.mappings.map(_.saAgentReference))
   }
-
 }
