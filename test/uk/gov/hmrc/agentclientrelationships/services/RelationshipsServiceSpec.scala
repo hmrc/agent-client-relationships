@@ -270,7 +270,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val request = FakeRequest()
 
       mappingServiceUnavailable()
-      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
+      val check = relationshipsService.checkCesaForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
       verifyGgRecordNotCreated()
@@ -322,6 +322,23 @@ class RelationshipsServiceSpec extends UnitSpec
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
       checkAndCopyResult.grantAccess shouldBe false
 
+      verifyGgRecordNotCreated()
+      verifyEtmpRecordNotCreated()
+    }
+  }
+
+  "checkCesaForrOldRelationship" should {
+    "return Upstream5xxResponse, if the mapping service is unavailable" in {
+      val lockService = new FakeLockService
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      mappingServiceUnavailable()
+      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
+
+      an[Upstream5xxResponse] should be thrownBy await(check)
       verifyGgRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
