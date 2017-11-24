@@ -46,7 +46,6 @@ class Relationships @Inject()(
 
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
-
     val agentCode = service.getAgentCodeFor(arn)
 
     val result = for {
@@ -63,6 +62,8 @@ class Relationships @Inject()(
             case cesaResult =>
               Right(cesaResult.grantAccess)
           }.recover {
+          case upS: Upstream5xxResponse =>
+            throw upS
           case NonFatal(ex) =>
             Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${mtdItId.value}", ex)
             Left(errorCode)
@@ -75,7 +76,6 @@ class Relationships @Inject()(
   }
 
   def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
-
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
@@ -84,8 +84,8 @@ class Relationships @Inject()(
         case references if references.nonEmpty => Ok
         case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }.recover {
-      case _: Upstream5xxResponse =>
-        BadGateway(toJson("Upstream5xxResponse"))
+      case upS: Upstream5xxResponse =>
+        throw upS
       case NonFatal(ex) =>
         Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for ${arn.value}, $nino", ex)
         NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
@@ -110,6 +110,8 @@ class Relationships @Inject()(
           } yield ())
             .map(_ => Created)
             .recover {
+              case upS: Upstream5xxResponse =>
+                throw upS
               case NonFatal(ex) =>
                 Logger.warn(s"Could not create relationship for ${arn.value}, ${mtdItId.value}", ex)
                 NotFound(toJson(ex.getMessage))

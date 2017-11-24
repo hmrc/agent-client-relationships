@@ -426,6 +426,19 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"
     }
+
+    "return 502 when mapping service is unavailable" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenServiceReturnsServiceUnavailable()
+      givenAuditConnector()
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
   }
 
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
@@ -470,7 +483,6 @@ class RelationshipISpec extends UnitSpec
       givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 502
-      (result.json \ "code").as[String] shouldBe "Upstream5xxResponse"
     }
 
     "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
@@ -589,6 +601,14 @@ class RelationshipISpec extends UnitSpec
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 403
+    }
+
+    "return 502 when gg is unavailable" in {
+      givenUserIsSubscribedAgent(Arn(arn))
+      givenGgIsUnavailable()
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 502
     }
 
     /**
@@ -759,7 +779,7 @@ class RelationshipISpec extends UnitSpec
     }
   }
 
-  "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+  "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid" should {
 
     val requestPath: String = s"/test-only/db/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
@@ -771,7 +791,7 @@ class RelationshipISpec extends UnitSpec
     }
   }
 
-  "PUT /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+  "PUT /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
 
@@ -817,6 +837,14 @@ class RelationshipISpec extends UnitSpec
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 403
+    }
+
+    "return 502 when gg is unavailable" in {
+      givenUserIsSubscribedAgent(Arn(arn))
+      givenGgIsUnavailable()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 502
     }
 
     /**

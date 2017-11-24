@@ -241,7 +241,6 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
-
   def whenGetAssignedAgentsReturns(status: Int): GovernmentGatewayProxyStubs = {
     stubFor(post(urlEqualTo("/government-gateway-proxy/api/admin/GsoAdminGetAssignedAgents"))
       .willReturn(aResponse().withStatus(status)))
@@ -260,4 +259,9 @@ trait GovernmentGatewayProxyStubs {
     this
   }
 
+  def givenGgIsUnavailable(): GovernmentGatewayProxyStubs = {
+    stubFor(any(urlMatching("/government-gateway-proxy/.*"))
+      .willReturn(aResponse().withStatus(503)))
+    this
+  }
 }
