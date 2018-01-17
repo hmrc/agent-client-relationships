@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{NotFoundException, Upstream5xxResponse}
+import uk.gov.hmrc.http.Upstream5xxResponse
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
