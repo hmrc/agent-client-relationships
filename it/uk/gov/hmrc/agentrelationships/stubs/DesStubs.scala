@@ -150,6 +150,17 @@ trait DesStubs {
     )
   }
 
+  def givenAgentHasNoActiveRelationshipInDes(mtdItId: String, arn: String) = {
+    stubFor(
+      post(urlEqualTo(s"/registration/relationship"))
+        .withRequestBody(containing(mtdItId))
+        .withRequestBody(containing(arn))
+        .withRequestBody(containing("\"De-Authorise\""))
+        .willReturn(aResponse().withStatus(200)
+          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}"""))
+    )
+  }
+
   def givenAgentCanNotBeDeallocatedInDes = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))

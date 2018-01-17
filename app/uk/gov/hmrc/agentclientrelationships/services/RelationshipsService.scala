@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -250,10 +250,18 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
   def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
     implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
-    for {
+
+    def ggDeallocation = (for {
       agentCode <- getAgentCodeFor(arn)
+      _ <- checkForRelationship(mtdItId, agentCode).map(_ => gg.deallocateAgent(agentCode, mtdItId))
+    } yield ()).recover {
+      case ex: RelationshipNotFound =>
+        Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
+    }
+
+    for {
       _ <- des.deleteAgentRelationship(mtdItId, arn)
-      _ <- gg.deallocateAgent(agentCode, mtdItId)
+      _ <- ggDeallocation
     } yield ()
   }
 

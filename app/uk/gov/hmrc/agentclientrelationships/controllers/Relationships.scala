@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,17 +125,7 @@ class Relationships @Inject()(
         implicit val auditData = new AuditData()
         auditData.set("arn", arn)
 
-        (for {
-          agentCode <- service.getAgentCodeFor(arn)
-          _ <- service.checkForRelationship(mtdItId, agentCode)
-          _ <- service.deleteRelationship(arn, mtdItId)
-        } yield ())
-          .map(_ => NoContent)
-          .recover {
-            case ex: RelationshipNotFound =>
-              Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
-              NotFound(toJson(ex.getMessage))
-          }
+        service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
       }
   }
 
