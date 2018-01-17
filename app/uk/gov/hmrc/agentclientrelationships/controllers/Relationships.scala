@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.Upstream5xxResponse
+import uk.gov.hmrc.http.{NotFoundException, Upstream5xxResponse}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
@@ -125,17 +125,7 @@ class Relationships @Inject()(
         implicit val auditData = new AuditData()
         auditData.set("arn", arn)
 
-        (for {
-          agentCode <- service.getAgentCodeFor(arn)
-          _ <- service.checkForRelationship(mtdItId, agentCode)
-          _ <- service.deleteRelationship(arn, mtdItId)
-        } yield ())
-          .map(_ => NoContent)
-          .recover {
-            case ex: RelationshipNotFound =>
-              Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
-              NotFound(toJson(ex.getMessage))
-          }
+        service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
       }
   }
 

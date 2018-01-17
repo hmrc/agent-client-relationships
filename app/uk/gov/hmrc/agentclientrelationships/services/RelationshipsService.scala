@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -250,10 +250,18 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
   def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
     implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
-    for {
+
+    def ggDeallocation = (for {
       agentCode <- getAgentCodeFor(arn)
+      _ <- checkForRelationship(mtdItId, agentCode).map(_ => gg.deallocateAgent(agentCode, mtdItId))
+    } yield ()).recover {
+      case ex: RelationshipNotFound =>
+        Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
+    }
+
+    for {
       _ <- des.deleteAgentRelationship(mtdItId, arn)
-      _ <- gg.deallocateAgent(agentCode, mtdItId)
+      _ <- ggDeallocation
     } yield ()
   }
 

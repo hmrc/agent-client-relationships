@@ -585,6 +585,43 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 204
     }
 
+    "return 204 when the relationship exists in ETMP and not exist in GG" in {
+      givenUserIsSubscribedClient(MtdItId(mtditid))
+      writeAuditSucceeds()
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
+    "return 204 when the relationship does not exists in ETMP and in GG" in {
+      givenUserIsSubscribedClient(MtdItId(mtditid))
+      writeAuditSucceeds()
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(mtditid)
+      givenAgentHasNoActiveRelationshipInDes(mtditid, arn)
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
+    "return 204 when the relationship does not exists in ETPM but exists in GG" in {
+      givenUserIsSubscribedClient(MtdItId(mtditid))
+      writeAuditSucceeds()
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
+      givenAgentHasNoActiveRelationshipInDes(mtditid, arn)
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
     /**
       * Agent's Unhappy paths
       */
@@ -605,7 +642,9 @@ class RelationshipISpec extends UnitSpec
 
     "return 502 when gg is unavailable" in {
       givenUserIsSubscribedAgent(Arn(arn))
+
       givenGgIsUnavailable()
+      givenAgentCanBeDeallocatedInDes(mtditid, arn)
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 502
