@@ -81,15 +81,29 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
 
     "allocate an enrolment to an agent" in {
       givenAuditConnector()
-      givenEnrolmentDelegationSucceeds("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
-      await(connector.delegateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+      givenEnrolmentAllocationSucceeds("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
+      await(connector.allocateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
     }
 
     "throw an exception if allocation failed" in {
       givenAuditConnector()
-      givenEnrolmentDelegationFailsWith404("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
+      givenEnrolmentAllocationFailsWith(404)("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
       an[Exception] shouldBe thrownBy {
-        await(connector.delegateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+        await(connector.allocateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+      }
+    }
+
+    "de-allocate an enrolment from an agent" in {
+      givenAuditConnector()
+      givenEnrolmentDeallocationSucceeds("group1", "FOO", "FOO-ID", "ABC1233", "bar")
+      await(connector.deallocateEnrolmentFromAgent("group1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+    }
+
+    "throw an exception if de-allocation failed" in {
+      givenAuditConnector()
+      givenEnrolmentDeallocationFailsWith(404)("group1", "FOO", "FOO-ID", "ABC1233", "bar")
+      an[Exception] shouldBe thrownBy {
+        await(connector.deallocateEnrolmentFromAgent("group1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
       }
     }
   }

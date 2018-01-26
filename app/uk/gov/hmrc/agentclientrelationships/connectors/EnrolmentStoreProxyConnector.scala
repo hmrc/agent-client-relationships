@@ -33,11 +33,15 @@ import scala.concurrent.{ExecutionContext, Future}
 case class EnrolmentStoreDataNotFound(errorCode: String) extends Exception(errorCode)
 
 case class EnrolmentIdentifier(key: String, value: String) {
-  def toESKey: String = s"$key~$value"
+  def toEnrolmentKey: String = s"$key~$value"
+}
+
+object EnrolmentIdentifier {
+  implicit val ordering: Ordering[EnrolmentIdentifier] = Ordering.by(_.key)
 }
 
 case class Enrolment(key: String, identifiers: Seq[EnrolmentIdentifier]) {
-  def toESKey: String = key + "~" + identifiers.map(_.toESKey).mkString("~")
+  def toEnrolmentKey: String = key + "~" + identifiers.sorted.map(_.toEnrolmentKey).mkString("~")
 }
 
 object Enrolment {
@@ -48,7 +52,7 @@ object Enrolment {
 @Singleton
 class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseUrl") espBaseUrl: URL,
                                              @Named("tax-enrolments-baseUrl") teBaseUrl: URL,
-                                             http: HttpGet with HttpPost, metrics: Metrics)
+                                             http: HttpGet with HttpPost with HttpDelete, metrics: Metrics)
   extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -99,12 +103,23 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
   /*
     See: https://github.tools.tax.service.gov.uk/HMRC/tax-enrolments#post-tax-enrolmentsgroupsgroupidenrolmentsenrolmentkey
    */
-  def delegateEnrolmentToAgent(clientGroupId: String, clientUserId: String, enrolment: Enrolment, agentCode: AgentCode)
-                              (implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-    val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$clientGroupId/enrolments/${enrolment.toESKey}?legacy-agentCode=${agentCode.value}")
-    monitor(s"ConsumedAPI-TE-delegateEnrolmentToAgent-POST") {
-      http.POSTString[HttpResponse](url.toString, s"""{"userId":"$clientUserId","type":"delegated"}""")(HttpReads.readRaw,hc,ec)
-    }
+  def allocateEnrolmentToAgent(groupId: String, clientUserId: String, enrolment: Enrolment, agentCode: AgentCode)
+                              (implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
+    val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/${enrolment.toEnrolmentKey}?legacy-agentCode=${agentCode.value}")
+    monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-POST") {
+      http.POSTString[HttpResponse](url.toString, s"""{"userId":"$clientUserId","type":"delegated"}""")
+    }.map(_ => ())
+  }
+
+  /*
+    See: https://github.tools.tax.service.gov.uk/HMRC/tax-enrolments#delete-tax-enrolmentsgroupsgroupidenrolmentsenrolmentkey
+   */
+  def deallocateEnrolmentFromAgent(groupId: String, enrolment: Enrolment, agentCode: AgentCode)
+                                  (implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
+    val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/${enrolment.toEnrolmentKey}?legacy-agentCode=${agentCode.value}")
+    monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-DELETE") {
+      http.DELETE[HttpResponse](url.toString)
+    }.map(_ => ())
   }
 
 }

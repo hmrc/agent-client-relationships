@@ -80,9 +80,9 @@ trait EnrolmentStoreProxyStubs {
           """.stripMargin)))
   }
 
-  def givenEnrolmentDelegationSucceeds(clientGroupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
+  def givenEnrolmentAllocationSucceeds(groupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
     stubFor(
-      post(urlEqualTo(s"$teBaseUrl/groups/$clientGroupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+      post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(
           s"""
              |{
@@ -96,9 +96,10 @@ trait EnrolmentStoreProxyStubs {
     )
   }
 
-  def givenEnrolmentDelegationFailsWith404(clientGroupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
+  def givenEnrolmentAllocationFailsWith(responseStatus: Int)
+                                       (groupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
     stubFor(
-      post(urlEqualTo(s"$teBaseUrl/groups/$clientGroupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+      post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(
           s"""
              |{
@@ -107,7 +108,26 @@ trait EnrolmentStoreProxyStubs {
              |}
              |""".stripMargin))
         .willReturn(
-          aResponse().withStatus(404)
+          aResponse().withStatus(responseStatus)
+        )
+    )
+  }
+
+  def givenEnrolmentDeallocationSucceeds(groupId: String, key: String, identifier: String, value: String, agentCode: String) = {
+    stubFor(
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+        .willReturn(
+          aResponse().withStatus(204)
+        )
+    )
+  }
+
+  def givenEnrolmentDeallocationFailsWith(responseStatus: Int)
+                                         (groupId: String, key: String, identifier: String, value: String, agentCode: String) = {
+    stubFor(
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+        .willReturn(
+          aResponse().withStatus(responseStatus)
         )
     )
   }
