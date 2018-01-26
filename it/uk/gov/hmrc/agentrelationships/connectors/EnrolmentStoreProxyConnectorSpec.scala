@@ -5,10 +5,11 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
-import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.connectors.{Enrolment, EnrolmentStoreDataNotFound, EnrolmentStoreProxyConnector}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -24,13 +25,14 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+        "microservice.services.tax-enrolments.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort
       )
 
   implicit val hc = HeaderCarrier()
 
-  val connector = new EnrolmentStoreProxyConnector(wireMockBaseUrl, WSHttp, app.injector.instanceOf[Metrics])
+  val connector = new EnrolmentStoreProxyConnector(wireMockBaseUrl, wireMockBaseUrl, WSHttp, app.injector.instanceOf[Metrics])
 
   "EnrolmentStoreProxy" should {
 
@@ -40,10 +42,10 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       await(connector.getGroupIdFor(Arn("foo"))) shouldBe "bar"
     }
 
-    "return RelationshipNotFound Exception when ARN not found" in {
+    "return EnrolmentStoreDataNotFound Exception when ARN not found" in {
       givenAuditConnector()
       givenGroupIdNotExistsForArn(Arn("foo"))
-      an[RelationshipNotFound] shouldBe thrownBy {
+      an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
         await(connector.getGroupIdFor(Arn("foo")))
       }
     }
@@ -51,13 +53,44 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
     "return some client's groupIds for given MTDITID" in {
       givenAuditConnector()
       givenGroupIdsExistForMTDITID(MtdItId("foo"), Set("bar", "car", "dar"))
-      await(connector.getGroupIdsFor(MtdItId("foo"))) should contain("bar")
+      await(connector.getDelegatedGroupIdsFor(MtdItId("foo"))) should contain("bar")
     }
 
     "return Empty when MTDITIT not found" in {
       givenAuditConnector()
       givenGroupIdsNotExistForMTDITID(MtdItId("foo"))
-      await(connector.getGroupIdsFor(MtdItId("foo"))) should be(empty)
+      await(connector.getDelegatedGroupIdsFor(MtdItId("foo"))) should be(empty)
+    }
+
+    "return some clients userId for given MTDITID" in {
+      givenAuditConnector()
+      givenUserIdsExistForMTDITID(MtdItId("foo"), "bar")
+      await(connector.getUserIdFor(MtdItId("foo"))) shouldBe "bar"
+    }
+
+    "return EnrolmentStoreDataNotFound Exception when MTDITID not found" in {
+      givenAuditConnector()
+      givenUserIdsNotExistForMTDITID(MtdItId("foo"))
+      an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
+        await(connector.getUserIdFor(MtdItId("foo")))
+      }
+    }
+  }
+
+  "TaxEnrolments" should {
+
+    "allocate an enrolment to an agent" in {
+      givenAuditConnector()
+      givenEnrolmentDelegationSucceeds("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
+      await(connector.delegateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+    }
+
+    "throw an exception if allocation failed" in {
+      givenAuditConnector()
+      givenEnrolmentDelegationFailsWith404("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
+      an[Exception] shouldBe thrownBy {
+        await(connector.delegateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+      }
     }
   }
 }

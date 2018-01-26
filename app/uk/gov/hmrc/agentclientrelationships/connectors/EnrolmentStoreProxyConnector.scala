@@ -25,24 +25,42 @@ import play.api.Logger
 import play.api.libs.json.JsObject
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.http._
 
 import scala.concurrent.{ExecutionContext, Future}
 
+case class EnrolmentStoreDataNotFound(errorCode: String) extends Exception(errorCode)
+
+case class EnrolmentIdentifier(key: String, value: String) {
+  def toESKey: String = s"$key~$value"
+}
+
+case class Enrolment(key: String, identifiers: Seq[EnrolmentIdentifier]) {
+  def toESKey: String = key + "~" + identifiers.map(_.toESKey).mkString("~")
+}
+
+object Enrolment {
+  def apply(key: String, identifierKey: String, identifierValue: String): Enrolment =
+    Enrolment(key, Seq(EnrolmentIdentifier(identifierKey, identifierValue)))
+}
+
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseUrl") baseUrl: URL, httpGet: HttpGet, metrics: Metrics)
+class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseUrl") espBaseUrl: URL,
+                                             @Named("tax-enrolments-baseUrl") teBaseUrl: URL,
+                                             http: HttpGet with HttpPost, metrics: Metrics)
   extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] = {
-    val url = new URL(baseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}/groups?type=principal")
+    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}/groups?type=principal")
     monitor(s"ConsumedAPI-ES-getGroupIdForARN-GET") {
-      httpGet.GET[JsObject](url.toString)
+      http.GET[JsObject](url.toString)
     }
       .map(json => {
         val groupIds = (json \ "principalGroupIds").as[Seq[String]]
-        if(groupIds.isEmpty){
-          throw RelationshipNotFound("UNKNOWN_GROUP_ID_FOR_ARN")
+        if (groupIds.isEmpty) {
+          throw EnrolmentStoreDataNotFound("UNKNOWN_GROUP_ID_FOR_ARN")
         } else {
           if (groupIds.lengthCompare(1) > 0) {
             Logger.warn(s"Multiple groupIds found for $arn: $groupIds")
@@ -52,12 +70,41 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
       })
   }
 
-  def getGroupIdsFor(mtdItId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] = {
-    val url = new URL(baseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/HMRC-MTD-IT~MTDITID~${mtdItId.value}/groups?type=delegated")
+  def getDelegatedGroupIdsFor(mtdItId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] = {
+    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/HMRC-MTD-IT~MTDITID~${mtdItId.value}/groups?type=delegated")
     monitor(s"ConsumedAPI-ES-getGroupIdsForMTDITID-GET") {
-      httpGet.GET[JsObject](url.toString)
+      http.GET[JsObject](url.toString)
     }
       .map(json => (json \ "delegatedGroupIds").as[Seq[String]].toSet)
+  }
+
+  def getUserIdFor(mtdItId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] = {
+    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/HMRC-MTD-IT~MTDITID~${mtdItId.value}/users?type=principal")
+    monitor(s"ConsumedAPI-ES-getUserIdForMTDITID-GET") {
+      http.GET[JsObject](url.toString)
+    }
+      .map(json => {
+        val userIds = (json \ "principalUserIds").as[Seq[String]]
+        if (userIds.isEmpty) {
+          throw EnrolmentStoreDataNotFound("UNKNOWN_USER_ID_FOR_MTDITID")
+        } else {
+          if (userIds.lengthCompare(1) > 0) {
+            Logger.warn(s"Multiple userIds found for $mtdItId: $userIds")
+          }
+          userIds.head
+        }
+      })
+  }
+
+  /*
+    See: https://github.tools.tax.service.gov.uk/HMRC/tax-enrolments#post-tax-enrolmentsgroupsgroupidenrolmentsenrolmentkey
+   */
+  def delegateEnrolmentToAgent(clientGroupId: String, clientUserId: String, enrolment: Enrolment, agentCode: AgentCode)
+                              (implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
+    val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$clientGroupId/enrolments/${enrolment.toESKey}?legacy-agentCode=${agentCode.value}")
+    monitor(s"ConsumedAPI-TE-delegateEnrolmentToAgent-POST") {
+      http.POSTString[HttpResponse](url.toString, s"""{"userId":"$clientUserId","type":"delegated"}""")(HttpReads.readRaw,hc,ec)
+    }
   }
 
 }
