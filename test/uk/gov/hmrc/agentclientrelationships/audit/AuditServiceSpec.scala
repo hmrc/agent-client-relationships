@@ -17,22 +17,21 @@
 package uk.gov.hmrc.agentclientrelationships.audit
 
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
-import org.mockito.Mockito.verify
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Span}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, Nino}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.logging.{Authorization, RequestId, SessionId}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging.{ Authorization, RequestId, SessionId }
 
 class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
   "auditEvent" should {
@@ -52,8 +51,9 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("credId", "0000001234567890")
       auditData.set("agentCode",AgentCode("GG1234567890").value)
       auditData.set("saAgentRef", "12313")
-      auditData.set("regime","mtd-it")
-      auditData.set("regimeId","XX1234")
+      auditData.set("service","mtd-it")
+      auditData.set("clientId","XX1234")
+      auditData.set("clientIdType","ni")
       auditData.set("nino",Nino("KS969148D").value)
       auditData.set("CESARelationship", true)
       auditData.set("etmpRelationshipCreated",true)
@@ -79,6 +79,9 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sentEvent.detail("agentCode") shouldBe "GG1234567890"
         sentEvent.detail("saAgentRef") shouldBe "12313"
         sentEvent.detail("credId") shouldBe "0000001234567890"
+        sentEvent.detail("service") shouldBe "mtd-it"
+        sentEvent.detail("clientId") shouldBe "XX1234"
+        sentEvent.detail("clientIdType") shouldBe "ni"
         sentEvent.detail("nino") shouldBe "KS969148D"
         sentEvent.detail("CESARelationship") shouldBe "true"
         sentEvent.detail("etmpRelationshipCreated") shouldBe "true"
