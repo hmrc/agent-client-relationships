@@ -133,7 +133,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       _ <- updateEtmpSyncStatus(InProgress)
       _ <- identifier match {
         case mtdItId @ MtdItId(_) => des.createAgentRelationship(mtdItId, arn)
-        case vrn @ Vrn(_) => ??? // FIXME: Put in fake/stubbed connector for pending ETMP endpoint
+        case vrn @ Vrn(_) => Future.successful(()) // FIXME: Put in fake/stubbed connector for pending ETMP endpoint
       }
       _ = auditData.set("etmpRelationshipCreated", true)
       _ <- updateEtmpSyncStatus(Success)

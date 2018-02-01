@@ -87,9 +87,9 @@ trait AuthStub {
   }
 
   def givenUserIsSubscribedClient(identifier: TaxIdentifier): AuthStub = {
-    val (key, value) = identifier match {
-      case MtdItId(v) => ("MTDITID", v)
-      case Vrn(v) => ("MTDVATID", v)
+    val (service, key, value) = identifier match {
+      case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
+      case Vrn(v) => ("HMRC-MTD-VAT", "MTDVATID", v)
     }
 
     stubFor(post(urlEqualTo("/auth/authorise"))
@@ -100,7 +100,7 @@ trait AuthStub {
              |{
              |"affinityGroup": "Individual",
              |"allEnrolments": [{
-             |  "key": "HMRC-MTD-IT",
+             |  "key": "$service",
              |  "identifiers": [{
              |			"key": "$key",
              |			"value": "$value"
