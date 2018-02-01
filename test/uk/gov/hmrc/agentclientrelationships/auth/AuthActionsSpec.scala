@@ -23,6 +23,7 @@ import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.{Retrieval, ~}
 import uk.gov.hmrc.play.microservice.controller.BaseController
@@ -44,7 +45,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
     state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {
-    def testAuthActions() = AuthorisedAgent {
+    def testAuthActions() = AuthorisedAgent(Arn(arn), MtdItId(mtdItId)) {
       implicit request =>
         implicit agent =>
           Future.successful(Ok)

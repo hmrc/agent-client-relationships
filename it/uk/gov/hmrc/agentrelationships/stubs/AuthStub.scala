@@ -1,8 +1,9 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.domain.TaxIdentifier
 
 trait AuthStub {
   me: WireMockSupport =>
@@ -85,7 +86,12 @@ trait AuthStub {
     this
   }
 
-  def givenUserIsSubscribedClient(mtdItId: MtdItId): AuthStub = {
+  def givenUserIsSubscribedClient(identifier: TaxIdentifier): AuthStub = {
+    val (key, value) = identifier match {
+      case MtdItId(v) => ("MTDITID", v)
+      case Vrn(v) => ("MTDVATID", v)
+    }
+
     stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
         .withStatus(200)
@@ -96,8 +102,8 @@ trait AuthStub {
              |"allEnrolments": [{
              |  "key": "HMRC-MTD-IT",
              |  "identifiers": [{
-             |			"key": "MTDITID",
-             |			"value": "${mtdItId.value}"
+             |			"key": "$key",
+             |			"value": "$value"
              |		}],
              |		"state": "Activated"
              |	}, {

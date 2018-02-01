@@ -20,6 +20,7 @@ import play.api.mvc.{Action, AnyContent, Results}
 import uk.gov.hmrc.agentclientrelationships.auth.{AgentOrClientRequest, AuthActions}
 import uk.gov.hmrc.domain.TaxIdentifier
 
+/*
 trait PermissiveAuthActions extends AuthActions {
   me: Results =>
 
@@ -30,3 +31,4 @@ trait PermissiveAuthActions extends AuthActions {
       body(request)(AgentOrClientRequest(taxIdentifier, request))
   }
 }
+*/

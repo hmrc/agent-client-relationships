@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+/*
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.mvc.{Result, Results}
@@ -64,3 +65,4 @@ class RelationshipsControllerForThisAgentOrClientSpec extends UnitSpec with Rese
   private def request(taxIdentifier: TaxIdentifier) =
     AgentOrClientRequest[Unit](taxIdentifier, null)
 }
+*/

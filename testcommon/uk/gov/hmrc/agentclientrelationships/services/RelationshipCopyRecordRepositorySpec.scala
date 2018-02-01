@@ -67,7 +67,7 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
       await(repo.create(relationshipCopyRecord))
       intercept[DatabaseException] {
         await(repo.create(relationshipCopyRecord.copy(syncToETMPStatus = None)))
-      }.getMessage.contains("duplicate key error collection") shouldBe true
+      }.getMessage should contain("duplicate key error collection")
     }
 
     "remove should remove the record" in {
