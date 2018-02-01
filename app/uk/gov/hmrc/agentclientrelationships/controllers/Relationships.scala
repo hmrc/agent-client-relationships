@@ -92,7 +92,7 @@ class Relationships @Inject()(
     }
   }
 
-  def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgent(arn, identifier) {
+  def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
     implicit request =>
       implicit agent =>
         implicit val auditData = new AuditData()
@@ -117,7 +117,7 @@ class Relationships @Inject()(
           }
   }
 
-  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgent(arn, mtdItId) {
+  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgentOrClient(arn, mtdItId) {
     implicit request =>
       implicit agent =>
         implicit val auditData = new AuditData()

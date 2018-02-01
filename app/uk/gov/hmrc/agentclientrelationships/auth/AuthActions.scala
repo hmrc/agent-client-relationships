@@ -39,7 +39,7 @@ trait AuthActions extends AuthorisedFunctions {
 
   protected type AsyncPlayUserRequest = Request[AnyContent] => AgentOrClientRequest[AnyContent] => Future[Result]
 
-  def AuthorisedAgent(arn: Arn, clientId: TaxIdentifier)(body: AsyncPlayUserRequest): Action[AnyContent] = Action.async {
+  def AuthorisedAgentOrClient(arn: Arn, clientId: TaxIdentifier)(body: AsyncPlayUserRequest): Action[AnyContent] = Action.async {
     implicit request =>
       implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       authorised(AuthProviders(GovernmentGateway)).retrieve(allEnrolments and affinityGroup) {
