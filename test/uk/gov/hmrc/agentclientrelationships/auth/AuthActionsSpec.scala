@@ -22,7 +22,6 @@ import org.scalatestplus.play.OneAppPerSuite
 import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
-import uk.gov.hmrc.agentclientrelationships.controllers.Relationships
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core._
@@ -72,65 +71,75 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
 
   val testAuthImpl = new TestAuth
 
-  "AuthorisedAgentOrClient" should {
-    "return Ok if Agent has matching Arn" in {
-      mockAgentAuth(enrolment = Set(agentEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-      await(result) shouldBe Ok
+  "AuthorisedAgentOrClient" when {
+    "affinity group is Agent" should {
+      "return Ok if Agent has matching Arn in its enrolments" in {
+        mockAgentAuth(enrolment = Set(agentEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        await(result) shouldBe Ok
+      }
+
+      "return NoPermissionOnAgencyOrClient if Agent doesn't have the correct enrolment" in {
+        mockAgentAuth(enrolment = Set(agentEnrolment.copy(key = "NOT_CORRECT_ENROLMENT")))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
+
+      "return NoPermissionOnAgencyOrClient if Agent has a different Arn and different client identifier" in {
+        mockAgentAuth(enrolment = Set(agentEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId("NON_MATCHING")).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
+
+      "return NoPermissionOnAgencyOrClient if Agent has a different Arn but a matching client identifier" in {
+        mockAgentAuth(enrolment = Set(agentEnrolment, mtdItIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId(mtdItId)).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
+
+      "return NoPermissionOnAgencyOrClient if Agent has only a matching client identifier" in {
+        mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdItIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
+
+      "return NoPermissionOnAgencyOrClient if Agent has only an enrolment with a different identifier type" in {
+        mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdVatIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
     }
 
-    "return Ok if Client has matching MtdItId " in {
-      mockClientAuth(enrolment = Set(mtdItIdEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-      await(result) shouldBe Ok
-    }
+    "affinity group is not Agent" should {
+      "return Ok if Client has matching MtdItId in their enrolments" in {
+        mockClientAuth(enrolment = Set(mtdItIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        await(result) shouldBe Ok
+      }
 
-    "return Ok if Client has matching Vrn" in {
-      mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn)).apply(fakeRequest)
-      await(result) shouldBe Ok
-    }
+      "return Ok if Client has matching Vrn in their enrolments" in {
+        mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn)).apply(fakeRequest)
+        await(result) shouldBe Ok
+      }
 
-    "return NoPermissionOnAgencyOrClient if Agent doesn't have the correct enrolment" in {
-      mockAgentAuth(enrolment = Set(agentEnrolment.copy(key = "NOT_CORRECT_ENROLMENT")))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnAgencyOrClient
-    }
+      "return NoPermissionOnAgencyOrClient if Client has a non-matching MtdItId in their enrolments" in {
+        mockClientAuth(enrolment = Set(mtdItIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING")).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
 
-    "return NoPermissionOnAgencyOrClient if Agent has a different Arn and different client identifier" in {
-      mockAgentAuth(enrolment = Set(agentEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId("NON_MATCHING")).apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnAgencyOrClient
-    }
+      "return NoPermissionOnAgencyOrClient if Client has a non-matching Vrn in their enrolments" in {
+        mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING")).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
 
-    "return NoPermissionOnAgencyOrClient if Agent has only client enrolment" in {
-      mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdItIdEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnAgencyOrClient
-    }
-
-    "return NoPermissionOnAgencyOrClient if Agent has only an enrolment with a different identifier type" in {
-      mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdVatIdEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnAgencyOrClient
-    }
-
-    "return NoPermissionOnAgencyOrClient if Client has only an enrolment with a different identifier type" in {
-      mockClientAuth(AffinityGroup.Individual, enrolment = Set(mtdVatIdEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnAgencyOrClient
-    }
-
-    "return NoPermissionOnAgencyOrClient if Client has a non-matching MtdItId in their enrolment" in {
-      mockClientAuth(AffinityGroup.Individual, enrolment = Set(mtdItIdEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING")).apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnAgencyOrClient
-    }
-
-    "return NoPermissionOnAgencyOrClient if Client has a non-matching Vrn in their enrolment" in {
-      mockClientAuth(AffinityGroup.Individual, enrolment = Set(mtdVatIdEnrolment))
-      val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING")).apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnAgencyOrClient
+      "return NoPermissionOnAgencyOrClient if Client has only an enrolment with a different identifier type" in {
+        mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        await(result) shouldBe NoPermissionOnAgencyOrClient
+      }
     }
   }
 }

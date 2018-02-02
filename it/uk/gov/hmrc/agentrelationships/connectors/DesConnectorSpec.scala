@@ -6,7 +6,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
@@ -31,7 +31,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   private implicit val hc = HeaderCarrier()
   private implicit val ec = ExecutionContext.global
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", 200, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
 
   "DesConnector GetRegistrationBusinessDetails" should {
 
@@ -189,6 +189,37 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       givenAgentCanNotBeDeallocatedInDes
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
+    }
+  }
+
+  "DesConnector CreateUpdateAgentRelationshipRosm" should {
+
+    "return a stubbed 200 successful response if stubbed to return 200" in {
+      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 200, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+      await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001"))).processingDate should not be null
+    }
+
+    "throw a stubbed NotFoundException exception if stubbed to return 404" in {
+      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 404, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+      intercept[uk.gov.hmrc.http.NotFoundException] {
+        await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001")))
+      }
+    }
+
+    "throw a stubbed BadRequestException exception if stubbed to return 400" in {
+      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 400, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+
+      intercept[uk.gov.hmrc.http.BadRequestException] {
+        await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001")))
+      }
+    }
+
+    "throw a stubbed HttpException if stubbed to return 500" in {
+      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 500, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+
+      intercept[uk.gov.hmrc.http.HttpException] {
+        await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001")))
+      }.responseCode shouldBe 500
     }
   }
 }
