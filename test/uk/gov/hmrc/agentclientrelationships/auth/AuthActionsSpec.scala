@@ -52,8 +52,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   class TestAuth() extends AuthActions with BaseController {
     def testAuthActions(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
       implicit request =>
-        implicit agent =>
-          Future.successful(Ok)
+        Future.successful(Ok)
     }
 
     override def authConnector: AuthConnector = mockAuthConnector

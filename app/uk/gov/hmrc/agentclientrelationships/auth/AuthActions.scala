@@ -35,10 +35,7 @@ trait AuthActions extends AuthorisedFunctions {
 
   override def authConnector: AuthConnector
 
-  private def getEnrolmentInfo(enrolment: Set[Enrolment], enrolmentKey: String, identifier: String): Option[String] =
-    enrolment.find(_.key equals enrolmentKey).flatMap(_.identifiers.find(_.key equals identifier).map(_.value))
-
-  protected type AsyncPlayUserRequest = Request[AnyContent] => AgentOrClientRequest[AnyContent] => Future[Result]
+  protected type AsyncPlayUserRequest = Request[AnyContent] => Future[Result]
 
   def AuthorisedAgentOrClient(arn: Arn, clientId: TaxIdentifier)(body: AsyncPlayUserRequest): Action[AnyContent] = Action.async {
     implicit request =>
@@ -56,7 +53,7 @@ trait AuthActions extends AuthorisedFunctions {
           val actualIdFromEnrolment: Option[TaxIdentifier] = requiredEnrolmentType.findEnrolmentIdentifier(enrol.enrolments)
 
           if(actualIdFromEnrolment.contains(requiredIdentifier)) {
-            body(request)(AgentOrClientRequest(requiredIdentifier, request))
+            body(request)
           } else {
             Future successful NoPermissionOnAgencyOrClient
           }
@@ -64,5 +61,3 @@ trait AuthActions extends AuthorisedFunctions {
       }
   }
 }
-
-case class AgentOrClientRequest[A](taxIdentifier: TaxIdentifier, request: Request[A]) extends WrappedRequest[A](request)

@@ -69,7 +69,6 @@ class RelationshipISpec extends UnitSpec
   val arn = "AARN0000002"
   val mtditid = "ABCDEF123456789"
   val nino = "AB123456C"
-  val vrn = "101747641"
   val mtdItIdType = "MTDITID"
 
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
@@ -912,7 +911,7 @@ class RelationshipISpec extends UnitSpec
   }
 
   "PUT /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
-
+    val vrn = "101747641"
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in {

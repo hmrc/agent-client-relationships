@@ -139,7 +139,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     case Vrn(value) =>
       <ServiceName>HMRC-MTD-VAT</ServiceName>
       <Identifiers>
-        <Identifier IdentifierType="MTDVAT">{value}</Identifier>
+        <Identifier IdentifierType="MTDVATID">{value}</Identifier>
       </Identifiers>
   }
 

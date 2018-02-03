@@ -91,38 +91,34 @@ class Relationships @Inject()(
     }
   }
 
-  def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
-    implicit request =>
-      implicit agent =>
-        implicit val auditData = new AuditData()
-        auditData.set("arn", arn)
+  def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request =>
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
 
-        (for {
-          agentCode <- service.getAgentCodeFor(arn)
-          _ <- service.checkForRelationship(identifier, agentCode)
-            .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
-            .recover {
-              case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
-            }
-          _ <- service.createRelationship(arn, identifier, Future.successful(agentCode), Set(), false, true)
-        } yield ())
-          .map(_ => Created)
-          .recover {
-            case upS: Upstream5xxResponse =>
-              throw upS
-            case NonFatal(ex) =>
-              Logger.warn(s"Could not create relationship for ${arn.value}, ${identifier.value}", ex)
-              NotFound(toJson(ex.getMessage))
-          }
+    (for {
+      agentCode <- service.getAgentCodeFor(arn)
+      _ <- service.checkForRelationship(identifier, agentCode)
+        .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
+        .recover {
+          case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
+        }
+      _ <- service.createRelationship(arn, identifier, Future.successful(agentCode), Set(), false, true)
+    } yield ())
+      .map(_ => Created)
+      .recover {
+        case upS: Upstream5xxResponse =>
+          throw upS
+        case NonFatal(ex) =>
+          Logger.warn(s"Could not create relationship for ${arn.value}, ${identifier.value}", ex)
+          NotFound(toJson(ex.getMessage))
+      }
   }
 
-  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgentOrClient(arn, mtdItId) {
-    implicit request =>
-      implicit agent =>
-        implicit val auditData = new AuditData()
-        auditData.set("arn", arn)
+  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgentOrClient(arn, mtdItId) { implicit request =>
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
 
-        service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
+    service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>

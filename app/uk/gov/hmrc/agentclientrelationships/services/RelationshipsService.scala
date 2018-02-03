@@ -21,8 +21,9 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
@@ -130,12 +131,14 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   private def createEtmpRecord(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
     val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
 
+    def desCreateAgentRelationship: Future[RegistrationRelationshipResponse] = identifier match {
+      case mtdItId @ MtdItId(_) => des.createAgentRelationship(mtdItId, arn)
+      case vrn @ Vrn(_) => des.createUpdateAgentRelationshipRosm(vrn, arn)
+    }
+
     (for {
       _ <- updateEtmpSyncStatus(InProgress)
-      _ <- identifier match {
-        case mtdItId @ MtdItId(_) => des.createAgentRelationship(mtdItId, arn)
-        case vrn @ Vrn(_) => des.createUpdateAgentRelationshipRosm(vrn, arn)
-      }
+      _ <- desCreateAgentRelationship
       _ = auditData.set("etmpRelationshipCreated", true)
       _ <- updateEtmpSyncStatus(Success)
     } yield ())
@@ -187,11 +190,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     auditData.set("etmpRelationshipCreated", false)
 
     def createRelationshipRecord: Future[Unit] = {
-      val identifierType = identifier match {
-        case _ : MtdItId => "MTDITID"
-        case _ : Vrn => "MTDVATID"
-      }
-
+      val identifierType = EnrolmentType.enrolmentTypeFor(identifier).identifierKey
       val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
       relationshipCopyRepository.create(record)
         .map(_ => auditData.set("AgentDBRecord", true))
