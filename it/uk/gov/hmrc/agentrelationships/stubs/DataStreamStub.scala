@@ -8,7 +8,8 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.A
 
 trait DataStreamStub extends Eventually {
 
-  def verifyAuditRequestSent(count: Int, event: AgentClientRelationshipEvent, tags: Map[String, String] = Map.empty, detail: Map[String, String] = Map.empty) = {
+  def verifyAuditRequestSent(count: Int, event: AgentClientRelationshipEvent, tags: Map[String, String] = Map.empty,
+                             detail: Map[String, String] = Map.empty) = {
     eventually {
       verify(count, postRequestedFor(urlPathEqualTo(auditUrl))
         .withRequestBody(similarToJson(
@@ -37,7 +38,8 @@ trait DataStreamStub extends Eventually {
   }
 
   def givenAuditConnector() = {
-    stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(200)))
+    stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(204)))
+    stubFor(post(urlPathEqualTo(auditUrl + "/merged")).willReturn(aResponse().withStatus(204)))
   }
 
   private def auditUrl = "/write/audit"

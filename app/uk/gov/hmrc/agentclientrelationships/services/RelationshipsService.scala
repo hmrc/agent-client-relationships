@@ -81,8 +81,9 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CesaCheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
-    auditData.set("regime", "mtd-it")
-    auditData.set("regimeId", mtdItId)
+    auditData.set("service", "mtd-it")
+    auditData.set("clientId", mtdItId)
+    auditData.set("clientIdType", "ni")
 
     relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>

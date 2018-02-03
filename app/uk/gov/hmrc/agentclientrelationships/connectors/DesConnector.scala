@@ -138,7 +138,7 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
-          "regime": "ITSA",
+          "service": "ITSA",
           "authorisation": {
             "action": "Authorise",
             "isExclusiveAgent": true
@@ -150,7 +150,7 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
-          "regime": "ITSA",
+          "service": "ITSA",
           "authorisation": {
             "action": "De-Authorise"
           }
