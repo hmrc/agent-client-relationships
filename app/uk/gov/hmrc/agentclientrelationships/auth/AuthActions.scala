@@ -53,7 +53,7 @@ trait AuthActions extends AuthorisedFunctions {
 
           val requiredEnrolmentType = EnrolmentType.enrolmentTypeFor(requiredIdentifier)
 
-          val actualIdFromEnrolment: Option[TaxIdentifier] = EnrolmentType.findEnrolmentIdentifier(requiredEnrolmentType, enrol.enrolments)
+          val actualIdFromEnrolment: Option[TaxIdentifier] = requiredEnrolmentType.findEnrolmentIdentifier(enrol.enrolments)
 
           if(actualIdFromEnrolment.contains(requiredIdentifier)) {
             body(request)(AgentOrClientRequest(requiredIdentifier, request))

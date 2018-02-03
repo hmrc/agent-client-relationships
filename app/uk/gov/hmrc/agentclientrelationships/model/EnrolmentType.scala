@@ -20,47 +20,25 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.domain.TaxIdentifier
 
-sealed trait EnrolmentType {
-  def enrolmentKey: String
-  def identifierKey: String
-}
-
-case object EnrolmentAsAgent extends EnrolmentType {
-  override val enrolmentKey = "HMRC-AS-AGENT"
-  override val identifierKey = "AgentReferenceNumber"
-}
-
-case object EnrolmentMtdIt extends EnrolmentType {
-  override val enrolmentKey = "HMRC-MTD-IT"
-  override val identifierKey = "MTDITID"
-}
-
-case object EnrolmentMtdVat extends EnrolmentType {
-  override val enrolmentKey = "HMRC-MTD-VAT"
-  override val identifierKey = "MTDVATID"
-}
-
 object EnrolmentType {
+  sealed class EnrolmentType(val enrolmentKey: String, val identifierKey: String, val identifierForValue: String => TaxIdentifier) {
+    def findEnrolmentIdentifier(enrolments: Set[Enrolment]): Option[TaxIdentifier] = {
+      val maybeEnrolment: Option[Enrolment] = enrolments.find(_.key equals enrolmentKey)
+
+      maybeEnrolment
+        .flatMap(_.identifiers.find(_.key equals identifierKey))
+        .map(enrolmentIdentifier => identifierForValue(enrolmentIdentifier.value))
+    }
+  }
+
+  case object EnrolmentAsAgent extends EnrolmentType("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
+  case object EnrolmentMtdIt extends EnrolmentType("HMRC-MTD-IT", "MTDITID", MtdItId.apply)
+  case object EnrolmentMtdVat extends EnrolmentType("HMRC-MTD-VAT", "MTDVATID", Vrn.apply)
+
   def enrolmentTypeFor(identifier: TaxIdentifier): EnrolmentType = identifier match {
     case _ @ MtdItId(_) => EnrolmentMtdIt
     case _ @ Vrn(_)     => EnrolmentMtdVat
     case _ @ Arn(_)     => EnrolmentAsAgent
     case _ => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
-  }
-
-  def findEnrolmentIdentifier(enrolmentType: EnrolmentType, enrolments: Set[Enrolment]): Option[TaxIdentifier] = {
-    val maybeEnrolment: Option[Enrolment] = enrolments.find(_.key equals enrolmentType.enrolmentKey)
-
-    maybeEnrolment
-      .flatMap(_.identifiers.find(_.key equals enrolmentType.identifierKey))
-      .map(enrolmentIdentifier => identifierForValue(enrolmentType, enrolmentIdentifier.value))
-  }
-
-  private def identifierForValue(enrolmentType: EnrolmentType, identifierValue: String): TaxIdentifier = {
-    enrolmentType match {
-      case EnrolmentAsAgent => Arn(identifierValue)
-      case EnrolmentMtdIt => MtdItId(identifierValue)
-      case EnrolmentMtdVat => Vrn(identifierValue)
-    }
   }
 }

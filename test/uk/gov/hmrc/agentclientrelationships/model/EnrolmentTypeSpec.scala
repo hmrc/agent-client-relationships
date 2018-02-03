@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain.Nino
@@ -48,27 +49,25 @@ class EnrolmentTypeSpec extends UnitSpec {
     "return Arn for EnrolmentAsAgent if the HMRC-AS-AGENT enrolment exists with an AgentReferenceNumber identifier" in {
       val enrolments = Set(Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("AgentReferenceNumber", "arn123")), "activated"))
 
-      EnrolmentType.findEnrolmentIdentifier(EnrolmentAsAgent, enrolments) shouldBe Some(Arn("arn123"))
+      EnrolmentAsAgent.findEnrolmentIdentifier(enrolments) shouldBe Some(Arn("arn123"))
     }
 
     "return Vrn for EnrolmentMtdVat if the HMRC-MTD-VAT enrolment exists with an MTDVATID identifier" in {
       val enrolments = Set(Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("MTDVATID", "101747696")), "activated"))
 
-      EnrolmentType.findEnrolmentIdentifier(EnrolmentMtdVat, enrolments) shouldBe Some(Vrn("101747696"))
+      EnrolmentMtdVat.findEnrolmentIdentifier(enrolments) shouldBe Some(Vrn("101747696"))
     }
 
     "return MtdItId for EnrolmentMtdIt if the HMRC-MTD-IT enrolment exists with an MTDITID identifier" in {
       val enrolments = Set(Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", "123456789")), "activated"))
 
-      EnrolmentType.findEnrolmentIdentifier(EnrolmentMtdIt, enrolments) shouldBe Some(MtdItId("123456789"))
+      EnrolmentMtdIt.findEnrolmentIdentifier(enrolments) shouldBe Some(MtdItId("123456789"))
     }
 
     "return None if the required enrolment does not exist" in {
       val enrolments = Set(Enrolment("HMRC-FOO-BAR", Seq(EnrolmentIdentifier("Foo", "Bar")), "activated"))
 
-      allEnrolmentTypes.foreach { enrolmentType =>
-        EnrolmentType.findEnrolmentIdentifier(enrolmentType, enrolments) shouldBe None
-      }
+      allEnrolmentTypes.foreach(_.findEnrolmentIdentifier(enrolments) shouldBe None)
     }
 
     "return None if the required enrolment exists but the required identifier does not exist" in {
@@ -78,9 +77,7 @@ class EnrolmentTypeSpec extends UnitSpec {
         Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("NotMTDVATID", "123")), "activated")
       )
 
-      allEnrolmentTypes.foreach { enrolmentType =>
-        EnrolmentType.findEnrolmentIdentifier(enrolmentType, enrolments) shouldBe None
-      }
+      allEnrolmentTypes.foreach(_.findEnrolmentIdentifier(enrolments) shouldBe None)
     }
   }
 }
