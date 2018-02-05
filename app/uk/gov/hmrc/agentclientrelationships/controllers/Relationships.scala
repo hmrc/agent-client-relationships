@@ -91,7 +91,11 @@ class Relationships @Inject()(
     }
   }
 
-  def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request =>
+  def createForMtdIt(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
+
+  def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
+
+  private def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request =>
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
