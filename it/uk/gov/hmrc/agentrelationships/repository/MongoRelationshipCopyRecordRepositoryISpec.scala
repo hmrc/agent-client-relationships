@@ -1,13 +1,11 @@
 package uk.gov.hmrc.agentrelationships.repository
 
-import java.util.UUID
-
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
+import uk.gov.hmrc.agentclientrelationships.repository.MongoRelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.services.RelationshipCopyRecordRepositorySpec
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.support.MongoApp
 import uk.gov.hmrc.play.test.UnitSpec
 

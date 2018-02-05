@@ -120,10 +120,10 @@ trait DesStubs {
     )
   }
 
-  def givenAgentCanBeAllocatedInDes(mtdItId: String, arn: String) = {
+  def givenAgentCanBeAllocatedInDes(identifier: String, arn: String) = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing(mtdItId))
+        .withRequestBody(containing(identifier))
         .withRequestBody(containing(arn))
         .withRequestBody(containing("\"Authorise\""))
         .willReturn(aResponse().withStatus(200)

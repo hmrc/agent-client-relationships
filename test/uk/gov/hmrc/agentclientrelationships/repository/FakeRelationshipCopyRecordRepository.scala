@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import reactivemongo.core.errors.GenericDatabaseException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.TaxIdentifier
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,25 +48,25 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
     })
   }
 
-  override def updateEtmpSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
-    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + mtdItId.value)
+  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
-        data(arn.value + mtdItId.value) = maybeValue.get.copy(syncToETMPStatus = Some(status))
+        data(arn.value + identifier.value) = maybeValue.get.copy(syncToETMPStatus = Some(status))
       } else {
-        throw new IllegalArgumentException(s"Unexpected arn and mtdItId $arn, $mtdItId")
+        throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
       }
     )
 
   }
 
-  def updateGgSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
-    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + mtdItId.value)
+  def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
-        data(arn.value + mtdItId.value) = maybeValue.get.copy(syncToGGStatus = Some(status))
+        data(arn.value + identifier.value) = maybeValue.get.copy(syncToGGStatus = Some(status))
       }  else {
-        throw new IllegalArgumentException(s"Unexpected arn and mtdItId $arn, $mtdItId")
+        throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
       }
     )
   }

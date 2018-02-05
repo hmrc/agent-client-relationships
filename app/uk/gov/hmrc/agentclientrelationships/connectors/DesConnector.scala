@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
+import java.time.{LocalDateTime, ZoneOffset}
 import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry
@@ -25,11 +26,11 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 
 import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, HttpReads}
+import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
 
 
@@ -67,6 +68,7 @@ object RegistrationRelationshipResponse {
 class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
                              @Named("des.authorizationToken") authorizationToken: String,
                              @Named("des.environment") environment: String,
+                             @Named("stub.test.createUpdateAgentRelationshipRosm.response") stubResponseCreateUpdateAgentRelationshipRosm: Int,
                              httpGet: HttpGet,
                              httpPost: HttpPost,
                              metrics: Metrics)
@@ -98,6 +100,19 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
   def deleteAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
     val url = new URL(baseUrl, s"/registration/relationship")
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("DeleteAgentRelationship", url, deleteAgentRelationshipInputJson(mtdbsa.value, arn.value))
+  }
+
+  def createUpdateAgentRelationshipRosm(vrn: Vrn, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
+    val requestBody = createUpdateAgentRelationshipRosmInputJson(vrn.value, arn.value)
+
+    stubResponseCreateUpdateAgentRelationshipRosm match {
+      case response2xx if (200 until 300) contains(response2xx) => {
+        Future.successful(RegistrationRelationshipResponse(LocalDateTime.now().atZone(ZoneOffset.UTC).toString))
+      }
+      case 400 => Future.failed(new BadRequestException("Stubbed bad request response"))
+      case 404 => Future.failed(new NotFoundException("Stubbed not found response"))
+      case code => Future.failed(new HttpException("Stubbed failure response", code))
+    }
   }
 
   private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[A] = {
@@ -140,4 +155,16 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
             "action": "De-Authorise"
           }
      }""")
+
+  private def createUpdateAgentRelationshipRosmInputJson(refNum: String, agentRefNum: String) = Json.parse(
+    s"""{
+         "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
+          "refNumber": "$refNum",
+          "agentReferenceNumber": "$agentRefNum",
+          "regime": "TAVC",
+          "authorisation": {
+            "action": "Authorise",
+            "isExclusiveAgent": true
+          }
+       }""")
 }

@@ -22,12 +22,12 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -55,7 +55,8 @@ class RelationshipISpec extends UnitSpec
         "microservice.services.auth.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort)
+        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "test.stub.createUpdateAgentRelationshipRosm.response" -> 200)
       .configure(mongoConfiguration)
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
@@ -896,6 +897,81 @@ class RelationshipISpec extends UnitSpec
 
     "return 403 for a client with a mismatched MtdItId" in {
       givenUserIsSubscribedClient(MtdItId("unmatched"))
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 403
+    }
+
+    "return 403 for a client with no client enrolments" in {
+      givenUserHasNoClientEnrolments
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 403
+    }
+  }
+
+  "PUT /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
+    val vrn = "101747641"
+    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
+
+    "return 201 when the relationship exists and the Arn matches that of current Agent user" in {
+      givenUserIsSubscribedAgent(Arn(arn))
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 when the relationship exists and the Vrn matches that of current Client user" in {
+      givenUserIsSubscribedClient(Vrn(vrn))
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    /**
+      * Agent's Unhappy paths
+      */
+
+    "return 403 for an agent with a mismatched arn" in {
+      givenUserIsSubscribedAgent(Arn("unmatched"))
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 403
+    }
+
+    "return 403 for an agent with no agent enrolments" in {
+      givenUserHasNoAgentEnrolments(Arn(arn))
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 403
+    }
+
+    "return 502 when gg is unavailable" in {
+      givenUserIsSubscribedAgent(Arn(arn))
+      givenGgIsUnavailable()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 502
+    }
+
+    /**
+      * Client's Unhappy paths
+      */
+
+    "return 403 for a client with a mismatched Vrn" in {
+      givenUserIsSubscribedClient(Vrn("unmatched"))
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 403

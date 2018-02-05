@@ -21,12 +21,13 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, GovernmentGatewayProxyConnector, MappingConnector, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -60,8 +61,6 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      lockService: RecoveryLockService,
                                      auditService: AuditService) {
 
-  private[services] val MtdItIdType = "MTDITID"
-
   def getAgentCodeFor(arn: Arn)
                      (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentCode] =
     for {
@@ -71,10 +70,10 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
       _ = auditData.set("agentCode", agentCode)
     } yield agentCode
 
-  def checkForRelationship(mtdItId: MtdItId, agentCode: AgentCode)
+  def checkForRelationship(identifier: TaxIdentifier, agentCode: AgentCode)
                           (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, Boolean]] =
     for {
-      allocatedAgents <- gg.getAllocatedAgentCodes(mtdItId)
+      allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
       result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
@@ -129,43 +128,48 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
 
-  private def createEtmpRecord(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
-    val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, mtdItId, _: SyncStatus)
+  private def createEtmpRecord(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+    val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
+
+    def desCreateAgentRelationship: Future[RegistrationRelationshipResponse] = identifier match {
+      case mtdItId @ MtdItId(_) => des.createAgentRelationship(mtdItId, arn)
+      case vrn @ Vrn(_) => des.createUpdateAgentRelationshipRosm(vrn, arn)
+    }
 
     (for {
       _ <- updateEtmpSyncStatus(InProgress)
-      _ <- des.createAgentRelationship(mtdItId, arn)
+      _ <- desCreateAgentRelationship
       _ = auditData.set("etmpRelationshipCreated", true)
       _ <- updateEtmpSyncStatus(Success)
     } yield ())
       .recoverWith {
         case NonFatal(ex) =>
-          Logger.warn(s"Creating ETMP record failed for ${arn.value}, ${mtdItId.value}", ex)
+          Logger.warn(s"Creating ETMP record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
           updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DES")))
       }
   }
 
   private def createGgRecord(
     arn: Arn,
-    mtdItId: MtdItId,
+    identifier: TaxIdentifier,
     eventualAgentCode: Future[AgentCode],
     failIfAllocateAgentInGGFails: Boolean
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
-    val updateGgSyncStatus = relationshipCopyRepository.updateGgSyncStatus(arn, mtdItId, _: SyncStatus)
+    val updateGgSyncStatus = relationshipCopyRepository.updateGgSyncStatus(arn, identifier, _: SyncStatus)
     (for {
       _ <- updateGgSyncStatus(InProgress)
       agentCode <- eventualAgentCode
-      _ <- gg.allocateAgent(agentCode, mtdItId)
+      _ <- gg.allocateAgent(agentCode, identifier)
       _ = auditData.set("enrolmentDelegated", true)
       _ <- updateGgSyncStatus(Success)
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          Logger.warn(s"Creating GG record for ${arn.value}, ${mtdItId.value} not possible because of incomplete data: $errorCode")
+          Logger.warn(s"Creating GG record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) not possible because of incomplete data: $errorCode")
           updateGgSyncStatus(IncompleteInputParams)
         case NonFatal(ex) =>
-          Logger.warn(s"Creating GG record failed for ${arn.value}, ${mtdItId.value}", ex)
+          Logger.warn(s"Creating GG record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
           updateGgSyncStatus(Failed)
           if (failIfAllocateAgentInGGFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_GG"))
           else Future.successful(())
@@ -173,7 +177,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
   def createRelationship(arn: Arn,
-                         mtdItId: MtdItId,
+                         identifier: TaxIdentifier,
                          eventualAgentCode: Future[AgentCode],
                          oldReferences: Set[SaAgentReference],
                          failIfCreateRecordFails: Boolean,
@@ -186,12 +190,13 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     auditData.set("etmpRelationshipCreated", false)
 
     def createRelationshipRecord: Future[Unit] = {
-      val record = RelationshipCopyRecord(arn.value, mtdItId.value, MtdItIdType, Some(oldReferences))
+      val identifierType = EnrolmentType.enrolmentTypeFor(identifier).identifierKey
+      val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
       relationshipCopyRepository.create(record)
         .map(_ => auditData.set("AgentDBRecord", true))
         .recoverWith {
           case NonFatal(ex) =>
-            Logger.warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${mtdItId.value}", ex)
+            Logger.warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
             if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
             else Future.successful(())
         }
@@ -199,8 +204,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
     for {
       _ <- createRelationshipRecord
-      _ <- createEtmpRecord(arn, mtdItId)
-      _ <- createGgRecord(arn, mtdItId, eventualAgentCode, failIfAllocateAgentInGGFails)
+      _ <- createEtmpRecord(arn, identifier)
+      _ <- createGgRecord(arn, identifier, eventualAgentCode, failIfAllocateAgentInGGFails)
     } yield ()
   }
 

@@ -27,14 +27,14 @@ import org.apache.xerces.impl.Constants._
 import play.api.http.ContentTypes.XML
 import play.api.http.HeaderNames.CONTENT_TYPE
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, Nino, TaxIdentifier}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
 import scala.xml.Elem
 import scala.xml.XML.withSAXParser
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpPost }
+import uk.gov.hmrc.http.{HeaderCarrier, HttpPost}
 
 @Singleton
 class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy-baseUrl") baseUrl: URL, httpPost: HttpPost, metrics: Metrics)
@@ -61,9 +61,9 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentCodes(mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
+  def getAllocatedAgentCodes(identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
     monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
-      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(mtdItId), Seq(CONTENT_TYPE -> XML))
+      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(identifier), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml: Elem = toXmlElement(response.body)
       val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"
@@ -71,19 +71,9 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentCodes(nino: Nino)(implicit hc: HeaderCarrier): Future[Set[AgentCode]] = {
-    monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
-      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInput(nino), Seq(CONTENT_TYPE -> XML))
-    }.map({ response =>
-      val xml: Elem = toXmlElement(response.body)
-      val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"
-      agentDetails.map(agency => (agency \ "AgentCode").text).filterNot(_.isEmpty).map(AgentCode(_)).toSet
-    })
-  }
-
-  def allocateAgent(agentCode: AgentCode, mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Boolean] = {
+  def allocateAgent(agentCode: AgentCode, identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Boolean] = {
     monitor("ConsumedAPI-GGW-GsoAdminAllocateAgent-POST") {
-      httpPost.POSTString(path("GsoAdminAllocateAgent"), GsoAdminAllocateAgentXmlInput(mtdItId.value,"MTDITID",agentCode.value), Seq(CONTENT_TYPE -> XML))
+      httpPost.POSTString(path("GsoAdminAllocateAgent"), GsoAdminAllocateAgentXmlInput(identifier, agentCode.value), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml: Elem = toXmlElement(response.body) ensuring (_.label == "GsoAdminAllocateAgentXmlOutput")
       (xml \ "PrincipalEnrolmentAlreadyExisted").text.toBoolean
@@ -126,31 +116,36 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       <CredentialIdentifier>{credentialIdentifier}</CredentialIdentifier>
     </GsoAdminGetUserDetailsXmlInput>.toString()
 
-  private def GsoAdminGetAssignedAgentsXmlInput(identifier: TaxIdentifier):String =
+  private def GsoAdminGetAssignedAgentsXmlInput(identifier: TaxIdentifier):String = {
     <GsoAdminGetAssignedAgentsXmlInput xmlns="urn:GSO-System-Services:external:2.13.3:GsoAdminGetAssignedAgentsXmlInput">
       <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
-      <ServiceName>HMRC-MTD-IT</ServiceName>
-      {xmlClientIdentifiers(identifier)}
+      {xmlServiceAndIdentifier(identifier)}
     </GsoAdminGetAssignedAgentsXmlInput>.toString()
+  }
 
-  private def xmlClientIdentifiers(identifier: TaxIdentifier) = identifier match {
+  private def xmlServiceAndIdentifier(identifier: TaxIdentifier) = identifier match {
     case MtdItId(value) =>
+      <ServiceName>HMRC-MTD-IT</ServiceName>
       <Identifiers>
         <Identifier IdentifierType="MTDITID">{value}</Identifier>
       </Identifiers>
 
     case Nino(value) =>
+      <ServiceName>HMRC-MTD-IT</ServiceName>
       <Identifiers>
         <Identifier IdentifierType="NINO">{value}</Identifier>
       </Identifiers>
+
+    case Vrn(value) =>
+      <ServiceName>HMRC-MTD-VAT</ServiceName>
+      <Identifiers>
+        <Identifier IdentifierType="MTDVATID">{value}</Identifier>
+      </Identifiers>
   }
 
-  private def GsoAdminAllocateAgentXmlInput(identifier: String, identifierType: String, agentCode: String): String =
+  private def GsoAdminAllocateAgentXmlInput(identifier: TaxIdentifier, agentCode: String): String =
     <GsoAdminAllocateAgentXmlInput xmlns="urn:GSO-System-Services:external:1.65:GsoAdminAllocateAgentXmlInput">
-      <ServiceName>HMRC-MTD-IT</ServiceName>
-      <Identifiers>
-        <Identifier IdentifierType={identifierType}>{identifier}</Identifier>
-      </Identifiers>
+      {xmlServiceAndIdentifier(identifier)}
       <AgentCode>{agentCode}</AgentCode>
     </GsoAdminAllocateAgentXmlInput>.toString()
 

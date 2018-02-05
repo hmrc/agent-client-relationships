@@ -19,16 +19,15 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.auth.{AgentOrClientRequest, AuthActions}
+import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, RelationshipsService}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.Upstream5xxResponse
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
@@ -92,49 +91,34 @@ class Relationships @Inject()(
     }
   }
 
-  def create(arn: Arn, mtdItId: MtdItId) = AuthorisedAgent {
-    implicit request =>
-      implicit agent =>
-        forThisAgentOrClient(arn, mtdItId) {
-          implicit val auditData = new AuditData()
-          auditData.set("arn", arn)
+  def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request =>
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
 
-          (for {
-            agentCode <- service.getAgentCodeFor(arn)
-            _ <- service.checkForRelationship(mtdItId, agentCode)
-              .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
-              .recover {
-                case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
-              }
-            _ <- service.createRelationship(arn, mtdItId, Future.successful(agentCode), Set(), false, true)
-          } yield ())
-            .map(_ => Created)
-            .recover {
-              case upS: Upstream5xxResponse =>
-                throw upS
-              case NonFatal(ex) =>
-                Logger.warn(s"Could not create relationship for ${arn.value}, ${mtdItId.value}", ex)
-                NotFound(toJson(ex.getMessage))
-            }
+    (for {
+      agentCode <- service.getAgentCodeFor(arn)
+      _ <- service.checkForRelationship(identifier, agentCode)
+        .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
+        .recover {
+          case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
         }
-  }
-
-  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgent { implicit request =>
-    implicit agent =>
-      forThisAgentOrClient(arn, mtdItId) {
-        implicit val auditData = new AuditData()
-        auditData.set("arn", arn)
-
-        service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
+      _ <- service.createRelationship(arn, identifier, Future.successful(agentCode), Set(), false, true)
+    } yield ())
+      .map(_ => Created)
+      .recover {
+        case upS: Upstream5xxResponse =>
+          throw upS
+        case NonFatal(ex) =>
+          Logger.warn(s"Could not create relationship for ${arn.value}, ${identifier.value}", ex)
+          NotFound(toJson(ex.getMessage))
       }
   }
 
-  private[controllers] def forThisAgentOrClient(requiredArn: Arn, requiredMtdItId: MtdItId)
-                                               (block: => Future[Result])(implicit request: AgentOrClientRequest[_]) = {
-    val taxId: String = request.taxIdentifier.value
+  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgentOrClient(arn, mtdItId) { implicit request =>
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
 
-    if (requiredArn.value.equals(taxId) || requiredMtdItId.value.equals(taxId)) block
-    else Future successful NoPermissionOnAgencyOrClient
+    service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>

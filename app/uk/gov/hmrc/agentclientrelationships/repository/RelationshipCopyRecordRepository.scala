@@ -28,9 +28,10 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.domain.{SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
@@ -66,9 +67,9 @@ object RelationshipCopyRecord extends ReactiveMongoFormats {
 trait RelationshipCopyRecordRepository {
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int]
   def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
-  def updateEtmpSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
+  def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
 
-  def updateGgSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
+  def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
 
   def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int]
 }
@@ -80,7 +81,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
   with RelationshipCopyRecordRepository
   with AtomicUpdate[RelationshipCopyRecord] {
 
-  private val MtdItIdType = "MTDITID"
+  private def clientIdentifierType(identifier: TaxIdentifier) = EnrolmentType.enrolmentTypeFor(identifier).identifierKey
 
   override def indexes = Seq(
     Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true)
@@ -95,22 +96,22 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
 
   def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
 
-    find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType)
+    find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> clientIdentifierType(mtdItId))
       .map(_.headOption)
   }
 
-  def updateEtmpSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+  def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
-      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType),
+      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
     })
   }
 
-  def updateGgSyncStatus(arn: Arn, mtdItId: MtdItId, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+  def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
-      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType),
+      finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToGGStatus" -> status.toString))
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating GG sync status ($status) failed: $error"))
@@ -118,7 +119,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
   }
 
   def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int] = {
-    remove("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> MtdItIdType)
+    remove("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> clientIdentifierType(mtdItId))
       .map(_.n)
   }
 
