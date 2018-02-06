@@ -504,7 +504,7 @@ class RelationshipsServiceSpec extends UnitSpec
         await(check) shouldBe FoundAndCopied
 
         verifyGgRecordNotCreatedMtdVat()
-        verifyEtmpRecordNotCreatedForMtdVat()
+        verifyEtmpRecordCreatedForMtdVat()
         val auditDetails = verifyGGAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
         auditDetails.get("enrolmentDelegated") shouldBe None
@@ -542,11 +542,11 @@ class RelationshipsServiceSpec extends UnitSpec
       val relationshipsService = new RelationshipsService(gg, des, mapping, relationshipCopyRepository, lockService, auditService)
       val auditData = new AuditData()
       val request = FakeRequest()
-
-      mappingServiceUnavailable()
+      mappingServiceUnavailableForMtdVat()
       val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
+
       verifyGgRecordNotCreatedMtdVat()
       verifyEtmpRecordNotCreatedForMtdVat()
     }
@@ -626,7 +626,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val auditData = new AuditData()
       val request = FakeRequest()
 
-      mappingServiceUnavailable()
+      mappingServiceUnavailableForMtdVat()
       val check = relationshipsService.lookupGGForOldRelationship(arn, vrn)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
@@ -650,6 +650,11 @@ class RelationshipsServiceSpec extends UnitSpec
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
+  }
+
+  private def mappingServiceUnavailableForMtdVat(): Unit = {
+    when(gg.getAllocatedAgentCodesForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
+    when(mapping.getAgentVrnsFor(eqs(arn))(eqs(hc))).thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
 
   private def cesaRelationshipExists(): Unit = {
