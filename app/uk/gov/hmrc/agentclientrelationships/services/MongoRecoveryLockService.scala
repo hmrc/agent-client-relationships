@@ -20,17 +20,18 @@ import javax.inject.{Inject, Singleton}
 
 import org.joda.time
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.lock.{LockKeeper, LockRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MongoRecoveryLockService @Inject() (lockRepository: LockRepository) extends RecoveryLockService {
-  override def tryLock[T](arn: Arn, mtdItId: MtdItId)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+  override def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
     new LockKeeper {
     override def repo = lockRepository
 
-    override def lockId: String = s"recovery-${arn.value}-${mtdItId.value}"
+    override def lockId: String = s"recovery-${arn.value}-${identifier.value}"
 
     override val forceLockReleaseAfter: time.Duration =  time.Duration.standardMinutes(5)
   }.tryLock(body)

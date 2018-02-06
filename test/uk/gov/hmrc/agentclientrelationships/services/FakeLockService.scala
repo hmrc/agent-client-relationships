@@ -16,20 +16,21 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.domain.TaxIdentifier
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 class FakeLockService extends RecoveryLockService {
-  val locked: mutable.Set[(Arn, MtdItId)] = mutable.Set.empty[(Arn, MtdItId)]
+  val locked: mutable.Set[(Arn, TaxIdentifier)] = mutable.Set.empty[(Arn, TaxIdentifier)]
 
-  override def tryLock[T](arn: Arn, mtdItId: MtdItId)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
-    if (locked.contains((arn, mtdItId))) Future.successful(None)
+  override def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+    if (locked.contains((arn, identifier))) Future.successful(None)
     else {
-      locked.add((arn, mtdItId))
+      locked.add((arn, identifier))
       body.map(Some.apply).map { result =>
-        locked.remove((arn, mtdItId))
+        locked.remove((arn, identifier))
         result
       }
     }

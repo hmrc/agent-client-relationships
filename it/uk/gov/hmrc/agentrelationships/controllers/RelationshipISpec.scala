@@ -21,6 +21,7 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
@@ -112,7 +113,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaAgentReference("foo")))),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Success))
       )
@@ -177,7 +178,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaAgentReference("foo")))),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
       )
@@ -244,7 +245,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaAgentReference("foo")))),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
       )
@@ -315,7 +316,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaAgentReference("foo")))),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
         'syncToGGStatus (None)
       )
@@ -346,7 +347,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (mtditid),
         'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaAgentReference("foo")))),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Failed))
       )

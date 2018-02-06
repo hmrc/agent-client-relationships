@@ -23,14 +23,15 @@ import org.joda.time.DateTime.now
 import org.joda.time.DateTimeZone.UTC
 import play.api.Logger
 import play.api.libs.json.Json.format
-import play.api.libs.json.{Format, Reads, Writes}
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.{SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
@@ -46,10 +47,43 @@ object SyncStatus extends Enumeration {
 
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 
+sealed trait RelationshipReference {
+  val value: TaxIdentifier
+}
+
+object RelationshipReference {
+  case class SaRef(value: SaAgentReference) extends RelationshipReference
+
+  object SaRef {
+    implicit val saReads = (__ \ "saAgentReference").read[SaAgentReference].map(x => SaRef(x))
+
+    val saWrites: Writes[SaRef] = new Writes[SaRef] {
+      override def writes(o: SaRef): JsValue = Json.obj("saAgentReference" -> o.value)
+    }
+  }
+
+  case class VatRef(value: Vrn) extends RelationshipReference
+
+  object VatRef {
+    implicit val vatReads = (__ \ "vrn").read[Vrn].map(x => VatRef(x))
+    val vatWrites: Writes[VatRef] = new Writes[VatRef] {
+      override def writes(o: VatRef): JsValue = Json.obj("vrn" -> o.value)
+    }
+  }
+
+  implicit val relationshipReferenceReads =
+    __.read[SaRef].map(x => x: RelationshipReference) orElse __.read[VatRef].map(x => x: RelationshipReference)
+
+  implicit val relationshipReferenceWrites = Writes[RelationshipReference] {
+    case saRef: SaRef => SaRef.saWrites.writes(saRef)
+    case vatRef: VatRef => VatRef.vatWrites.writes(vatRef)
+  }
+}
+
 case class RelationshipCopyRecord(arn: String,
                                   clientIdentifier: String,
                                   clientIdentifierType: String,
-                                  references: Option[Set[SaAgentReference]] = None,
+                                  references: Option[Set[RelationshipReference]] = None,
                                   dateTime: DateTime = now(UTC),
                                   syncToETMPStatus: Option[SyncStatus] = None,
                                   syncToGGStatus: Option[SyncStatus] = None) {
@@ -66,7 +100,7 @@ object RelationshipCopyRecord extends ReactiveMongoFormats {
 
 trait RelationshipCopyRecordRepository {
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int]
-  def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
+  def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
 
   def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
@@ -94,9 +128,9 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
     }
   }
 
-  def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
+  def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
 
-    find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> clientIdentifierType(mtdItId))
+    find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier))
       .map(_.headOption)
   }
 
