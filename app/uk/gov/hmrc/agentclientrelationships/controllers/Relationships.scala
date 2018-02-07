@@ -68,7 +68,7 @@ class Relationships @Inject()(
           case upS: Upstream5xxResponse =>
             throw upS
           case NonFatal(ex) =>
-            Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
+            Logger.warn(s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
             Left(errorCode)
         }
     }.map {
