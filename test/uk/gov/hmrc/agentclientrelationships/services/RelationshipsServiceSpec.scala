@@ -642,7 +642,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def oldGGRelationshipDoesNotExist(): Unit = {
-    when(gg.getAllocatedAgentCodesForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
+    when(gg.getAllocatedAgentVrnsForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
     when(mapping.getAgentVrnsFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
   }
 
@@ -653,7 +653,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def mappingServiceUnavailableForMtdVat(): Unit = {
-    when(gg.getAllocatedAgentCodesForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
+    when(gg.getAllocatedAgentVrnsForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
     when(mapping.getAgentVrnsFor(eqs(arn))(eqs(hc))).thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
 
@@ -664,7 +664,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def oldGGRelationshipExists(): Unit = {
-    when(gg.getAllocatedAgentCodesForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
+    when(gg.getAllocatedAgentVrnsForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
     when(mapping.getAgentVrnsFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
   }
 

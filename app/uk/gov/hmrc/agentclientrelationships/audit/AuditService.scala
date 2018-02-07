@@ -75,6 +75,20 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "Journey"
   )
 
+  val createRelationshipDetailsFieldsForMtdVat = Seq(
+    "agentCode",
+    "credId",
+    "arn",
+    "service",
+    "vrn",
+    "agentVrns",
+    "GGRelationship",
+    "etmpRelationshipCreated",
+    "enrolmentDelegated",
+    "AgentDBRecord",
+    "Journey"
+  )
+
   val CheckCESADetailsFields = Seq(
     "agentCode",
     "credId",
@@ -87,14 +101,20 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   val CheckGGDetailsFields = Seq(
     "agentCode",
     "credId",
-    "arn",
+    "agentVrns",
     "vrn",
+    "arn",
     "GGRelationship"
   )
 
   def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
       collectDetails(auditData.getDetails, createRelationshipDetailsFields))
+  }
+
+  def sendCreateRelationshipAuditEventForMtdVat(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
+    auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
+      collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat))
   }
 
   def sendCheckCESAAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {

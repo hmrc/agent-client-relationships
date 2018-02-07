@@ -71,7 +71,7 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentCodesForHmceVatDec(vrn: Vrn)(implicit hc: HeaderCarrier): Future[Seq[Vrn]] = {
+  def getAllocatedAgentVrnsForHmceVatDec(vrn: Vrn)(implicit hc: HeaderCarrier): Future[Seq[Vrn]] = {
     monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
       httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInputForHmceVatDec(vrn), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>

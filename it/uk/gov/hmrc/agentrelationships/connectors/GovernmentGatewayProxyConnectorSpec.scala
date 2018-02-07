@@ -6,7 +6,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.GovernmentGatewayProxyConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, GovernmentGatewayProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
@@ -144,6 +144,21 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       givenAgentCannotBeDeallocatedInGovernmentGateway("foo", "bar")
       givenAuditConnector()
       an[Exception] should be thrownBy await(connector.deallocateAgent(AgentCode("bar"), MtdItId("foo")))
+    }
+
+    "return set containing agent vrns if agent is allocated and assigned for a client in HMCE-VATDEC-ORG" in {
+      givenAgentIsAllocatedAndAssignedToClient("101747641", "101747645")
+      givenAuditConnector()
+      await(connector.getAllocatedAgentVrnsForHmceVatDec(Vrn("101747641"))) should contain(Vrn("101747645"))
+    }
+
+    "return set containing agent vrns if agent is allocated but not assigned for a client in HMCE-VATDEC-ORG" in {
+      givenAgentIsAllocatedButNotAssignedToClient("101747641")
+      givenAuditConnector()
+      val result = await(connector.getAllocatedAgentVrnsForHmceVatDec(Vrn("101747641")))
+      result should not contain Vrn("101747645")
+      result should contain(Vrn("other"))
+      result should contain(Vrn("123ABCD12345"))
     }
   }
 }

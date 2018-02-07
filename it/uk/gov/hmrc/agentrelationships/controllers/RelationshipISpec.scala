@@ -21,7 +21,7 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
@@ -71,11 +71,22 @@ class RelationshipISpec extends UnitSpec
   val mtditid = "ABCDEF123456789"
   val nino = "AB123456C"
   val mtdItIdType = "MTDITID"
+  val vrn = "101747641"
+  val agentVrn = "101747645"
+  val mtdVatIdType = "MTDVATID"
 
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
     arn,
     mtditid,
     "MTDITID",
+    syncToETMPStatus = Some(SyncStatus.Success),
+    syncToGGStatus = Some(SyncStatus.Success)
+  )
+
+  val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
+    arn,
+    vrn,
+    mtdVatIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
     syncToGGStatus = Some(SyncStatus.Success)
   )
@@ -404,7 +415,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 when relationship was previously copied from CESA to ETMP & GG but has since been deleted from ETMP & GG " +
-    "(even though the relationship upon which the copy was based still exists in CESA)" in {
+      "(even though the relationship upon which the copy was based still exists in CESA)" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(mtditid)
@@ -439,6 +450,441 @@ class RelationshipISpec extends UnitSpec
       givenAgentIsNotAllocatedToClient(mtditid)
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
       givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenServiceReturnsServiceUnavailable()
+      givenAuditConnector()
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+  }
+
+  "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
+
+    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
+
+    def doRequest = doAgentGetRequest(requestPath)
+
+    //HAPPY PATH :-)
+
+    "return 200 when relationship exists in gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenAuditConnector()
+
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query()) shouldBe empty
+      val result = await(doRequest)
+      result.status shouldBe 200
+      await(query()) shouldBe empty
+    }
+
+    //UNHAPPY PATHS
+
+    "return 404 when credentials are not found in gg" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+    }
+
+    "return 404 when agent code is not found in gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+    }
+
+    //FAILURE CASES
+
+    "return 502 when GsoAdminGetCredentialsForDirectEnrolments returns 5xx" in {
+      whenGetCredentialsReturns(500)
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when GsoAdminGetUserDetails returns 5xx" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      whenGetUserDetailReturns(500)
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when GsoAdminGetAssignedAgents returns 5xx" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAuditConnector()
+      whenGetAssignedAgentsReturns(500)
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 400 when GsoAdminGetCredentialsForDirectEnrolments returns 4xx" in {
+      whenGetCredentialsReturns(400)
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when GsoAdminGetUserDetails returns 4xx" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      whenGetUserDetailReturns(400)
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when GsoAdminGetAssignedAgents returns 4xx" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      whenGetAssignedAgentsReturns(400)
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    //HAPPY PATHS WHEN CHECKING HMRC-VATDEC-ORG
+
+    "return 200 when agent not allocated to client in gg but relationship exists in HMCE-VATDEC-ORG" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query()) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query()).head should have(
+        'arn (arn),
+        'clientIdentifier (vrn),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.Success))
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CreateRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "agentVrns" -> agentVrn,
+          "service" -> "mtd-vat",
+          "vrn" -> vrn,
+          "GGRelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "true",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingGGRelationship"
+        ),
+        tags = Map(
+          "transactionName" -> "create-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckGG,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "agentVrns" -> agentVrn,
+          "vrn" -> vrn,
+          "GGRelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-gg",
+          "path" -> requestPath
+        )
+      )
+    }
+
+    "return 200 when agent credentials unknown but relationship exists in HMCE-VATDEC-ORG" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAuditConnector()
+
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query()) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query()).head should have(
+        'arn (arn),
+        'clientIdentifier (vrn),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CreateRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "service" -> "mtd-vat",
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn,
+          "GGRelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingGGRelationship"
+        ),
+        tags = Map(
+          "transactionName" -> "create-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckGG,
+        detail = Map(
+          "arn" -> arn,
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "GGRelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-gg",
+          "path" -> requestPath
+        )
+      )
+    }
+
+    "return 200 when agent code unknown but relationship exists in HMCE-VATDEC-ORG" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsNotInTheResponseFor("foo")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query()) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query()).head should have(
+        'arn (arn),
+        'clientIdentifier (vrn),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CreateRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "",
+          "service" -> "mtd-vat",
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn,
+          "GGRelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingGGRelationship"
+        ),
+        tags = Map(
+          "transactionName" -> "create-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckGG,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn,
+          "agentCode" -> "",
+          "GGRelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-gg",
+          "path" -> requestPath
+        )
+      )
+
+    }
+
+    //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
+
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of etmp" ignore {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenAgentCanNotBeAllocatedInDes //TODO APB-1987
+      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query()) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query()).head should have(
+        'arn (arn),
+        'clientIdentifier (vrn),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'syncToETMPStatus (Some(SyncStatus.Failed)),
+        'syncToGGStatus (None)
+      )
+    }
+
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCannotBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query()) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query()).head should have(
+        'arn (arn),
+        'clientIdentifier (vrn),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToGGStatus (Some(SyncStatus.Failed))
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CreateRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "service" -> "mtd-vat",
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn,
+          "GGRelationship" -> "true",
+          "etmpRelationshipCreated" -> "true",
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "true",
+          "Journey" -> "CopyExistingGGRelationship"
+        ),
+        tags = Map(
+          "transactionName" -> "create-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckGG,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "GGRelationship" -> "true",
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn
+        ),
+        tags = Map(
+          "transactionName" -> "check-gg",
+          "path" -> requestPath
+        )
+      )
+    }
+
+    "return 404 when relationship is not found in gg but relationship copy was made before" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenAuditConnector()
+      await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when relationship was previously copied from HMCE-VATDEC-ORG to ETMP & GG but has since been deleted from ETMP & GG " +
+      "(even though the relationship upon which the copy was based still exists in HMCE-VATDEC-ORG)" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+      await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when credentials are not found but relationship copy was made before" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenAuditConnector()
+      await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+    }
+
+    "return 502 when mapping service is unavailable" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
       givenServiceReturnsServiceUnavailable()
       givenAuditConnector()
 

@@ -6,7 +6,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.SaAgentReference
@@ -73,8 +73,17 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
       timerShouldExistsAndBeenUpdated("ConsumedAPI-Digital-Mappings-GET")
     }
 
+    "return agent vrns for some known ARN" in {
+      givenArnIsKnownFor(arn, Vrn("foo"))
+      givenAuditConnector()
+      await(mappingConnector.getAgentVrnsFor(arn)) shouldBe Seq(Vrn("foo"))
+    }
 
+    "return multiple agent vrns for some known ARN" in {
+      val vrns = Seq(Vrn("001"), Vrn("002"))
+      givenArnIsKnownForVrns(arn, vrns)
+      givenAuditConnector()
+      await(mappingConnector.getAgentVrnsFor(arn)) shouldBe vrns
+    }
   }
-
-
 }

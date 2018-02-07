@@ -138,12 +138,12 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
             maybeRelationshipCopyRecord.map(
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentCode))
               .getOrElse(createRelationship(arn, vrn, eventualAgentCode, references.map(x => VatRef(x)), true, false)).map { _ =>
-              auditService.sendCreateRelationshipAuditEvent
+              auditService.sendCreateRelationshipAuditEventForMtdVat
               FoundAndCopied
             }
               .recover { case NonFatal(ex) =>
                 Logger.warn(s"Failed to copy GG relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})", ex)
-                auditService.sendCreateRelationshipAuditEvent
+                auditService.sendCreateRelationshipAuditEventForMtdVat
                 FoundAndFailedToCopy
               }
           } else Future.successful(NotFound)
@@ -172,11 +172,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     auditData.set("vrn", vrn)
 
     for {
-      agentVrns <- gg.getAllocatedAgentCodesForHmceVatDec(vrn)
+      agentVrns <- gg.getAllocatedAgentVrnsForHmceVatDec(vrn)
       matching <- intersection[Vrn](agentVrns) {
         mapping.getAgentVrnsFor(arn)
       }
-      _ = auditData.set("agentVrns", matching.mkString(","))
+      _ = auditData.set("agentVrns", matching.map(_.value).mkString(","))
       _ = auditData.set("GGRelationship", matching.nonEmpty)
     } yield {
       auditService.sendCheckGGAuditEvent
