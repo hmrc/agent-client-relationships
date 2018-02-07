@@ -757,7 +757,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentIsNotAllocatedToClient(vrn)
       givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
       givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
-      givenAgentCanNotBeAllocatedInDes //TODO APB-1987
+      givenAgentCanNotBeAllocatedInDes //TODO Implement new stub after APB-1987
       givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
       givenAuditConnector()
 
@@ -778,7 +778,7 @@ class RelationshipISpec extends UnitSpec
       )
     }
 
-    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of gg" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)

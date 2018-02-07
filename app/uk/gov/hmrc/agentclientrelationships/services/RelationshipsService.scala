@@ -106,7 +106,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           result <- if (references.nonEmpty) {
             maybeRelationshipCopyRecord.map(
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentCode))
-              .getOrElse(createRelationship(arn, mtdItId, eventualAgentCode, references.map(x => SaRef(x)), true, false)).map { _ =>
+              .getOrElse(createRelationship(arn, mtdItId, eventualAgentCode, references.map(SaRef.apply), true, false)).map { _ =>
                 auditService.sendCreateRelationshipAuditEvent
                 FoundAndCopied
               }
@@ -137,7 +137,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           result <- if (references.nonEmpty) {
             maybeRelationshipCopyRecord.map(
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentCode))
-              .getOrElse(createRelationship(arn, vrn, eventualAgentCode, references.map(x => VatRef(x)), true, false)).map { _ =>
+              .getOrElse(createRelationship(arn, vrn, eventualAgentCode, references.map(VatRef.apply), true, false)).map { _ =>
               auditService.sendCreateRelationshipAuditEventForMtdVat
               FoundAndCopied
             }
@@ -284,11 +284,11 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
         case (false, true) =>
           recoverGgRecord()
         case (true, false) =>
-          Logger.warn(s"GG relationship existed without ETMP relationship for ${arn.value}, ${identifier.value}. " +
+          Logger.warn(s"GG relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                       s"This should not happen because we always create the ETMP relationship first,")
           recoverEtmpRecord()
         case (false, false) =>
-          Logger.warn(s"recoverRelationshipCreation called for ${arn.value}, ${identifier.value} when no recovery needed")
+          Logger.warn(s"recoverRelationshipCreation called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
           Future.successful(())
       }
     }.map(_ => ())

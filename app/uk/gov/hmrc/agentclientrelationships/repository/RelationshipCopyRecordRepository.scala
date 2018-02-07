@@ -55,7 +55,7 @@ object RelationshipReference {
   case class SaRef(value: SaAgentReference) extends RelationshipReference
 
   object SaRef {
-    implicit val saReads = (__ \ "saAgentReference").read[SaAgentReference].map(x => SaRef(x))
+    implicit val saReads = (__ \ "saAgentReference").read[SaAgentReference].map(SaRef.apply)
 
     val saWrites: Writes[SaRef] = new Writes[SaRef] {
       override def writes(o: SaRef): JsValue = Json.obj("saAgentReference" -> o.value)
@@ -65,7 +65,7 @@ object RelationshipReference {
   case class VatRef(value: Vrn) extends RelationshipReference
 
   object VatRef {
-    implicit val vatReads = (__ \ "vrn").read[Vrn].map(x => VatRef(x))
+    implicit val vatReads = (__ \ "vrn").read[Vrn].map(VatRef.apply)
     val vatWrites: Writes[VatRef] = new Writes[VatRef] {
       override def writes(o: VatRef): JsValue = Json.obj("vrn" -> o.value)
     }
