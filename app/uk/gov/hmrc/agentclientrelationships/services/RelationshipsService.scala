@@ -296,16 +296,16 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
 
-  private def intersection[A](cesaIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Set[A]] = {
-    val cesaIdSet = cesaIds.toSet
+  private def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Set[A]] = {
+    val referenceIdSet = referenceIds.toSet
 
-    if (cesaIdSet.isEmpty) {
-      Logger.warn("The sa references in cesa are empty.")
+    if (referenceIdSet.isEmpty) {
+      Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/gg are empty.")
       returnValue(Set.empty)
     } else
         mappingServiceCall.map { mappingServiceIds =>
-          val intersected = mappingServiceIds.toSet.intersect(cesaIdSet)
-          Logger.info(s"The sa references in mapping store are $mappingServiceIds. The intersected value between mapping store and DES is $intersected")
+          val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
+          Logger.info(s"The sa/gg references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. The intersected value between mapping store and DES/GG is $intersected")
           intersected
         }
   }

@@ -30,13 +30,13 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import scala.concurrent.Future
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
 
-case class Mappings(mappings: Seq[Mapping])
+case class SaMappings(mappings: Seq[SaMapping])
 
-case class Mapping(arn: Arn, saAgentReference: SaAgentReference)
+case class SaMapping(arn: Arn, saAgentReference: SaAgentReference)
 
-object Mappings {
-  implicit val mappingReads = Json.reads[Mapping]
-  implicit val reads = Json.reads[Mappings]
+object SaMappings {
+  implicit val mappingReads = Json.reads[SaMapping]
+  implicit val reads = Json.reads[SaMappings]
 }
 
 case class VatMappings(mappings: Seq[VatMapping])
@@ -58,7 +58,7 @@ class MappingConnector @Inject()(
 
   def getSaAgentReferencesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/agent-mapping/mappings/${arn.value}")
-    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[Mappings](url.toString)}
+    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[SaMappings](url.toString)}
       .map(_.mappings.map(_.saAgentReference))
   }
 
