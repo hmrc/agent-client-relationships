@@ -23,20 +23,29 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet }
+import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
 
-case class Mappings(mappings: Seq[Mapping])
+case class SaMappings(mappings: Seq[SaMapping])
 
-case class Mapping(arn: Arn, saAgentReference: SaAgentReference)
+case class SaMapping(arn: Arn, saAgentReference: SaAgentReference)
 
-object Mappings {
-  implicit val mappingReads = Json.reads[Mapping]
-  implicit val reads = Json.reads[Mappings]
+object SaMappings {
+  implicit val mappingReads = Json.reads[SaMapping]
+  implicit val reads = Json.reads[SaMappings]
+}
+
+case class VatMappings(mappings: Seq[VatMapping])
+
+case class VatMapping(arn: Arn, vrn: Vrn)
+
+object VatMappings {
+  implicit val mappingReads = Json.reads[VatMapping]
+  implicit val reads = Json.reads[VatMappings]
 }
 
 @Singleton
@@ -49,7 +58,13 @@ class MappingConnector @Inject()(
 
   def getSaAgentReferencesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/agent-mapping/mappings/${arn.value}")
-    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[Mappings](url.toString)}
+    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[SaMappings](url.toString)}
       .map(_.mappings.map(_.saAgentReference))
+  }
+
+  def getAgentVrnsFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[Vrn]] = {
+    val url = new URL(baseUrl, s"/agent-mapping/mappings/vat/${arn.value}")
+    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[VatMappings](url.toString)}
+      .map(_.mappings.map(_.vrn))
   }
 }

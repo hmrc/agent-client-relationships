@@ -39,8 +39,8 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
     )
   }
 
-  override def findBy(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
-    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + mtdItId.value)
+  override def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
+    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
     Future.successful(if (maybeValue.isDefined) {
       maybeValue
     } else {

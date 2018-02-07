@@ -4,3 +4,4 @@ DELETE  /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId     @uk.gov.hmrc
 PUT     /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId     @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.createForMtdIt(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
 
 PUT     /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn     @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.createForMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
+GET     /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn     @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.checkWithMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)

@@ -25,7 +25,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
@@ -79,7 +79,9 @@ class RelationshipWithoutMongoISpec extends UnitSpec
   val arn = "AARN0000002"
   val mtditid = "ABCDEF123456789"
   val nino = "AB123456C"
-
+  val vrn = "101747641"
+  val agentVrn = "101747645"
+  val mtdVatIdType = "MTDVATID"
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
@@ -145,6 +147,70 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         ),
         tags = Map(
           "transactionName" -> "check-cesa",
+          "path" -> requestPath
+        )
+      )
+    }
+  }
+
+  "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
+
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
+
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+
+      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenAuditConnector()
+
+
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query) shouldBe empty
+
+      val result = await(doAgentRequest(requestPath))
+      result.status shouldBe 200
+
+      await(query) shouldBe empty
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CreateRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "service" -> "mtd-vat",
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn,
+          "GGRelationship" -> "true",
+          "etmpRelationshipCreated" -> "false",
+          "enrolmentDelegated" -> "false",
+          "AgentDBRecord" -> "false",
+          "Journey" -> "CopyExistingGGRelationship"
+        ),
+        tags = Map(
+          "transactionName" -> "create-relationship",
+          "path" -> requestPath
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckGG,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "foo",
+          "agentCode" -> "bar",
+          "GGRelationship" -> "true",
+          "vrn" -> vrn,
+          "agentVrns" -> agentVrn
+        ),
+        tags = Map(
+          "transactionName" -> "check-gg",
           "path" -> requestPath
         )
       )

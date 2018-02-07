@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import reactivemongo.core.errors.DatabaseException
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.SaAgentReference
@@ -34,7 +35,7 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
     arn = arn.value,
     clientIdentifier = mtdItId.value,
     clientIdentifierType = "MTDITID",
-    references = Some(Set((SaAgentReference("T1113T")))),
+    references = Some(Set(SaRef(SaAgentReference("T1113T")))),
     syncToETMPStatus = Some(SyncStatus.InProgress), syncToGGStatus = None)
 
   "RelationshipCopyRecordRepository" should {

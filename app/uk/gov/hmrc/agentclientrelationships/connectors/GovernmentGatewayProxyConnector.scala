@@ -71,6 +71,16 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
+  def getAllocatedAgentVrnsForHmceVatDec(vrn: Vrn)(implicit hc: HeaderCarrier): Future[Seq[Vrn]] = {
+    monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
+      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInputForHmceVatDec(vrn), Seq(CONTENT_TYPE -> XML))
+    }.map({ response =>
+      val xml: Elem = toXmlElement(response.body)
+      val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"
+      agentDetails.map(agency => (agency \ "AgentCode").text).filterNot(_.isEmpty).map(Vrn(_))
+    })
+  }
+
   def allocateAgent(agentCode: AgentCode, identifier: TaxIdentifier)(implicit hc: HeaderCarrier): Future[Boolean] = {
     monitor("ConsumedAPI-GGW-GsoAdminAllocateAgent-POST") {
       httpPost.POSTString(path("GsoAdminAllocateAgent"), GsoAdminAllocateAgentXmlInput(identifier, agentCode.value), Seq(CONTENT_TYPE -> XML))
@@ -120,6 +130,16 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     <GsoAdminGetAssignedAgentsXmlInput xmlns="urn:GSO-System-Services:external:2.13.3:GsoAdminGetAssignedAgentsXmlInput">
       <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
       {xmlServiceAndIdentifier(identifier)}
+    </GsoAdminGetAssignedAgentsXmlInput>.toString()
+  }
+
+  private def GsoAdminGetAssignedAgentsXmlInputForHmceVatDec(vrn: Vrn):String = {
+    <GsoAdminGetAssignedAgentsXmlInput xmlns="urn:GSO-System-Services:external:2.13.3:GsoAdminGetAssignedAgentsXmlInput">
+      <DelegatedAccessIdentifier>HMRC</DelegatedAccessIdentifier>
+      <ServiceName>HMCE-VATDEC-ORG</ServiceName>
+      <Identifiers>
+        <Identifier IdentifierType="VATRegNo">{vrn.value}</Identifier>
+      </Identifiers>
     </GsoAdminGetAssignedAgentsXmlInput>.toString()
   }
 

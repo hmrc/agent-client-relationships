@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, RelationshipsService}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.Upstream5xxResponse
@@ -41,7 +41,11 @@ class Relationships @Inject()(
                                service: RelationshipsService)
   extends BaseController with AuthActions {
 
-  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
+
+  def checkWithMtdVat(arn: Arn, vrn: Vrn): Action[AnyContent] = checkWithTaxIdentifier(arn, vrn)
+
+  private def checkWithTaxIdentifier(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async { implicit request =>
 
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
@@ -49,12 +53,12 @@ class Relationships @Inject()(
 
     val result = for {
       agentCode <- agentCode
-      result <- service.checkForRelationship(mtdItId, agentCode)
+      result <- service.checkForRelationship(identifier, agentCode)
     } yield result
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        service.checkCesaForOldRelationshipAndCopy(arn, mtdItId, agentCode)
+        service.checkForOldRelationshipAndCopy(arn, identifier, agentCode)
           .map {
             case AlreadyCopiedDidNotCheck =>
               Left(errorCode)
@@ -64,7 +68,7 @@ class Relationships @Inject()(
           case upS: Upstream5xxResponse =>
             throw upS
           case NonFatal(ex) =>
-            Logger.warn(s"Error in checkCesaForOldRelationshipAndCopy for ${arn.value}, ${mtdItId.value}", ex)
+            Logger.warn(s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
             Left(errorCode)
         }
     }.map {

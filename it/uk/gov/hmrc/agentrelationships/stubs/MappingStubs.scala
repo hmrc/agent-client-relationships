@@ -1,7 +1,7 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.domain.SaAgentReference
 
 trait MappingStubs {
@@ -21,6 +21,24 @@ trait MappingStubs {
         .willReturn(aResponse()
           .withStatus(200)
           .withBody(s"""{"mappings":[${refs.map(ref => s"""{"arn":"${arn.value}","saAgentReference":"${ref.value}"}""").mkString(",")}]}"""))
+    )
+  }
+
+  def givenArnIsKnownFor(arn: Arn, vrn: Vrn) = {
+    stubFor(
+      get(urlEqualTo(s"/agent-mapping/mappings/vat/${arn.value}"))
+        .willReturn(aResponse()
+          .withStatus(200)
+          .withBody(s"""{"mappings":[{"arn":"${arn.value}","vrn":"${vrn.value}"}]}"""))
+    )
+  }
+
+  def givenArnIsKnownForVrns(arn: Arn, vrns: Seq[Vrn]) = {
+    stubFor(
+      get(urlEqualTo(s"/agent-mapping/mappings/vat/${arn.value}"))
+        .willReturn(aResponse()
+          .withStatus(200)
+          .withBody(s"""{"mappings":[${vrns.map(vrn => s"""{"arn":"${arn.value}","vrn":"${vrn.value}"}""").mkString(",")}]}"""))
     )
   }
 
