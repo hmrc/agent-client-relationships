@@ -669,13 +669,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def relationshipWillBeCreated(identifier: TaxIdentifier): Unit = {
-    identifier match {
-      case mtdItId @ MtdItId(_) =>
-        when(des.createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
-      case vrn @ Vrn(_) =>
-        when(des.createUpdateAgentRelationshipRosm(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
-    }
-
+    when(des.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
     when(gg.allocateAgent(eqs(agentCode), eqs(identifier))(eqs(hc))).thenReturn(Future successful true)
   }
 
@@ -688,13 +682,12 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   def verifyEtmpRecordCreatedForMtdVat(): Unit = {
-    verify(des).createUpdateAgentRelationshipRosm(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
+    verify(des).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
   }
 
   def verifyEtmpRecordNotCreatedForMtdVat(): Unit = {
-    verify(des, never()).createUpdateAgentRelationshipRosm(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
+    verify(des, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
   }
-
 
   def verifyGgRecordCreated(): Unit = {
     verify(gg).allocateAgent(eqs(agentCode), eqs(mtdItId))(eqs(hc))
