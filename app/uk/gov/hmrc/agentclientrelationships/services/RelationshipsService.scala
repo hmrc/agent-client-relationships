@@ -187,14 +187,9 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   private def createEtmpRecord(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
     val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
 
-    def desCreateAgentRelationship: Future[RegistrationRelationshipResponse] = identifier match {
-      case mtdItId @ MtdItId(_) => des.createAgentRelationship(mtdItId, arn)
-      case vrn @ Vrn(_) => des.createUpdateAgentRelationshipRosm(vrn, arn)
-    }
-
     (for {
       _ <- updateEtmpSyncStatus(InProgress)
-      _ <- desCreateAgentRelationship
+      _ <- des.createAgentRelationship(identifier, arn)
       _ = auditData.set("etmpRelationshipCreated", true)
       _ <- updateEtmpSyncStatus(Success)
     } yield ())

@@ -50,11 +50,6 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     bindBaseUrl("auth")
     bindProperty("des.environment", "des.environment")
     bindProperty("des.authorizationToken", "des.authorization-token")
-
-    val desStubConfKey = "stub.test.createUpdateAgentRelationshipRosm.response"
-    bind(classOf[Int])
-      .annotatedWith(Names.named(desStubConfKey))
-      .toProvider(new Provider[Int] { override lazy val get = getInt(desStubConfKey) })
   }
 
   private def bindBaseUrl(serviceName: String) =

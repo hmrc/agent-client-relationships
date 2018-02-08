@@ -1,5 +1,6 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
+import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
@@ -31,7 +32,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   private implicit val hc = HeaderCarrier()
   private implicit val ec = ExecutionContext.global
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", 200, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
 
   "DesConnector GetRegistrationBusinessDetails" should {
 
@@ -176,6 +177,26 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
+
+    "request body contains service as ITSA when client Id is an MtdItId" in {
+      givenAgentCanBeAllocatedInDes("someMtdItId","someArn")
+      givenAuditConnector()
+
+      await(desConnector.createAgentRelationship(MtdItId("someMtdItId"), Arn("someArn")))
+
+      verify(1, postRequestedFor(urlPathEqualTo("/registration/relationship"))
+        .withRequestBody(equalToJson(s"""{ "regime": "ITSA"}""", true, true)))
+    }
+
+    "request body contains service as TAVC when client Id is a Vrn" in {
+      givenAgentCanBeAllocatedInDes("someVrn","someArn")
+      givenAuditConnector()
+
+      await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+
+      verify(1, postRequestedFor(urlPathEqualTo("/registration/relationship"))
+        .withRequestBody(equalToJson(s"""{ "regime": "TAVC"}""", true, true)))
+    }
   }
 
   "DesConnector DeleteAgentRelationship" should {
@@ -189,37 +210,6 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       givenAgentCanNotBeDeallocatedInDes
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
-    }
-  }
-
-  "DesConnector CreateUpdateAgentRelationshipRosm" should {
-
-    "return a stubbed 200 successful response if stubbed to return 200" in {
-      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 200, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
-      await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001"))).processingDate should not be null
-    }
-
-    "throw a stubbed NotFoundException exception if stubbed to return 404" in {
-      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 404, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
-      intercept[uk.gov.hmrc.http.NotFoundException] {
-        await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001")))
-      }
-    }
-
-    "throw a stubbed BadRequestException exception if stubbed to return 400" in {
-      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 400, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
-
-      intercept[uk.gov.hmrc.http.BadRequestException] {
-        await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001")))
-      }
-    }
-
-    "throw a stubbed HttpException if stubbed to return 500" in {
-      val connector = new DesConnector(wireMockBaseUrl, "token", "stub", 500, WSHttp, WSHttp, app.injector.instanceOf[Metrics])
-
-      intercept[uk.gov.hmrc.http.HttpException] {
-        await(connector.createUpdateAgentRelationshipRosm(Vrn("101747696"), Arn("TARN0000001")))
-      }.responseCode shouldBe 500
     }
   }
 }

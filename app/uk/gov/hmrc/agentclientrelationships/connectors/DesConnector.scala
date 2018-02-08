@@ -27,7 +27,7 @@ import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 
 import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.http._
@@ -68,7 +68,6 @@ object RegistrationRelationshipResponse {
 class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
                              @Named("des.authorizationToken") authorizationToken: String,
                              @Named("des.environment") environment: String,
-                             @Named("stub.test.createUpdateAgentRelationshipRosm.response") stubResponseCreateUpdateAgentRelationshipRosm: Int,
                              httpGet: HttpGet,
                              httpPost: HttpPost,
                              metrics: Metrics)
@@ -92,27 +91,20 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
       .flatMap(_.agentId))
   }
 
-  def createAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
+  def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
+    val regime = clientId match {
+      case MtdItId(_) => "ITSA"
+      case Vrn(_) => "TAVC"
+    }
+
     val url = new URL(baseUrl, s"/registration/relationship")
-    postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, createAgentRelationshipInputJson(mtdbsa.value, arn.value))
+    val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, regime)
+    postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, requestBody)
   }
 
   def deleteAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
     val url = new URL(baseUrl, s"/registration/relationship")
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("DeleteAgentRelationship", url, deleteAgentRelationshipInputJson(mtdbsa.value, arn.value))
-  }
-
-  def createUpdateAgentRelationshipRosm(vrn: Vrn, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
-    val requestBody = createUpdateAgentRelationshipRosmInputJson(vrn.value, arn.value)
-
-    stubResponseCreateUpdateAgentRelationshipRosm match {
-      case response2xx if (200 until 300) contains(response2xx) => {
-        Future.successful(RegistrationRelationshipResponse(LocalDateTime.now().atZone(ZoneOffset.UTC).toString))
-      }
-      case 400 => Future.failed(new BadRequestException("Stubbed bad request response"))
-      case 404 => Future.failed(new NotFoundException("Stubbed not found response"))
-      case code => Future.failed(new HttpException("Stubbed failure response", code))
-    }
   }
 
   private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[A] = {
@@ -133,12 +125,12 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
     }
   }
 
-  private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String) = Json.parse(
+  private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String, regime: String) = Json.parse(
     s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
-          "service": "ITSA",
+          "regime": "$regime",
           "authorisation": {
             "action": "Authorise",
             "isExclusiveAgent": true
@@ -150,21 +142,9 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
-          "service": "ITSA",
+          "regime": "ITSA",
           "authorisation": {
             "action": "De-Authorise"
           }
      }""")
-
-  private def createUpdateAgentRelationshipRosmInputJson(refNum: String, agentRefNum: String) = Json.parse(
-    s"""{
-         "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
-          "refNumber": "$refNum",
-          "agentReferenceNumber": "$agentRefNum",
-          "regime": "TAVC",
-          "authorisation": {
-            "action": "Authorise",
-            "isExclusiveAgent": true
-          }
-       }""")
 }
