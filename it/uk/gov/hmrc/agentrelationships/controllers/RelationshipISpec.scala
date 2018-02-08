@@ -751,13 +751,13 @@ class RelationshipISpec extends UnitSpec
 
     //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
-    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of etmp" ignore {
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of etmp" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)
       givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
       givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
-      givenAgentCanNotBeAllocatedInDes //TODO Implement new stub after APB-1987
+      givenAgentCanNotBeAllocatedInDes
       givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
       givenAuditConnector()
 
