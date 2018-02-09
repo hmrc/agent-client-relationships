@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 
 import play.api.Logger
 import play.api.mvc.Request
@@ -54,13 +54,19 @@ final case object NotFound extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
+final case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
+  override val grantAccess = false
+}
+
 @Singleton
 class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                      des: DesConnector,
                                      mapping: MappingConnector,
                                      relationshipCopyRepository: RelationshipCopyRecordRepository,
                                      lockService: RecoveryLockService,
-                                     auditService: AuditService) {
+                                     auditService: AuditService,
+                                     @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
+                                     @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) {
 
   def getAgentCodeFor(arn: Arn)
                      (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentCode] =
@@ -81,9 +87,15 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
   def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentCode: Future[AgentCode])
                                     (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+
+    def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
+      if (copyRelationshipFlag) body else returnValue(CopyRelationshipNotEnabled)
+
     identifier match {
-      case mtdItId @ MtdItId(_) => checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentCode)
-      case vrn @ Vrn(_) => checkGGForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentCode)
+      case mtdItId @ MtdItId(_) =>
+        ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentCode))
+      case vrn @ Vrn(_) =>
+        ifEnabled(copyMtdVatRelationshipFlag)(checkGGForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentCode))
     }
   }
 
