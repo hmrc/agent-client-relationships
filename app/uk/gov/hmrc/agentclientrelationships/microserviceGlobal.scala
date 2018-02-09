@@ -50,6 +50,8 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
     bindBaseUrl("auth")
     bindProperty("des.environment", "des.environment")
     bindProperty("des.authorizationToken", "des.authorization-token")
+    bindBooleanProperty("features.copy-relationship.mtd-it")
+    bindBooleanProperty("features.copy-relationship.mtd-vat")
   }
 
   private def bindBaseUrl(serviceName: String) =
@@ -64,6 +66,16 @@ class GuiceModule() extends AbstractModule with ServicesConfig {
 
   private class PropertyProvider(confKey: String) extends Provider[String] {
     override lazy val get = getConfString(confKey, throw new IllegalStateException(s"No value found for configuration property $confKey"))
+  }
+
+  private def bindBooleanProperty(propertyName: String) =
+    bind(classOf[Boolean]).annotatedWith(Names.named(propertyName)).toProvider(new BooleanPropertyProvider(propertyName))
+
+  private class BooleanPropertyProvider(confKey: String) extends Provider[Boolean] {
+    def getBooleanFromRoot = runModeConfiguration
+      .getBoolean(confKey)
+      .getOrElse(throw new IllegalStateException(s"No value found for configuration property $confKey"))
+    override lazy val get: Boolean = getConfBool(confKey, getBooleanFromRoot)
   }
 }
 

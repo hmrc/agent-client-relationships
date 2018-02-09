@@ -57,7 +57,8 @@ class RelationshipISpec extends UnitSpec
         "microservice.services.agent-mapping.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort,
-        "test.stub.createUpdateAgentRelationshipRosm.response" -> 200)
+        "features.copy-relationship.mtd-it" -> true,
+        "features.copy-relationship.mtd-vat" -> true)
       .configure(mongoConfiguration)
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]

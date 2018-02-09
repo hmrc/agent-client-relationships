@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, RelationshipsService}
+import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, CopyRelationshipNotAllowed, RelationshipsService}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -60,7 +60,7 @@ class Relationships @Inject()(
       case RelationshipNotFound(errorCode) =>
         service.checkForOldRelationshipAndCopy(arn, identifier, agentCode)
           .map {
-            case AlreadyCopiedDidNotCheck =>
+            case AlreadyCopiedDidNotCheck | CopyRelationshipNotAllowed =>
               Left(errorCode)
             case cesaResult =>
               Right(cesaResult.grantAccess)
