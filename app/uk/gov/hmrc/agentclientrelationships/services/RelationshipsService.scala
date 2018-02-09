@@ -54,7 +54,7 @@ final case object NotFound extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-final case object CopyRelationshipNotAllowed extends CheckAndCopyResult {
+final case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
@@ -89,7 +89,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
                                     (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
-      if (copyRelationshipFlag) body else returnValue(CopyRelationshipNotAllowed)
+      if (copyRelationshipFlag) body else returnValue(CopyRelationshipNotEnabled)
 
     identifier match {
       case mtdItId @ MtdItId(_) =>

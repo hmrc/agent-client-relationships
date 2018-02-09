@@ -653,7 +653,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         val check = relationshipsService.checkForOldRelationshipAndCopy(arn, identifier, eventualAgentCode)(ec, hc, request, auditData)
 
-        await(check) shouldBe CopyRelationshipNotAllowed
+        await(check) shouldBe CopyRelationshipNotEnabled
 
         verifyZeroInteractions(des, mapping, relationshipCopyRepository, lockService, auditService, gg)
       }
