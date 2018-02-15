@@ -23,6 +23,7 @@ import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
+import play.api.mvc.EssentialFilter
 import play.api.{Application, Configuration, Play}
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoLockRepository, MongoRelationshipCopyRecordRepository, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{MongoRecoveryLockService, RecoveryLockService}
@@ -31,8 +32,8 @@ import uk.gov.hmrc.lock.LockRepository
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
-import uk.gov.hmrc.http.{ HttpGet, HttpPost }
-import uk.gov.hmrc.play.microservice.filters.{ AuditFilter, LoggingFilter, MicroserviceFilterSupport }
+import uk.gov.hmrc.http.{HttpGet, HttpPost}
+import uk.gov.hmrc.play.microservice.filters.{AuditFilter, LoggingFilter, MicroserviceFilterSupport}
 
 class GuiceModule() extends AbstractModule with ServicesConfig {
 
@@ -104,4 +105,8 @@ object MicroserviceGlobal extends DefaultMicroserviceGlobal with RunMode {
   override val microserviceAuditFilter = MicroserviceAuditFilter
 
   override val authFilter = None
+
+  lazy val monitoringFilter: EssentialFilter = Play.current.injector.instanceOf[MicroserviceMonitoringFilter]
+
+  override lazy val microserviceFilters: Seq[EssentialFilter] = defaultMicroserviceFilters ++ Seq(monitoringFilter)
 }
