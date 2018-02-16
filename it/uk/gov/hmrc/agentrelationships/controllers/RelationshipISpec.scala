@@ -1024,8 +1024,13 @@ class RelationshipISpec extends UnitSpec
       givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 404
+<<<<<<< HEAD
 //      val a = result.json
 //      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+=======
+      val a = result.json
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+>>>>>>> 100275a451d7697b89aed34d7b968208de731d62
     }
 
     "return 404 when agent not allocated to client in gg nor cesa" in {
@@ -1042,6 +1047,7 @@ class RelationshipISpec extends UnitSpec
 
     "return 5xx mapping is unavailable" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+<<<<<<< HEAD
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(nino)
       givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
@@ -1050,6 +1056,13 @@ class RelationshipISpec extends UnitSpec
       givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 502
+=======
+      givenArnIsKnownFor(Arn(arn), Vrn(vrn))
+      givenServiceReturnsServiceUnavailable()
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 503
+>>>>>>> 100275a451d7697b89aed34d7b968208de731d62
     }
 
     "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
