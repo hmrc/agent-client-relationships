@@ -90,7 +90,7 @@ class Relationships @Inject()(
       case upS: Upstream5xxResponse =>
         throw upS
       case NonFatal(ex) =>
-        Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for ${arn.value}, $nino", ex)
+        Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino", ex)
         NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
     }
   }
@@ -135,5 +135,27 @@ class Relationships @Inject()(
       .recover {
         case ex: RelationshipNotFound => NotFound(ex.getMessage)
       }
+  }
+
+  def checkWithVrn(arn: Arn, vrn: Vrn): Action[AnyContent] = Action.async { implicit request =>
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn)
+
+    service.lookupGGForOldRelationship(arn, vrn)
+      .map {
+        case references if references.nonEmpty => {
+          Ok
+        }
+        case _ => {
+          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+        }
+      }.recover {
+      case upS: Upstream5xxResponse => {
+        throw upS
+      }
+      case NonFatal(ex) =>
+        Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, vrn: ${vrn.value}", ex)
+        NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+    }
   }
 }

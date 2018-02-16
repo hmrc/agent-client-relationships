@@ -1008,6 +1008,118 @@ class RelationshipISpec extends UnitSpec
       )
     }
   }
+
+  "GET /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn" should {
+
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMCE-VATDEC-ORG/client/vrn/$vrn"
+
+    def doRequest = doAgentGetRequest(requestPath)
+
+    "return 404 when agent not allocated to client in gg nor identifier not found in des" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(vrn)
+      givenNinoIsUnknownFor(MtdItId(mtditid))
+      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 404
+      val a = result.json
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in gg nor cesa" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(nino)
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 404
+//      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 5xx mapping is unavailable" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenArnIsKnownFor(Arn(arn), Vrn(vrn))
+      givenServiceReturnsServiceUnavailable()
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 503
+    }
+
+    "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
+      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
+      givenAgentCodeIsFoundFor("foo", "bar")
+      givenAgentIsNotAllocatedToClient(nino)
+      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenArnIsUnknownFor(Arn(arn))
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 200 when agent credentials unknown but relationship exists in cesa" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenAuditConnector()
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-cesa",
+          "path" -> requestPath
+        )
+      )
+    }
+
+    "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
+      givenAgentCredentialsAreNotFoundFor(Arn(arn))
+      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenMtdItIdIsUnKnownFor(Nino(nino))
+      givenAuditConnector()
+
+      def query() = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+
+      await(query()) shouldBe empty
+      val result = await(doRequest)
+      result.status shouldBe 200
+      await(query()) shouldBe empty
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "nino" -> nino,
+          "saAgentRef" -> "foo",
+          "CESARelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-cesa",
+          "path" -> requestPath
+        )
+      )
+    }
+  }
+
   "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
