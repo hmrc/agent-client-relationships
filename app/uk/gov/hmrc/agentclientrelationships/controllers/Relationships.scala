@@ -117,7 +117,7 @@ class Relationships @Inject()(
         case upS: Upstream5xxResponse =>
           throw upS
         case NonFatal(ex) =>
-          Logger.warn(s"Could not create relationship for ${arn.value}, ${identifier.value}", ex)
+          Logger.warn("Could not create relationship")
           NotFound(toJson(ex.getMessage))
       }
   }
@@ -154,7 +154,7 @@ class Relationships @Inject()(
         throw upS
       }
       case NonFatal(ex) =>
-        Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, vrn: ${vrn.value}", ex)
+        Logger.warn("checkWithNino: lookupCesaForOldRelationship failed")
         NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
     }
   }
