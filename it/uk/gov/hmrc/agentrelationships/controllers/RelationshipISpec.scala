@@ -1015,121 +1015,49 @@ class RelationshipISpec extends UnitSpec
 
     def doRequest = doAgentGetRequest(requestPath)
 
-    "return 404 when agent not allocated to client in gg nor identifier not found in des" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 404 when agent not allocated to client in gg" in {
       givenAgentIsNotAllocatedToClient(vrn)
-      givenNinoIsUnknownFor(MtdItId(mtditid))
-      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
-      givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 404
-<<<<<<< HEAD
-//      val a = result.json
-//      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-=======
-      val a = result.json
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
->>>>>>> 100275a451d7697b89aed34d7b968208de731d62
     }
 
-    "return 404 when agent not allocated to client in gg nor cesa" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(nino)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
-      givenAuditConnector()
+    "return 404 when agent not allocated to client in agent-mapping but allocated in gg" in {
+      givenAgentIsAllocatedAndAssignedToClient(vrn, arn)
+      givenArnIsUnknownFor(Arn(arn))
       val result = await(doRequest)
       result.status shouldBe 404
-//      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 5xx mapping is unavailable" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-<<<<<<< HEAD
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(nino)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "foo")
       givenServiceReturnsServiceUnavailable()
       givenAuditConnector()
       val result = await(doRequest)
       result.status shouldBe 502
-=======
-      givenArnIsKnownFor(Arn(arn), Vrn(vrn))
-      givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
-      val result = await(doRequest)
-      result.status shouldBe 503
->>>>>>> 100275a451d7697b89aed34d7b968208de731d62
-    }
-
-    "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(nino)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenArnIsUnknownFor(Arn(arn))
-      givenAuditConnector()
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenAgentIsAllocatedAndAssignedToClient(vrn, arn)
+      givenArnIsKnownFor(Arn(arn), Vrn(arn))
       givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 200
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckCESA,
+        event = AgentClientRelationshipEvent.CheckGG,
         detail = Map(
           "arn" -> arn,
+          "vrn" -> vrn,
+          "agentVrns" -> arn,
           "credId" -> "",
           "agentCode" -> "",
-          "nino" -> nino,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
+          "GGRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath
-        )
-      )
-    }
-
-    "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenMtdItIdIsUnKnownFor(Nino(nino))
-      givenAuditConnector()
-
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
-
-      await(query()) shouldBe empty
-      val result = await(doRequest)
-      result.status shouldBe 200
-      await(query()) shouldBe empty
-
-      verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map(
-          "arn" -> arn,
-          "credId" -> "",
-          "agentCode" -> "",
-          "nino" -> nino,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
-        tags = Map(
-          "transactionName" -> "check-cesa",
+          "transactionName" -> "check-gg",
           "path" -> requestPath
         )
       )
