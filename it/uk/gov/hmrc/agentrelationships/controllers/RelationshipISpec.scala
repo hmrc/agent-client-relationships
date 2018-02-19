@@ -1008,6 +1008,62 @@ class RelationshipISpec extends UnitSpec
       )
     }
   }
+
+  "GET /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn" should {
+
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMCE-VATDEC-ORG/client/vrn/$vrn"
+
+    def doRequest = doAgentGetRequest(requestPath)
+
+    "return 404 when agent not allocated to client in gg" in {
+      givenAgentIsNotAllocatedToClient(vrn)
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in agent-mapping but allocated in gg" in {
+      givenAgentIsAllocatedAndAssignedToClient(vrn, arn)
+      givenArnIsUnknownFor(Arn(arn))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 5xx mapping is unavailable" in {
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "foo")
+      givenServiceReturnsServiceUnavailable()
+      givenAuditConnector()
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 200 when agent credentials unknown but relationship exists in cesa" in {
+      givenAgentIsAllocatedAndAssignedToClient(vrn, arn)
+      givenArnIsKnownFor(Arn(arn), Vrn(arn))
+      givenAuditConnector()
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      verifyAuditRequestSent(1,
+        event = AgentClientRelationshipEvent.CheckGG,
+        detail = Map(
+          "arn" -> arn,
+          "vrn" -> vrn,
+          "agentVrns" -> arn,
+          "credId" -> "",
+          "agentCode" -> "",
+          "GGRelationship" -> "true"
+        ),
+        tags = Map(
+          "transactionName" -> "check-gg",
+          "path" -> requestPath
+        )
+      )
+    }
+  }
+
   "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
