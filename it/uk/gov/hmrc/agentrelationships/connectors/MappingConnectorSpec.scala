@@ -9,7 +9,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -73,17 +73,17 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
       timerShouldExistsAndBeenUpdated("ConsumedAPI-Digital-Mappings-GET")
     }
 
-    "return agent vrns for some known ARN" in {
-      givenArnIsKnownFor(arn, Vrn("foo"))
+    "return agent codes for some known ARN" in {
+      givenArnIsKnownFor(arn, AgentCode("foo"))
       givenAuditConnector()
-      await(mappingConnector.getAgentVrnsFor(arn)) shouldBe Seq(Vrn("foo"))
+      await(mappingConnector.getAgentCodesFor(arn)) shouldBe Seq(AgentCode("foo"))
     }
 
-    "return multiple agent vrns for some known ARN" in {
-      val vrns = Seq(Vrn("001"), Vrn("002"))
-      givenArnIsKnownForVrns(arn, vrns)
+    "return multiple agent codes for some known ARN" in {
+      val oldAgentCodes = Seq(AgentCode("001"), AgentCode("002"))
+      givenArnIsKnownForAgentCodes(arn, oldAgentCodes)
       givenAuditConnector()
-      await(mappingConnector.getAgentVrnsFor(arn)) shouldBe vrns
+      await(mappingConnector.getAgentCodesFor(arn)) shouldBe oldAgentCodes
     }
   }
 }

@@ -179,16 +179,16 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     }
   }
 
-  def lookupGGForOldRelationship(arn: Arn, vrn: Vrn)(
-    implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[Vrn]] = {
-    auditData.set("vrn", vrn)
+  def lookupGGForOldRelationship(arn: Arn, clientVrn: Vrn)(
+    implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[AgentCode]] = {
+    auditData.set("vrn", clientVrn)
 
     for {
-      agentVrns <- gg.getAllocatedAgentVrnsForHmceVatDec(vrn)
-      matching <- intersection[Vrn](agentVrns) {
-        mapping.getAgentVrnsFor(arn)
+      agentCodes <- gg.getAllocatedAgentCodesForHmceVatDec(clientVrn)
+      matching <- intersection[AgentCode](agentCodes) {
+        mapping.getAgentCodesFor(arn)
       }
-      _ = auditData.set("agentVrns", matching.map(_.value).mkString(","))
+      _ = auditData.set("oldAgentCodes", matching.map(_.value).mkString(","))
       _ = auditData.set("GGRelationship", matching.nonEmpty)
     } yield {
       auditService.sendCheckGGAuditEvent

@@ -71,13 +71,13 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
     })
   }
 
-  def getAllocatedAgentVrnsForHmceVatDec(vrn: Vrn)(implicit hc: HeaderCarrier): Future[Seq[Vrn]] = {
+  def getAllocatedAgentCodesForHmceVatDec(clientVrn: Vrn)(implicit hc: HeaderCarrier): Future[Seq[AgentCode]] = {
     monitor("ConsumedAPI-GGW-GsoAdminGetAssignedAgents-POST") {
-      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInputForHmceVatDec(vrn), Seq(CONTENT_TYPE -> XML))
+      httpPost.POSTString(path("GsoAdminGetAssignedAgents"), GsoAdminGetAssignedAgentsXmlInputForHmceVatDec(clientVrn), Seq(CONTENT_TYPE -> XML))
     }.map({ response =>
       val xml: Elem = toXmlElement(response.body)
       val agentDetails = xml \ "AllocatedAgents" \ "AgentDetails"
-      agentDetails.map(agency => (agency \ "AgentCode").text).filterNot(_.isEmpty).map(Vrn(_))
+      agentDetails.map(agency => (agency \ "AgentCode").text).filterNot(_.isEmpty).map(AgentCode(_))
     })
   }
 

@@ -32,7 +32,7 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.{AgentCode, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
@@ -62,12 +62,12 @@ object RelationshipReference {
     }
   }
 
-  case class VatRef(value: Vrn) extends RelationshipReference
+  case class VatRef(value: AgentCode) extends RelationshipReference
 
   object VatRef {
-    implicit val vatReads = (__ \ "vrn").read[Vrn].map(VatRef.apply)
+    implicit val vatReads = (__ \ "oldAgentCode").read[AgentCode].map(VatRef.apply)
     val vatWrites: Writes[VatRef] = new Writes[VatRef] {
-      override def writes(o: VatRef): JsValue = Json.obj("vrn" -> o.value)
+      override def writes(o: VatRef): JsValue = Json.obj("oldAgentCode" -> o.value)
     }
   }
 
