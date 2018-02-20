@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRec
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -80,7 +80,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
   val mtditid = "ABCDEF123456789"
   val nino = "AB123456C"
   val vrn = "101747641"
-  val agentVrn = "101747645"
+  val oldAgentCode = "oldAgentCode"
   val mtdVatIdType = "MTDVATID"
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
@@ -157,13 +157,13 @@ class RelationshipWithoutMongoISpec extends UnitSpec
 
     val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
 
-    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
+    "return 200 when relationship exists mapping and gg and relationship copy attempt fails because of mongo" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)
 
-      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
       givenAuditConnector()
@@ -186,7 +186,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
           "agentCode" -> "bar",
           "service" -> "mtd-vat",
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "GGRelationship" -> "true",
           "etmpRelationshipCreated" -> "false",
           "enrolmentDelegated" -> "false",
@@ -207,7 +207,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
           "agentCode" -> "bar",
           "GGRelationship" -> "true",
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn
+          "oldAgentCodes" -> oldAgentCode
         ),
         tags = Map(
           "transactionName" -> "check-gg",

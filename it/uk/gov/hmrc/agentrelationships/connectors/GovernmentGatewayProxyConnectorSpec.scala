@@ -146,19 +146,18 @@ class GovernmentGatewayProxyConnectorSpec extends UnitSpec with OneServerPerSuit
       an[Exception] should be thrownBy await(connector.deallocateAgent(AgentCode("bar"), MtdItId("foo")))
     }
 
-    "return set containing agent vrns if agent is allocated and assigned for a client in HMCE-VATDEC-ORG" in {
-      givenAgentIsAllocatedAndAssignedToClient("101747641", "101747645")
+    "return set containing agent agentCodes if agent is allocated and assigned for a client in HMCE-VATDEC-ORG" in {
+      givenAgentIsAllocatedAndAssignedToClient("101747641", "oldAgentCode")
       givenAuditConnector()
-      await(connector.getAllocatedAgentVrnsForHmceVatDec(Vrn("101747641"))) should contain(Vrn("101747645"))
+      await(connector.getAllocatedAgentCodesForHmceVatDec(Vrn("101747641"))) should contain(AgentCode("oldAgentCode"))
     }
 
-    "return set containing agent vrns if agent is allocated but not assigned for a client in HMCE-VATDEC-ORG" in {
+    "return set containing agent agentCodes if agent is allocated but not assigned for a client in HMCE-VATDEC-ORG" in {
       givenAgentIsAllocatedButNotAssignedToClient("101747641")
       givenAuditConnector()
-      val result = await(connector.getAllocatedAgentVrnsForHmceVatDec(Vrn("101747641")))
-      result should not contain Vrn("101747645")
-      result should contain(Vrn("other"))
-      result should contain(Vrn("123ABCD12345"))
+      val result = await(connector.getAllocatedAgentCodesForHmceVatDec(Vrn("101747641")))
+      result should contain(AgentCode("other"))
+      result should contain(AgentCode("123ABCD12345"))
     }
   }
 }

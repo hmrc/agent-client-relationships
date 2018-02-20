@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -73,7 +73,7 @@ class RelationshipISpec extends UnitSpec
   val nino = "AB123456C"
   val mtdItIdType = "MTDITID"
   val vrn = "101747641"
-  val agentVrn = "101747645"
+  val oldAgentCode = "oldAgentCode"
   val mtdVatIdType = "MTDVATID"
 
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
@@ -565,8 +565,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
-      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
       givenAuditConnector()
@@ -582,7 +582,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (vrn),
         'clientIdentifierType (mtdVatIdType),
-        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Success))
       )
@@ -593,7 +593,7 @@ class RelationshipISpec extends UnitSpec
           "arn" -> arn,
           "credId" -> "foo",
           "agentCode" -> "bar",
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "service" -> "mtd-vat",
           "vrn" -> vrn,
           "GGRelationship" -> "true",
@@ -614,7 +614,7 @@ class RelationshipISpec extends UnitSpec
           "arn" -> arn,
           "credId" -> "foo",
           "agentCode" -> "bar",
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "vrn" -> vrn,
           "GGRelationship" -> "true"
         ),
@@ -627,8 +627,8 @@ class RelationshipISpec extends UnitSpec
 
     "return 200 when agent credentials unknown but relationship exists in HMCE-VATDEC-ORG" in {
       givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
-      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenAuditConnector()
 
@@ -643,7 +643,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (vrn),
         'clientIdentifierType (mtdVatIdType),
-        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
       )
@@ -656,7 +656,7 @@ class RelationshipISpec extends UnitSpec
           "agentCode" -> "",
           "service" -> "mtd-vat",
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "GGRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
@@ -674,7 +674,7 @@ class RelationshipISpec extends UnitSpec
         detail = Map(
           "arn" -> arn,
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "credId" -> "",
           "agentCode" -> "",
           "GGRelationship" -> "true"
@@ -689,8 +689,8 @@ class RelationshipISpec extends UnitSpec
     "return 200 when agent code unknown but relationship exists in HMCE-VATDEC-ORG" in {
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsNotInTheResponseFor("foo")
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
-      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
       givenAuditConnector()
@@ -706,7 +706,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (vrn),
         'clientIdentifierType (mtdVatIdType),
-        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
       )
@@ -719,7 +719,7 @@ class RelationshipISpec extends UnitSpec
           "agentCode" -> "",
           "service" -> "mtd-vat",
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "GGRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
@@ -738,7 +738,7 @@ class RelationshipISpec extends UnitSpec
           "arn" -> arn,
           "credId" -> "foo",
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "agentCode" -> "",
           "GGRelationship" -> "true"
         ),
@@ -756,8 +756,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)
-      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
       givenAgentCanNotBeAllocatedInDes
       givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
       givenAuditConnector()
@@ -773,7 +773,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (vrn),
         'clientIdentifierType (mtdVatIdType),
-        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
         'syncToGGStatus (None)
       )
@@ -783,8 +783,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)
-      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenAgentCannotBeAllocatedInGovernmentGateway(vrn, "bar")
       givenAuditConnector()
@@ -800,7 +800,7 @@ class RelationshipISpec extends UnitSpec
         'arn (arn),
         'clientIdentifier (vrn),
         'clientIdentifierType (mtdVatIdType),
-        'references (Some(Set(VatRef(Vrn(agentVrn))))),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
         'syncToGGStatus (Some(SyncStatus.Failed))
       )
@@ -813,7 +813,7 @@ class RelationshipISpec extends UnitSpec
           "agentCode" -> "bar",
           "service" -> "mtd-vat",
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn,
+          "oldAgentCodes" -> oldAgentCode,
           "GGRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
@@ -834,7 +834,7 @@ class RelationshipISpec extends UnitSpec
           "agentCode" -> "bar",
           "GGRelationship" -> "true",
           "vrn" -> vrn,
-          "agentVrns" -> agentVrn
+          "oldAgentCodes" -> oldAgentCode
         ),
         tags = Map(
           "transactionName" -> "check-gg",
@@ -859,8 +859,8 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)
-      givenArnIsKnownFor(Arn(arn), Vrn(agentVrn))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
 
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
@@ -885,7 +885,7 @@ class RelationshipISpec extends UnitSpec
       givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
       givenAgentCodeIsFoundFor("foo", "bar")
       givenAgentIsNotAllocatedToClient(vrn)
-      givenAgentIsAllocatedAndAssignedToClient(vrn, agentVrn)
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
       givenServiceReturnsServiceUnavailable()
       givenAuditConnector()
 
@@ -1038,9 +1038,9 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 502
     }
 
-    "return 200 when agent credentials unknown but relationship exists in cesa" in {
-      givenAgentIsAllocatedAndAssignedToClient(vrn, arn)
-      givenArnIsKnownFor(Arn(arn), Vrn(arn))
+    "return 200 when agent credentials unknown but relationship exists in mapping" in {
+      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
       givenAuditConnector()
 
       val result = await(doRequest)
@@ -1051,7 +1051,7 @@ class RelationshipISpec extends UnitSpec
         detail = Map(
           "arn" -> arn,
           "vrn" -> vrn,
-          "agentVrns" -> arn,
+          "oldAgentCodes" -> oldAgentCode,
           "credId" -> "",
           "agentCode" -> "",
           "GGRelationship" -> "true"

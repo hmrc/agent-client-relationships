@@ -44,12 +44,12 @@ class RelationshipsServiceSpec extends UnitSpec
   val saAgentRef = SaAgentReference("T1113T")
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
-  val agentVrn = Vrn("101747645")
-  val agentCode = AgentCode("ABC1234")
-  val eventualAgentCode = Future successful agentCode
+  val agentCodeForVatDecAgent = AgentCode("oldAgentCode")
+  val agentCodeForAsAgent = AgentCode("ABC1234")
+  val eventualAgentCodeForAsAgent = Future successful agentCodeForAsAgent
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(arn.value, mtdItId.value, "MTDITID", Some(Set(SaRef(saAgentRef))), syncToETMPStatus = None, syncToGGStatus = None)
-  val defaultRecordForMtdVat = RelationshipCopyRecord(arn.value, vrn.value, "MTDVATID", Some(Set(VatRef(agentVrn))), syncToETMPStatus = None, syncToGGStatus = None)
+  val defaultRecordForMtdVat = RelationshipCopyRecord(arn.value, vrn.value, "MTDVATID", Some(Set(VatRef(agentCodeForVatDecAgent))), syncToETMPStatus = None, syncToGGStatus = None)
 
   val gg = resettingMock[GovernmentGatewayProxyConnector]
   val des = resettingMock[DesConnector]
@@ -76,7 +76,7 @@ class RelationshipsServiceSpec extends UnitSpec
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -103,7 +103,7 @@ class RelationshipsServiceSpec extends UnitSpec
         relationshipWillBeCreated(mtdItId)
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItId) {
-          relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+          relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -129,7 +129,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         cesaRelationshipDoesNotExist()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEtmpRecordNotCreated()
@@ -150,7 +150,7 @@ class RelationshipsServiceSpec extends UnitSpec
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -178,7 +178,7 @@ class RelationshipsServiceSpec extends UnitSpec
         relationshipWillBeCreated(mtdItId)
 
         val maybeCheck = await(lockService.tryLock(arn, mtdItId) {
-          relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+          relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -205,7 +205,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         cesaRelationshipDoesNotExist()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyGgRecordNotCreated()
@@ -229,7 +229,7 @@ class RelationshipsServiceSpec extends UnitSpec
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -258,7 +258,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         cesaRelationshipDoesNotExist()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyGgRecordNotCreated()
@@ -274,7 +274,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val request = FakeRequest()
 
       mappingServiceUnavailable()
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
       verifyGgRecordNotCreated()
@@ -294,7 +294,7 @@ class RelationshipsServiceSpec extends UnitSpec
       cesaRelationshipExists()
       relationshipWillBeCreated(mtdItId)
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -320,7 +320,7 @@ class RelationshipsServiceSpec extends UnitSpec
       cesaRelationshipExists()
       relationshipWillBeCreated(mtdItId)
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCode)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -346,7 +346,7 @@ class RelationshipsServiceSpec extends UnitSpec
         oldGGRelationshipExists()
         relationshipWillBeCreated(vrn)
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -373,7 +373,7 @@ class RelationshipsServiceSpec extends UnitSpec
         relationshipWillBeCreated(vrn)
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vrn) {
-          relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+          relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -399,7 +399,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         oldGGRelationshipDoesNotExist()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEtmpRecordNotCreatedForMtdVat()
@@ -420,7 +420,7 @@ class RelationshipsServiceSpec extends UnitSpec
         oldGGRelationshipExists()
         relationshipWillBeCreated(vrn)
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -448,7 +448,7 @@ class RelationshipsServiceSpec extends UnitSpec
         relationshipWillBeCreated(vrn)
 
         val maybeCheck = await(lockService.tryLock(arn, vrn) {
-          relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+          relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -475,7 +475,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         oldGGRelationshipDoesNotExist()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyGgRecordNotCreated()
@@ -499,7 +499,7 @@ class RelationshipsServiceSpec extends UnitSpec
         oldGGRelationshipExists()
         relationshipWillBeCreated(vrn)
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -528,7 +528,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         oldGGRelationshipDoesNotExist()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyGgRecordNotCreated()
@@ -543,7 +543,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val auditData = new AuditData()
       val request = FakeRequest()
       mappingServiceUnavailableForMtdVat()
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
 
@@ -564,7 +564,7 @@ class RelationshipsServiceSpec extends UnitSpec
       oldGGRelationshipExists()
       relationshipWillBeCreated(vrn)
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -590,7 +590,7 @@ class RelationshipsServiceSpec extends UnitSpec
       oldGGRelationshipExists()
       relationshipWillBeCreated(vrn)
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCode)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -651,7 +651,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val auditData = new AuditData()
         val request = FakeRequest()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, identifier, eventualAgentCode)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, identifier, eventualAgentCodeForAsAgent)(ec, hc, request, auditData)
 
         await(check) shouldBe CopyRelationshipNotEnabled
 
@@ -667,8 +667,8 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def oldGGRelationshipDoesNotExist(): Unit = {
-    when(gg.getAllocatedAgentVrnsForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
-    when(mapping.getAgentVrnsFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
+    when(gg.getAllocatedAgentCodesForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
   }
 
   private def mappingServiceUnavailable(): Unit = {
@@ -678,8 +678,8 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def mappingServiceUnavailableForMtdVat(): Unit = {
-    when(gg.getAllocatedAgentVrnsForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
-    when(mapping.getAgentVrnsFor(eqs(arn))(eqs(hc))).thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
+    when(gg.getAllocatedAgentCodesForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
 
   private def cesaRelationshipExists(): Unit = {
@@ -689,13 +689,13 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def oldGGRelationshipExists(): Unit = {
-    when(gg.getAllocatedAgentVrnsForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
-    when(mapping.getAgentVrnsFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq(agentVrn)))
+    when(gg.getAllocatedAgentCodesForHmceVatDec(eqs(vrn))(eqs(hc))).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
 
   private def relationshipWillBeCreated(identifier: TaxIdentifier): Unit = {
     when(des.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
-    when(gg.allocateAgent(eqs(agentCode), eqs(identifier))(eqs(hc))).thenReturn(Future successful true)
+    when(gg.allocateAgent(eqs(agentCodeForAsAgent), eqs(identifier))(eqs(hc))).thenReturn(Future successful true)
   }
 
   def verifyEtmpRecordCreated(): Unit = {
@@ -715,19 +715,19 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   def verifyGgRecordCreated(): Unit = {
-    verify(gg).allocateAgent(eqs(agentCode), eqs(mtdItId))(eqs(hc))
+    verify(gg).allocateAgent(eqs(agentCodeForAsAgent), eqs(mtdItId))(eqs(hc))
   }
 
   def verifyGgRecordNotCreated(): Unit = {
-    verify(gg, never()).allocateAgent(eqs(agentCode), eqs(mtdItId))(eqs(hc))
+    verify(gg, never()).allocateAgent(eqs(agentCodeForAsAgent), eqs(mtdItId))(eqs(hc))
   }
 
   def verifyGgRecordCreatedForMtdVat(): Unit = {
-    verify(gg).allocateAgent(eqs(agentCode), eqs(vrn))(eqs(hc))
+    verify(gg).allocateAgent(eqs(agentCodeForAsAgent), eqs(vrn))(eqs(hc))
   }
 
   def verifyGgRecordNotCreatedMtdVat(): Unit = {
-    verify(gg, never()).allocateAgent(eqs(agentCode), eqs(vrn))(eqs(hc))
+    verify(gg, never()).allocateAgent(eqs(agentCodeForAsAgent), eqs(vrn))(eqs(hc))
   }
 
   def verifyAuditEventSent(): Map[String, Any] = {

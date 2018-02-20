@@ -81,7 +81,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "arn",
     "service",
     "vrn",
-    "agentVrns",
+    "oldAgentCodes",
     "GGRelationship",
     "etmpRelationshipCreated",
     "enrolmentDelegated",
@@ -101,7 +101,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   val CheckGGDetailsFields = Seq(
     "agentCode",
     "credId",
-    "agentVrns",
+    "oldAgentCodes",
     "vrn",
     "arn",
     "GGRelationship"

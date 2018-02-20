@@ -21,14 +21,16 @@ import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+import play.api.libs.json.Json.format
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
-import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
+import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 case class SaMappings(mappings: Seq[SaMapping])
 
@@ -39,13 +41,13 @@ object SaMappings {
   implicit val reads = Json.reads[SaMappings]
 }
 
-case class VatMappings(mappings: Seq[VatMapping])
+case class AgentCodeMappings(mappings: Seq[AgentCodeMapping])
 
-case class VatMapping(arn: Arn, vrn: Vrn)
+case class AgentCodeMapping(arn: Arn, agentCode: AgentCode)
 
-object VatMappings {
-  implicit val mappingReads = Json.reads[VatMapping]
-  implicit val reads = Json.reads[VatMappings]
+object AgentCodeMappings {
+  implicit val mappingReads = Json.reads[AgentCodeMapping]
+  implicit val reads = Json.reads[AgentCodeMappings]
 }
 
 @Singleton
@@ -60,11 +62,13 @@ class MappingConnector @Inject()(
     val url = new URL(baseUrl, s"/agent-mapping/mappings/${arn.value}")
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[SaMappings](url.toString)}
       .map(_.mappings.map(_.saAgentReference))
+
+
   }
 
-  def getAgentVrnsFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[Vrn]] = {
-    val url = new URL(baseUrl, s"/agent-mapping/mappings/vat/${arn.value}")
-    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[VatMappings](url.toString)}
-      .map(_.mappings.map(_.vrn))
+  def getAgentCodesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[AgentCode]] = {
+    val url = new URL(baseUrl, s"/agent-mapping/mappings/agentcode/${arn.value}")
+    monitor(s"ConsumedAPI-Digital-Mappings-GET") {httpGet.GET[AgentCodeMappings](url.toString)}
+      .map(_.mappings.map(_.agentCode))
   }
 }

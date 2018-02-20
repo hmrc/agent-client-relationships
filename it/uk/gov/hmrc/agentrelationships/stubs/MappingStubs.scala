@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
-import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 
 trait MappingStubs {
 
@@ -24,21 +24,21 @@ trait MappingStubs {
     )
   }
 
-  def givenArnIsKnownFor(arn: Arn, vrn: Vrn) = {
+  def givenArnIsKnownFor(arn: Arn, agentCode: AgentCode) = {
     stubFor(
-      get(urlEqualTo(s"/agent-mapping/mappings/vat/${arn.value}"))
+      get(urlEqualTo(s"/agent-mapping/mappings/agentcode/${arn.value}"))
         .willReturn(aResponse()
           .withStatus(200)
-          .withBody(s"""{"mappings":[{"arn":"${arn.value}","vrn":"${vrn.value}"}]}"""))
+          .withBody(s"""{"mappings":[{"arn":"${arn.value}","agentCode":"${agentCode.value}"}]}"""))
     )
   }
 
-  def givenArnIsKnownForVrns(arn: Arn, vrns: Seq[Vrn]) = {
+  def givenArnIsKnownForAgentCodes(arn: Arn, agentCodes: Seq[AgentCode]) = {
     stubFor(
-      get(urlEqualTo(s"/agent-mapping/mappings/vat/${arn.value}"))
+      get(urlEqualTo(s"/agent-mapping/mappings/agentcode/${arn.value}"))
         .willReturn(aResponse()
           .withStatus(200)
-          .withBody(s"""{"mappings":[${vrns.map(vrn => s"""{"arn":"${arn.value}","vrn":"${vrn.value}"}""").mkString(",")}]}"""))
+          .withBody(s"""{"mappings":[${agentCodes.map(agentCode => s"""{"arn":"${arn.value}","agentCode":"${agentCode.value}"}""").mkString(",")}]}"""))
     )
   }
 
