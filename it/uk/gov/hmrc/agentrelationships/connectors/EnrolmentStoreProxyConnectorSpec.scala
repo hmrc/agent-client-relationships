@@ -50,13 +50,13 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       }
     }
 
-    "return some client's groupIds for given MTDITID" in {
+    "return some agents's groupIds for given MTDITID" in {
       givenAuditConnector()
       givenGroupIdsExistForMTDITID(MtdItId("foo"), Set("bar", "car", "dar"))
       await(connector.getDelegatedGroupIdsFor(MtdItId("foo"))) should contain("bar")
     }
 
-    "return Empty when MTDITIT not found" in {
+    "return Empty when MTDITID not found" in {
       givenAuditConnector()
       givenGroupIdsNotExistForMTDITID(MtdItId("foo"))
       await(connector.getDelegatedGroupIdsFor(MtdItId("foo"))) should be(empty)
