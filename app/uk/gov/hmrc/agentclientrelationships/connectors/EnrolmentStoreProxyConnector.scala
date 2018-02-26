@@ -58,7 +58,7 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   // ES0 - principal
-  def getUserIdFor(taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] = {
+  def getPrincipalUserIdFor(taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] = {
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=principal")
@@ -79,7 +79,7 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
   }
 
   // ES1 - principal
-  def getGroupIdFor(taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] = {
+  def getPrincipalGroupIdFor(taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] = {
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")

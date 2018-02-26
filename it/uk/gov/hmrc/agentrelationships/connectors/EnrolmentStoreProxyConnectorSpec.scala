@@ -39,14 +39,14 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
     "return some agent's groupId for given ARN" in {
       givenAuditConnector()
       givenPrincipalGroupIdExistsFor(Arn("foo"),"bar")
-      await(connector.getGroupIdFor(Arn("foo"))) shouldBe "bar"
+      await(connector.getPrincipalGroupIdFor(Arn("foo"))) shouldBe "bar"
     }
 
     "return EnrolmentStoreDataNotFound Exception when ARN not found" in {
       givenAuditConnector()
       givenPrincipalGroupIdNotExistsFor(Arn("foo"))
       an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
-        await(connector.getGroupIdFor(Arn("foo")))
+        await(connector.getPrincipalGroupIdFor(Arn("foo")))
       }
     }
 
@@ -89,42 +89,42 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
     "return some clients userId for given MTDITID" in {
       givenAuditConnector()
       givenPrincipalUserIdsExistFor(MtdItId("foo"), "bar")
-      await(connector.getUserIdFor(MtdItId("foo"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdFor(MtdItId("foo"))) shouldBe "bar"
     }
 
     "return EnrolmentStoreDataNotFound Exception when MTDITID not found" in {
       givenAuditConnector()
       givenPrincipalUserIdsNotExistFor(MtdItId("foo"))
       an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
-        await(connector.getUserIdFor(MtdItId("foo")))
+        await(connector.getPrincipalUserIdFor(MtdItId("foo")))
       }
     }
 
     "return some clients userId for given NINO" in {
       givenAuditConnector()
       givenPrincipalUserIdsExistFor(Nino("AB123456C"), "bar")
-      await(connector.getUserIdFor(Nino("AB123456C"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdFor(Nino("AB123456C"))) shouldBe "bar"
     }
 
     "return EnrolmentStoreDataNotFound Exception when NINO not found" in {
       givenAuditConnector()
       givenPrincipalUserIdsNotExistFor(Nino("AB123456C"))
       an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
-        await(connector.getUserIdFor(Nino("AB123456C")))
+        await(connector.getPrincipalUserIdFor(Nino("AB123456C")))
       }
     }
 
     "return some clients userId for given VRN" in {
       givenAuditConnector()
       givenPrincipalUserIdsExistFor(Vrn("foo"), "bar")
-      await(connector.getUserIdFor(Vrn("foo"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdFor(Vrn("foo"))) shouldBe "bar"
     }
 
     "return EnrolmentStoreDataNotFound Exception when VRN not found" in {
       givenAuditConnector()
       givenPrincipalUserIdsNotExistFor(Vrn("foo"))
       an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
-        await(connector.getUserIdFor(Vrn("foo")))
+        await(connector.getPrincipalUserIdFor(Vrn("foo")))
       }
     }
   }
