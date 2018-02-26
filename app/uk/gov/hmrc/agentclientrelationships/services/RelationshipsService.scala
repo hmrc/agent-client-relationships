@@ -86,7 +86,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } yield result
 
   def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentCode: Future[AgentCode])
-                                    (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+                                    (implicit ec: ExecutionContext, hc: HeaderCarrier,
+                                     request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
       if (copyRelationshipFlag) body else returnValue(CopyRelationshipNotEnabled)
@@ -133,7 +134,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   }
 
   private def checkGGForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentCode: Future[AgentCode])
-                                        (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+                                        (implicit ec: ExecutionContext, hc: HeaderCarrier,
+                                         request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingGGRelationship")
     auditData.set("service", "mtd-vat")

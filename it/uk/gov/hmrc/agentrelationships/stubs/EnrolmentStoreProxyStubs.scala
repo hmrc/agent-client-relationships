@@ -1,15 +1,17 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
+import uk.gov.hmrc.domain.TaxIdentifier
 
-trait EnrolmentStoreProxyStubs {
+trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
 
   private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store/enrolments"
   private val teBaseUrl = s"/tax-enrolments"
 
-  def givenGroupIdExistsForArn(arn: Arn, groupId: String) = {
-    stubFor(get(urlEqualTo(s"$esBaseUrl/HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}/groups?type=principal"))
+  def givenPrincipalGroupIdExistsFor(taxIdentifier: TaxIdentifier, groupId: String) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=principal"))
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -21,8 +23,9 @@ trait EnrolmentStoreProxyStubs {
           """.stripMargin)))
   }
 
-  def givenGroupIdNotExistsForArn(arn: Arn) = {
-    stubFor(get(urlEqualTo(s"$esBaseUrl/HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}/groups?type=principal"))
+  def givenPrincipalGroupIdNotExistsFor(taxIdentifier: TaxIdentifier) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=principal"))
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -32,8 +35,9 @@ trait EnrolmentStoreProxyStubs {
           """.stripMargin)))
   }
 
-  def givenGroupIdsExistForMTDITID(mtdItId: MtdItId, groupIds: Set[String]) = {
-    stubFor(get(urlEqualTo(s"$esBaseUrl/HMRC-MTD-IT~MTDITID~${mtdItId.value}/groups?type=delegated"))
+  def givenDelegatedGroupIdsExistFor(taxIdentifier: TaxIdentifier, groupIds: Set[String]) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -45,8 +49,9 @@ trait EnrolmentStoreProxyStubs {
           """.stripMargin)))
   }
 
-  def givenGroupIdsNotExistForMTDITID(mtdItId: MtdItId) = {
-    stubFor(get(urlEqualTo(s"$esBaseUrl/HMRC-MTD-IT~MTDITID~${mtdItId.value}/groups?type=delegated"))
+  def givenDelegatedGroupIdsNotExistFor(taxIdentifier: TaxIdentifier) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -56,8 +61,9 @@ trait EnrolmentStoreProxyStubs {
           """.stripMargin)))
   }
 
-  def givenUserIdsExistForMTDITID(mtdItId: MtdItId, userId: String) = {
-    stubFor(get(urlEqualTo(s"$esBaseUrl/HMRC-MTD-IT~MTDITID~${mtdItId.value}/users?type=principal"))
+  def givenPrincipalUserIdsExistFor(taxIdentifier: TaxIdentifier, userId: String) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/users?type=principal"))
       .willReturn(aResponse()
         .withBody(
           s"""
@@ -69,8 +75,9 @@ trait EnrolmentStoreProxyStubs {
           """.stripMargin)))
   }
 
-  def givenUserIdsNotExistForMTDITID(mtdItId: MtdItId) = {
-    stubFor(get(urlEqualTo(s"$esBaseUrl/HMRC-MTD-IT~MTDITID~${mtdItId.value}/users?type=principal"))
+  def givenPrincipalUserIdsNotExistFor(taxIdentifier: TaxIdentifier) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/users?type=principal"))
       .willReturn(aResponse()
         .withBody(
           s"""
