@@ -11,7 +11,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -138,10 +138,40 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
     }
 
-    "throw an exception if allocation failed" in {
+    "throw an exception if allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
       givenEnrolmentAllocationFailsWith(404)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      an[Exception] shouldBe thrownBy {
+      an[NotFoundException] shouldBe thrownBy {
+        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+      }
+    }
+
+    "throw an exception if allocation failed because of bad request" in {
+      givenAuditConnector()
+      givenEnrolmentAllocationFailsWith(400)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      an[BadRequestException] shouldBe thrownBy {
+        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+      }
+    }
+
+    "throw an exception if allocation failed because of unauthorized" in {
+      givenAuditConnector()
+      givenEnrolmentAllocationFailsWith(401)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      an[Upstream4xxResponse] shouldBe thrownBy {
+        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+      }
+    }
+
+    "keep calm if conflict reported" in {
+      givenAuditConnector()
+      givenEnrolmentAllocationFailsWith(409)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+    }
+
+    "throw an exception if service not available when allocating enrolment" in {
+      givenAuditConnector()
+      givenEnrolmentAllocationFailsWith(503)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      an[Upstream5xxResponse] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
     }
@@ -152,10 +182,34 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
     }
 
-    "throw an exception if de-allocation failed" in {
+    "throw an exception if de-allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
       givenEnrolmentDeallocationFailsWith(404)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      an[Exception] shouldBe thrownBy {
+      an[NotFoundException] shouldBe thrownBy {
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+      }
+    }
+
+    "throw an exception if de-allocation failed because of bad request" in {
+      givenAuditConnector()
+      givenEnrolmentDeallocationFailsWith(400)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      an[BadRequestException] shouldBe thrownBy {
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+      }
+    }
+
+    "throw an exception if de-allocation failed because of unauthorized" in {
+      givenAuditConnector()
+      givenEnrolmentDeallocationFailsWith(401)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      an[Upstream4xxResponse] shouldBe thrownBy {
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+      }
+    }
+
+    "throw an exception if service not available when de-allocating enrolment" in {
+      givenAuditConnector()
+      givenEnrolmentDeallocationFailsWith(503)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      an[Upstream5xxResponse] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
       }
     }

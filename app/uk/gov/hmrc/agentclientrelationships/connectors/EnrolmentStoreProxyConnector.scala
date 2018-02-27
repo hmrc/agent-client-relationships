@@ -22,7 +22,9 @@ import javax.inject.{Inject, Named, Singleton}
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
+import play.api.http.Status
 import play.api.libs.json.JsObject
+import play.api.mvc.Results
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
@@ -99,9 +101,15 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")
-    monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent_${enrolmentKeyPrefix.replace("~", "_")}-POST") {
+    monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKeyPrefix.replace("~", "_")}-POST") {
       http.POSTString[HttpResponse](url.toString, s"""{"userId":"$userId","type":"delegated"}""")
-    }.map(_ => ())
+    }
+      .map(_ => ())
+      .recover {
+        case e: Upstream4xxResponse if e.upstreamResponseCode==Status.CONFLICT =>
+          Logger.warn(s"An attempt to allocate new enrolment $enrolmentKeyPrefix resulted in conflict with an existing one.")
+          ()
+      }
   }
 
   // ES9
@@ -110,7 +118,7 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")
-    monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent_${enrolmentKeyPrefix.replace("~", "_")}-DELETE") {
+    monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKeyPrefix.replace("~", "_")}-DELETE") {
       http.DELETE[HttpResponse](url.toString)
     }.map(_ => ())
   }
