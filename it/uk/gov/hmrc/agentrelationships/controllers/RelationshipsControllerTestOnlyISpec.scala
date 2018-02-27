@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RelationshipTestOnlyISpec extends UnitSpec
+class RelationshipsControllerTestOnlyISpec extends UnitSpec
   with MongoApp
   with OneServerPerSuite
   with WireMockSupport
