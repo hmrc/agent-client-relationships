@@ -48,7 +48,7 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
       .map(json => {
         val userIds = (json \ "principalUserIds").as[Seq[String]]
         if (userIds.isEmpty) {
-          throw RelationshipNotFound(s"INVALID_${identifierName(taxIdentifier)}")
+          throw RelationshipNotFound(s"UNKNOWN_${identifierName(taxIdentifier)}")
         } else {
           if (userIds.lengthCompare(1) > 0) {
             Logger.warn(s"Multiple userIds found for $enrolmentKeyPrefix")
@@ -69,7 +69,7 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
       .map(json => {
         val groupIds = (json \ "principalGroupIds").as[Seq[String]]
         if (groupIds.isEmpty) {
-          throw RelationshipNotFound(s"INVALID_${identifierName(taxIdentifier)}")
+          throw RelationshipNotFound(s"UNKNOWN_${identifierName(taxIdentifier)}")
         } else {
           if (groupIds.lengthCompare(1) > 0) {
             Logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")

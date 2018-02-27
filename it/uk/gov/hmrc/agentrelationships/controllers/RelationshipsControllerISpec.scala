@@ -440,7 +440,7 @@ class RelationshipsControllerISpec extends UnitSpec
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
     "return 502 when mapping service is unavailable" in {
@@ -870,7 +870,7 @@ class RelationshipsControllerISpec extends UnitSpec
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
     "return 502 when mapping service is unavailable" in {
@@ -1202,7 +1202,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
     "return 404 when agent code is not found in ugs" in {
