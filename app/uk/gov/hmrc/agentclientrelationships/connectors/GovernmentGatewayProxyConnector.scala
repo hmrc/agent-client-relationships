@@ -27,14 +27,15 @@ import org.apache.xerces.impl.Constants._
 import play.api.http.ContentTypes.XML
 import play.api.http.HeaderNames.CONTENT_TYPE
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, Nino, TaxIdentifier}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpPost}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
 import scala.xml.Elem
 import scala.xml.XML.withSAXParser
-import uk.gov.hmrc.http.{HeaderCarrier, HttpPost}
 
 @Singleton
 class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy-baseUrl") baseUrl: URL, httpPost: HttpPost, metrics: Metrics)
@@ -178,5 +179,3 @@ class GovernmentGatewayProxyConnector @Inject()(@Named("government-gateway-proxy
       <AgentCode>{agentCode}</AgentCode>
     </GsoAdminDeallocateAgentXmlInput>.toString()
 }
-
-case class RelationshipNotFound(errorCode: String) extends Exception(errorCode)

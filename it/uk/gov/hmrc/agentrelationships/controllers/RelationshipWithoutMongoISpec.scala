@@ -26,9 +26,9 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, GovernmentGatewayProxyStubs, MappingStubs}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -45,7 +45,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
   with MongoApp
   with OneServerPerSuite
   with WireMockSupport
-  with GovernmentGatewayProxyStubs
+  with RelationshipStubs
   with DesStubs
   with MappingStubs
   with DataStreamStub {
@@ -56,7 +56,9 @@ class RelationshipWithoutMongoISpec extends UnitSpec
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.government-gateway-proxy.port" -> wireMockPort,
+        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+        "microservice.services.tax-enrolments.port" -> wireMockPort,
+        "microservice.services.users-groups-search.port" -> wireMockPort,
         "microservice.services.des.port" -> wireMockPort,
         "microservice.services.auth.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
@@ -77,33 +79,33 @@ class RelationshipWithoutMongoISpec extends UnitSpec
   }
 
   val arn = "AARN0000002"
-  val mtditid = "ABCDEF123456789"
-  val nino = "AB123456C"
-  val vrn = "101747641"
+  val mtditid = MtdItId("ABCDEF123456789")
+  val nino = Nino("AB123456C")
+  val vrn = Vrn("101747641")
   val oldAgentCode = "oldAgentCode"
   val mtdVatIdType = "MTDVATID"
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
 
-    val identifier: String = mtditid
+    val identifier: TaxIdentifier = mtditid
     val identifierType: String = "MTDITID"
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(identifier)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
+      givenPrincipalUser(Arn(arn), "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(identifier)
+      givenNinoIsKnownFor(mtditid, nino)
+      givenMtdItIdIsKnownFor(nino, mtditid)
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
+      givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
 
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 
@@ -116,12 +118,12 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn,
-          "credId" -> "foo",
+          "credId" -> "any",
           "agentCode" -> "bar",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "service" -> "mtd-it",
-          "clientId" -> mtditid,
+          "clientId" -> mtditid.value,
           "clientIdType" -> "ni",
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "false",
@@ -139,9 +141,9 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn,
-          "credId" -> "foo",
+          "credId" -> "any",
           "agentCode" -> "bar",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),
@@ -155,17 +157,16 @@ class RelationshipWithoutMongoISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
 
-    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
+    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     "return 200 when relationship exists mapping and gg and relationship copy attempt fails because of mongo" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
-
+      givenPrincipalUser(Arn(arn), "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
 
 
@@ -182,10 +183,10 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn,
-          "credId" -> "foo",
+          "credId" -> "any",
           "agentCode" -> "bar",
           "service" -> "mtd-vat",
-          "vrn" -> vrn,
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
           "GGRelationship" -> "true",
           "etmpRelationshipCreated" -> "false",
@@ -203,10 +204,10 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         event = AgentClientRelationshipEvent.CheckGG,
         detail = Map(
           "arn" -> arn,
-          "credId" -> "foo",
+          "credId" -> "any",
           "agentCode" -> "bar",
           "GGRelationship" -> "true",
-          "vrn" -> vrn,
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode
         ),
         tags = Map(
@@ -221,15 +222,15 @@ class RelationshipWithoutMongoISpec extends UnitSpec
 
     val requestPath = s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"
 
-    val identifier: String = nino
+    val identifier: TaxIdentifier = nino
     val identifierType: String = "NINO"
 
     "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
       givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier, "clientIdentifierType" -> identifierType)
+      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 
@@ -246,7 +247,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn,
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),

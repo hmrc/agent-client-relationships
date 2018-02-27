@@ -23,8 +23,9 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
+import uk.gov.hmrc.http._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,7 +36,7 @@ case class GroupInfo(
                     )
 
 object GroupInfo {
-  implicit val reads: Reads[GroupInfo] = Json.reads[GroupInfo]
+  implicit val formats: Format[GroupInfo] = Json.format[GroupInfo]
 }
 
 @Singleton
@@ -50,6 +51,8 @@ class UsersGroupsSearchConnector @Inject()(
     val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId")
     monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
       httpGet.GET[GroupInfo](url.toString)
+    } recoverWith {
+      case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_AGENT_CODE")
     }
   }
 }

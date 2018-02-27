@@ -1,6 +1,7 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -35,8 +36,21 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
           """.stripMargin)))
   }
 
+  private def urlContains(str: String): UrlPattern = new UrlPattern(containing(str),false){
+    override def `match`(url: String): MatchResult = pattern.`match`(url)
+  }
+
+  def givenPrincipalGroupIdRequestFailsWith(status: Int) = {
+    stubFor(get(urlContains("/groups?type=principal"))
+      .willReturn(aResponse().withStatus(status)))
+  }
+
   def givenDelegatedGroupIdsExistFor(taxIdentifier: TaxIdentifier, groupIds: Set[String]) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    givenDelegatedGroupIdsExistForKey(enrolmentKey,groupIds)
+  }
+
+  def givenDelegatedGroupIdsExistForKey(enrolmentKey: String, groupIds: Set[String]) = {
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
       .willReturn(aResponse()
         .withBody(
@@ -61,7 +75,12 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
           """.stripMargin)))
   }
 
-  def givenPrincipalUserIdsExistFor(taxIdentifier: TaxIdentifier, userId: String) = {
+  def givenDelegatedGroupIdRequestFailsWith(status: Int) = {
+    stubFor(get(urlContains("/groups?type=delegated"))
+      .willReturn(aResponse().withStatus(status)))
+  }
+
+  def givenPrincipalUserIdExistFor(taxIdentifier: TaxIdentifier, userId: String) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/users?type=principal"))
       .willReturn(aResponse()
@@ -75,7 +94,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
           """.stripMargin)))
   }
 
-  def givenPrincipalUserIdsNotExistFor(taxIdentifier: TaxIdentifier) = {
+  def givenPrincipalUserIdNotExistFor(taxIdentifier: TaxIdentifier) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/users?type=principal"))
       .willReturn(aResponse()
@@ -120,6 +139,16 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
     )
   }
 
+  def givenEnrolmentDeallocationSucceeds(groupId: String, taxIdentifier: TaxIdentifier, agentCode: String) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
+        .willReturn(
+          aResponse().withStatus(204)
+        )
+    )
+  }
+
   def givenEnrolmentDeallocationSucceeds(groupId: String, key: String, identifier: String, value: String, agentCode: String) = {
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
@@ -137,6 +166,13 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
           aResponse().withStatus(responseStatus)
         )
     )
+  }
+
+  def givenEsIsUnavailable() = {
+    stubFor(any(urlMatching(s"$esBaseUrl/.*"))
+      .willReturn(aResponse().withStatus(503)))
+    stubFor(any(urlMatching(s"$teBaseUrl/.*"))
+      .willReturn(aResponse().withStatus(503)))
   }
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)

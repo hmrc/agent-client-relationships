@@ -7,6 +7,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UsersGroupsSearchConnector}
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.AgentCode
@@ -46,6 +47,14 @@ class UsersGroupsSearchConnectorSpec extends UnitSpec with OneServerPerSuite wit
       givenNonAgentGroupExistsFor("foo")
       await(connector.getGroupInfo("foo")) shouldBe GroupInfo("foo", Some("Organisation"), None)
     }
+
+    "throw exception if group not exists" in {
+      givenAuditConnector()
+      givenGroupNotExistsFor("foo")
+      an[RelationshipNotFound] shouldBe thrownBy {
+        await(connector.getGroupInfo("foo"))
+      }
+    }
   }
 
   def givenAgentGroupExistsFor(groupId: String): Unit = {
@@ -78,6 +87,11 @@ class UsersGroupsSearchConnectorSpec extends UnitSpec with OneServerPerSuite wit
              |  "affinityGroup": "Organisation"
              |}
           """.stripMargin)))
+  }
+
+  def givenGroupNotExistsFor(groupId:String) = {
+    stubFor(get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
+      .willReturn(aResponse().withStatus(404)))
   }
 
 }

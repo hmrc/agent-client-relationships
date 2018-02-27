@@ -5,7 +5,8 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.WSHttp
-import uk.gov.hmrc.agentclientrelationships.connectors.{Enrolment, EnrolmentStoreDataNotFound, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
@@ -42,10 +43,10 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       await(connector.getPrincipalGroupIdFor(Arn("foo"))) shouldBe "bar"
     }
 
-    "return EnrolmentStoreDataNotFound Exception when ARN not found" in {
+    "return RelationshipNotFound Exception when ARN not found" in {
       givenAuditConnector()
       givenPrincipalGroupIdNotExistsFor(Arn("foo"))
-      an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
+      an[RelationshipNotFound] shouldBe thrownBy {
         await(connector.getPrincipalGroupIdFor(Arn("foo")))
       }
     }
@@ -88,42 +89,42 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
 
     "return some clients userId for given MTDITID" in {
       givenAuditConnector()
-      givenPrincipalUserIdsExistFor(MtdItId("foo"), "bar")
+      givenPrincipalUserIdExistFor(MtdItId("foo"), "bar")
       await(connector.getPrincipalUserIdFor(MtdItId("foo"))) shouldBe "bar"
     }
 
-    "return EnrolmentStoreDataNotFound Exception when MTDITID not found" in {
+    "return RelationshipNotFound Exception when MTDITID not found" in {
       givenAuditConnector()
-      givenPrincipalUserIdsNotExistFor(MtdItId("foo"))
-      an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
+      givenPrincipalUserIdNotExistFor(MtdItId("foo"))
+      an[RelationshipNotFound] shouldBe thrownBy {
         await(connector.getPrincipalUserIdFor(MtdItId("foo")))
       }
     }
 
     "return some clients userId for given NINO" in {
       givenAuditConnector()
-      givenPrincipalUserIdsExistFor(Nino("AB123456C"), "bar")
+      givenPrincipalUserIdExistFor(Nino("AB123456C"), "bar")
       await(connector.getPrincipalUserIdFor(Nino("AB123456C"))) shouldBe "bar"
     }
 
-    "return EnrolmentStoreDataNotFound Exception when NINO not found" in {
+    "return RelationshipNotFound Exception when NINO not found" in {
       givenAuditConnector()
-      givenPrincipalUserIdsNotExistFor(Nino("AB123456C"))
-      an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
+      givenPrincipalUserIdNotExistFor(Nino("AB123456C"))
+      an[RelationshipNotFound] shouldBe thrownBy {
         await(connector.getPrincipalUserIdFor(Nino("AB123456C")))
       }
     }
 
     "return some clients userId for given VRN" in {
       givenAuditConnector()
-      givenPrincipalUserIdsExistFor(Vrn("foo"), "bar")
+      givenPrincipalUserIdExistFor(Vrn("foo"), "bar")
       await(connector.getPrincipalUserIdFor(Vrn("foo"))) shouldBe "bar"
     }
 
-    "return EnrolmentStoreDataNotFound Exception when VRN not found" in {
+    "return RelationshipNotFound Exception when VRN not found" in {
       givenAuditConnector()
-      givenPrincipalUserIdsNotExistFor(Vrn("foo"))
-      an[EnrolmentStoreDataNotFound] shouldBe thrownBy {
+      givenPrincipalUserIdNotExistFor(Vrn("foo"))
+      an[RelationshipNotFound] shouldBe thrownBy {
         await(connector.getPrincipalUserIdFor(Vrn("foo")))
       }
     }
@@ -133,29 +134,29 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
 
     "allocate an enrolment to an agent" in {
       givenAuditConnector()
-      givenEnrolmentAllocationSucceeds("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
-      await(connector.allocateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+      givenEnrolmentAllocationSucceeds("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
     }
 
     "throw an exception if allocation failed" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(404)("group1", "user1", "FOO", "FOO-ID", "ABC1233", "bar")
+      givenEnrolmentAllocationFailsWith(404)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
       an[Exception] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
     }
 
     "de-allocate an enrolment from an agent" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationSucceeds("group1", "FOO", "FOO-ID", "ABC1233", "bar")
-      await(connector.deallocateEnrolmentFromAgent("group1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+      givenEnrolmentDeallocationSucceeds("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
     }
 
     "throw an exception if de-allocation failed" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(404)("group1", "FOO", "FOO-ID", "ABC1233", "bar")
+      givenEnrolmentDeallocationFailsWith(404)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
       an[Exception] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", Enrolment("FOO", "FOO-ID", "ABC1233"), AgentCode("bar")))
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
       }
     }
   }

@@ -167,7 +167,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
   "DesConnector CreateAgentRelationship" should {
     "create relationship between agent and client and return 200" in {
-      givenAgentCanBeAllocatedInDes("foo","bar")
+      givenAgentCanBeAllocatedInDes(MtdItId("foo"),"bar")
       givenAuditConnector()
       await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }
@@ -179,17 +179,17 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "request body contains service as ITSA when client Id is an MtdItId" in {
-      givenAgentCanBeAllocatedInDes("someMtdItId","someArn")
+      givenAgentCanBeAllocatedInDes(MtdItId("foo"),"someArn")
       givenAuditConnector()
 
-      await(desConnector.createAgentRelationship(MtdItId("someMtdItId"), Arn("someArn")))
+      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("someArn")))
 
       verify(1, postRequestedFor(urlPathEqualTo("/registration/relationship"))
         .withRequestBody(equalToJson(s"""{ "regime": "ITSA"}""", true, true)))
     }
 
     "request body contains service as TAVC when client Id is a Vrn" in {
-      givenAgentCanBeAllocatedInDes("someVrn","someArn")
+      givenAgentCanBeAllocatedInDes(Vrn("someVrn"),"someArn")
       givenAuditConnector()
 
       await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
@@ -201,7 +201,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
   "DesConnector DeleteAgentRelationship" should {
     "delete relationship between agent and client and return 200" in {
-      givenAgentCanBeDeallocatedInDes("foo","bar")
+      givenAgentCanBeDeallocatedInDes(MtdItId("foo"),"bar")
       givenAuditConnector()
       await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }

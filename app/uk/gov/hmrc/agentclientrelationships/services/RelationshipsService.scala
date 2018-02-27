@@ -27,6 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -58,34 +59,39 @@ final case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
+case class AgentUser(userId: String, groupId: String, agentCode: AgentCode)
+
 @Singleton
-class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
+class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
                                      des: DesConnector,
                                      mapping: MappingConnector,
+                                     ugs: UsersGroupsSearchConnector,
                                      relationshipCopyRepository: RelationshipCopyRecordRepository,
                                      lockService: RecoveryLockService,
                                      auditService: AuditService,
                                      @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
                                      @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) {
 
-  def getAgentCodeFor(arn: Arn)
-                     (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentCode] =
+  def getAgentUserFor(arn: Arn)
+                     (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     for {
-      credentialIdentifier <- gg.getCredIdFor(arn)
-      _ = auditData.set("credId", credentialIdentifier)
-      agentCode <- gg.getAgentCodeFor(credentialIdentifier)
+      agentGroupId <- es.getPrincipalGroupIdFor(arn)
+      agentUserId <- es.getPrincipalUserIdFor(arn)
+      _ = auditData.set("credId", agentUserId)
+      groupInfo <- ugs.getGroupInfo(agentGroupId)
+      agentCode = groupInfo.agentCode.getOrElse(throw new Exception(s"Missing AgentCode for $arn"))
       _ = auditData.set("agentCode", agentCode)
-    } yield agentCode
+    } yield AgentUser(agentUserId, agentGroupId, agentCode)
 
-  def checkForRelationship(identifier: TaxIdentifier, agentCode: AgentCode)
+  def checkForRelationship(identifier: TaxIdentifier, agentUser: AgentUser)
                           (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, Boolean]] =
     for {
-      allocatedAgents <- gg.getAllocatedAgentCodes(identifier)
-      result <- if (allocatedAgents.contains(agentCode)) returnValue(Right(true))
+      allocatedGroupIds <- es.getDelegatedGroupIdsFor(identifier)
+      result <- if (allocatedGroupIds.contains(agentUser.groupId)) returnValue(Right(true))
                 else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
-  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentCode: Future[AgentCode])
+  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentUser: Future[AgentUser])
                                     (implicit ec: ExecutionContext, hc: HeaderCarrier,
                                      request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
@@ -94,13 +100,13 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
     identifier match {
       case mtdItId @ MtdItId(_) =>
-        ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentCode))
+        ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentUser))
       case vrn @ Vrn(_) =>
-        ifEnabled(copyMtdVatRelationshipFlag)(checkGGForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentCode))
+        ifEnabled(copyMtdVatRelationshipFlag)(checkGGForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
     }
   }
 
-  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId, eventualAgentCode: Future[AgentCode])
+  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId, eventualAgentCode: Future[AgentUser])
     (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
@@ -133,7 +139,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     }
   }
 
-  private def checkGGForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentCode: Future[AgentCode])
+  private def checkGGForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentUser: Future[AgentUser])
                                         (implicit ec: ExecutionContext, hc: HeaderCarrier,
                                          request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
@@ -150,8 +156,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
           references <- lookupGGForOldRelationship(arn, vrn)
           result <- if (references.nonEmpty) {
             maybeRelationshipCopyRecord.map(
-              relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentCode))
-              .getOrElse(createRelationship(arn, vrn, eventualAgentCode, references.map(VatRef.apply), true, false)).map { _ =>
+              relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentUser))
+              .getOrElse(createRelationship(arn, vrn, eventualAgentUser, references.map(VatRef.apply), true, false)).map { _ =>
               auditService.sendCreateRelationshipAuditEventForMtdVat
               FoundAndCopied
             }
@@ -186,7 +192,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     auditData.set("vrn", clientVrn)
 
     for {
-      agentCodes <- gg.getAllocatedAgentCodesForHmceVatDec(clientVrn)
+      agentGroupIds <- es.getDelegatedGroupIdsFor(s"HMCE-VATDEC-ORG~VATRegNo~${clientVrn.value}")
+      agentCodes <- Future.sequence(agentGroupIds.map(ugs.getGroupInfo).toSeq).map(_.map(_.agentCode).collect{case Some(ac) => ac})
       matching <- intersection[AgentCode](agentCodes) {
         mapping.getAgentCodesFor(arn)
       }
@@ -217,21 +224,22 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   private def createGgRecord(
     arn: Arn,
     identifier: TaxIdentifier,
-    eventualAgentCode: Future[AgentCode],
+    eventualAgentUser: Future[AgentUser],
     failIfAllocateAgentInGGFails: Boolean
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     val updateGgSyncStatus = relationshipCopyRepository.updateGgSyncStatus(arn, identifier, _: SyncStatus)
     (for {
       _ <- updateGgSyncStatus(InProgress)
-      agentCode <- eventualAgentCode
-      _ <- gg.allocateAgent(agentCode, identifier)
+      agentUser <- eventualAgentUser
+      _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
       _ <- updateGgSyncStatus(Success)
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          Logger.warn(s"Creating GG record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) not possible because of incomplete data: $errorCode")
+          Logger.warn(s"Creating GG record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
+            s"not possible because of incomplete data: $errorCode")
           updateGgSyncStatus(IncompleteInputParams)
         case NonFatal(ex) =>
           Logger.warn(s"Creating GG record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
@@ -243,7 +251,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
 
   def createRelationship(arn: Arn,
                          identifier: TaxIdentifier,
-                         eventualAgentCode: Future[AgentCode],
+                         eventualAgentUser: Future[AgentUser],
                          oldReferences: Set[RelationshipReference],
                          failIfCreateRecordFails: Boolean,
                          failIfAllocateAgentInGGFails: Boolean
@@ -270,19 +278,19 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     for {
       _ <- createRelationshipRecord
       _ <- createEtmpRecord(arn, identifier)
-      _ <- createGgRecord(arn, identifier, eventualAgentCode, failIfAllocateAgentInGGFails)
+      _ <- createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInGGFails)
     } yield ()
   }
 
   private def recoverRelationshipCreation(
     relationshipCopyRecord: RelationshipCopyRecord,
     arn: Arn, identifier: TaxIdentifier,
-    eventualAgentCode: Future[AgentCode])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+    eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     lockService.tryLock(arn, identifier) {
       def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
 
-      def recoverGgRecord() = createGgRecord(arn, identifier, eventualAgentCode, failIfAllocateAgentInGGFails = false)
+      def recoverGgRecord() = createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInGGFails = false)
 
       (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateGgRecord) match {
         case (true, true) =>
@@ -314,7 +322,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     } else
         mappingServiceCall.map { mappingServiceIds =>
           val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
-          Logger.info(s"The sa/gg references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. The intersected value between mapping store and DES/GG is $intersected")
+          Logger.info(s"The sa/gg references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
+            s"The intersected value between mapping store and DES/GG is $intersected")
           intersected
         }
   }
@@ -323,8 +332,8 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
     implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
 
     def ggDeallocation = (for {
-      agentCode <- getAgentCodeFor(arn)
-      _ <- checkForRelationship(mtdItId, agentCode).map(_ => gg.deallocateAgent(agentCode, mtdItId))
+      agentUser <- getAgentUserFor(arn)
+      _ <- checkForRelationship(mtdItId, agentUser).map(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId,mtdItId,agentUser.agentCode))
     } yield ()).recover {
       case ex: RelationshipNotFound =>
         Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
@@ -339,7 +348,7 @@ class RelationshipsService @Inject()(gg: GovernmentGatewayProxyConnector,
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] = {
     relationshipCopyRepository.remove(arn, mtdItId).flatMap { n =>
       if (n == 0) {
-        Future.failed(new RelationshipNotFound("Nothing has been removed from db."))
+        Future.failed(RelationshipNotFound("Nothing has been removed from db."))
       } else {
         Logger.warn(s"Copy status record(s) has been removed for ${arn.value}, ${mtdItId.value}: $n")
         Future.successful(())

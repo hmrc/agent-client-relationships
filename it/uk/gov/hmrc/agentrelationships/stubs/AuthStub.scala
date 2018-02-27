@@ -18,7 +18,11 @@ trait AuthStub {
   def writeAuditSucceeds(): Unit = {
     stubFor(post(urlEqualTo("/write/audit"))
       .willReturn(aResponse()
-        .withStatus(200)
+        .withStatus(204)
+      ))
+    stubFor(post(urlEqualTo("/write/audit/merged"))
+      .willReturn(aResponse()
+        .withStatus(204)
       ))
   }
 
