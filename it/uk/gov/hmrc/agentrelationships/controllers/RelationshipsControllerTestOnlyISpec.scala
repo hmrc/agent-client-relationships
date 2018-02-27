@@ -31,7 +31,6 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
   with MongoApp
   with OneServerPerSuite
   with WireMockSupport
-  with GovernmentGatewayProxyStubs
   with DesStubs
   with MappingStubs
   with DataStreamStub {
