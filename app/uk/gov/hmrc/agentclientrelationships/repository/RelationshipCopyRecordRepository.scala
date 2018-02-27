@@ -86,12 +86,12 @@ case class RelationshipCopyRecord(arn: String,
                                   references: Option[Set[RelationshipReference]] = None,
                                   dateTime: DateTime = now(UTC),
                                   syncToETMPStatus: Option[SyncStatus] = None,
-                                  syncToGGStatus: Option[SyncStatus] = None) {
+                                  syncToESStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateGgRecord
 
   def needToCreateEtmpRecord = !syncToETMPStatus.contains(Success)
 
-  def needToCreateGgRecord = !(syncToGGStatus.contains(Success) || syncToGGStatus.contains(InProgress))
+  def needToCreateGgRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
@@ -146,7 +146,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
   def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToGGStatus" -> status.toString))
+      modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ES sync status ($status) failed: $error"))
     })

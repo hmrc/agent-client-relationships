@@ -142,7 +142,7 @@ class RelationshipsController @Inject()(
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    service.lookupGGForOldRelationship(arn, vrn)
+    service.lookupESForOldRelationship(arn, vrn)
       .map {
         case references if references.nonEmpty => {
           Ok

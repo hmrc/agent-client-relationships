@@ -86,7 +86,7 @@ class RelationshipsControllerISpec extends UnitSpec
     mtdItId.value,
     "MTDITID",
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToGGStatus = Some(SyncStatus.Success)
+    syncToESStatus = Some(SyncStatus.Success)
   )
 
   val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
@@ -94,7 +94,7 @@ class RelationshipsControllerISpec extends UnitSpec
     vrn.value,
     mtdVatIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToGGStatus = Some(SyncStatus.Success)
+    syncToESStatus = Some(SyncStatus.Success)
   )
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
@@ -131,7 +131,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Success))
+        'syncToESStatus (Some(SyncStatus.Success))
       )
 
       verifyAuditRequestSent(1,
@@ -195,7 +195,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
@@ -261,7 +261,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
@@ -331,12 +331,12 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
-        'syncToGGStatus (None)
+        'syncToESStatus (None)
       )
 
     }
 
-    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of es" in {
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -360,7 +360,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Failed))
+        'syncToESStatus (Some(SyncStatus.Failed))
       )
 
       verifyAuditRequestSent(1,
@@ -581,7 +581,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Success))
+        'syncToESStatus (Some(SyncStatus.Success))
       )
 
       verifyAuditRequestSent(1,
@@ -593,11 +593,11 @@ class RelationshipsControllerISpec extends UnitSpec
           "oldAgentCodes" -> oldAgentCode,
           "service" -> "mtd-vat",
           "vrn" -> vrn.value,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "true",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -606,14 +606,14 @@ class RelationshipsControllerISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,
           "credId" -> "any",
           "agentCode" -> "bar",
           "oldAgentCodes" -> oldAgentCode,
           "vrn" -> vrn.value,
-          "GGRelationship" -> "true"
+          "ESRelationship" -> "true"
         ),
         tags = Map(
           "transactionName" -> "check-es",
@@ -641,7 +641,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
@@ -653,11 +653,11 @@ class RelationshipsControllerISpec extends UnitSpec
           "service" -> "mtd-vat",
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -666,14 +666,14 @@ class RelationshipsControllerISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
           "credId" -> "",
           "agentCode" -> "",
-          "GGRelationship" -> "true"
+          "ESRelationship" -> "true"
         ),
         tags = Map(
           "transactionName" -> "check-es",
@@ -703,7 +703,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
@@ -715,11 +715,11 @@ class RelationshipsControllerISpec extends UnitSpec
           "service" -> "mtd-vat",
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -728,14 +728,14 @@ class RelationshipsControllerISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,
           "credId" -> "any",
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
           "agentCode" -> "",
-          "GGRelationship" -> "true"
+          "ESRelationship" -> "true"
         ),
         tags = Map(
           "transactionName" -> "check-es",
@@ -769,11 +769,11 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
-        'syncToGGStatus (None)
+        'syncToESStatus (None)
       )
     }
 
-    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of gg" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -795,7 +795,7 @@ class RelationshipsControllerISpec extends UnitSpec
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Failed))
+        'syncToESStatus (Some(SyncStatus.Failed))
       )
 
       verifyAuditRequestSent(1,
@@ -807,11 +807,11 @@ class RelationshipsControllerISpec extends UnitSpec
           "service" -> "mtd-vat",
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -820,12 +820,12 @@ class RelationshipsControllerISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,
           "credId" -> "any",
           "agentCode" -> "bar",
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode
         ),
@@ -1037,14 +1037,14 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
           "credId" -> "",
           "agentCode" -> "",
-          "GGRelationship" -> "true"
+          "ESRelationship" -> "true"
         ),
         tags = Map(
           "transactionName" -> "check-es",
@@ -1134,7 +1134,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when es is unavailable" in {
+    "return 502 when gg is unavailable" in {
 
       givenUserIsSubscribedAgent(arn)
 
@@ -1371,7 +1371,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when es is unavailable" in {
+    "return 502 when gg is unavailable" in {
       givenUserIsSubscribedAgent(arn)
       givenEsIsUnavailable()
 
@@ -1444,7 +1444,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when es is unavailable" in {
+    "return 502 when gg is unavailable" in {
       givenUserIsSubscribedAgent(arn)
       givenEsIsUnavailable()
 

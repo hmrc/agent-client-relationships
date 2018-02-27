@@ -64,7 +64,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
     val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
-        data(arn.value + identifier.value) = maybeValue.get.copy(syncToGGStatus = Some(status))
+        data(arn.value + identifier.value) = maybeValue.get.copy(syncToESStatus = Some(status))
       }  else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
       }

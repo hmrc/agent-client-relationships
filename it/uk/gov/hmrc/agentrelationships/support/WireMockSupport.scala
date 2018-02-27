@@ -12,9 +12,6 @@ import uk.gov.hmrc.play.it.Port.randomAvailable
 case class WireMockBaseUrl(value: URL)
 
 object WireMockSupport {
-  // We have to make the wireMockPort constant per-JVM instead of constant
-  // per-WireMockSupport-instance because config values containing it are
-  // cached in the GGConfig object
   private lazy val wireMockPort = randomAvailable
 }
 

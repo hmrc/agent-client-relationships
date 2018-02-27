@@ -54,7 +54,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val auditData = new AuditData()
       auditData.set("arn", Arn("1234").value)
       auditData.set("credId", "0000001234567890")
-      auditData.set("agentCode", AgentCode("GG1234567890").value)
+      auditData.set("agentCode", AgentCode("ES1234567890").value)
       auditData.set("saAgentRef", "12313")
       auditData.set("service", "mtd-it")
       auditData.set("clientId", "XX1234")
@@ -81,7 +81,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sentEvent.auditType shouldBe "CreateRelationship"
         sentEvent.auditSource shouldBe "agent-client-relationships"
         sentEvent.detail("arn") shouldBe "1234"
-        sentEvent.detail("agentCode") shouldBe "GG1234567890"
+        sentEvent.detail("agentCode") shouldBe "ES1234567890"
         sentEvent.detail("saAgentRef") shouldBe "12313"
         sentEvent.detail("credId") shouldBe "0000001234567890"
         sentEvent.detail("service") shouldBe "mtd-it"
@@ -117,7 +117,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val auditData = new AuditData()
       auditData.set("arn", Arn("1234").value)
       auditData.set("credId", "0000001234567890")
-      auditData.set("agentCode", AgentCode("GG1234567890").value)
+      auditData.set("agentCode", AgentCode("ES1234567890").value)
       auditData.set("saAgentRef", "12313")
       auditData.set("nino", Nino("KS969148D").value)
       auditData.set("CESARelationship", true)
@@ -137,7 +137,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sentEvent.auditType shouldBe "CheckCESA"
         sentEvent.auditSource shouldBe "agent-client-relationships"
         sentEvent.detail("arn") shouldBe "1234"
-        sentEvent.detail("agentCode") shouldBe "GG1234567890"
+        sentEvent.detail("agentCode") shouldBe "ES1234567890"
         sentEvent.detail("saAgentRef") shouldBe "12313"
         sentEvent.detail("credId") shouldBe "0000001234567890"
         sentEvent.detail("nino") shouldBe "KS969148D"

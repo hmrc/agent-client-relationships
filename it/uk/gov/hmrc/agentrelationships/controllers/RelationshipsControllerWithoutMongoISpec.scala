@@ -159,7 +159,7 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
 
     val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
-    "return 200 when relationship exists mapping and es and relationship copy attempt fails because of mongo" in {
+    "return 200 when relationship exists mapping and gg and relationship copy attempt fails because of mongo" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -188,11 +188,11 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           "service" -> "mtd-vat",
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "false",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "false",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -201,12 +201,12 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,
           "credId" -> "any",
           "agentCode" -> "bar",
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode
         ),

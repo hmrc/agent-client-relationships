@@ -102,7 +102,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       case mtdItId @ MtdItId(_) =>
         ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentUser))
       case vrn @ Vrn(_) =>
-        ifEnabled(copyMtdVatRelationshipFlag)(checkGGForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
+        ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
     }
   }
 
@@ -139,11 +139,11 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     }
   }
 
-  private def checkGGForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentUser: Future[AgentUser])
+  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentUser: Future[AgentUser])
                                         (implicit ec: ExecutionContext, hc: HeaderCarrier,
                                          request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
-    auditData.set("Journey", "CopyExistingGGRelationship")
+    auditData.set("Journey", "CopyExistingESRelationship")
     auditData.set("service", "mtd-vat")
     auditData.set("vrn", vrn)
 
@@ -153,7 +153,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord@ _    =>
         for {
-          references <- lookupGGForOldRelationship(arn, vrn)
+          references <- lookupESForOldRelationship(arn, vrn)
           result <- if (references.nonEmpty) {
             maybeRelationshipCopyRecord.map(
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentUser))
@@ -187,7 +187,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     }
   }
 
-  def lookupGGForOldRelationship(arn: Arn, clientVrn: Vrn)(
+  def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(
     implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[AgentCode]] = {
     auditData.set("vrn", clientVrn)
 
@@ -198,9 +198,9 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
         mapping.getAgentCodesFor(arn)
       }
       _ = auditData.set("oldAgentCodes", matching.map(_.value).mkString(","))
-      _ = auditData.set("GGRelationship", matching.nonEmpty)
+      _ = auditData.set("ESRelationship", matching.nonEmpty)
     } yield {
-      auditService.sendCheckGGAuditEvent
+      auditService.sendCheckESAuditEvent
       matching
     }
   }
@@ -225,7 +225,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     arn: Arn,
     identifier: TaxIdentifier,
     eventualAgentUser: Future[AgentUser],
-    failIfAllocateAgentInGGFails: Boolean
+    failIfAllocateAgentInESFails: Boolean
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     val updateGgSyncStatus = relationshipCopyRepository.updateGgSyncStatus(arn, identifier, _: SyncStatus)
@@ -244,7 +244,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
         case NonFatal(ex) =>
           Logger.warn(s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
           updateGgSyncStatus(Failed)
-          if (failIfAllocateAgentInGGFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_GG"))
+          if (failIfAllocateAgentInESFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
           else Future.successful(())
       }
   }
@@ -254,7 +254,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
                          eventualAgentUser: Future[AgentUser],
                          oldReferences: Set[RelationshipReference],
                          failIfCreateRecordFails: Boolean,
-                         failIfAllocateAgentInGGFails: Boolean
+                         failIfAllocateAgentInESFails: Boolean
                         )
                         (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
@@ -278,7 +278,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     for {
       _ <- createRelationshipRecord
       _ <- createEtmpRecord(arn, identifier)
-      _ <- createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInGGFails)
+      _ <- createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails)
     } yield ()
   }
 
@@ -290,7 +290,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     lockService.tryLock(arn, identifier) {
       def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
 
-      def recoverGgRecord() = createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInGGFails = false)
+      def recoverGgRecord() = createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails = false)
 
       (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateGgRecord) match {
         case (true, true) =>
@@ -317,12 +317,12 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
-      Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
+      Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/gg are empty.")
       returnValue(Set.empty)
     } else
         mappingServiceCall.map { mappingServiceIds =>
           val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
-          Logger.info(s"The sa/es references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
+          Logger.info(s"The sa/gg references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
             s"The intersected value between mapping store and DES/ES is $intersected")
           intersected
         }
