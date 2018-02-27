@@ -331,7 +331,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
     implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
 
-    def ggDeallocation = (for {
+    def esDeAllocation = (for {
       agentUser <- getAgentUserFor(arn)
       _ <- checkForRelationship(mtdItId, agentUser).map(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId,mtdItId,agentUser.agentCode))
     } yield ()).recover {
@@ -341,7 +341,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
 
     for {
       _ <- des.deleteAgentRelationship(mtdItId, arn)
-      _ <- ggDeallocation
+      _ <- esDeAllocation
     } yield ()
   }
 
