@@ -11,4 +11,4 @@
 
 # Add all the application routes to the prod.routes file
 ->         /                                                                     prod.Routes
-DELETE     /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId  @uk.gov.hmrc.agentclientrelationships.controllers.Relationships.cleanCopyStatusRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
+DELETE     /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.cleanCopyStatusRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)

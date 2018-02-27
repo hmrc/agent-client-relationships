@@ -36,7 +36,7 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
-class Relationships @Inject()(
+class RelationshipsController @Inject()(
                                override val authConnector: AuthConnector,
                                service: RelationshipsService)
   extends BaseController with AuthActions {
