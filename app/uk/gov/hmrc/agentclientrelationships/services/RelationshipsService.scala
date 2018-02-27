@@ -106,7 +106,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     }
   }
 
-  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId, eventualAgentCode: Future[AgentUser])
+  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId, eventualAgentUser: Future[AgentUser])
     (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
@@ -124,8 +124,8 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
           references <- lookupCesaForOldRelationship(arn, nino)
           result <- if (references.nonEmpty) {
             maybeRelationshipCopyRecord.map(
-              relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentCode))
-              .getOrElse(createRelationship(arn, mtdItId, eventualAgentCode, references.map(SaRef.apply), true, false)).map { _ =>
+              relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
+              .getOrElse(createRelationship(arn, mtdItId, eventualAgentUser, references.map(SaRef.apply), true, false)).map { _ =>
                 auditService.sendCreateRelationshipAuditEvent
                 FoundAndCopied
               }
@@ -192,7 +192,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     auditData.set("vrn", clientVrn)
 
     for {
-      agentGroupIds <- es.getDelegatedGroupIdsFor(s"HMCE-VATDEC-ORG~VATRegNo~${clientVrn.value}")
+      agentGroupIds <- es.getDelegatedGroupIdsForHMCEVATDECORG(clientVrn)
       agentCodes <- Future.sequence(agentGroupIds.map(ugs.getGroupInfo).toSeq).map(_.map(_.agentCode).collect{case Some(ac) => ac})
       matching <- intersection[AgentCode](agentCodes) {
         mapping.getAgentCodesFor(arn)

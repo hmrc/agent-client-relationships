@@ -672,7 +672,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def oldESRelationshipDoesNotExist(): Unit = {
-    when(es.getDelegatedGroupIdsFor(eqs(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"))(eqs(hc), eqs(ec)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set.empty[String])
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
   }
@@ -684,7 +684,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def mappingServiceUnavailableForMtdVat(): Unit = {
-    when(es.getDelegatedGroupIdsFor(eqs(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"))(eqs(hc), eqs(ec)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set(agentGroupId))
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo(agentGroupId,Some("Agent"),Some(agentCodeForVatDecAgent)))
@@ -698,7 +698,7 @@ class RelationshipsServiceSpec extends UnitSpec
   }
 
   private def oldESRelationshipExists(): Unit = {
-    when(es.getDelegatedGroupIdsFor(eqs(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"))(eqs(hc), eqs(ec)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set("test2", "foo", agentGroupId, "ABC-123"))
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo(agentGroupId,Some("Agent"),Some(agentCodeForVatDecAgent)))
