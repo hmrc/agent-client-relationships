@@ -123,7 +123,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   }
 
   def sendCheckGGAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.CheckGG, "check-gg",
+    auditEvent(AgentClientRelationshipEvent.CheckGG, "check-es",
       collectDetails(auditData.getDetails, CheckGGDetailsFields))
   }
 

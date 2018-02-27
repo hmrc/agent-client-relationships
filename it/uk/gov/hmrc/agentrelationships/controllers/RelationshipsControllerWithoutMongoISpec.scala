@@ -159,7 +159,7 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
 
     val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
-    "return 200 when relationship exists mapping and gg and relationship copy attempt fails because of mongo" in {
+    "return 200 when relationship exists mapping and es and relationship copy attempt fails because of mongo" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -211,7 +211,7 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           "oldAgentCodes" -> oldAgentCode
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )

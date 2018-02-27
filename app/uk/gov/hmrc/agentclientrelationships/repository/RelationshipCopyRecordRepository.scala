@@ -148,7 +148,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToGGStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating GG sync status ($status) failed: $error"))
+      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ES sync status ($status) failed: $error"))
     })
   }
 

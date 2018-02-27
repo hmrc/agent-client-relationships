@@ -149,7 +149,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
 
     relationshipCopyRepository.findBy(arn, vrn).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-        Logger.warn(s"Relationship has been already been found in GG and we have already attempted to copy to MTD")
+        Logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord@ _    =>
         for {
@@ -162,7 +162,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
               FoundAndCopied
             }
               .recover { case NonFatal(ex) =>
-                Logger.warn(s"Failed to copy GG relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})", ex)
+                Logger.warn(s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})", ex)
                 auditService.sendCreateRelationshipAuditEventForMtdVat
                 FoundAndFailedToCopy
               }
@@ -238,11 +238,11 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          Logger.warn(s"Creating GG record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
+          Logger.warn(s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
             s"not possible because of incomplete data: $errorCode")
           updateGgSyncStatus(IncompleteInputParams)
         case NonFatal(ex) =>
-          Logger.warn(s"Creating GG record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
+          Logger.warn(s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
           updateGgSyncStatus(Failed)
           if (failIfAllocateAgentInGGFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_GG"))
           else Future.successful(())
@@ -301,7 +301,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
         case (false, true) =>
           recoverGgRecord()
         case (true, false) =>
-          Logger.warn(s"GG relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
+          Logger.warn(s"ES relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                       s"This should not happen because we always create the ETMP relationship first,")
           recoverEtmpRecord()
         case (false, false) =>
@@ -317,13 +317,13 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
-      Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/gg are empty.")
+      Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
       returnValue(Set.empty)
     } else
         mappingServiceCall.map { mappingServiceIds =>
           val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
-          Logger.info(s"The sa/gg references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
-            s"The intersected value between mapping store and DES/GG is $intersected")
+          Logger.info(s"The sa/es references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
+            s"The intersected value between mapping store and DES/ES is $intersected")
           intersected
         }
   }

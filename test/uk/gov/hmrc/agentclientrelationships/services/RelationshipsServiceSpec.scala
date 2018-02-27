@@ -141,7 +141,7 @@ class RelationshipsServiceSpec extends UnitSpec
     }
 
     needsRetryStatuses.filterNot(s => s.contains(InProgress) || s.contains(InProgress)) foreach { status =>
-      s"create GG relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
+      s"create ES relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -167,7 +167,7 @@ class RelationshipsServiceSpec extends UnitSpec
       }
 
 
-      s"skip recovery of GG relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
+      s"skip recovery of ES relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = $status and syncToGGStatus = None " +
         s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
@@ -197,7 +197,7 @@ class RelationshipsServiceSpec extends UnitSpec
     }
 
     needsRetryStatuses.foreach { status =>
-      s"not create GG relationship if no relationship currently exists in CESA " +
+      s"not create ES relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -249,7 +249,7 @@ class RelationshipsServiceSpec extends UnitSpec
     // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
     // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
-      s"not create GG relationship if no relationship currently exists in CESA " +
+      s"not create ES relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = Success" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToGGStatus = Some(Success))
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -285,7 +285,7 @@ class RelationshipsServiceSpec extends UnitSpec
       verifyEtmpRecordNotCreated()
     }
 
-    "not create ETMP or GG relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
+    "not create ETMP or ES relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
       val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = Some(Success))
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
@@ -309,9 +309,9 @@ class RelationshipsServiceSpec extends UnitSpec
     }
 
     "not createGG relationship if RelationshipCopyRecord exists syncToGGStatus is In Progress because we can't tell " +
-      "whether the GG copy happened successfully but the the status update failed e.g. due to a container kill and in " +
-      "that case we would be re-copying a relationship that has been removed in GG. It is more important that we never " +
-      "copy to GG twice than that the synch works!" in {
+      "whether the ES copy happened successfully but the the status update failed e.g. due to a container kill and in " +
+      "that case we would be re-copying a relationship that has been removed in ES. It is more important that we never " +
+      "copy to ES twice than that the synch works!" in {
       val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToGGStatus = Some(InProgress))
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
@@ -388,8 +388,8 @@ class RelationshipsServiceSpec extends UnitSpec
         await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToETMPStatus shouldBe status
       }
     }
-    // We ignore the RelationshipCopyRecord if there is no relationship in GG as a failsafe in case we have made a logic error.
-    // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from GG).
+    // We ignore the RelationshipCopyRecord if there is no relationship in ES as a failsafe in case we have made a logic error.
+    // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from ES).
     needsRetryStatuses.foreach { status =>
       s"not create ETMP relationship if no relationship currently exists in HMCE-VATDEC-ORG " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = None" in {
@@ -411,7 +411,7 @@ class RelationshipsServiceSpec extends UnitSpec
     }
 
     needsRetryStatuses.filterNot(s => s.contains(InProgress) || s.contains(InProgress)) foreach { status =>
-      s"create GG relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
+      s"create ES relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -437,7 +437,7 @@ class RelationshipsServiceSpec extends UnitSpec
       }
 
 
-      s"skip recovery of GG relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
+      s"skip recovery of ES relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = $status and syncToGGStatus = None " +
         s"and recovery of this relationship is already in progress" in {
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
@@ -467,7 +467,7 @@ class RelationshipsServiceSpec extends UnitSpec
     }
 
     needsRetryStatuses.foreach { status =>
-      s"not create GG relationship if no relationship currently exists in HMCE-VATDEC-ORG " +
+      s"not create ES relationship if no relationship currently exists in HMCE-VATDEC-ORG " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = $status" in {
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToGGStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -519,7 +519,7 @@ class RelationshipsServiceSpec extends UnitSpec
     // We ignore the RelationshipCopyRecord if there is no relationship in HMCE-VATDEC-ORG as a failsafe in case we have made a logic error.
     // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from HMCE-VATDEC-ORG).
     needsRetryStatuses.foreach { status =>
-      s"not create GG relationship if no relationship currently exists in HMCE-VATDEC-ORG " +
+      s"not create ES relationship if no relationship currently exists in HMCE-VATDEC-ORG " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToGGStatus = Success" in {
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = status, syncToGGStatus = Some(Success))
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -555,7 +555,7 @@ class RelationshipsServiceSpec extends UnitSpec
       verifyEtmpRecordNotCreatedForMtdVat()
     }
 
-    "not create ETMP or GG relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
+    "not create ETMP or ES relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToGGStatus = Success" in {
       val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToGGStatus = Some(Success))
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
@@ -578,10 +578,10 @@ class RelationshipsServiceSpec extends UnitSpec
       verifyEtmpRecordNotCreatedForMtdVat()
     }
 
-    "not create GG relationship if RelationshipCopyRecord exists syncToGGStatus is In Progress because we can't tell " +
-      "whether the GG copy happened successfully but the the status update failed e.g. due to a container kill and in " +
-      "that case we would be re-copying a relationship that has been removed in GG. It is more important that we never " +
-      "copy to GG twice than that the synch works!" in {
+    "not create ES relationship if RelationshipCopyRecord exists syncToGGStatus is In Progress because we can't tell " +
+      "whether the ES copy happened successfully but the the status update failed e.g. due to a container kill and in " +
+      "that case we would be re-copying a relationship that has been removed in ES. It is more important that we never " +
+      "copy to ES twice than that the synch works!" in {
       val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToGGStatus = Some(InProgress))
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
@@ -712,7 +712,7 @@ class RelationshipsServiceSpec extends UnitSpec
     when(des.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
     when(es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(identifier), eqs(agentCodeForAsAgent))(eqs(hc),eqs(ec)))
-      .thenReturn(Future successful ())
+      .thenReturn(Future.successful(()))
   }
 
   def verifyEtmpRecordCreated(): Unit = {

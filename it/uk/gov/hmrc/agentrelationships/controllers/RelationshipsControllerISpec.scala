@@ -336,7 +336,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     }
 
-    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of es" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -414,7 +414,7 @@ class RelationshipsControllerISpec extends UnitSpec
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when relationship was previously copied from CESA to ETMP & GG but has since been deleted from ETMP & GG " +
+    "return 404 when relationship was previously copied from CESA to ETMP & ES but has since been deleted from ETMP & ES " +
       "(even though the relationship upon which the copy was based still exists in CESA)" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -616,7 +616,7 @@ class RelationshipsControllerISpec extends UnitSpec
           "GGRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
@@ -676,7 +676,7 @@ class RelationshipsControllerISpec extends UnitSpec
           "GGRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
@@ -738,7 +738,7 @@ class RelationshipsControllerISpec extends UnitSpec
           "GGRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
@@ -773,7 +773,7 @@ class RelationshipsControllerISpec extends UnitSpec
       )
     }
 
-    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of gg" in {
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -830,7 +830,7 @@ class RelationshipsControllerISpec extends UnitSpec
           "oldAgentCodes" -> oldAgentCode
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
@@ -847,7 +847,7 @@ class RelationshipsControllerISpec extends UnitSpec
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when relationship was previously copied from HMCE-VATDEC-ORG to ETMP & GG but has since been deleted from ETMP & GG " +
+    "return 404 when relationship was previously copied from HMCE-VATDEC-ORG to ETMP & ES but has since been deleted from ETMP & ES " +
       "(even though the relationship upon which the copy was based still exists in HMCE-VATDEC-ORG)" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -1047,7 +1047,7 @@ class RelationshipsControllerISpec extends UnitSpec
           "GGRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
@@ -1082,7 +1082,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 204
     }
 
-    "return 204 when the relationship exists in ETMP and not exist in GG" in {
+    "return 204 when the relationship exists in ETMP and not exist in ES" in {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -1093,7 +1093,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 204
     }
 
-    "return 204 when the relationship does not exists in ETMP and in GG" in {
+    "return 204 when the relationship does not exists in ETMP and in ES" in {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -1104,7 +1104,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 204
     }
 
-    "return 204 when the relationship does not exists in ETMP but exists in GG" in {
+    "return 204 when the relationship does not exists in ETMP but exists in ES" in {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -1134,7 +1134,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
+    "return 502 when es is unavailable" in {
 
       givenUserIsSubscribedAgent(arn)
 
@@ -1371,7 +1371,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
+    "return 502 when es is unavailable" in {
       givenUserIsSubscribedAgent(arn)
       givenEsIsUnavailable()
 
@@ -1444,7 +1444,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
+    "return 502 when es is unavailable" in {
       givenUserIsSubscribedAgent(arn)
       givenEsIsUnavailable()
 
