@@ -33,7 +33,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RelationshipISpec extends UnitSpec
+class RelationshipsControllerISpec extends UnitSpec
   with MongoApp
   with OneServerPerSuite
   with WireMockSupport
@@ -67,6 +67,7 @@ class RelationshipISpec extends UnitSpec
 
   override def beforeEach() {
     super.beforeEach()
+    givenAuditConnector()
     await(repo.ensureIndexes)
   }
 
@@ -116,7 +117,6 @@ class RelationshipISpec extends UnitSpec
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
@@ -337,7 +337,6 @@ class RelationshipISpec extends UnitSpec
         'syncToGGStatus (None)
       )
 
-
     }
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
@@ -349,7 +348,7 @@ class RelationshipISpec extends UnitSpec
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
-      givenEnrolmentAllocationFailsWith(404)("foo","any","HMRC-MTD-IT","MTDITID",mtdItId.value,"bar")
+      givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, "bar")
       givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
@@ -1074,12 +1073,12 @@ class RelationshipISpec extends UnitSpec
 
     "return 204 when the relationship exists and the Arn matches that of current Agent user" in {
       givenUserIsSubscribedAgent(arn)
-      writeAuditSucceeds()
+      givenAuditConnector()
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-      givenEnrolmentDeallocationSucceeds("foo",mtdItId,"bar")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
@@ -1087,13 +1086,13 @@ class RelationshipISpec extends UnitSpec
 
     "return 204 when the relationship exists and the MtdItId matches that of current Client user" in {
       givenUserIsSubscribedClient(mtdItId)
-      writeAuditSucceeds()
+      givenAuditConnector()
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAgentCanBeDeallocatedInDes(mtdItId, arn)
       //givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
-      givenEnrolmentDeallocationSucceeds("foo",mtdItId,"bar")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
@@ -1101,7 +1100,7 @@ class RelationshipISpec extends UnitSpec
 
     "return 204 when the relationship exists in ETMP and not exist in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-      writeAuditSucceeds()
+      givenAuditConnector()
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1114,7 +1113,7 @@ class RelationshipISpec extends UnitSpec
 
     "return 204 when the relationship does not exists in ETMP and in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-      writeAuditSucceeds()
+      givenAuditConnector()
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1126,7 +1125,7 @@ class RelationshipISpec extends UnitSpec
 
     "return 204 when the relationship does not exists in ETMP but exists in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-      writeAuditSucceeds()
+      givenAuditConnector()
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
@@ -1141,6 +1140,7 @@ class RelationshipISpec extends UnitSpec
       */
 
     "return 403 for an agent with a mismatched arn" in {
+      givenAuditConnector()
       givenUserIsSubscribedAgent(Arn("unmatched"))
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1148,6 +1148,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 403 for an agent with no agent enrolments" in {
+      givenAuditConnector()
       givenUserHasNoAgentEnrolments(arn)
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1155,6 +1156,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 502 when gg is unavailable" in {
+      givenAuditConnector()
       givenUserIsSubscribedAgent(arn)
 
       givenEsIsUnavailable()
@@ -1169,6 +1171,7 @@ class RelationshipISpec extends UnitSpec
       */
 
     "return 403 for a client with a mismatched MtdItId" in {
+      givenAuditConnector()
       givenUserIsSubscribedClient(MtdItId("unmatched"))
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1176,6 +1179,7 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 403 for a client with no client enrolments" in {
+      givenAuditConnector()
       givenUserHasNoClientEnrolments
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1275,7 +1279,6 @@ class RelationshipISpec extends UnitSpec
     }
 
     //FAILURE CASES
-
 
     "return 502 when ES1/principal returns 5xx" in {
       givenPrincipalGroupIdRequestFailsWith(500)

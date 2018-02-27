@@ -41,7 +41,7 @@ class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: ReactiveMo
   }
 }
 
-class RelationshipWithoutMongoISpec extends UnitSpec
+class RelationshipsControllerWithoutMongoISpec extends UnitSpec
   with MongoApp
   with OneServerPerSuite
   with WireMockSupport

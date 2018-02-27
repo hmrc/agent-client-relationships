@@ -15,18 +15,6 @@ trait AuthStub {
     this
   }
 
-  def writeAuditSucceeds(): Unit = {
-    stubFor(post(urlEqualTo("/write/audit"))
-      .willReturn(aResponse()
-        .withStatus(204)
-      ))
-    stubFor(post(urlEqualTo("/write/audit/merged"))
-      .willReturn(aResponse()
-        .withStatus(204)
-      ))
-  }
-
-
   def givenUserIsSubscribedAgent(arn: Arn): AuthStub = {
     stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
