@@ -1060,7 +1060,6 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship exists and the Arn matches that of current Agent user" in {
       givenUserIsSubscribedAgent(arn)
-
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
@@ -1073,7 +1072,6 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship exists and the MtdItId matches that of current Client user" in {
       givenUserIsSubscribedClient(mtdItId)
-
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
@@ -1086,11 +1084,9 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship exists in ETMP and not exist in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-
       givenAgentCanBeDeallocatedInDes(mtdItId, arn)
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1099,7 +1095,6 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship does not exists in ETMP and in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1111,11 +1106,11 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship does not exists in ETMP but exists in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+      givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
@@ -1126,9 +1121,7 @@ class RelationshipsControllerISpec extends UnitSpec
       */
 
     "return 403 for an agent with a mismatched arn" in {
-
       givenUserIsSubscribedAgent(Arn("unmatched"))
-
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 403
     }
