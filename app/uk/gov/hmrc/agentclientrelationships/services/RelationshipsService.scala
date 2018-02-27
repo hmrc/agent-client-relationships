@@ -221,29 +221,29 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       }
   }
 
-  private def createGgRecord(
+  private def createEsRecord(
     arn: Arn,
     identifier: TaxIdentifier,
     eventualAgentUser: Future[AgentUser],
     failIfAllocateAgentInESFails: Boolean
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
-    val updateGgSyncStatus = relationshipCopyRepository.updateGgSyncStatus(arn, identifier, _: SyncStatus)
+    val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
     (for {
-      _ <- updateGgSyncStatus(InProgress)
+      _ <- updateEsSyncStatus(InProgress)
       agentUser <- eventualAgentUser
       _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
-      _ <- updateGgSyncStatus(Success)
+      _ <- updateEsSyncStatus(Success)
     } yield ())
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
           Logger.warn(s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
             s"not possible because of incomplete data: $errorCode")
-          updateGgSyncStatus(IncompleteInputParams)
+          updateEsSyncStatus(IncompleteInputParams)
         case NonFatal(ex) =>
           Logger.warn(s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
-          updateGgSyncStatus(Failed)
+          updateEsSyncStatus(Failed)
           if (failIfAllocateAgentInESFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
           else Future.successful(())
       }
@@ -278,7 +278,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     for {
       _ <- createRelationshipRecord
       _ <- createEtmpRecord(arn, identifier)
-      _ <- createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails)
+      _ <- createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails)
     } yield ()
   }
 
@@ -290,16 +290,16 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     lockService.tryLock(arn, identifier) {
       def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
 
-      def recoverGgRecord() = createGgRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails = false)
+      def recoverEsRecord() = createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails = false)
 
-      (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateGgRecord) match {
+      (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
         case (true, true) =>
           for {
             _ <- recoverEtmpRecord()
-            _ <- recoverGgRecord()
+            _ <- recoverEsRecord()
           } yield ()
         case (false, true) =>
-          recoverGgRecord()
+          recoverEsRecord()
         case (true, false) =>
           Logger.warn(s"ES relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                       s"This should not happen because we always create the ETMP relationship first,")
@@ -317,12 +317,12 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
-      Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/gg are empty.")
+      Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
       returnValue(Set.empty)
     } else
         mappingServiceCall.map { mappingServiceIds =>
           val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
-          Logger.info(s"The sa/gg references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
+          Logger.info(s"The sa/es references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
             s"The intersected value between mapping store and DES/ES is $intersected")
           intersected
         }

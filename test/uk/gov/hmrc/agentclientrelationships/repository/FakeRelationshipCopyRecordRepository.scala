@@ -60,7 +60,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
 
   }
 
-  def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {

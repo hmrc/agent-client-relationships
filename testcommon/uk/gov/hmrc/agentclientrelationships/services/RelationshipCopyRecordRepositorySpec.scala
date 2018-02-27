@@ -102,12 +102,12 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
       }
     }
 
-    "updateGgSyncStatus" should {
+    "updateEsSyncStatus" should {
       "update the record" in {
         await(repo.create(relationshipCopyRecord))
         await(repo.findBy(arn, mtdItId)).get.syncToESStatus shouldBe None
 
-        await(repo.updateGgSyncStatus(arn, mtdItId, SyncStatus.Success))
+        await(repo.updateEsSyncStatus(arn, mtdItId, SyncStatus.Success))
         await(repo.findBy(arn, mtdItId)).get.syncToESStatus shouldBe Some(SyncStatus.Success)
         await(repo.remove(arn, mtdItId))
       }

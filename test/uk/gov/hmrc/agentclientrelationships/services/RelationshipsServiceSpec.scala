@@ -158,7 +158,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         await(check) shouldBe FoundAndCopied
 
-        verifyGgRecordCreated()
+        verifyEsRecordCreated()
         verifyEtmpRecordNotCreated()
         val auditDetails = verifyAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
@@ -188,7 +188,7 @@ class RelationshipsServiceSpec extends UnitSpec
         maybeCheck.value shouldBe FoundAndCopied
 
         verifyEtmpRecordNotCreated()
-        verifyGgRecordNotCreated()
+        verifyEsRecordNotCreated()
         val auditDetails = verifyAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails.get("enrolmentDelegated") shouldBe None
@@ -212,7 +212,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
-        verifyGgRecordNotCreated()
+        verifyEsRecordNotCreated()
         verifyEtmpRecordNotCreated()
       }
     }
@@ -237,7 +237,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         await(check) shouldBe FoundAndCopied
 
-        verifyGgRecordNotCreated()
+        verifyEsRecordNotCreated()
         verifyEtmpRecordCreated()
         val auditDetails = verifyAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
@@ -265,7 +265,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
-        verifyGgRecordNotCreated()
+        verifyEsRecordNotCreated()
         verifyEtmpRecordNotCreated()
       }
     }
@@ -281,7 +281,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
-      verifyGgRecordNotCreated()
+      verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
 
@@ -304,7 +304,7 @@ class RelationshipsServiceSpec extends UnitSpec
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
       checkAndCopyResult.grantAccess shouldBe false
 
-      verifyGgRecordNotCreated()
+      verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
 
@@ -330,7 +330,7 @@ class RelationshipsServiceSpec extends UnitSpec
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
       checkAndCopyResult.grantAccess shouldBe false
 
-      verifyGgRecordNotCreated()
+      verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
   }
@@ -428,7 +428,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         await(check) shouldBe FoundAndCopied
 
-        verifyGgRecordCreatedForMtdVat()
+        verifyEsRecordCreatedForMtdVat()
         verifyEtmpRecordNotCreatedForMtdVat()
         val auditDetails = verifyESAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
@@ -458,7 +458,7 @@ class RelationshipsServiceSpec extends UnitSpec
         maybeCheck.value shouldBe FoundAndCopied
 
         verifyEtmpRecordNotCreatedForMtdVat()
-        verifyGgRecordNotCreated()
+        verifyEsRecordNotCreated()
         val auditDetails = verifyESAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails.get("enrolmentDelegated") shouldBe None
@@ -482,7 +482,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
-        verifyGgRecordNotCreated()
+        verifyEsRecordNotCreated()
         verifyEtmpRecordNotCreatedForMtdVat()
       }
     }
@@ -507,7 +507,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
         await(check) shouldBe FoundAndCopied
 
-        verifyGgRecordNotCreatedMtdVat()
+        verifyEsRecordNotCreatedMtdVat()
         verifyEtmpRecordCreatedForMtdVat()
         val auditDetails = verifyESAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
@@ -535,7 +535,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
-        verifyGgRecordNotCreated()
+        verifyEsRecordNotCreated()
         verifyEtmpRecordNotCreatedForMtdVat()
       }
     }
@@ -551,7 +551,7 @@ class RelationshipsServiceSpec extends UnitSpec
 
       an[Upstream5xxResponse] should be thrownBy await(check)
 
-      verifyGgRecordNotCreatedMtdVat()
+      verifyEsRecordNotCreatedMtdVat()
       verifyEtmpRecordNotCreatedForMtdVat()
     }
 
@@ -574,7 +574,7 @@ class RelationshipsServiceSpec extends UnitSpec
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
       checkAndCopyResult.grantAccess shouldBe false
 
-      verifyGgRecordNotCreated()
+      verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreatedForMtdVat()
     }
 
@@ -600,7 +600,7 @@ class RelationshipsServiceSpec extends UnitSpec
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
       checkAndCopyResult.grantAccess shouldBe false
 
-      verifyGgRecordNotCreated()
+      verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreatedForMtdVat()
     }
   }
@@ -617,7 +617,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
-      verifyGgRecordNotCreated()
+      verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
   }
@@ -634,7 +634,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val check = relationshipsService.lookupESForOldRelationship(arn, vrn)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
-      verifyGgRecordNotCreatedMtdVat()
+      verifyEsRecordNotCreatedMtdVat()
       verifyEtmpRecordNotCreatedForMtdVat()
     }
   }
@@ -731,19 +731,19 @@ class RelationshipsServiceSpec extends UnitSpec
     verify(des, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
   }
 
-  def verifyGgRecordCreated(): Unit = {
+  def verifyEsRecordCreated(): Unit = {
     verify(es).allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(mtdItId),eqs(agentCodeForAsAgent))(eqs(hc),eqs(ec))
   }
 
-  def verifyGgRecordNotCreated(): Unit = {
+  def verifyEsRecordNotCreated(): Unit = {
     verify(es, never()).allocateEnrolmentToAgent(eqs(agentUserId), eqs(agentGroupId), eqs(mtdItId),eqs(agentCodeForAsAgent))(eqs(hc),eqs(ec))
   }
 
-  def verifyGgRecordCreatedForMtdVat(): Unit = {
+  def verifyEsRecordCreatedForMtdVat(): Unit = {
     verify(es).allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(vrn),eqs(agentCodeForAsAgent))(eqs(hc),eqs(ec))
   }
 
-  def verifyGgRecordNotCreatedMtdVat(): Unit = {
+  def verifyEsRecordNotCreatedMtdVat(): Unit = {
     verify(es, never()).allocateEnrolmentToAgent(eqs(agentUserId), eqs(agentGroupId), eqs(vrn),eqs(agentCodeForAsAgent))(eqs(hc),eqs(ec))
   }
 
