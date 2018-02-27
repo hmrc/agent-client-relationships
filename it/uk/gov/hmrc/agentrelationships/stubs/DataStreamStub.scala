@@ -40,11 +40,11 @@ trait DataStreamStub extends Eventually {
   }
 
   def givenAuditConnector() = {
-    stubFor(post(urlEqualTo("/write/audit"))
+    stubFor(post(urlEqualTo("/write/audit/merged"))
       .willReturn(aResponse()
         .withStatus(204)
       ))
-    stubFor(post(urlEqualTo("/write/audit/merged"))
+    stubFor(post(urlEqualTo("/write/audit"))
       .willReturn(aResponse()
         .withStatus(204)
       ))

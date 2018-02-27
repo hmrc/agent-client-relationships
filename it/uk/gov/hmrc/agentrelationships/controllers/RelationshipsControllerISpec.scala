@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -181,7 +181,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
@@ -248,7 +247,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
@@ -319,7 +317,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanNotBeAllocatedInDes
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
@@ -349,7 +346,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
@@ -411,7 +407,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-      givenAuditConnector()
+
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
       result.status shouldBe 404
@@ -431,7 +427,6 @@ class RelationshipsControllerISpec extends UnitSpec
 
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
-      givenAuditConnector()
 
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
@@ -441,7 +436,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 404 when credentials are not found but relationship copy was made before" in {
       givenPrincipalGroupIdNotExistsFor(arn)
-      givenAuditConnector()
+
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
       result.status shouldBe 404
@@ -455,7 +450,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 502
@@ -474,7 +468,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
@@ -490,20 +483,22 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalGroupIdNotExistsFor(arn)
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
+
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 404 when agent code is not found in ugs" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoNotExists("foo")
       givenDelegatedGroupIdsExistFor(vrn, Set("foo"))
-      givenAuditConnector()
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
+
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     //FAILURE CASES
@@ -512,7 +507,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalGroupIdRequestFailsWith(500)
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -521,7 +516,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(500)
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -529,7 +524,7 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 502 when ES1/delegated returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenAuditConnector()
+
       givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
       result.status shouldBe 502
@@ -539,7 +534,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalGroupIdRequestFailsWith(400)
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -548,7 +543,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(400)
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -557,7 +552,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdRequestFailsWith(400)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -572,7 +567,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
@@ -633,7 +627,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
@@ -696,7 +689,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
@@ -763,7 +755,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanNotBeAllocatedInDes
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
@@ -790,7 +781,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "MTDVATID", vrn.value, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
@@ -850,7 +840,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
-      givenAuditConnector()
+
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
       result.status shouldBe 404
@@ -867,7 +857,6 @@ class RelationshipsControllerISpec extends UnitSpec
 
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAuditConnector()
 
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
@@ -877,7 +866,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 404 when credentials are not found but relationship copy was made before" in {
       givenPrincipalGroupIdNotExistsFor(arn)
-      givenAuditConnector()
+
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
       result.status shouldBe 404
@@ -890,7 +879,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 502
@@ -911,7 +899,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForNino(nino)
       givenNinoIsUnknownFor(mtdItId)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -923,7 +911,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForNino(nino)
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -936,7 +924,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -948,7 +936,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenArnIsUnknownFor(arn)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -958,7 +946,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalGroupIdNotExistsFor(arn)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -985,7 +972,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenMtdItIdIsUnKnownFor(nino)
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
 
@@ -1019,7 +1005,8 @@ class RelationshipsControllerISpec extends UnitSpec
     def doRequest = doAgentGetRequest(requestPath)
 
     "return 404 when agent not allocated to client in es" in {
-      givenDelegatedGroupIdsNotExistForMtdItId(vrn)
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -1028,6 +1015,7 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 404 when agent not allocated to client in agent-mapping but allocated in es" in {
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
       givenArnIsUnknownFor(arn)
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -1036,7 +1024,7 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 5xx mapping is unavailable" in {
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, "foo")
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -1044,7 +1032,6 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 200 when agent credentials unknown but relationship exists in mapping" in {
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
-      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1073,7 +1060,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship exists and the Arn matches that of current Agent user" in {
       givenUserIsSubscribedAgent(arn)
-      givenAuditConnector()
+
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
@@ -1086,12 +1073,11 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship exists and the MtdItId matches that of current Client user" in {
       givenUserIsSubscribedClient(mtdItId)
-      givenAuditConnector()
+
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-      //givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
       givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1100,7 +1086,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship exists in ETMP and not exist in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-      givenAuditConnector()
+
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1113,7 +1099,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship does not exists in ETMP and in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-      givenAuditConnector()
+
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1125,7 +1111,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 204 when the relationship does not exists in ETMP but exists in GG" in {
       givenUserIsSubscribedClient(mtdItId)
-      givenAuditConnector()
+
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
@@ -1140,7 +1126,7 @@ class RelationshipsControllerISpec extends UnitSpec
       */
 
     "return 403 for an agent with a mismatched arn" in {
-      givenAuditConnector()
+
       givenUserIsSubscribedAgent(Arn("unmatched"))
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1148,7 +1134,7 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     "return 403 for an agent with no agent enrolments" in {
-      givenAuditConnector()
+
       givenUserHasNoAgentEnrolments(arn)
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1156,7 +1142,7 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     "return 502 when gg is unavailable" in {
-      givenAuditConnector()
+
       givenUserIsSubscribedAgent(arn)
 
       givenEsIsUnavailable()
@@ -1171,7 +1157,7 @@ class RelationshipsControllerISpec extends UnitSpec
       */
 
     "return 403 for a client with a mismatched MtdItId" in {
-      givenAuditConnector()
+
       givenUserIsSubscribedClient(MtdItId("unmatched"))
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1179,7 +1165,7 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     "return 403 for a client with no client enrolments" in {
-      givenAuditConnector()
+
       givenUserHasNoClientEnrolments
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1203,7 +1189,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
 
@@ -1221,7 +1206,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
       givenNinoIsUnknownFor(mtdItId)
       givenClientIsUnknownInCESAFor(nino)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "INVALID_ARN"
@@ -1233,7 +1218,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsExistFor(identifier, Set("foo"))
       givenNinoIsUnknownFor(mtdItId)
       givenClientIsUnknownInCESAFor(nino)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
@@ -1244,10 +1229,10 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 404 when agent not allocated to client in es nor identifier not found in des" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(identifier)
+      givenDelegatedGroupIdsNotExistFor(identifier)
       givenNinoIsUnknownFor(mtdItId)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -1256,10 +1241,10 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 404 when agent not allocated to client in es nor cesa" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(identifier)
+      givenDelegatedGroupIdsNotExistFor(identifier)
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -1268,11 +1253,11 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(identifier)
+      givenDelegatedGroupIdsNotExistFor(identifier)
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenArnIsUnknownFor(arn)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -1284,7 +1269,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalGroupIdRequestFailsWith(500)
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -1293,7 +1278,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(500)
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
@@ -1301,7 +1286,7 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 502 when ES1/delegated returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenAuditConnector()
+
       givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
       result.status shouldBe 502
@@ -1311,7 +1296,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalGroupIdRequestFailsWith(400)
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -1320,7 +1305,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(400)
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -1329,7 +1314,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdRequestFailsWith(400)
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -1340,7 +1325,7 @@ class RelationshipsControllerISpec extends UnitSpec
     val requestPath: String = s"/test-only/db/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/$mtdItId"
 
     "return 404 for any call" in {
-      givenAuditConnector()
+
       await(repo.create(RelationshipCopyRecord(arn.value, mtdItId.value, mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 404
@@ -1358,7 +1343,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
-      givenAuditConnector()
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -1371,7 +1355,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
-      givenAuditConnector()
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -1433,7 +1416,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAuditConnector()
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -1446,7 +1428,6 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAuditConnector()
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -1533,10 +1514,6 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn: Vrn, agentCode: String) = {
     givenDelegatedGroupIdsExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}", Set("oldvatfoo"))
     givenGroupInfo("oldvatfoo", agentCode)
-  }
-
-  def givenDelegatedGroupIdsNotExistForMtdItId(taxIdentifier: TaxIdentifier) = {
-    givenDelegatedGroupIdsNotExistFor(taxIdentifier)
   }
 
 }

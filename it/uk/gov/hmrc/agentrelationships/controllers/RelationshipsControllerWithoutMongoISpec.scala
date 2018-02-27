@@ -89,13 +89,13 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
 
     val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
 
-    val identifier: TaxIdentifier = mtditid
+    //val identifier: TaxIdentifier = mtditid
     val identifierType: String = "MTDITID"
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(identifier)
+      givenDelegatedGroupIdsNotExistForMtdItId(mtditid)
       givenNinoIsKnownFor(mtditid, nino)
       givenMtdItIdIsKnownFor(nino, mtditid)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
@@ -105,7 +105,7 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
       givenAuditConnector()
 
 
-      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 

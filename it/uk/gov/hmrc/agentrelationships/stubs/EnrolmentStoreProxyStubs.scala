@@ -65,6 +65,10 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
 
   def givenDelegatedGroupIdsNotExistFor(taxIdentifier: TaxIdentifier) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    givenDelegatedGroupIdsNotExistForKey(enrolmentKey)
+  }
+
+  def givenDelegatedGroupIdsNotExistForKey(enrolmentKey: String) = {
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
       .willReturn(aResponse()
         .withBody(
