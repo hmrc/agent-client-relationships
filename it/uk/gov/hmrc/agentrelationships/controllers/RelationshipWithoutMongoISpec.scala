@@ -78,7 +78,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
     await(repo.ensureIndexes)
   }
 
-  val arn = "AARN0000002"
+  val arn = Arn("AARN0000002")
   val mtditid = MtdItId("ABCDEF123456789")
   val nino = Nino("AB123456C")
   val vrn = Vrn("101747641")
@@ -87,25 +87,25 @@ class RelationshipWithoutMongoISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
+    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
 
     val identifier: TaxIdentifier = mtditid
     val identifierType: String = "MTDITID"
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
-      givenPrincipalUser(Arn(arn), "foo")
+      givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(identifier)
       givenNinoIsKnownFor(mtditid, nino)
       givenMtdItIdIsKnownFor(nino, mtditid)
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
 
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 
@@ -117,7 +117,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "any",
           "agentCode" -> "bar",
           "nino" -> nino.value,
@@ -140,7 +140,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "any",
           "agentCode" -> "bar",
           "nino" -> nino.value,
@@ -157,20 +157,20 @@ class RelationshipWithoutMongoISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
 
-    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
+    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     "return 200 when relationship exists mapping and gg and relationship copy attempt fails because of mongo" in {
-      givenPrincipalUser(Arn(arn), "foo")
+      givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
 
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
 
       await(query) shouldBe empty
 
@@ -182,7 +182,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "any",
           "agentCode" -> "bar",
           "service" -> "mtd-vat",
@@ -203,7 +203,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckGG,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "any",
           "agentCode" -> "bar",
           "GGRelationship" -> "true",
@@ -220,17 +220,17 @@ class RelationshipWithoutMongoISpec extends UnitSpec
 
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
 
-    val requestPath = s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"
+    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/IR-SA/client/ni/$nino"
 
     val identifier: TaxIdentifier = nino
     val identifierType: String = "NINO"
 
     "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 
@@ -246,7 +246,7 @@ class RelationshipWithoutMongoISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
