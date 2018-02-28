@@ -84,7 +84,7 @@ class RelationshipsControllerISpec extends UnitSpec
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
     arn.value,
     mtdItId.value,
-    "MTDITID",
+    mtdItIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
     syncToESStatus = Some(SyncStatus.Success)
   )
