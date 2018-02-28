@@ -336,7 +336,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
     }
 
-    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of es" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -773,7 +773,7 @@ class RelationshipsControllerISpec extends UnitSpec
       )
     }
 
-    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of gg" in {
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -1139,7 +1139,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
+    "return 502 when es is unavailable" in {
 
       givenUserIsSubscribedAgent(arn)
 
@@ -1384,7 +1384,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
+    "return 502 when es is unavailable" in {
       givenUserIsSubscribedAgent(arn)
       givenEsIsUnavailable()
 
@@ -1457,7 +1457,7 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
+    "return 502 when es is unavailable" in {
       givenUserIsSubscribedAgent(arn)
       givenEsIsUnavailable()
 
