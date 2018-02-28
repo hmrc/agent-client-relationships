@@ -81,6 +81,12 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       await(connector.getDelegatedGroupIdsFor(Vrn("foo"))) should contain("bar")
     }
 
+    "return some agents's groupIds for given VATRegNo" in {
+      givenAuditConnector()
+      givenDelegatedGroupIdsExistForKey("HMCE-VATDEC-ORG~VATRegNo~oldfoo", Set("bar", "car", "dar"))
+      await(connector.getDelegatedGroupIdsForHMCEVATDECORG(Vrn("oldfoo"))) should contain("bar")
+    }
+
     "return Empty when VRN not found" in {
       givenAuditConnector()
       givenDelegatedGroupIdsNotExistFor(Vrn("foo"))
