@@ -112,7 +112,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     auditData.set("Journey", "CopyExistingCESARelationship")
     auditData.set("service", "mtd-it")
     auditData.set("clientId", mtdItId)
-    auditData.set("clientIdType", "ni")
+    auditData.set("clientIdType", "mtditid")
 
     relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>

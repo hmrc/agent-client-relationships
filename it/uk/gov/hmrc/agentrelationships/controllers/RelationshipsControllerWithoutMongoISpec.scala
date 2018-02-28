@@ -124,7 +124,7 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           "saAgentRef" -> "foo",
           "service" -> "mtd-it",
           "clientId" -> mtditid.value,
-          "clientIdType" -> "ni",
+          "clientIdType" -> "mtditid",
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "false",
           "enrolmentDelegated" -> "false",
