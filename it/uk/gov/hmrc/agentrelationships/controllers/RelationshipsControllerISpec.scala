@@ -1514,7 +1514,6 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
 
   def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) = {
     givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))
-    givenGroupInfo("foo", agentCode)
   }
 
   def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn: Vrn, agentCode: String) = {
