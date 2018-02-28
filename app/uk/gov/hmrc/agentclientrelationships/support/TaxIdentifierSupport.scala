@@ -29,7 +29,7 @@ trait TaxIdentifierSupport {
     case _ => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
-  protected def identifierName(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
+  protected def identifierNickname(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
     case _: Arn => "ARN"
     case _: MtdItId => "MTDITID"
     case _: Vrn => "MTDVATID"
