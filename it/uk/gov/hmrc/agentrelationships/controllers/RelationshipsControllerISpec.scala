@@ -1062,9 +1062,10 @@ class RelationshipsControllerISpec extends UnitSpec
       givenUserIsSubscribedAgent(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-      givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
@@ -1074,9 +1075,10 @@ class RelationshipsControllerISpec extends UnitSpec
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-      givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
@@ -1086,6 +1088,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenAgentCanBeDeallocatedInDes(mtdItId, arn)
 
@@ -1097,6 +1100,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
 
@@ -1108,9 +1112,10 @@ class RelationshipsControllerISpec extends UnitSpec
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
-      givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
@@ -1163,6 +1168,14 @@ class RelationshipsControllerISpec extends UnitSpec
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 403
+    }
+
+    "return 404 when a client has no groupId" in {
+      givenUserIsSubscribedClient(mtdItId)
+      givenPrincipalGroupIdNotExistsFor(mtdItId)
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
     }
   }
 

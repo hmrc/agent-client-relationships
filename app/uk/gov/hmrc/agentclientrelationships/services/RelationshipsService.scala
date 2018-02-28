@@ -88,7 +88,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
     for {
       allocatedGroupIds <- es.getDelegatedGroupIdsFor(identifier)
       result <- if (allocatedGroupIds.contains(agentUser.groupId)) returnValue(Right(true))
-                else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
+      else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
   def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentUser: Future[AgentUser])
@@ -99,15 +99,15 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       if (copyRelationshipFlag) body else returnValue(CopyRelationshipNotEnabled)
 
     identifier match {
-      case mtdItId @ MtdItId(_) =>
+      case mtdItId@MtdItId(_) =>
         ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentUser))
-      case vrn @ Vrn(_) =>
+      case vrn@Vrn(_) =>
         ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
     }
   }
 
   private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId, eventualAgentUser: Future[AgentUser])
-    (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+                                                        (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
     auditData.set("service", "mtd-it")
@@ -118,7 +118,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         Logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
-      case maybeRelationshipCopyRecord@ _    =>
+      case maybeRelationshipCopyRecord@_ =>
         for {
           nino <- des.getNinoFor(mtdItId)
           references <- lookupCesaForOldRelationship(arn, nino)
@@ -126,9 +126,9 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
             maybeRelationshipCopyRecord.map(
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
               .getOrElse(createRelationship(arn, mtdItId, eventualAgentUser, references.map(SaRef.apply), true, false)).map { _ =>
-                auditService.sendCreateRelationshipAuditEvent
-                FoundAndCopied
-              }
+              auditService.sendCreateRelationshipAuditEvent
+              FoundAndCopied
+            }
               .recover { case NonFatal(ex) =>
                 Logger.warn(s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})", ex)
                 auditService.sendCreateRelationshipAuditEvent
@@ -140,8 +140,8 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentUser: Future[AgentUser])
-                                        (implicit ec: ExecutionContext, hc: HeaderCarrier,
-                                         request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+                                                       (implicit ec: ExecutionContext, hc: HeaderCarrier,
+                                                        request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingESRelationship")
     auditData.set("service", "mtd-vat")
@@ -151,7 +151,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         Logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
-      case maybeRelationshipCopyRecord@ _    =>
+      case maybeRelationshipCopyRecord@_ =>
         for {
           references <- lookupESForOldRelationship(arn, vrn)
           result <- if (references.nonEmpty) {
@@ -172,7 +172,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   def lookupCesaForOldRelationship(arn: Arn, nino: Nino)
-    (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
+                                  (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
     auditData.set("nino", nino)
     for {
       references <- des.getClientSaAgentSaReferences(nino)
@@ -193,7 +193,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
 
     for {
       agentGroupIds <- es.getDelegatedGroupIdsForHMCEVATDECORG(clientVrn)
-      agentCodes <- Future.sequence(agentGroupIds.map(ugs.getGroupInfo).toSeq).map(_.map(_.agentCode).collect{case Some(ac) => ac})
+      agentCodes <- Future.sequence(agentGroupIds.map(ugs.getGroupInfo).toSeq).map(_.map(_.agentCode).collect { case Some(ac) => ac })
       matching <- intersection[AgentCode](agentCodes) {
         mapping.getAgentCodesFor(arn)
       }
@@ -222,11 +222,11 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   private def createEsRecord(
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser],
-    failIfAllocateAgentInESFails: Boolean
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+                              arn: Arn,
+                              identifier: TaxIdentifier,
+                              eventualAgentUser: Future[AgentUser],
+                              failIfAllocateAgentInESFails: Boolean
+                            )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
     (for {
@@ -283,9 +283,9 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   private def recoverRelationshipCreation(
-    relationshipCopyRecord: RelationshipCopyRecord,
-    arn: Arn, identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+                                           relationshipCopyRecord: RelationshipCopyRecord,
+                                           arn: Arn, identifier: TaxIdentifier,
+                                           eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     lockService.tryLock(arn, identifier) {
       def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
@@ -302,7 +302,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
           recoverEsRecord()
         case (true, false) =>
           Logger.warn(s"ES relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
-                      s"This should not happen because we always create the ETMP relationship first,")
+            s"This should not happen because we always create the ETMP relationship first,")
           recoverEtmpRecord()
         case (false, false) =>
           Logger.warn(s"recoverRelationshipCreation called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
@@ -312,7 +312,6 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
 
   }
 
-
   private def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
@@ -320,28 +319,29 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       Logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
       returnValue(Set.empty)
     } else
-        mappingServiceCall.map { mappingServiceIds =>
-          val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
-          Logger.info(s"The sa/es references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
-            s"The intersected value between mapping store and DES/ES is $intersected")
-          intersected
-        }
+      mappingServiceCall.map { mappingServiceIds =>
+        val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
+        Logger.info(s"The sa/es references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
+          s"The intersected value between mapping store and DES/ES is $intersected")
+        intersected
+      }
   }
 
   def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
     implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
 
-    def esDeAllocation = (for {
+    def esDeAllocation(clientGroupId: String) = (for {
       agentUser <- getAgentUserFor(arn)
-      _ <- checkForRelationship(mtdItId, agentUser).map(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId,mtdItId,agentUser.agentCode))
+      _ <- checkForRelationship(mtdItId, agentUser).map(_ => es.deallocateEnrolmentFromAgent(clientGroupId, mtdItId, agentUser.agentCode))
     } yield ()).recover {
       case ex: RelationshipNotFound =>
-        Logger.warn(s"Could not delete relationship for ${arn.value}, ${mtdItId.value}: ${ex.getMessage}")
+        Logger.warn("Could not delete relationship", ex)
     }
 
     for {
+      clientGroupId <- es.getPrincipalGroupIdFor(mtdItId)
       _ <- des.deleteAgentRelationship(mtdItId, arn)
-      _ <- esDeAllocation
+      _ <- esDeAllocation(clientGroupId)
     } yield ()
   }
 

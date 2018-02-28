@@ -37,8 +37,8 @@ import scala.util.control.NonFatal
 
 @Singleton
 class RelationshipsController @Inject()(
-                               override val authConnector: AuthConnector,
-                               service: RelationshipsService)
+                                         override val authConnector: AuthConnector,
+                                         service: RelationshipsService)
   extends BaseController with AuthActions {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
@@ -115,8 +115,7 @@ class RelationshipsController @Inject()(
     } yield ())
       .map(_ => Created)
       .recover {
-        case upS: Upstream5xxResponse =>
-          throw upS
+        case upS: Upstream5xxResponse => throw upS
         case NonFatal(ex) =>
           Logger.warn("Could not create relationship")
           NotFound(toJson(ex.getMessage))
@@ -127,7 +126,13 @@ class RelationshipsController @Inject()(
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
+    service.deleteRelationship(arn, mtdItId)
+      .map(_ => NoContent)
+      .recover {
+        case ex: RelationshipNotFound =>
+          Logger.warn("Could not delete relationship", ex)
+          NotFound(ex.getMessage)
+      }
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
@@ -151,10 +156,8 @@ class RelationshipsController @Inject()(
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
         }
       }.recover {
-      case upS: Upstream5xxResponse => {
-        throw upS
-      }
-      case NonFatal(ex) =>
+      case upS: Upstream5xxResponse => throw upS
+      case NonFatal(_) =>
         Logger.warn("checkWithNino: lookupCesaForOldRelationship failed")
         NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
     }
