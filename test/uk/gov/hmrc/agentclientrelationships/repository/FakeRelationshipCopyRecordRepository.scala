@@ -60,11 +60,11 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
 
   }
 
-  def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
-        data(arn.value + identifier.value) = maybeValue.get.copy(syncToGGStatus = Some(status))
+        data(arn.value + identifier.value) = maybeValue.get.copy(syncToESStatus = Some(status))
       }  else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
       }

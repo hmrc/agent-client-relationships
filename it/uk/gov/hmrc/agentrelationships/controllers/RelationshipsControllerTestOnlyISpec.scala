@@ -27,11 +27,10 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RelationshipTestOnlyISpec extends UnitSpec
+class RelationshipsControllerTestOnlyISpec extends UnitSpec
   with MongoApp
   with OneServerPerSuite
   with WireMockSupport
-  with GovernmentGatewayProxyStubs
   with DesStubs
   with MappingStubs
   with DataStreamStub {
@@ -39,10 +38,12 @@ class RelationshipTestOnlyISpec extends UnitSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
+    protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.government-gateway-proxy.port" -> wireMockPort,
+        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+        "microservice.services.tax-enrolments.port" -> wireMockPort,
+        "microservice.services.users-groups-search.port" -> wireMockPort,
         "microservice.services.des.port" -> wireMockPort,
         "microservice.services.auth.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,

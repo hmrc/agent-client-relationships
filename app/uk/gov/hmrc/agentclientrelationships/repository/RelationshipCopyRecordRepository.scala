@@ -86,12 +86,12 @@ case class RelationshipCopyRecord(arn: String,
                                   references: Option[Set[RelationshipReference]] = None,
                                   dateTime: DateTime = now(UTC),
                                   syncToETMPStatus: Option[SyncStatus] = None,
-                                  syncToGGStatus: Option[SyncStatus] = None) {
-  def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateGgRecord
+                                  syncToESStatus: Option[SyncStatus] = None) {
+  def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
 
   def needToCreateEtmpRecord = !syncToETMPStatus.contains(Success)
 
-  def needToCreateGgRecord = !(syncToGGStatus.contains(Success) || syncToGGStatus.contains(InProgress))
+  def needToCreateEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
@@ -103,7 +103,7 @@ trait RelationshipCopyRecordRepository {
   def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
 
-  def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
+  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit]
 
   def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int]
 }
@@ -143,12 +143,12 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
     })
   }
 
-  def updateGgSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
+  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToGGStatus" -> status.toString))
+      modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating GG sync status ($status) failed: $error"))
+      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ES sync status ($status) failed: $error"))
     })
   }
 

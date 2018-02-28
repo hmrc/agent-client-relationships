@@ -16,25 +16,4 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import org.mockito.Mockito
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, Suite}
-
-import scala.reflect.Manifest
-
-trait ResettingMockitoSugar extends MockitoSugar with BeforeAndAfterEach {
-  this: Suite =>
-
-  var mocksToReset = Seq.empty[Any]
-
-  def resettingMock[T <: AnyRef](implicit manifest: Manifest[T]): T = {
-    val m = mock[T](manifest)
-    mocksToReset = mocksToReset :+ m
-    m
-  }
-
-  override protected def beforeEach(): Unit = {
-    super.beforeEach()
-    Mockito.reset(mocksToReset: _*)
-  }
-}
+case class RelationshipNotFound(errorCode: String) extends Exception(errorCode)

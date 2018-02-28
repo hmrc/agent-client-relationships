@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -27,17 +27,17 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RelationshipISpec extends UnitSpec
+class RelationshipsControllerISpec extends UnitSpec
   with MongoApp
   with OneServerPerSuite
   with WireMockSupport
-  with GovernmentGatewayProxyStubs
+  with RelationshipStubs
   with DesStubs
   with MappingStubs
   with DataStreamStub
@@ -51,7 +51,9 @@ class RelationshipISpec extends UnitSpec
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.government-gateway-proxy.port" -> wireMockPort,
+        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+        "microservice.services.tax-enrolments.port" -> wireMockPort,
+        "microservice.services.users-groups-search.port" -> wireMockPort,
         "microservice.services.des.port" -> wireMockPort,
         "microservice.services.auth.port" -> wireMockPort,
         "microservice.services.agent-mapping.port" -> wireMockPort,
@@ -65,36 +67,39 @@ class RelationshipISpec extends UnitSpec
 
   override def beforeEach() {
     super.beforeEach()
+    givenAuditConnector()
     await(repo.ensureIndexes)
   }
 
-  val arn = "AARN0000002"
-  val mtditid = "ABCDEF123456789"
-  val nino = "AB123456C"
+  val arn = Arn("AARN0000002")
+  val mtdItId = MtdItId("ABCDEF123456789")
+  val nino = Nino("AB123456C")
+  val vrn = Vrn("101747641")
   val mtdItIdType = "MTDITID"
-  val vrn = "101747641"
-  val oldAgentCode = "oldAgentCode"
   val mtdVatIdType = "MTDVATID"
+  val oldAgentCode = "oldAgentCode"
+  val testAgentUser = "testAgentUser"
+  val testAgentGroup = "testAgentGroup"
 
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
-    arn,
-    mtditid,
-    "MTDITID",
+    arn.value,
+    mtdItId.value,
+    mtdItIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToGGStatus = Some(SyncStatus.Success)
+    syncToESStatus = Some(SyncStatus.Success)
   )
 
   val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
-    arn,
-    vrn,
+    arn.value,
+    vrn.value,
     mtdVatIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToGGStatus = Some(SyncStatus.Success)
+    syncToESStatus = Some(SyncStatus.Success)
   )
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
 
-    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
@@ -102,19 +107,18 @@ class RelationshipISpec extends UnitSpec
 
     //HAPPY PATHS WHEN CHECKING CESA
 
-    "return 200 when agent not allocated to client in gg but relationship exists in cesa" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-      givenAuditConnector()
+    "return 200 when agent not allocated to client in es but relationship exists in cesa" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -122,25 +126,25 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (mtditid),
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Success))
+        'syncToESStatus (Some(SyncStatus.Success))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "service" -> "mtd-it",
-          "clientId" -> mtditid,
-          "clientIdType" -> "ni",
+          "clientId" -> mtdItId.value,
+          "clientIdType" -> "mtditid",
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "true",
@@ -156,10 +160,10 @@ class RelationshipISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),
@@ -171,15 +175,14 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -187,25 +190,25 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (mtditid),
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "",
           "agentCode" -> "",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "service" -> "mtd-it",
-          "clientId" -> mtditid,
-          "clientIdType" -> "ni",
+          "clientId" -> mtdItId.value,
+          "clientIdType" -> "mtditid",
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
@@ -221,10 +224,10 @@ class RelationshipISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "",
           "agentCode" -> "",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),
@@ -236,17 +239,16 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 200 when agent code unknown but relationship exists in cesa" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsNotInTheResponseFor("foo")
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-      givenAuditConnector()
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoNotExists("foo")
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -254,25 +256,25 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (mtditid),
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "service" -> "mtd-it",
-          "clientId" -> mtditid,
-          "clientIdType" -> "ni",
+          "clientId" -> mtdItId.value,
+          "clientIdType" -> "mtditid",
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
@@ -288,10 +290,10 @@ class RelationshipISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),
@@ -306,18 +308,17 @@ class RelationshipISpec extends UnitSpec
     //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanNotBeAllocatedInDes
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-      givenAuditConnector()
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -325,30 +326,28 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (mtditid),
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
-        'syncToGGStatus (None)
+        'syncToESStatus (None)
       )
-
 
     }
 
-    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of gg" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCannotBeAllocatedInGovernmentGateway(mtditid, "bar")
-      givenAuditConnector()
+    "return 200 when relationship exists only in cesa and relationship copy attempt fails because of es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> mtditid, "clientIdentifierType" -> mtdItIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -356,25 +355,25 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (mtditid),
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
         'clientIdentifierType (mtdItIdType),
         'references (Some(Set(SaRef(SaAgentReference("foo"))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Failed))
+        'syncToESStatus (Some(SyncStatus.Failed))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "service" -> "mtd-it",
-          "clientId" -> mtditid,
-          "clientIdType" -> "ni",
+          "clientId" -> mtdItId.value,
+          "clientIdType" -> "mtditid",
           "CESARelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
@@ -390,10 +389,10 @@ class RelationshipISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),
@@ -404,31 +403,30 @@ class RelationshipISpec extends UnitSpec
       )
     }
 
-    "return 404 when relationship is not found in gg but relationship copy was made before" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenAuditConnector()
+    "return 404 when relationship is not found in es but relationship copy was made before" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when relationship was previously copied from CESA to ETMP & GG but has since been deleted from ETMP & GG " +
+    "return 404 when relationship was previously copied from CESA to ETMP & ES but has since been deleted from ETMP & ES " +
       "(even though the relationship upon which the copy was based still exists in CESA)" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
 
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenMtdItIdIsKnownFor(Nino(nino), MtdItId(mtditid))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-      givenAuditConnector()
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
@@ -437,22 +435,21 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 when credentials are not found but relationship copy was made before" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(arn)
+
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
     "return 502 when mapping service is unavailable" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 502
@@ -461,19 +458,18 @@ class RelationshipISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
 
-    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
     //HAPPY PATH :-)
 
-    "return 200 when relationship exists in gg" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 200 when relationship exists in es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
       val result = await(doRequest)
@@ -483,95 +479,96 @@ class RelationshipISpec extends UnitSpec
 
     //UNHAPPY PATHS
 
-    "return 404 when credentials are not found in gg" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 404 when credentials are not found in es" in {
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
+
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when agent code is not found in gg" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsNotInTheResponseFor("foo")
-      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+    "return 404 when agent code is not found in ugs" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoNotExists("foo")
+      givenDelegatedGroupIdsExistFor(vrn, Set("foo"))
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
+
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     //FAILURE CASES
 
-    "return 502 when GsoAdminGetCredentialsForDirectEnrolments returns 5xx" in {
-      whenGetCredentialsReturns(500)
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 502 when ES1/principal returns 5xx" in {
+      givenPrincipalGroupIdRequestFailsWith(500)
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
-    "return 502 when GsoAdminGetUserDetails returns 5xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      whenGetUserDetailReturns(500)
+    "return 502 when UGS returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(500)
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
-    "return 502 when GsoAdminGetAssignedAgents returns 5xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAuditConnector()
-      whenGetAssignedAgentsReturns(500)
+    "return 502 when ES1/delegated returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+
+      givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
-    "return 400 when GsoAdminGetCredentialsForDirectEnrolments returns 4xx" in {
-      whenGetCredentialsReturns(400)
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 400 when ES1/principal returns 4xx" in {
+      givenPrincipalGroupIdRequestFailsWith(400)
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
 
-    "return 400 when GsoAdminGetUserDetails returns 4xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      whenGetUserDetailReturns(400)
+    "return 400 when UGS returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(400)
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
 
-    "return 400 when GsoAdminGetAssignedAgents returns 4xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      whenGetAssignedAgentsReturns(400)
-      givenAuditConnector()
+    "return 400 when ES1/delegated returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdRequestFailsWith(400)
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
 
     //HAPPY PATHS WHEN CHECKING HMRC-VATDEC-ORG
 
-    "return 200 when agent not allocated to client in gg but relationship exists in HMCE-VATDEC-ORG" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+    "return 200 when agent not allocated to client in es but relationship exists in HMCE-VATDEC-ORG" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
-      givenAuditConnector()
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -579,28 +576,28 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (vrn),
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Success))
+        'syncToESStatus (Some(SyncStatus.Success))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
           "oldAgentCodes" -> oldAgentCode,
           "service" -> "mtd-vat",
-          "vrn" -> vrn,
-          "GGRelationship" -> "true",
+          "vrn" -> vrn.value,
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "true",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -609,30 +606,29 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
           "oldAgentCodes" -> oldAgentCode,
-          "vrn" -> vrn,
-          "GGRelationship" -> "true"
+          "vrn" -> vrn.value,
+          "ESRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
     }
 
     "return 200 when agent credentials unknown but relationship exists in HMCE-VATDEC-ORG" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAuditConnector()
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -640,28 +636,28 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (vrn),
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "",
           "agentCode" -> "",
           "service" -> "mtd-vat",
-          "vrn" -> vrn,
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -670,32 +666,31 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn,
-          "vrn" -> vrn,
+          "arn" -> arn.value,
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
           "credId" -> "",
           "agentCode" -> "",
-          "GGRelationship" -> "true"
+          "ESRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
     }
 
     "return 200 when agent code unknown but relationship exists in HMCE-VATDEC-ORG" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsNotInTheResponseFor("foo")
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoNotExists("foo")
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
-      givenAuditConnector()
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -703,28 +698,28 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (vrn),
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.IncompleteInputParams))
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "",
           "service" -> "mtd-vat",
-          "vrn" -> vrn,
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -733,17 +728,17 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
-          "vrn" -> vrn,
+          "arn" -> arn.value,
+          "credId" -> "any",
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
           "agentCode" -> "",
-          "GGRelationship" -> "true"
+          "ESRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
@@ -753,16 +748,15 @@ class RelationshipISpec extends UnitSpec
     //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
     "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of etmp" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanNotBeAllocatedInDes
-      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
-      givenAuditConnector()
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -770,26 +764,25 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (vrn),
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Failed)),
-        'syncToGGStatus (None)
+        'syncToESStatus (None)
       )
     }
 
-    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of gg" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAgentCannotBeAllocatedInGovernmentGateway(vrn, "bar")
-      givenAuditConnector()
+      givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "MTDVATID", vrn.value, "bar")
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -797,28 +790,28 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn),
-        'clientIdentifier (vrn),
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
         'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToGGStatus (Some(SyncStatus.Failed))
+        'syncToESStatus (Some(SyncStatus.Failed))
       )
 
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
           "service" -> "mtd-vat",
-          "vrn" -> vrn,
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
-          "GGRelationship" -> "true",
+          "ESRelationship" -> "true",
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingGGRelationship"
+          "Journey" -> "CopyExistingESRelationship"
         ),
         tags = Map(
           "transactionName" -> "create-relationship",
@@ -827,44 +820,43 @@ class RelationshipISpec extends UnitSpec
       )
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn,
-          "credId" -> "foo",
+          "arn" -> arn.value,
+          "credId" -> "any",
           "agentCode" -> "bar",
-          "GGRelationship" -> "true",
-          "vrn" -> vrn,
+          "ESRelationship" -> "true",
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
     }
 
-    "return 404 when relationship is not found in gg but relationship copy was made before" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
-      givenAuditConnector()
+    "return 404 when relationship is not found in es but relationship copy was made before" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when relationship was previously copied from HMCE-VATDEC-ORG to ETMP & GG but has since been deleted from ETMP & GG " +
+    "return 404 when relationship was previously copied from HMCE-VATDEC-ORG to ETMP & ES but has since been deleted from ETMP & ES " +
       "(even though the relationship upon which the copy was based still exists in HMCE-VATDEC-ORG)" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
 
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
-      givenAuditConnector()
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
@@ -873,21 +865,20 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 404 when credentials are not found but relationship copy was made before" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(arn)
+
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
     "return 502 when mapping service is unavailable" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
 
       val result = await(doRequest)
       result.status shouldBe 502
@@ -896,66 +887,65 @@ class RelationshipISpec extends UnitSpec
 
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
 
-    val requestPath = s"/agent-client-relationships/agent/$arn/service/IR-SA/client/ni/$nino"
+    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/IR-SA/client/ni/${nino.value}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
     //CESA CHECK UNHAPPY PATHS
 
-    "return 404 when agent not allocated to client in gg nor identifier not found in des" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(nino)
-      givenNinoIsUnknownFor(MtdItId(mtditid))
-      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
-      givenAuditConnector()
+    "return 404 when agent not allocated to client in es nor identifier not found in des" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForNino(nino)
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when agent not allocated to client in gg nor cesa" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(nino)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
-      givenAuditConnector()
+    "return 404 when agent not allocated to client in es nor cesa" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForNino(nino)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 5xx mapping is unavailable" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(nino)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForNino(nino)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
-    "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(nino)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenArnIsUnknownFor(Arn(arn))
-      givenAuditConnector()
+    "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForNino(nino)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenArnIsUnknownFor(arn)
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -963,10 +953,10 @@ class RelationshipISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "",
           "agentCode" -> "",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),
@@ -978,13 +968,12 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenArnIsKnownFor(Arn(arn), SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenMtdItIdIsUnKnownFor(Nino(nino))
-      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenMtdItIdIsUnKnownFor(nino)
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
 
       await(query()) shouldBe empty
       val result = await(doRequest)
@@ -994,10 +983,10 @@ class RelationshipISpec extends UnitSpec
       verifyAuditRequestSent(1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn,
+          "arn" -> arn.value,
           "credId" -> "",
           "agentCode" -> "",
-          "nino" -> nino,
+          "nino" -> nino.value,
           "saAgentRef" -> "foo",
           "CESARelationship" -> "true"
         ),
@@ -1011,53 +1000,54 @@ class RelationshipISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn" should {
 
-    val requestPath = s"/agent-client-relationships/agent/$arn/service/HMCE-VATDEC-ORG/client/vrn/$vrn"
+    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMCE-VATDEC-ORG/client/vrn/${vrn.value}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
-    "return 404 when agent not allocated to client in gg" in {
-      givenAgentIsNotAllocatedToClient(vrn)
+    "return 404 when agent not allocated to client in es" in {
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when agent not allocated to client in agent-mapping but allocated in gg" in {
-      givenAgentIsAllocatedAndAssignedToClient(vrn, arn)
-      givenArnIsUnknownFor(Arn(arn))
+    "return 404 when agent not allocated to client in agent-mapping but allocated in es" in {
+      givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenArnIsUnknownFor(arn)
+      givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 5xx mapping is unavailable" in {
-      givenAgentIsAllocatedAndAssignedToClient(vrn, "foo")
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, "foo")
       givenServiceReturnsServiceUnavailable()
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
     "return 200 when agent credentials unknown but relationship exists in mapping" in {
-      givenAgentIsAllocatedAndAssignedToClient(vrn, oldAgentCode)
-      givenArnIsKnownFor(Arn(arn), AgentCode(oldAgentCode))
-      givenAuditConnector()
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
 
       val result = await(doRequest)
       result.status shouldBe 200
 
       verifyAuditRequestSent(1,
-        event = AgentClientRelationshipEvent.CheckGG,
+        event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn,
-          "vrn" -> vrn,
+          "arn" -> arn.value,
+          "vrn" -> vrn.value,
           "oldAgentCodes" -> oldAgentCode,
           "credId" -> "",
           "agentCode" -> "",
-          "GGRelationship" -> "true"
+          "ESRelationship" -> "true"
         ),
         tags = Map(
-          "transactionName" -> "check-gg",
+          "transactionName" -> "check-es",
           "path" -> requestPath
         )
       )
@@ -1066,66 +1056,66 @@ class RelationshipISpec extends UnitSpec
 
   "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
     "return 204 when the relationship exists and the Arn matches that of current Agent user" in {
-      givenUserIsSubscribedAgent(Arn(arn))
-      writeAuditSucceeds()
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
-      givenAgentCanBeDeallocatedInDes(mtditid, arn)
-      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
     }
 
     "return 204 when the relationship exists and the MtdItId matches that of current Client user" in {
-      givenUserIsSubscribedClient(MtdItId(mtditid))
-      writeAuditSucceeds()
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
-      givenAgentCanBeDeallocatedInDes(mtditid, arn)
-      givenAgentCanBeDeallocatedInGovernmentGateway(mtditid, "bar")
+      givenUserIsSubscribedClient(mtdItId)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
     }
 
-    "return 204 when the relationship exists in ETMP and not exist in GG" in {
-      givenUserIsSubscribedClient(MtdItId(mtditid))
-      writeAuditSucceeds()
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-
-      givenAgentCanBeDeallocatedInDes(mtditid, arn)
-
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 204
-    }
-
-    "return 204 when the relationship does not exists in ETMP and in GG" in {
-      givenUserIsSubscribedClient(MtdItId(mtditid))
-      writeAuditSucceeds()
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenAgentHasNoActiveRelationshipInDes(mtditid, arn)
+    "return 204 when the relationship exists in ETMP and not exist in ES" in {
+      givenUserIsSubscribedClient(mtdItId)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
     }
 
-    "return 204 when the relationship does not exists in ETPM but exists in GG" in {
-      givenUserIsSubscribedClient(MtdItId(mtditid))
-      writeAuditSucceeds()
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(mtditid, "bar")
-      givenAgentHasNoActiveRelationshipInDes(mtditid, arn)
+    "return 204 when the relationship does not exists in ETMP and in ES" in {
+      givenUserIsSubscribedClient(mtdItId)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 204
+    }
+
+    "return 204 when the relationship does not exists in ETMP but exists in ES" in {
+      givenUserIsSubscribedClient(mtdItId)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId,"clientGroupId")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
@@ -1137,23 +1127,24 @@ class RelationshipISpec extends UnitSpec
 
     "return 403 for an agent with a mismatched arn" in {
       givenUserIsSubscribedAgent(Arn("unmatched"))
-
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 403
     }
 
     "return 403 for an agent with no agent enrolments" in {
-      givenUserHasNoAgentEnrolments(Arn(arn))
+
+      givenUserHasNoAgentEnrolments(arn)
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
-      givenUserIsSubscribedAgent(Arn(arn))
+    "return 502 when es is unavailable" in {
 
-      givenGgIsUnavailable()
-      givenAgentCanBeDeallocatedInDes(mtditid, arn)
+      givenUserIsSubscribedAgent(arn)
+
+      givenEsIsUnavailable()
+      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 502
@@ -1164,6 +1155,7 @@ class RelationshipISpec extends UnitSpec
       */
 
     "return 403 for a client with a mismatched MtdItId" in {
+
       givenUserIsSubscribedClient(MtdItId("unmatched"))
 
       val result = await(doAgentDeleteRequest(requestPath))
@@ -1171,10 +1163,19 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 403 for a client with no client enrolments" in {
+
       givenUserHasNoClientEnrolments
 
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 403
+    }
+
+    "return 404 when a client has no groupId" in {
+      givenUserIsSubscribedClient(mtdItId)
+      givenPrincipalGroupIdNotExistsFor(mtdItId)
+
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
     }
   }
 
@@ -1186,17 +1187,16 @@ class RelationshipISpec extends UnitSpec
 
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
 
-    val identifier: String = if (isMtdItId) mtditid else nino
+    val identifier: TaxIdentifier = if (isMtdItId) mtdItId else nino
 
     //HAPPY PATH :-)
 
-    "return 200 when relationship exists in gg" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 200 when relationship exists in es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
 
-      def query() = repo.find("arn" -> arn, "clientIdentifier" -> nino, "clientIdentifierType" -> "NINO")
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
 
       await(query()) shouldBe empty
       val result = await(doRequest)
@@ -1206,25 +1206,25 @@ class RelationshipISpec extends UnitSpec
 
     //UNHAPPY PATHS
 
-    "return 404 when credentials are not found in gg" in {
-      givenAgentCredentialsAreNotFoundFor(Arn(arn))
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 404 when credentials are not found in es" in {
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenNinoIsUnknownFor(MtdItId(mtditid))
-      givenClientIsUnknownInCESAFor(Nino(nino))
-      givenAuditConnector()
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientIsUnknownInCESAFor(nino)
+
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "INVALID_ARN"
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
-    "return 404 when agent code is not found in gg" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsNotInTheResponseFor("foo")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenNinoIsUnknownFor(MtdItId(mtditid))
-      givenClientIsUnknownInCESAFor(Nino(nino))
-      givenAuditConnector()
+    "return 404 when agent code is not found in ugs" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoNotExists("foo")
+      givenDelegatedGroupIdsExistFor(identifier, Set("foo"))
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientIsUnknownInCESAFor(nino)
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
@@ -1232,38 +1232,38 @@ class RelationshipISpec extends UnitSpec
 
     //CESA CHECK UNHAPPY PATHS
 
-    "return 404 when agent not allocated to client in gg nor identifier not found in des" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(identifier)
-      givenNinoIsUnknownFor(MtdItId(mtditid))
-      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
-      givenAuditConnector()
+    "return 404 when agent not allocated to client in es nor identifier not found in des" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(identifier)
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when agent not allocated to client in gg nor cesa" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(identifier)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasNoActiveRelationshipWithAgentInCESA(Nino(nino))
-      givenAuditConnector()
+    "return 404 when agent not allocated to client in es nor cesa" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(identifier)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when agent not allocated to client in gg and also cesa mapping not found" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(identifier)
-      givenNinoIsKnownFor(MtdItId(mtditid), Nino(nino))
-      givenClientHasRelationshipWithAgentInCESA(Nino(nino), "foo")
-      givenArnIsUnknownFor(Arn(arn))
-      givenAuditConnector()
+    "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(identifier)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenArnIsUnknownFor(arn)
+
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -1271,57 +1271,56 @@ class RelationshipISpec extends UnitSpec
 
     //FAILURE CASES
 
-
-    "return 502 when GsoAdminGetCredentialsForDirectEnrolments returns 5xx" in {
-      whenGetCredentialsReturns(500)
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 502 when ES1/principal returns 5xx" in {
+      givenPrincipalGroupIdRequestFailsWith(500)
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
-    "return 502 when GsoAdminGetUserDetails returns 5xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      whenGetUserDetailReturns(500)
+    "return 502 when UGS returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(500)
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
-    "return 502 when GsoAdminGetAssignedAgents returns 5xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAuditConnector()
-      whenGetAssignedAgentsReturns(500)
+    "return 502 when ES1/delegated returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+
+      givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
       result.status shouldBe 502
     }
 
-    "return 400 when GsoAdminGetCredentialsForDirectEnrolments returns 4xx" in {
-      whenGetCredentialsReturns(400)
-      givenAgentCodeIsFoundFor("foo", "bar")
+    "return 400 when ES1/principal returns 4xx" in {
+      givenPrincipalGroupIdRequestFailsWith(400)
+      givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
 
-    "return 400 when GsoAdminGetUserDetails returns 4xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      whenGetUserDetailReturns(400)
+    "return 400 when UGS returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(400)
       givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenAuditConnector()
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
 
-    "return 400 when GsoAdminGetAssignedAgents returns 4xx" in {
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      whenGetAssignedAgentsReturns(400)
-      givenAuditConnector()
+    "return 400 when ES/delegated returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdRequestFailsWith(400)
+
       val result = await(doRequest)
       result.status shouldBe 400
     }
@@ -1329,11 +1328,11 @@ class RelationshipISpec extends UnitSpec
 
   "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid" should {
 
-    val requestPath: String = s"/test-only/db/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+    val requestPath: String = s"/test-only/db/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/$mtdItId"
 
     "return 404 for any call" in {
-      givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
+
+      await(repo.create(RelationshipCopyRecord(arn.value, mtdItId.value, mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 404
     }
@@ -1341,29 +1340,27 @@ class RelationshipISpec extends UnitSpec
 
   "PUT /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid" should {
 
-    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-IT/client/MTDITID/$mtditid"
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in {
-      givenUserIsSubscribedAgent(Arn(arn))
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-      givenAuditConnector()
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
     }
 
     "return 201 when the relationship exists and the MtdItId matches that of current Client user" in {
-      givenUserIsSubscribedClient(MtdItId(mtditid))
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(mtditid)
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(mtditid, "bar")
-      givenAuditConnector()
+      givenUserIsSubscribedClient(mtdItId)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -1381,15 +1378,15 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 403 for an agent with no agent enrolments" in {
-      givenUserHasNoAgentEnrolments(Arn(arn))
+      givenUserHasNoAgentEnrolments(arn)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
-      givenUserIsSubscribedAgent(Arn(arn))
-      givenGgIsUnavailable()
+    "return 502 when es is unavailable" in {
+      givenUserIsSubscribedAgent(arn)
+      givenEsIsUnavailable()
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -1415,30 +1412,28 @@ class RelationshipISpec extends UnitSpec
   }
 
   "PUT /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
-    val vrn = "101747641"
-    val requestPath: String = s"/agent-client-relationships/agent/$arn/service/HMRC-MTD-VAT/client/VRN/$vrn"
+    val vrn = Vrn("101747641")
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in {
-      givenUserIsSubscribedAgent(Arn(arn))
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
-      givenAuditConnector()
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
     }
 
     "return 201 when the relationship exists and the Vrn matches that of current Client user" in {
-      givenUserIsSubscribedClient(Vrn(vrn))
-      givenAgentCredentialsAreFoundFor(Arn(arn), "foo")
-      givenAgentCodeIsFoundFor("foo", "bar")
-      givenAgentIsNotAllocatedToClient(vrn)
+      givenUserIsSubscribedClient(vrn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenAgentCanBeAllocatedInGovernmentGateway(vrn, "bar")
-      givenAuditConnector()
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -1456,15 +1451,15 @@ class RelationshipISpec extends UnitSpec
     }
 
     "return 403 for an agent with no agent enrolments" in {
-      givenUserHasNoAgentEnrolments(Arn(arn))
+      givenUserHasNoAgentEnrolments(arn)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 403
     }
 
-    "return 502 when gg is unavailable" in {
-      givenUserIsSubscribedAgent(Arn(arn))
-      givenGgIsUnavailable()
+    "return 502 when es is unavailable" in {
+      givenUserIsSubscribedAgent(arn)
+      givenEsIsUnavailable()
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -1488,4 +1483,42 @@ class RelationshipISpec extends UnitSpec
       result.status shouldBe 403
     }
   }
+}
+
+trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
+
+  def givenPrincipalUser(taxIdentifier: TaxIdentifier, groupId: String, userId: String = "any") = {
+    givenPrincipalGroupIdExistsFor(taxIdentifier, groupId)
+    givenPrincipalUserIdExistFor(taxIdentifier, userId)
+  }
+
+  def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) = {
+    givenDelegatedGroupIdsNotExistFor(mtdItId)
+  }
+
+  def givenDelegatedGroupIdsNotExistForNino(nino: Nino) = {
+    givenDelegatedGroupIdsNotExistFor(nino)
+  }
+
+  def givenDelegatedGroupIdsNotExistForMtdVatId(vrn: Vrn) = {
+    givenDelegatedGroupIdsNotExistFor(vrn)
+  }
+
+  def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) = {
+    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, agentCode)
+  }
+
+  def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) = {
+    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-VAT", "MTDVATID", vrn.value, agentCode)
+  }
+
+  def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) = {
+    givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))
+  }
+
+  def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn: Vrn, agentCode: String) = {
+    givenDelegatedGroupIdsExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}", Set("oldvatfoo"))
+    givenGroupInfo("oldvatfoo", agentCode)
+  }
+
 }

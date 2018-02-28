@@ -36,7 +36,7 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
     clientIdentifier = mtdItId.value,
     clientIdentifierType = "MTDITID",
     references = Some(Set(SaRef(SaAgentReference("T1113T")))),
-    syncToETMPStatus = Some(SyncStatus.InProgress), syncToGGStatus = None)
+    syncToETMPStatus = Some(SyncStatus.InProgress), syncToESStatus = None)
 
   "RelationshipCopyRecordRepository" should {
 
@@ -102,13 +102,13 @@ trait RelationshipCopyRecordRepositorySpec extends UnitSpec {
       }
     }
 
-    "updateGgSyncStatus" should {
+    "updateEsSyncStatus" should {
       "update the record" in {
         await(repo.create(relationshipCopyRecord))
-        await(repo.findBy(arn, mtdItId)).get.syncToGGStatus shouldBe None
+        await(repo.findBy(arn, mtdItId)).get.syncToESStatus shouldBe None
 
-        await(repo.updateGgSyncStatus(arn, mtdItId, SyncStatus.Success))
-        await(repo.findBy(arn, mtdItId)).get.syncToGGStatus shouldBe Some(SyncStatus.Success)
+        await(repo.updateEsSyncStatus(arn, mtdItId, SyncStatus.Success))
+        await(repo.findBy(arn, mtdItId)).get.syncToESStatus shouldBe Some(SyncStatus.Success)
         await(repo.remove(arn, mtdItId))
       }
     }

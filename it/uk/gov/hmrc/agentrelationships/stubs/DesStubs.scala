@@ -1,8 +1,8 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait DesStubs {
 
@@ -120,11 +120,11 @@ trait DesStubs {
     )
   }
 
-  def givenAgentCanBeAllocatedInDes(identifier: String, arn: String) = {
+  def givenAgentCanBeAllocatedInDes(taxIdentifier: TaxIdentifier, arn: Arn) = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing(identifier))
-        .withRequestBody(containing(arn))
+        .withRequestBody(containing(taxIdentifier.value))
+        .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"Authorise\""))
         .willReturn(aResponse().withStatus(200)
         .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}"""))
@@ -139,22 +139,22 @@ trait DesStubs {
           .withBody(s"""{"reason": "Service unavailable"}""")))
   }
 
-  def givenAgentCanBeDeallocatedInDes(mtdItId: String, arn: String) = {
+  def givenAgentCanBeDeallocatedInDes(taxIdentifier: TaxIdentifier, arn: Arn) = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing(mtdItId))
-        .withRequestBody(containing(arn))
+        .withRequestBody(containing(taxIdentifier.value))
+        .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(aResponse().withStatus(200)
           .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}"""))
     )
   }
 
-  def givenAgentHasNoActiveRelationshipInDes(mtdItId: String, arn: String) = {
+  def givenAgentHasNoActiveRelationshipInDes(taxIdentifier: TaxIdentifier, arn: Arn) = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing(mtdItId))
-        .withRequestBody(containing(arn))
+        .withRequestBody(containing(taxIdentifier.value))
+        .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(aResponse().withStatus(200)
           .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}"""))

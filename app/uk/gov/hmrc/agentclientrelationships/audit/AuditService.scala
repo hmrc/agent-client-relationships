@@ -34,7 +34,7 @@ import scala.util.Try
 import uk.gov.hmrc.http.HeaderCarrier
 
 object AgentClientRelationshipEvent extends Enumeration {
-  val CreateRelationship, CheckCESA, CheckGG = Value
+  val CreateRelationship, CheckCESA, CheckES = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -82,7 +82,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "service",
     "vrn",
     "oldAgentCodes",
-    "GGRelationship",
+    "ESRelationship",
     "etmpRelationshipCreated",
     "enrolmentDelegated",
     "AgentDBRecord",
@@ -98,13 +98,13 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "nino"
   )
 
-  val CheckGGDetailsFields = Seq(
+  val CheckESDetailsFields = Seq(
     "agentCode",
     "credId",
     "oldAgentCodes",
     "vrn",
     "arn",
-    "GGRelationship"
+    "ESRelationship"
   )
 
   def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
@@ -122,9 +122,9 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       collectDetails(auditData.getDetails, CheckCESADetailsFields))
   }
 
-  def sendCheckGGAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.CheckGG, "check-gg",
-      collectDetails(auditData.getDetails, CheckGGDetailsFields))
+  def sendCheckESAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
+    auditEvent(AgentClientRelationshipEvent.CheckES, "check-es",
+      collectDetails(auditData.getDetails, CheckESDetailsFields))
   }
 
   private[audit] def auditEvent(event: AgentClientRelationshipEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)

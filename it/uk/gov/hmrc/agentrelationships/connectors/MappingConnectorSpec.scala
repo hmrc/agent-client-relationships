@@ -35,8 +35,8 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
     val arn = Arn("foo")
 
     "return CESA agent reference for some known ARN" in {
-      givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenAuditConnector()
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
       await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe Seq(SaAgentReference("foo"))
     }
 

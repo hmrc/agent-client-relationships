@@ -22,9 +22,9 @@ import play.api.Logger
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
-import uk.gov.hmrc.agentclientrelationships.connectors.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService}
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -36,9 +36,9 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
-class Relationships @Inject()(
-                               override val authConnector: AuthConnector,
-                               service: RelationshipsService)
+class RelationshipsController @Inject()(
+                                         override val authConnector: AuthConnector,
+                                         service: RelationshipsService)
   extends BaseController with AuthActions {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
@@ -49,16 +49,17 @@ class Relationships @Inject()(
 
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
-    val agentCode = service.getAgentCodeFor(arn)
+
+    val agentUserFuture = service.getAgentUserFor(arn)
 
     val result = for {
-      agentCode <- agentCode
-      result <- service.checkForRelationship(identifier, agentCode)
+      agentUser <- agentUserFuture
+      result <- service.checkForRelationship(identifier, agentUser)
     } yield result
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        service.checkForOldRelationshipAndCopy(arn, identifier, agentCode)
+        service.checkForOldRelationshipAndCopy(arn, identifier, agentUserFuture)
           .map {
             case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled =>
               Left(errorCode)
@@ -104,18 +105,17 @@ class Relationships @Inject()(
     auditData.set("arn", arn)
 
     (for {
-      agentCode <- service.getAgentCodeFor(arn)
-      _ <- service.checkForRelationship(identifier, agentCode)
+      agentUser <- service.getAgentUserFor(arn)
+      _ <- service.checkForRelationship(identifier, agentUser)
         .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
         .recover {
           case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
         }
-      _ <- service.createRelationship(arn, identifier, Future.successful(agentCode), Set(), false, true)
+      _ <- service.createRelationship(arn, identifier, Future.successful(agentUser), Set(), false, true)
     } yield ())
       .map(_ => Created)
       .recover {
-        case upS: Upstream5xxResponse =>
-          throw upS
+        case upS: Upstream5xxResponse => throw upS
         case NonFatal(ex) =>
           Logger.warn("Could not create relationship")
           NotFound(toJson(ex.getMessage))
@@ -126,7 +126,13 @@ class Relationships @Inject()(
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    service.deleteRelationship(arn, mtdItId).map(_ => NoContent)
+    service.deleteRelationship(arn, mtdItId)
+      .map(_ => NoContent)
+      .recover {
+        case ex: RelationshipNotFound =>
+          Logger.warn("Could not delete relationship", ex)
+          NotFound(ex.getMessage)
+      }
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
@@ -141,7 +147,7 @@ class Relationships @Inject()(
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    service.lookupGGForOldRelationship(arn, vrn)
+    service.lookupESForOldRelationship(arn, vrn)
       .map {
         case references if references.nonEmpty => {
           Ok
@@ -150,10 +156,8 @@ class Relationships @Inject()(
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
         }
       }.recover {
-      case upS: Upstream5xxResponse => {
-        throw upS
-      }
-      case NonFatal(ex) =>
+      case upS: Upstream5xxResponse => throw upS
+      case NonFatal(_) =>
         Logger.warn("checkWithNino: lookupCesaForOldRelationship failed")
         NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
     }
