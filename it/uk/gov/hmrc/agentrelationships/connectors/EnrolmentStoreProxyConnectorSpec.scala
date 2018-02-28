@@ -142,6 +142,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       givenAuditConnector()
       givenEnrolmentAllocationSucceeds("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
       await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if allocation failed because of missing agent or enrolment" in {
@@ -150,6 +151,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[NotFoundException] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if allocation failed because of bad request" in {
@@ -158,6 +160,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[BadRequestException] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if allocation failed because of unauthorized" in {
@@ -166,12 +169,14 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[Upstream4xxResponse] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "keep calm if conflict reported" in {
       givenAuditConnector()
       givenEnrolmentAllocationFailsWith(409)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
       await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if service not available when allocating enrolment" in {
@@ -180,12 +185,14 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[Upstream5xxResponse] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "de-allocate an enrolment from an agent" in {
       givenAuditConnector()
       givenEnrolmentDeallocationSucceeds("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
       await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if de-allocation failed because of missing agent or enrolment" in {
@@ -194,6 +201,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[NotFoundException] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if de-allocation failed because of bad request" in {
@@ -202,6 +210,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[BadRequestException] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if de-allocation failed because of unauthorized" in {
@@ -210,6 +219,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[Upstream4xxResponse] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
 
     "throw an exception if service not available when de-allocating enrolment" in {
@@ -218,6 +228,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
       an[Upstream5xxResponse] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
       }
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
     }
   }
 }

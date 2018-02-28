@@ -2,10 +2,14 @@ package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 
-trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
+trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
+
+  private implicit val patience = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
 
   private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store/enrolments"
   private val teBaseUrl = s"/tax-enrolments"
@@ -126,6 +130,27 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
     )
   }
 
+  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey : String, agentCode: String)= {
+    eventually {
+      verify(1, postRequestedFor(
+        urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
+          .withRequestBody(similarToJson(
+            s"""
+               |{
+               |   "userId":"$clientUserId",
+               |   "type":"delegated"
+               |}
+               |""".stripMargin))
+      )
+    }
+  }
+
+  def verifyNoEnrolmentHasBeenAllocated()= {
+    eventually {
+      verify(0, postRequestedFor(urlContains(s"$teBaseUrl/groups/")))
+    }
+  }
+
   def givenEnrolmentAllocationFailsWith(responseStatus: Int)
                                        (groupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
     stubFor(
@@ -151,6 +176,20 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport {
           aResponse().withStatus(204)
         )
     )
+  }
+
+  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: String, agentCode: String)= {
+    eventually {
+      verify(1, deleteRequestedFor(
+        urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
+      )
+    }
+  }
+
+  def verifyNoEnrolmentHasBeenDeallocated()= {
+    eventually {
+      verify(0, deleteRequestedFor(urlContains(s"$teBaseUrl/groups/")))
+    }
   }
 
   def givenEnrolmentDeallocationSucceeds(groupId: String, key: String, identifier: String, value: String, agentCode: String) = {
