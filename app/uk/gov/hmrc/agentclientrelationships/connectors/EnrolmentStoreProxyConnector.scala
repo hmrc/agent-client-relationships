@@ -24,7 +24,6 @@ import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.JsObject
-import play.api.mvc.Results
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
@@ -46,7 +45,10 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=principal")
     monitor(s"ConsumedAPI-ES-getPrincipalUserIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
-      http.GET[JsObject](url.toString)
+      http.GET[HttpResponse](url.toString)
+    }.map { response =>
+      if (response.status == 204) throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
+      else response.json
     }
       .map(json => {
         val userIds = (json \ "principalUserIds").as[Seq[String]]
@@ -67,19 +69,22 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
     monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
-      http.GET[JsObject](url.toString)
+      http.GET[HttpResponse](url.toString)
+    }.map { response =>
+      if (response.status == 204) throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
+      else response.json
     }
-      .map(json => {
-        val groupIds = (json \ "principalGroupIds").as[Seq[String]]
-        if (groupIds.isEmpty) {
-          throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-        } else {
-          if (groupIds.lengthCompare(1) > 0) {
-            Logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
-          }
-          groupIds.head
+    .map(json => {
+      val groupIds = (json \ "principalGroupIds").as[Seq[String]]
+      if (groupIds.isEmpty) {
+        throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
+      } else {
+        if (groupIds.lengthCompare(1) > 0) {
+          Logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
         }
-      })
+        groupIds.head
+      }
+    })
   }
 
   // ES1 - delegated
@@ -94,9 +99,11 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
   protected def getDelegatedGroupIdsFor(enrolmentKey: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] = {
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=delegated")
     monitor(s"ConsumedAPI-ES-getDelegatedGroupIdsFor-${enrolmentKey.split("~").take(2).mkString("_")}-GET") {
-      http.GET[JsObject](url.toString)
+      http.GET[HttpResponse](url.toString)
+    }.map { response =>
+      if (response.status == 204) Set.empty
+      else (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
     }
-      .map(json => (json \ "delegatedGroupIds").as[Seq[String]].toSet)
   }
 
   // ES8
@@ -110,7 +117,7 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
     }
       .map(_ => ())
       .recover {
-        case e: Upstream4xxResponse if e.upstreamResponseCode==Status.CONFLICT =>
+        case e: Upstream4xxResponse if e.upstreamResponseCode == Status.CONFLICT =>
           Logger.warn(s"An attempt to allocate new enrolment $enrolmentKeyPrefix resulted in conflict with an existing one.")
           ()
       }

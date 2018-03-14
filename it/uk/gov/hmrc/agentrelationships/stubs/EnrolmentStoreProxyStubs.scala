@@ -32,12 +32,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=principal"))
       .willReturn(aResponse()
-        .withBody(
-          s"""
-             |{
-             |    "principalGroupIds":[]
-             |}
-          """.stripMargin)))
+        .withStatus(204)))
   }
 
   private def urlContains(str: String): UrlPattern = new UrlPattern(containing(str),false){
@@ -75,12 +70,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenDelegatedGroupIdsNotExistForKey(enrolmentKey: String) = {
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
       .willReturn(aResponse()
-        .withBody(
-          s"""
-             |{
-             |    "delegatedGroupIds":[]
-             |}
-          """.stripMargin)))
+          .withStatus(204)))
   }
 
   def givenDelegatedGroupIdRequestFailsWith(status: Int) = {
@@ -106,12 +96,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/users?type=principal"))
       .willReturn(aResponse()
-        .withBody(
-          s"""
-             |{
-             |    "principalUserIds":[]
-             |}
-          """.stripMargin)))
+        .withStatus(204)))
   }
 
   def givenEnrolmentAllocationSucceeds(groupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
