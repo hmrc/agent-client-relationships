@@ -5,6 +5,7 @@ import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
@@ -33,6 +34,9 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   private implicit val ec = ExecutionContext.global
 
   val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+
+  val mtdItId = MtdItId("ABCDEF123456789")
+  val agentARN = Arn("ABCDE123456")
 
   "DesConnector GetRegistrationBusinessDetails" should {
 
@@ -156,7 +160,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
     }
 
-    "record metrics for GetStatusAgentRelationship" in {
+    "record metrics for GetStatusAgentRelationship Cesa" in {
       givenClientHasRelationshipWithAgentInCESA(nino, "bar")
       givenCleanMetricRegistry()
       givenAuditConnector()
@@ -210,6 +214,32 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       givenAgentCanNotBeDeallocatedInDes
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
+    }
+  }
+
+  "DesConnector GetStatusAgentRelationship" should {
+    val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+
+    "return existing active relationships for specified clientId" in {
+      getClientActiveAgentRelationships(encodedClientId, "ITSA", agentARN.value)
+
+      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      result.get.arn shouldBe agentARN
+    }
+
+    "return notFound active relationships for specified clientId" in {
+      getNotFoundClientActiveAgentRelationships(encodedClientId, "ITSA")
+
+      val result =  await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      result shouldBe None
+    }
+
+    "record metrics for GetStatusAgentRelationship" in {
+      getClientActiveAgentRelationships(encodedClientId, "ITSA", agentARN.value)
+
+      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      result.get.arn shouldBe agentARN
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
     }
   }
 }

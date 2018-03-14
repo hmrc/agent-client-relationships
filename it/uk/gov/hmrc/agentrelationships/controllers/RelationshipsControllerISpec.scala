@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.scalatest.mockito.MockitoSugar
+import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.FakeRequest
+import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
@@ -1483,6 +1486,35 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
   }
+
+  "getItsaRelationship" should {
+    val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+    val requestPath: String = s"/agent-client-relationships/service/HMRC-MTD-IT/client/relationship"
+
+    def doRequest = doAgentGetRequest(requestPath)
+    val req = FakeRequest()
+
+    "find relationship and send back Json" in {
+      authorisedAsClient(req, mtdItId.value)
+      givenAuditConnector()
+      getClientActiveAgentRelationships(mtdItIdEncoded, "ITSA", arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      val b = result.json
+      (result.json \ "arn").get.as[String] shouldBe arn.value
+    }
+
+    "return 404 when relationship not found" in {
+      authorisedAsClient(req, mtdItId.value)
+      givenAuditConnector()
+      getNotFoundClientActiveAgentRelationships(mtdItIdEncoded, "ITSA")
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
 }
 
 trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
@@ -1520,5 +1552,4 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
     givenDelegatedGroupIdsExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}", Set("oldvatfoo"))
     givenGroupInfo("oldvatfoo", agentCode)
   }
-
 }

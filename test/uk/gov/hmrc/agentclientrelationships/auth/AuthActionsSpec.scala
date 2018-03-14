@@ -21,7 +21,7 @@ import org.mockito.Mockito._
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionOnAgencyOrClient
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{NoPermissionOnAgencyOrClient, NoPermissionOnClient}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core._
@@ -53,6 +53,10 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
     def testAuthActions(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
       implicit request =>
         Future.successful(Ok)
+    }
+
+    def testAuthorisedAsClient = AuthorisedAsClient { implicit request => clientId =>
+      Future.successful(Ok)
     }
 
     override def authConnector: AuthConnector = mockAuthConnector
@@ -139,6 +143,20 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
         val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
         await(result) shouldBe NoPermissionOnAgencyOrClient
       }
+    }
+  }
+
+  "AuthorisedAgentOrClient" should {
+    "return Ok if client has HMRC-MTD-IT enrolment" in {
+      mockClientAuth(enrolment = Set(mtdItIdEnrolment))
+      val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
+      await(result) shouldBe Ok
+    }
+
+    "return Forbidden if client has other enrolment" in {
+      mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
+      val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
+      await(result) shouldBe NoPermissionOnClient
     }
   }
 }

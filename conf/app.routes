@@ -7,3 +7,5 @@ PUT           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk
 GET           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 
 GET     /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn   @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithVrn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
+
+GET           /service/HMRC-MTD-IT/client/relationship                       @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationship
