@@ -20,12 +20,14 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType.EnrolmentMtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.retrieve.Retrievals._
+
 import scala.concurrent.Future
 import uk.gov.hmrc.play.HeaderCarrierConverter
 
@@ -64,13 +66,13 @@ trait AuthActions extends AuthorisedFunctions {
     implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
 
     authorised(
-      Enrolment("HMRC-MTD-IT")
+      Enrolment(EnrolmentMtdIt.enrolmentKey)
         and AuthProviders(GovernmentGateway))
       .retrieve(authorisedEnrolments and affinityGroup) {
-        case enrolments ~ affinityG =>
+        case enrolments ~ _ =>
           val id = for {
-            enrolment <- enrolments.getEnrolment("HMRC-MTD-IT")
-            identifier <- enrolment.getIdentifier("MTDITID")
+            enrolment <- enrolments.getEnrolment(EnrolmentMtdIt.enrolmentKey)
+            identifier <- enrolment.getIdentifier(EnrolmentMtdIt.identifierKey)
           } yield identifier.value
 
           id.map(x => body(request)(MtdItId(x)))
