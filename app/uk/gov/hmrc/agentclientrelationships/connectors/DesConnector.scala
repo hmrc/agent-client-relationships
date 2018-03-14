@@ -24,6 +24,7 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json.Reads._
 import play.api.libs.json._
+import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
@@ -32,7 +33,6 @@ import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
-
 
 case class NinoBusinessDetails(nino: Nino)
 
@@ -44,6 +44,21 @@ case class MtdItIdBusinessDetails(mtdbsa: MtdItId)
 
 object MtdItIdBusinessDetails {
   implicit val reads = Json.reads[MtdItIdBusinessDetails]
+}
+
+case class ItsaRelationship(arn: Arn)
+
+object ItsaRelationship {
+  implicit val relationshipWrites = Json.writes[ItsaRelationship]
+
+  implicit val reads: Reads[ItsaRelationship] =
+    (JsPath \ "agentReferenceNumber").read[Arn].map(arn => ItsaRelationship(arn))
+}
+
+case class RelationshipResponse(relationship: Seq[ItsaRelationship])
+
+object RelationshipResponse {
+  implicit val relationshipResponseFormat = Json.format[RelationshipResponse]
 }
 
 case class ClientRelationship(agents: Seq[Agent])
@@ -89,6 +104,17 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
     getWithDesHeaders[ClientRelationship]("GetStatusAgentRelationship", url).map(_.agents
       .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
       .flatMap(_.agentId))
+  }
+
+  def getActiveClientItsaRelationships(mtdItId: MtdItId)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] = {
+    monitor(s"ConsumedAPI-Get-ITSA-Relationship-GET") {
+      val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+      val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=ITSA")
+
+      getWithDesHeaders[RelationshipResponse]("GetStatusAgentRelationship", url).map(_.relationship.headOption).recover {
+        case e: NotFoundException => None
+      }
+    }
   }
 
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {

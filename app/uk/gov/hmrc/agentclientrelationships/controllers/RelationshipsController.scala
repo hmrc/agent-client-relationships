@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
@@ -160,6 +161,13 @@ class RelationshipsController @Inject()(
       case NonFatal(_) =>
         Logger.warn("checkWithNino: lookupCesaForOldRelationship failed")
         NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+    }
+  }
+
+  def getItsaRelationship: Action[AnyContent] = AuthorisedAsClient { implicit request => clientId =>
+    service.getItsaRelationshipForClient(clientId).map {
+      case Some(relationship) => Ok(Json.toJson(relationship))
+      case None => NotFound
     }
   }
 }

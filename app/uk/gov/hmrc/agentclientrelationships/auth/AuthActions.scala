@@ -20,7 +20,8 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType.EnrolmentMtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.auth.core._
@@ -52,12 +53,30 @@ trait AuthActions extends AuthorisedFunctions {
 
           val actualIdFromEnrolment: Option[TaxIdentifier] = requiredEnrolmentType.findEnrolmentIdentifier(enrol.enrolments)
 
-          if(actualIdFromEnrolment.contains(requiredIdentifier)) {
+          if (actualIdFromEnrolment.contains(requiredIdentifier)) {
             body(request)
           } else {
             Future successful NoPermissionOnAgencyOrClient
           }
         }
+      }
+  }
+
+  def AuthorisedAsClient[A](body: Request[AnyContent] => MtdItId => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
+    implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+
+    authorised(
+      Enrolment(EnrolmentMtdIt.enrolmentKey)
+        and AuthProviders(GovernmentGateway))
+      .retrieve(authorisedEnrolments and affinityGroup) {
+        case enrolments ~ _ =>
+          val id = for {
+            enrolment <- enrolments.getEnrolment(EnrolmentMtdIt.enrolmentKey)
+            identifier <- enrolment.getIdentifier(EnrolmentMtdIt.identifierKey)
+          } yield identifier.value
+
+          id.map(x => body(request)(MtdItId(x)))
+            .getOrElse(Future.successful(NoPermissionOnClient))
       }
   }
 }
