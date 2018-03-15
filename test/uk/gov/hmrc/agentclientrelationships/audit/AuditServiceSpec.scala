@@ -37,8 +37,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
   implicit val patience = PatienceConfig(
     timeout = scaled(Span(500, Millis)),
-    interval = scaled(Span(200, Millis))
-  )
+    interval = scaled(Span(200, Millis)))
 
   "auditEvent" should {
     "send an CreateRelationship event with the correct fields" in {
@@ -48,8 +47,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
         sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id"))
-      )
+        requestId = Some(RequestId("dummy request id")))
 
       val auditData = new AuditData()
       auditData.set("arn", Arn("1234").value)
@@ -69,8 +67,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       await(service.sendCreateRelationshipAuditEvent(
         hc,
         FakeRequest("GET", "/path"),
-        auditData)
-      )
+        auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
@@ -111,8 +108,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
         sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id"))
-      )
+        requestId = Some(RequestId("dummy request id")))
 
       val auditData = new AuditData()
       auditData.set("arn", Arn("1234").value)
@@ -125,8 +121,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       await(service.sendCheckCESAAuditEvent(
         hc,
         FakeRequest("GET", "/path"),
-        auditData)
-      )
+        auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

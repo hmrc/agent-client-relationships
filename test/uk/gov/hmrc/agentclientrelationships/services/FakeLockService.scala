@@ -20,7 +20,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class FakeLockService extends RecoveryLockService {
   val locked: mutable.Set[(Arn, TaxIdentifier)] = mutable.Set.empty[(Arn, TaxIdentifier)]
