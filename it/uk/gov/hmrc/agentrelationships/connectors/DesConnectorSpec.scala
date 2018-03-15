@@ -6,13 +6,12 @@ import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs}
-import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs }
+import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
+import uk.gov.hmrc.domain.{ Nino, SaAgentReference }
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet, HttpPost}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
@@ -21,6 +20,9 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
   override implicit lazy val app: Application = appBuilder
     .build()
+
+  val httpGet = app.injector.instanceOf[HttpGet]
+  val httpPost = app.injector.instanceOf[HttpPost]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -33,7 +35,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   private implicit val hc = HeaderCarrier()
   private implicit val ec = ExecutionContext.global
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", httpGet, httpPost, app.injector.instanceOf[Metrics])
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val agentARN = Arn("ABCDE123456")

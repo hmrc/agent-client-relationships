@@ -1,8 +1,8 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Vrn }
+import uk.gov.hmrc.domain.{ AgentCode, SaAgentReference }
 
 trait MappingStubs {
 

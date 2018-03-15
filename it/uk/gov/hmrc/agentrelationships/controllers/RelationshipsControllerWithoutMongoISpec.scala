@@ -24,17 +24,17 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, MappingStubs}
-import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository }
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs, MappingStubs }
+import uk.gov.hmrc.agentrelationships.support.{ MongoApp, Resource, WireMockSupport }
+import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
-class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: ReactiveMongoComponent)
+class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: ReactiveMongoComponent)
   extends MongoRelationshipCopyRecordRepository(moduleComponent) {
   override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
     Future.failed(new Exception("Could not connect the mongo db."))
@@ -114,7 +114,8 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
 
       await(query) shouldBe empty
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn.value,
@@ -129,15 +130,13 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           "etmpRelationshipCreated" -> "false",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "false",
-          "Journey" -> "CopyExistingCESARelationship"
-        ),
+          "Journey" -> "CopyExistingCESARelationship"),
         tags = Map(
           "transactionName" -> "create-relationship",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn.value,
@@ -145,13 +144,10 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           "agentCode" -> "bar",
           "nino" -> nino.value,
           "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
+          "CESARelationship" -> "true"),
         tags = Map(
           "transactionName" -> "check-cesa",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
     }
   }
 
@@ -169,7 +165,6 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
 
-
       def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
 
       await(query) shouldBe empty
@@ -179,7 +174,8 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
 
       await(query) shouldBe empty
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn.value,
@@ -192,15 +188,13 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           "etmpRelationshipCreated" -> "false",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "false",
-          "Journey" -> "CopyExistingESRelationship"
-        ),
+          "Journey" -> "CopyExistingESRelationship"),
         tags = Map(
           "transactionName" -> "create-relationship",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,
@@ -208,13 +202,10 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           "agentCode" -> "bar",
           "ESRelationship" -> "true",
           "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode
-        ),
+          "oldAgentCodes" -> oldAgentCode),
         tags = Map(
           "transactionName" -> "check-es",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
     }
   }
 
@@ -240,22 +231,19 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
       await(query) shouldBe empty
 
       verifyAuditRequestNotSent(
-        event = AgentClientRelationshipEvent.CreateRelationship
-      )
+        event = AgentClientRelationshipEvent.CreateRelationship)
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn.value,
           "nino" -> nino.value,
           "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
+          "CESARelationship" -> "true"),
         tags = Map(
           "transactionName" -> "check-cesa",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
     }
   }
 

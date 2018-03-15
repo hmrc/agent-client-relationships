@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import java.time.{LocalDateTime, ZoneOffset}
 import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry

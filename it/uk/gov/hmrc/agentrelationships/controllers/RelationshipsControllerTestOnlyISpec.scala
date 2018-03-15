@@ -19,9 +19,9 @@ package uk.gov.hmrc.agentrelationships.controllers
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
+import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord }
 import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support.{Http, MongoApp, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support.{ Http, MongoApp, WireMockSupport }
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 

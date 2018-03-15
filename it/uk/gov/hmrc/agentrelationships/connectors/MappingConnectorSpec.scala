@@ -4,19 +4,20 @@ import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
-import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Vrn }
+import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, MappingStubs }
+import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
+import uk.gov.hmrc.domain.{ AgentCode, SaAgentReference }
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet, Upstream5xxResponse }
 import uk.gov.hmrc.play.test.UnitSpec
 
 class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs with DataStreamStub with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
+
+  val httpGet = app.injector.instanceOf[HttpGet]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -28,7 +29,7 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
 
   private implicit val hc = HeaderCarrier()
 
-  val mappingConnector = new MappingConnector(wireMockBaseUrl, WSHttp, app.injector.instanceOf[Metrics])
+  val mappingConnector = new MappingConnector(wireMockBaseUrl, httpGet, app.injector.instanceOf[Metrics])
 
   "MappingConnector" should {
 

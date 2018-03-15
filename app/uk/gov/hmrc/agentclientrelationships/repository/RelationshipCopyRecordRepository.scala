@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 import org.joda.time.DateTime
 import org.joda.time.DateTime.now
@@ -28,15 +28,15 @@ import play.api.libs.functional.syntax._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.{ BSONDocument, BSONObjectID }
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.domain.{ AgentCode, SaAgentReference, TaxIdentifier }
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
+import uk.gov.hmrc.mongo.{ AtomicUpdate, ReactiveRepository }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object SyncStatus extends Enumeration {
   type SyncStatus = Value

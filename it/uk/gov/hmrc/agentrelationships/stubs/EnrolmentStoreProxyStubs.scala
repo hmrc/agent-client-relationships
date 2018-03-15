@@ -115,7 +115,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
     )
   }
 
-  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey : String, agentCode: String)= {
+  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey: String, agentCode: String) = {
     eventually {
       verify(1, postRequestedFor(
         urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
