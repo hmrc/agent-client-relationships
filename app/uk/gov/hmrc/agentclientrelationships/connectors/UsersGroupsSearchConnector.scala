@@ -30,20 +30,19 @@ import uk.gov.hmrc.http._
 import scala.concurrent.{ ExecutionContext, Future }
 
 case class GroupInfo(
-                      groupId: String,
-                      affinityGroup: Option[String],
-                      agentCode: Option[AgentCode]
-                    )
+  groupId: String,
+  affinityGroup: Option[String],
+  agentCode: Option[AgentCode])
 
 object GroupInfo {
   implicit val formats: Format[GroupInfo] = Json.format[GroupInfo]
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject()(
-                                            @Named("users-groups-search-baseUrl") baseUrl: URL,
-                                            httpGet: HttpGet,
-                                            metrics: Metrics)
+class UsersGroupsSearchConnector @Inject() (
+  @Named("users-groups-search-baseUrl") baseUrl: URL,
+  httpGet: HttpGet,
+  metrics: Metrics)
   extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 

@@ -62,15 +62,16 @@ final case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
 case class AgentUser(userId: String, groupId: String, agentCode: AgentCode)
 
 @Singleton
-class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
-                                     des: DesConnector,
-                                     mapping: MappingConnector,
-                                     ugs: UsersGroupsSearchConnector,
-                                     relationshipCopyRepository: RelationshipCopyRecordRepository,
-                                     lockService: RecoveryLockService,
-                                     auditService: AuditService,
-                                     @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
-                                     @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) {
+class RelationshipsService @Inject() (
+  es: EnrolmentStoreProxyConnector,
+  des: DesConnector,
+  mapping: MappingConnector,
+  ugs: UsersGroupsSearchConnector,
+  relationshipCopyRepository: RelationshipCopyRecordRepository,
+  lockService: RecoveryLockService,
+  auditService: AuditService,
+  @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
+  @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) {
 
   def getAgentUserFor(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     for {
