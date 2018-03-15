@@ -89,16 +89,14 @@ class RelationshipsControllerISpec extends UnitSpec
     mtdItId.value,
     mtdItIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToESStatus = Some(SyncStatus.Success)
-  )
+    syncToESStatus = Some(SyncStatus.Success))
 
   val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
     arn.value,
     vrn.value,
     mtdVatIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToESStatus = Some(SyncStatus.Success)
-  )
+    syncToESStatus = Some(SyncStatus.Success))
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
 
@@ -129,15 +127,15 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn.value),
-        'clientIdentifier (mtdItId.value),
-        'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToESStatus (Some(SyncStatus.Success))
-      )
+        'arn(arn.value),
+        'clientIdentifier(mtdItId.value),
+        'clientIdentifierType(mtdItIdType),
+        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus(Some(SyncStatus.Success)),
+        'syncToESStatus(Some(SyncStatus.Success)))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn.value,
@@ -152,15 +150,13 @@ class RelationshipsControllerISpec extends UnitSpec
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "true",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"
-        ),
+          "Journey" -> "CopyExistingCESARelationship"),
         tags = Map(
           "transactionName" -> "create-relationship",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn.value,
@@ -168,13 +164,10 @@ class RelationshipsControllerISpec extends UnitSpec
           "agentCode" -> "bar",
           "nino" -> nino.value,
           "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
+          "CESARelationship" -> "true"),
         tags = Map(
           "transactionName" -> "check-cesa",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
@@ -193,15 +186,15 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn.value),
-        'clientIdentifier (mtdItId.value),
-        'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
-      )
+        'arn(arn.value),
+        'clientIdentifier(mtdItId.value),
+        'clientIdentifierType(mtdItIdType),
+        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus(Some(SyncStatus.Success)),
+        'syncToESStatus(Some(SyncStatus.IncompleteInputParams)))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn.value,
@@ -216,15 +209,13 @@ class RelationshipsControllerISpec extends UnitSpec
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"
-        ),
+          "Journey" -> "CopyExistingCESARelationship"),
         tags = Map(
           "transactionName" -> "create-relationship",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn.value,
@@ -232,13 +223,10 @@ class RelationshipsControllerISpec extends UnitSpec
           "agentCode" -> "",
           "nino" -> nino.value,
           "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
+          "CESARelationship" -> "true"),
         tags = Map(
           "transactionName" -> "check-cesa",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
     }
 
     "return 200 when agent code unknown but relationship exists in cesa" in {
@@ -259,15 +247,15 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn.value),
-        'clientIdentifier (mtdItId.value),
-        'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
-      )
+        'arn(arn.value),
+        'clientIdentifier(mtdItId.value),
+        'clientIdentifierType(mtdItIdType),
+        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus(Some(SyncStatus.Success)),
+        'syncToESStatus(Some(SyncStatus.IncompleteInputParams)))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn.value,
@@ -282,15 +270,13 @@ class RelationshipsControllerISpec extends UnitSpec
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"
-        ),
+          "Journey" -> "CopyExistingCESARelationship"),
         tags = Map(
           "transactionName" -> "create-relationship",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn.value,
@@ -298,13 +284,10 @@ class RelationshipsControllerISpec extends UnitSpec
           "agentCode" -> "",
           "nino" -> nino.value,
           "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
+          "CESARelationship" -> "true"),
         tags = Map(
           "transactionName" -> "check-cesa",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
     }
 
@@ -329,13 +312,12 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn.value),
-        'clientIdentifier (mtdItId.value),
-        'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus (Some(SyncStatus.Failed)),
-        'syncToESStatus (None)
-      )
+        'arn(arn.value),
+        'clientIdentifier(mtdItId.value),
+        'clientIdentifierType(mtdItIdType),
+        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus(Some(SyncStatus.Failed)),
+        'syncToESStatus(None))
 
     }
 
@@ -358,15 +340,15 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn.value),
-        'clientIdentifier (mtdItId.value),
-        'clientIdentifierType (mtdItIdType),
-        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToESStatus (Some(SyncStatus.Failed))
-      )
+        'arn(arn.value),
+        'clientIdentifier(mtdItId.value),
+        'clientIdentifierType(mtdItIdType),
+        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus(Some(SyncStatus.Success)),
+        'syncToESStatus(Some(SyncStatus.Failed)))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn.value,
@@ -381,15 +363,13 @@ class RelationshipsControllerISpec extends UnitSpec
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "false",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"
-        ),
+          "Journey" -> "CopyExistingCESARelationship"),
         tags = Map(
           "transactionName" -> "create-relationship",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn" -> arn.value,
@@ -397,13 +377,10 @@ class RelationshipsControllerISpec extends UnitSpec
           "agentCode" -> "bar",
           "nino" -> nino.value,
           "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"
-        ),
+          "CESARelationship" -> "true"),
         tags = Map(
           "transactionName" -> "check-cesa",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
     }
 
     "return 404 when relationship is not found in es but relationship copy was made before" in {
@@ -419,23 +396,23 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 404 when relationship was previously copied from CESA to ETMP & ES but has since been deleted from ETMP & ES " +
       "(even though the relationship upon which the copy was based still exists in CESA)" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
 
-      givenNinoIsKnownFor(mtdItId, nino)
-      givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenArnIsKnownFor(arn, SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+        givenNinoIsKnownFor(mtdItId, nino)
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenArnIsKnownFor(arn, SaAgentReference("foo"))
+        givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
-      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+        givenAgentCanBeAllocatedInDes(mtdItId, arn)
+        givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-      await(repo.insert(relationshipCopiedSuccessfully))
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-    }
+        await(repo.insert(relationshipCopiedSuccessfully))
+        val result = await(doRequest)
+        result.status shouldBe 404
+        (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+      }
 
     "return 404 when credentials are not found but relationship copy was made before" in {
       givenPrincipalGroupIdNotExistsFor(arn)
@@ -579,15 +556,15 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn (arn.value),
-        'clientIdentifier (vrn.value),
-        'clientIdentifierType (mtdVatIdType),
-        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
-        'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToESStatus (Some(SyncStatus.Success))
-      )
+        'arn(arn.value),
+        'clientIdentifier(vrn.value),
+        'clientIdentifierType(mtdVatIdType),
+        'references(Some(Set(VatRef(AgentCode(oldAgentCode))))),
+        'syncToETMPStatus(Some(SyncStatus.Success)),
+        'syncToESStatus(Some(SyncStatus.Success)))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn" -> arn.value,
@@ -600,15 +577,13 @@ class RelationshipsControllerISpec extends UnitSpec
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated" -> "true",
           "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingESRelationship"
-        ),
+          "Journey" -> "CopyExistingESRelationship"),
         tags = Map(
           "transactionName" -> "create-relationship",
-          "path" -> requestPath
-        )
-      )
+          "path" -> requestPath))
 
-      verifyAuditRequestSent(1,
+      verifyAuditRequestSent(
+        1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn" -> arn.value,

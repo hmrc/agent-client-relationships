@@ -104,7 +104,6 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
 
-
       def query = repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty

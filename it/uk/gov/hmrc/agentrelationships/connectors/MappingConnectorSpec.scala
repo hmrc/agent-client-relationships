@@ -24,8 +24,7 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
       .configure(
         "microservice.services.agent-mapping.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort
-      )
+        "auditing.consumer.baseUri.port" -> wireMockPort)
 
   private implicit val hc = HeaderCarrier()
 

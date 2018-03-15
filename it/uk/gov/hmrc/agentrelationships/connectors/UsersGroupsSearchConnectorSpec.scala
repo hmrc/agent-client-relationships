@@ -28,8 +28,7 @@ class UsersGroupsSearchConnectorSpec extends UnitSpec with OneServerPerSuite wit
       .configure(
         "microservice.services.users-groups-search.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort
-      )
+        "auditing.consumer.baseUri.port" -> wireMockPort)
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 

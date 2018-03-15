@@ -17,15 +17,15 @@
 package uk.gov.hmrc.agentrelationships.support
 
 import play.api.Play.current
-import play.api.http.{HeaderNames, MimeTypes}
-import play.api.libs.ws.{WS, WSRequest, WSResponse}
+import play.api.http.{ HeaderNames, MimeTypes }
+import play.api.libs.ws.{ WS, WSRequest, WSResponse }
 import play.api.mvc.Results
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpResponse }
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 
 object Http {
@@ -34,8 +34,7 @@ object Http {
     request.get()
   }
 
-  def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)
-          (implicit hc: HeaderCarrier): HttpResponse = perform(url) { request =>
+  def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(implicit hc: HeaderCarrier): HttpResponse = perform(url) { request =>
     request.withHeaders(headers: _*).post(body)
   }
 

@@ -28,8 +28,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
         "microservice.services.tax-enrolments.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort
-      )
+        "auditing.consumer.baseUri.port" -> wireMockPort)
 
   implicit val hc = HeaderCarrier()
 
@@ -41,7 +40,7 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
 
     "return some agent's groupId for given ARN" in {
       givenAuditConnector()
-      givenPrincipalGroupIdExistsFor(Arn("foo"),"bar")
+      givenPrincipalGroupIdExistsFor(Arn("foo"), "bar")
       await(connector.getPrincipalGroupIdFor(Arn("foo"))) shouldBe "bar"
     }
 

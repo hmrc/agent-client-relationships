@@ -38,7 +38,7 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-    protected def appBuilder: GuiceApplicationBuilder =
+  protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -49,8 +49,7 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
         "microservice.services.agent-mapping.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort,
-        "application.router" -> "testOnlyDoNotUseInAppConf.Routes"
-      )
+        "application.router" -> "testOnlyDoNotUseInAppConf.Routes")
       .configure(mongoConfiguration)
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
@@ -72,14 +71,14 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
 
     "return 204 for a valid arn and mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
     }
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,"ABCDEF123456780",mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, "ABCDEF123456780", mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 404
     }
