@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.auth.core.{ Enrolment, EnrolmentIdentifier }
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -52,8 +52,8 @@ class EnrolmentTypeSpec extends UnitSpec {
       EnrolmentAsAgent.findEnrolmentIdentifier(enrolments) shouldBe Some(Arn("arn123"))
     }
 
-    "return Vrn for EnrolmentMtdVat if the HMRC-MTD-VAT enrolment exists with an MTDVATID identifier" in {
-      val enrolments = Set(Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("MTDVATID", "101747696")), "activated"))
+    "return Vrn for EnrolmentMtdVat if the HMRC-MTD-VAT enrolment exists with an VRN identifier" in {
+      val enrolments = Set(Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", "101747696")), "activated"))
 
       EnrolmentMtdVat.findEnrolmentIdentifier(enrolments) shouldBe Some(Vrn("101747696"))
     }
@@ -74,8 +74,7 @@ class EnrolmentTypeSpec extends UnitSpec {
       val enrolments = Set(
         Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("NotAgentReferenceNumber", "arn123")), "activated"),
         Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("NotMTDITID", "123")), "activated"),
-        Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("NotMTDVATID", "123")), "activated")
-      )
+        Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("NotVRN", "123")), "activated"))
 
       allEnrolmentTypes.foreach(_.findEnrolmentIdentifier(enrolments) shouldBe None)
     }

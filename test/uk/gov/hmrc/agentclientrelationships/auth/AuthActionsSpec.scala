@@ -19,13 +19,13 @@ package uk.gov.hmrc.agentclientrelationships.auth
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatestplus.play.OneAppPerSuite
-import play.api.mvc.{Result, Results}
+import play.api.mvc.{ Result, Results }
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{NoPermissionOnAgencyOrClient, NoPermissionOnClient}
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{ NoPermissionOnAgencyOrClient, NoPermissionOnClient }
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.{Retrieval, ~}
+import uk.gov.hmrc.auth.core.retrieve.{ Retrieval, ~ }
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
@@ -46,7 +46,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   private val mtdItIdEnrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)),
     state = "", delegatedAuthRule = None)
 
-  private val mtdVatIdEnrolment = Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("MTDVATID", vrn)),
+  private val mtdVatIdEnrolment = Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)),
     state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {

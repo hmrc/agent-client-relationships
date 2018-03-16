@@ -21,7 +21,7 @@ import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType.EnrolmentMtdIt
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId }
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.auth.core._

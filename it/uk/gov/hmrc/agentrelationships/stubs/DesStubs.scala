@@ -1,51 +1,45 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId }
+import uk.gov.hmrc.domain.{ Nino, TaxIdentifier }
 
 trait DesStubs {
 
   def givenNinoIsKnownFor(mtdbsa: MtdItId, nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/business-details/mtdbsa/${mtdbsa.value}"))
-        .willReturn(aResponse().withStatus(200).withBody(s"""{ "nino": "${nino.value}" }"""))
-    )
+        .willReturn(aResponse().withStatus(200).withBody(s"""{ "nino": "${nino.value}" }""")))
   }
 
   def givenNinoIsUnknownFor(mtdbsa: MtdItId) = {
     stubFor(
       get(urlEqualTo(s"/registration/business-details/mtdbsa/${mtdbsa.value}"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
   }
 
   def givenMtdbsaIsInvalid(mtdbsa: MtdItId) = {
     stubFor(
       get(urlMatching(s"/registration/.*?/mtdbsa/${mtdbsa.value}"))
-        .willReturn(aResponse().withStatus(400))
-    )
+        .willReturn(aResponse().withStatus(400)))
   }
 
   def givenMtdItIdIsKnownFor(nino: Nino, mtdbsa: MtdItId) = {
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(200).withBody(s"""{ "mtdbsa": "${mtdbsa.value}" }"""))
-    )
+        .willReturn(aResponse().withStatus(200).withBody(s"""{ "mtdbsa": "${mtdbsa.value}" }""")))
   }
 
   def givenMtdItIdIsUnKnownFor(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
   }
 
   def givenNinoIsInvalid(nino: Nino) = {
     stubFor(
       get(urlMatching(s"/registration/.*?/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(400))
-    )
+        .willReturn(aResponse().withStatus(400)))
   }
 
   val someAlienAgent = """{"hasAgent":false,"agentId":"alien"}"""
@@ -55,69 +49,60 @@ trait DesStubs {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{"agents":[$someCeasedAgent,{"hasAgent":true,"agentId":"$agentId"}, $someAlienAgent]}"""))
-    )
+          .withBody(s"""{"agents":[$someCeasedAgent,{"hasAgent":true,"agentId":"$agentId"}, $someAlienAgent]}""")))
   }
 
   def givenClientHasRelationshipWithMultipleAgentsInCESA(nino: Nino, agentIds: Seq[String]) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{"agents":[${agentIds.map(id =>s"""{"hasAgent":true,"agentId":"$id"}""").mkString(",")}, $someAlienAgent, $someCeasedAgent ]}"""))
-    )
+          .withBody(s"""{"agents":[${agentIds.map(id => s"""{"hasAgent":true,"agentId":"$id"}""").mkString(",")}, $someAlienAgent, $someCeasedAgent ]}""")))
   }
 
   def givenClientRelationshipWithAgentCeasedInCESA(nino: Nino, agentId: String) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{"agents":[{"hasAgent":true,"agentId":"$agentId","agentCeasedDate":"2010-01-01"}]}"""))
-    )
+          .withBody(s"""{"agents":[{"hasAgent":true,"agentId":"$agentId","agentCeasedDate":"2010-01-01"}]}""")))
   }
 
   def givenAllClientRelationshipsWithAgentsCeasedInCESA(nino: Nino, agentIds: Seq[String]) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{"agents":[${agentIds.map(id =>s"""{"hasAgent":true,"agentId":"$id","agentCeasedDate":"2020-12-31"}""").mkString(",")}]}"""))
-    )
+          .withBody(s"""{"agents":[${agentIds.map(id => s"""{"hasAgent":true,"agentId":"$id","agentCeasedDate":"2020-12-31"}""").mkString(",")}]}""")))
   }
 
   def givenClientHasNoActiveRelationshipWithAgentInCESA(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{"agents":[$someCeasedAgent, $someAlienAgent]}"""))
-    )
+          .withBody(s"""{"agents":[$someCeasedAgent, $someAlienAgent]}""")))
   }
 
   def givenClientHasNoRelationshipWithAnyAgentInCESA(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{}"""))
-    )
+          .withBody(s"""{}""")))
   }
 
   def givenClientIsUnknownInCESAFor(nino: Nino) = {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
   }
 
   def givenDesReturnsServerError() = {
     stubFor(
       get(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(500))
-    )
+        .willReturn(aResponse().withStatus(500)))
   }
 
   def givenDesReturnsServiceUnavailable() = {
     stubFor(
       get(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(503))
-    )
+        .willReturn(aResponse().withStatus(503)))
   }
 
   def givenAgentCanBeAllocatedInDes(taxIdentifier: TaxIdentifier, arn: Arn) = {
@@ -127,8 +112,7 @@ trait DesStubs {
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"Authorise\""))
         .willReturn(aResponse().withStatus(200)
-        .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}"""))
-    )
+          .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}""")))
   }
 
   def givenAgentCanNotBeAllocatedInDes = {
@@ -146,8 +130,7 @@ trait DesStubs {
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}"""))
-    )
+          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")))
   }
 
   def givenAgentHasNoActiveRelationshipInDes(taxIdentifier: TaxIdentifier, arn: Arn) = {
@@ -157,8 +140,7 @@ trait DesStubs {
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(aResponse().withStatus(200)
-          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}"""))
-    )
+          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")))
   }
 
   def givenAgentCanNotBeDeallocatedInDes = {

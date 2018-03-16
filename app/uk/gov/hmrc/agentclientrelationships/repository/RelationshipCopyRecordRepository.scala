@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 import org.joda.time.DateTime
 import org.joda.time.DateTime.now
@@ -28,15 +28,15 @@ import play.api.libs.functional.syntax._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.{ BSONDocument, BSONObjectID }
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.domain.{ AgentCode, SaAgentReference, TaxIdentifier }
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
+import uk.gov.hmrc.mongo.{ AtomicUpdate, ReactiveRepository }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object SyncStatus extends Enumeration {
   type SyncStatus = Value
@@ -80,13 +80,14 @@ object RelationshipReference {
   }
 }
 
-case class RelationshipCopyRecord(arn: String,
-                                  clientIdentifier: String,
-                                  clientIdentifierType: String,
-                                  references: Option[Set[RelationshipReference]] = None,
-                                  dateTime: DateTime = now(UTC),
-                                  syncToETMPStatus: Option[SyncStatus] = None,
-                                  syncToESStatus: Option[SyncStatus] = None) {
+case class RelationshipCopyRecord(
+  arn: String,
+  clientIdentifier: String,
+  clientIdentifierType: String,
+  references: Option[Set[RelationshipReference]] = None,
+  dateTime: DateTime = now(UTC),
+  syncToETMPStatus: Option[SyncStatus] = None,
+  syncToESStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
 
   def needToCreateEtmpRecord = !syncToETMPStatus.contains(Success)
@@ -109,17 +110,16 @@ trait RelationshipCopyRecordRepository {
 }
 
 @Singleton
-class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoComponent) extends
-  ReactiveRepository[RelationshipCopyRecord, BSONObjectID]("relationship-copy-record",
-    mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats)
+class MongoRelationshipCopyRecordRepository @Inject() (mongoComponent: ReactiveMongoComponent) extends ReactiveRepository[RelationshipCopyRecord, BSONObjectID](
+  "relationship-copy-record",
+  mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats)
   with RelationshipCopyRecordRepository
   with AtomicUpdate[RelationshipCopyRecord] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = EnrolmentType.enrolmentTypeFor(identifier).identifierKey
 
   override def indexes = Seq(
-    Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true)
-  )
+    Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true))
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
     insert(record).map { result =>
@@ -137,19 +137,17 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
-    ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
-    })
+      modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))).map(_.foreach { update =>
+        update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
+      })
   }
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
     atomicUpdate(
       finder = BSONDocument("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
-    ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ES sync status ($status) failed: $error"))
-    })
+      modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))).map(_.foreach { update =>
+        update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ES sync status ($status) failed: $error"))
+      })
   }
 
   def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int] = {

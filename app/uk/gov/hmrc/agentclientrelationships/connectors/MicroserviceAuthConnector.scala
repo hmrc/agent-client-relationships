@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.services
+package uk.gov.hmrc.agentclientrelationships.connectors
 
-import org.scalatestplus.play.OneAppPerSuite
+import java.net.URL
+import javax.inject.{ Inject, Named, Singleton }
 
-class MongoRecoveryLockServiceISpec extends RecoveryLockServiceSpec with OneAppPerSuite {
+import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.http.HttpPost
+import uk.gov.hmrc.play.http.ws.WSPost
 
-  override val lockService: RecoveryLockService = app.injector.instanceOf[MongoRecoveryLockService]
+@Singleton
+class MicroserviceAuthConnector @Inject() (@Named("auth-baseUrl") baseUrl: URL)
+  extends PlayAuthConnector {
 
+  override val serviceUrl = baseUrl.toString
+
+  override def http = new HttpPost with WSPost {
+    override val hooks = NoneRequired
+  }
 }

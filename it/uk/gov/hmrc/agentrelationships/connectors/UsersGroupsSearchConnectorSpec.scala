@@ -1,17 +1,16 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, stubFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{ aResponse, get, stubFor, urlEqualTo }
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.WSHttp
-import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UsersGroupsSearchConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{ GroupInfo, UsersGroupsSearchConnector }
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentrelationships.stubs.DataStreamStub
-import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet }
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,17 +21,18 @@ class UsersGroupsSearchConnectorSpec extends UnitSpec with OneServerPerSuite wit
   override implicit lazy val app: Application = appBuilder
     .build()
 
+  val httpGet = app.injector.instanceOf[HttpGet]
+
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.users-groups-search.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort
-      )
+        "auditing.consumer.baseUri.port" -> wireMockPort)
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val connector = new UsersGroupsSearchConnector(wireMockBaseUrl, WSHttp, app.injector.instanceOf[Metrics])
+  val connector = new UsersGroupsSearchConnector(wireMockBaseUrl, httpGet, app.injector.instanceOf[Metrics])
 
   "UsersGroupsSearchConnector" should {
 
@@ -89,7 +89,7 @@ class UsersGroupsSearchConnectorSpec extends UnitSpec with OneServerPerSuite wit
           """.stripMargin)))
   }
 
-  def givenGroupNotExistsFor(groupId:String) = {
+  def givenGroupNotExistsFor(groupId: String) = {
     stubFor(get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
       .willReturn(aResponse().withStatus(404)))
   }

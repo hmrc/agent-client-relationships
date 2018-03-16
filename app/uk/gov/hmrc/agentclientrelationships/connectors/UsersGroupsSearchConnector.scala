@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{ Inject, Named, Singleton }
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
@@ -27,23 +27,22 @@ import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class GroupInfo(
-                      groupId: String,
-                      affinityGroup: Option[String],
-                      agentCode: Option[AgentCode]
-                    )
+  groupId: String,
+  affinityGroup: Option[String],
+  agentCode: Option[AgentCode])
 
 object GroupInfo {
   implicit val formats: Format[GroupInfo] = Json.format[GroupInfo]
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject()(
-                                            @Named("users-groups-search-baseUrl") baseUrl: URL,
-                                            httpGet: HttpGet,
-                                            metrics: Metrics)
+class UsersGroupsSearchConnector @Inject() (
+  @Named("users-groups-search-baseUrl") baseUrl: URL,
+  httpGet: HttpGet,
+  metrics: Metrics)
   extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 

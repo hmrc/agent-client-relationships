@@ -1,18 +1,17 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
+import com.github.tomakehurst.wiremock.client.WireMock.{ equalToJson, postRequestedFor, urlPathEqualTo, verify }
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.WSHttp
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs}
-import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs }
+import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
+import uk.gov.hmrc.domain.{ Nino, SaAgentReference }
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet, HttpPost }
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
@@ -22,18 +21,20 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   override implicit lazy val app: Application = appBuilder
     .build()
 
+  val httpGet = app.injector.instanceOf[HttpGet]
+  val httpPost = app.injector.instanceOf[HttpPost]
+
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.des.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort
-      )
+        "auditing.consumer.baseUri.port" -> wireMockPort)
 
   private implicit val hc = HeaderCarrier()
   private implicit val ec = ExecutionContext.global
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", WSHttp, WSHttp, app.injector.instanceOf[Metrics])
+  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", httpGet, httpPost, app.injector.instanceOf[Metrics])
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val agentARN = Arn("ABCDE123456")
@@ -106,7 +107,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "return multiple CESA identifiers when client has multiple active agents" in {
-      val agentIds = Seq("001","002","003","004","005","005","007")
+      val agentIds = Seq("001", "002", "003", "004", "005", "005", "007")
       givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
@@ -171,7 +172,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
   "DesConnector CreateAgentRelationship" should {
     "create relationship between agent and client and return 200" in {
-      givenAgentCanBeAllocatedInDes(MtdItId("foo"),Arn("bar"))
+      givenAgentCanBeAllocatedInDes(MtdItId("foo"), Arn("bar"))
       givenAuditConnector()
       await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }
@@ -183,7 +184,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "request body contains service as ITSA when client Id is an MtdItId" in {
-      givenAgentCanBeAllocatedInDes(MtdItId("foo"),Arn("someArn"))
+      givenAgentCanBeAllocatedInDes(MtdItId("foo"), Arn("someArn"))
       givenAuditConnector()
 
       await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("someArn")))
@@ -193,7 +194,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "request body contains service as TAVC when client Id is a Vrn" in {
-      givenAgentCanBeAllocatedInDes(Vrn("someVrn"),Arn("someArn"))
+      givenAgentCanBeAllocatedInDes(Vrn("someVrn"), Arn("someArn"))
       givenAuditConnector()
 
       await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
@@ -205,7 +206,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
   "DesConnector DeleteAgentRelationship" should {
     "delete relationship between agent and client and return 200" in {
-      givenAgentCanBeDeallocatedInDes(MtdItId("foo"),Arn("bar"))
+      givenAgentCanBeDeallocatedInDes(MtdItId("foo"), Arn("bar"))
       givenAuditConnector()
       await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }
@@ -230,7 +231,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     "return notFound active relationships for specified clientId" in {
       getNotFoundClientActiveAgentRelationships(encodedClientId, "ITSA")
 
-      val result =  await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result shouldBe None
     }
 

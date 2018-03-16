@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-class FakeLockServiceSpec extends RecoveryLockServiceSpec {
+class FakeLockServiceSpec {
 
-  override val lockService: RecoveryLockService = new FakeLockService
+  val lockService: RecoveryLockService = new FakeLockService
 
 }
