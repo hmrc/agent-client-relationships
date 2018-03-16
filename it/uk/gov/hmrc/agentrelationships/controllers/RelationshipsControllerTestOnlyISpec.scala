@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentrelationships.controllers
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.ws.WSClient
 import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord }
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support.{ Http, MongoApp, WireMockSupport }
@@ -52,6 +53,9 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
         "application.router" -> "testOnlyDoNotUseInAppConf.Routes")
       .configure(mongoConfiguration)
 
+  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
+  implicit val hc: HeaderCarrier = HeaderCarrier()
+
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
   override def beforeEach() {
@@ -63,7 +67,7 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
   val mtditid = "ABCDEF123456789"
   val mtdItIdType = "MTDITID"
 
-  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
+  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
   "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 

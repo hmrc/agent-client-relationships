@@ -20,6 +20,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.ws.WSClient
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
@@ -65,6 +66,9 @@ class RelationshipsControllerISpec extends UnitSpec
         "features.copy-relationship.mtd-it" -> true,
         "features.copy-relationship.mtd-vat" -> true)
       .configure(mongoConfiguration)
+
+  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
@@ -1134,9 +1138,9 @@ class RelationshipsControllerISpec extends UnitSpec
 
   private def doAgentGetRequest(route: String) = new Resource(route, port).get()
 
-  private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")(HeaderCarrier())
+  private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
 
-  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
+  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
   private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
 

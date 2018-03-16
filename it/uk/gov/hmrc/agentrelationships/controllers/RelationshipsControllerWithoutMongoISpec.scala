@@ -22,6 +22,7 @@ import com.google.inject.AbstractModule
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.ws.WSClient
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository }
@@ -29,6 +30,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs, MappingStubs }
 import uk.gov.hmrc.agentrelationships.support.{ MongoApp, Resource, WireMockSupport }
 import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -70,6 +72,9 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
           bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
         }
       })
+
+  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
