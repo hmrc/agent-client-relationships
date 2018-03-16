@@ -83,7 +83,7 @@ class RelationshipsControllerISpec extends UnitSpec
   val nino = Nino("AB123456C")
   val vrn = Vrn("101747641")
   val mtdItIdType = "MTDITID"
-  val mtdVatIdType = "MTDVATID"
+  val mtdVatIdType = "VRN"
   val oldAgentCode = "oldAgentCode"
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
@@ -748,7 +748,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "MTDVATID", vrn.value, "bar")
+      givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, "bar")
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
@@ -1495,7 +1495,7 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   }
 
   def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) = {
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-VAT", "MTDVATID", vrn.value, agentCode)
+    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, agentCode)
   }
 
   def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) = {

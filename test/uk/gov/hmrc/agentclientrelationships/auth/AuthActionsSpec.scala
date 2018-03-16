@@ -46,7 +46,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   private val mtdItIdEnrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)),
     state = "", delegatedAuthRule = None)
 
-  private val mtdVatIdEnrolment = Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("MTDVATID", vrn)),
+  private val mtdVatIdEnrolment = Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)),
     state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {

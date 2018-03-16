@@ -51,7 +51,7 @@ class RelationshipsServiceSpec extends UnitSpec
   val eventualAgentUserForAsAgent = Future successful AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent)
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(arn.value, mtdItId.value, "MTDITID", Some(Set(SaRef(saAgentRef))), syncToETMPStatus = None, syncToESStatus = None)
-  val defaultRecordForMtdVat = RelationshipCopyRecord(arn.value, vrn.value, "MTDVATID", Some(Set(VatRef(agentCodeForVatDecAgent))),
+  val defaultRecordForMtdVat = RelationshipCopyRecord(arn.value, vrn.value, "VRN", Some(Set(VatRef(agentCodeForVatDecAgent))),
     syncToETMPStatus = None, syncToESStatus = None)
 
   val es = resettingMock[EnrolmentStoreProxyConnector]

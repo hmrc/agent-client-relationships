@@ -88,7 +88,7 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
   val nino = Nino("AB123456C")
   val vrn = Vrn("101747641")
   val oldAgentCode = "oldAgentCode"
-  val mtdVatIdType = "MTDVATID"
+  val mtdVatIdType = "VRN"
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 

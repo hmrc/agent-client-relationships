@@ -83,7 +83,7 @@ trait AuthStub {
   def givenUserIsSubscribedClient(identifier: TaxIdentifier): AuthStub = {
     val (service, key, value) = identifier match {
       case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
-      case Vrn(v) => ("HMRC-MTD-VAT", "MTDVATID", v)
+      case Vrn(v) => ("HMRC-MTD-VAT", "VRN", v)
     }
 
     stubFor(post(urlEqualTo("/auth/authorise"))
