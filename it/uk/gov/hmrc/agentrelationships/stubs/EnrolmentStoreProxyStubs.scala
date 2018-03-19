@@ -109,6 +109,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
              |   "type":"delegated"
              |}
              |""".stripMargin))
+        .withHeader("Content-Type", containing("application/json"))
         .willReturn(
           aResponse().withStatus(201)))
   }
