@@ -23,7 +23,7 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
 import play.api.http.Status
-import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.support.{ RelationshipNotFound, TaxIdentifierSupport }
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
@@ -31,6 +31,11 @@ import uk.gov.hmrc.domain.{ AgentCode, TaxIdentifier }
 import uk.gov.hmrc.http._
 
 import scala.concurrent.{ ExecutionContext, Future }
+
+case class ES8Request(userId: String, `type`: String)
+object ES8Request {
+  implicit val writes = Json.writes[ES8Request]
+}
 
 @Singleton
 class EnrolmentStoreProxyConnector @Inject() (
@@ -113,7 +118,7 @@ class EnrolmentStoreProxyConnector @Inject() (
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKeyPrefix.replace("~", "_")}-POST") {
-      http.POSTString[HttpResponse](url.toString, s"""{"userId":"$userId","type":"delegated"}""")
+      http.POST[ES8Request, HttpResponse](url.toString, ES8Request(userId, "delegated"))
     }
       .map(_ => ())
       .recover {
