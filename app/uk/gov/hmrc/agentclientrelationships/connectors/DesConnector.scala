@@ -17,12 +17,12 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{ Inject, Named, Singleton }
 
+import javax.inject.{ Inject, Named, Singleton }
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json.Reads._
-import play.api.libs.json._
+import play.api.libs.json.{ JsLookupResult, _ }
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
@@ -120,7 +120,7 @@ class DesConnector @Inject() (
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
     val regime = clientId match {
       case MtdItId(_) => "ITSA"
-      case Vrn(_) => "TAVC"
+      case Vrn(_) => "VATC"
     }
 
     val url = new URL(baseUrl, s"/registration/relationship")
@@ -151,8 +151,8 @@ class DesConnector @Inject() (
     }
   }
 
-  private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String, regime: String) = Json.parse(
-    s"""{
+  private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String, regime: String) = {
+    includeIdTypeIfNeeded(Json.parse(s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
@@ -161,10 +161,12 @@ class DesConnector @Inject() (
             "action": "Authorise",
             "isExclusiveAgent": true
           }
-       }""")
+       }""").as[JsObject])
+  }
 
-  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String) = Json.parse(
-    s"""{
+  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String) = {
+    includeIdTypeIfNeeded(Json.parse(
+      s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
@@ -172,5 +174,13 @@ class DesConnector @Inject() (
           "authorisation": {
             "action": "De-Authorise"
           }
-     }""")
+     }""").as[JsObject])
+  }
+
+  private val includeIdTypeIfNeeded: JsObject => JsObject = { request =>
+    (request \ "regime").toOption match {
+      case Some(JsString("VATC")) => request + ("idType", JsString("VRN"))
+      case _ => request
+    }
+  }
 }
