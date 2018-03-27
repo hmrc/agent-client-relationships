@@ -170,4 +170,11 @@ class RelationshipsController @Inject()(
       case None => NotFound
     }
   }
+
+  def getVatRelationship: Action[AnyContent] = AuthorisedAsVatClient { implicit request => clientId =>
+    service.getVatRelationshipForClient(clientId).map {
+      case Some(relationship) => Ok(Json.toJson(relationship))
+      case None => NotFound
+    }
+  }
 }

@@ -33,7 +33,7 @@ object EnrolmentType {
 
   case object EnrolmentAsAgent extends EnrolmentType("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
   case object EnrolmentMtdIt extends EnrolmentType("HMRC-MTD-IT", "MTDITID", MtdItId.apply)
-  case object EnrolmentMtdVat extends EnrolmentType("HMRC-MTD-VAT", "MTDVATID", Vrn.apply)
+  case object EnrolmentMtdVat extends EnrolmentType("HMRC-MTD-VAT", "VRN", Vrn.apply)
 
   def enrolmentTypeFor(identifier: TaxIdentifier): EnrolmentType = identifier match {
     case _ @ MtdItId(_) => EnrolmentMtdIt

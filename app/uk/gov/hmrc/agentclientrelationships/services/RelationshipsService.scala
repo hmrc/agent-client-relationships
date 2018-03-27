@@ -359,4 +359,8 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   def getItsaRelationshipForClient(clientId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] = {
     des.getActiveClientItsaRelationships(clientId)
   }
+
+  def getVatRelationshipForClient(clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] = {
+    des.getActiveClientVatRelationships(clientId)
+  }
 }

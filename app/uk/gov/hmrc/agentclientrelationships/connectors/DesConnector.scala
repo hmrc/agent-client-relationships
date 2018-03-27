@@ -55,10 +55,25 @@ object ItsaRelationship {
     (JsPath \ "agentReferenceNumber").read[Arn].map(arn => ItsaRelationship(arn))
 }
 
-case class RelationshipResponse(relationship: Seq[ItsaRelationship])
+case class VatRelationship(arn: Arn)
 
-object RelationshipResponse {
-  implicit val relationshipResponseFormat = Json.format[RelationshipResponse]
+object VatRelationship {
+  implicit val relationshipWrites = Json.writes[VatRelationship]
+
+  implicit val reads: Reads[VatRelationship] =
+    (JsPath \ "agentReferenceNumber").read[Arn].map(arn => VatRelationship(arn))
+}
+
+case class ItsaRelationshipResponse(relationship: Seq[ItsaRelationship])
+
+case class VatRelationshipResponse(relationship: Seq[VatRelationship])
+
+object ItsaRelationshipResponse {
+  implicit val relationshipResponseFormat = Json.format[ItsaRelationshipResponse]
+}
+
+object VatRelationshipResponse {
+  implicit val vatRelationshipResponseFormat = Json.format[VatRelationshipResponse]
 }
 
 case class ClientRelationship(agents: Seq[Agent])
@@ -111,7 +126,18 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
       val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
       val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=ITSA")
 
-      getWithDesHeaders[RelationshipResponse]("GetStatusAgentRelationship", url).map(_.relationship.headOption).recover {
+      getWithDesHeaders[ItsaRelationshipResponse]("GetStatusAgentRelationship", url).map(_.relationship.headOption).recover {
+        case e: NotFoundException => None
+      }
+    }
+  }
+
+  def getActiveClientVatRelationships(vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] = {
+    monitor(s"ConsumedAPI-Get-VAT-Relationship-GET") {
+      val encodedClientId = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
+      val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=VAT")
+
+      getWithDesHeaders[VatRelationshipResponse]("GetStatusAgentRelationshipVat", url).map(_.relationship.headOption).recover {
         case e: NotFoundException => None
       }
     }
