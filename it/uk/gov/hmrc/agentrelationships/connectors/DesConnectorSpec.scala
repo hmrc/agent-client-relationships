@@ -183,7 +183,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       an[Exception] should be thrownBy await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
 
-    "request body contains service as ITSA when client Id is an MtdItId" in {
+    "request body contains regime as ITSA when client Id is an MtdItId" in {
       givenAgentCanBeAllocatedInDes(MtdItId("foo"), Arn("someArn"))
       givenAuditConnector()
 
@@ -193,14 +193,14 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
         .withRequestBody(equalToJson(s"""{ "regime": "ITSA"}""", true, true)))
     }
 
-    "request body contains service as TAVC when client Id is a Vrn" in {
+    "request body contains regime as VATC and idType as VRN when client Id is a Vrn" in {
       givenAgentCanBeAllocatedInDes(Vrn("someVrn"), Arn("someArn"))
       givenAuditConnector()
 
       await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
 
       verify(1, postRequestedFor(urlPathEqualTo("/registration/relationship"))
-        .withRequestBody(equalToJson(s"""{ "regime": "TAVC"}""", true, true)))
+        .withRequestBody(equalToJson(s"""{ "regime": "VATC", "idType" : "VRN" }""", true, true)))
     }
   }
 
