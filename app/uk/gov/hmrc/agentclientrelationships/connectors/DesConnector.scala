@@ -121,6 +121,7 @@ class DesConnector @Inject() (
     val regime = clientId match {
       case MtdItId(_) => "ITSA"
       case Vrn(_) => "VATC"
+      case _ => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
     val url = new URL(baseUrl, s"/registration/relationship")
