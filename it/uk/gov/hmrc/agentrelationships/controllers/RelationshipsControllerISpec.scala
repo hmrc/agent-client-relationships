@@ -79,7 +79,7 @@ class RelationshipsControllerISpec extends UnitSpec
   val nino = Nino("AB123456C")
   val vrn = Vrn("101747641")
   val mtdItIdType = "MTDITID"
-  val mtdVatIdType = "MTDVATID"
+  val mtdVatIdType = "VRN"
   val oldAgentCode = "oldAgentCode"
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
