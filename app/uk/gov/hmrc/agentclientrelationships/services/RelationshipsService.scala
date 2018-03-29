@@ -16,23 +16,24 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import javax.inject.{ Inject, Named, Singleton }
+import javax.inject.{Inject, Named, Singleton}
 
+import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.{ AuditData, AuditService }
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{ raiseError, returnValue }
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository.{ SyncStatus => _, _ }
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
-import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
+import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 sealed trait CheckAndCopyResult {
@@ -70,8 +71,9 @@ class RelationshipsService @Inject() (
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: RecoveryLockService,
   auditService: AuditService,
+  val metrics: Metrics,
   @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
-  @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) {
+  @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) extends Monitoring {
 
   def getAgentUserFor(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     for {
@@ -124,12 +126,14 @@ class RelationshipsService @Inject() (
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
               .getOrElse(createRelationship(arn, mtdItId, eventualAgentUser, references.map(SaRef.apply), true, false)).map { _ =>
                 auditService.sendCreateRelationshipAuditEvent
+                mark("Count-CopyRelationship-ITSA-FoundAndCopied")
                 FoundAndCopied
               }
               .recover {
                 case NonFatal(ex) =>
                   Logger.warn(s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})", ex)
                   auditService.sendCreateRelationshipAuditEvent
+                  mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                   FoundAndFailedToCopy
               }
           } else Future.successful(NotFound)
@@ -156,12 +160,14 @@ class RelationshipsService @Inject() (
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentUser))
               .getOrElse(createRelationship(arn, vrn, eventualAgentUser, references.map(VatRef.apply), true, false)).map { _ =>
                 auditService.sendCreateRelationshipAuditEventForMtdVat
+                mark("Count-CopyRelationship-VAT-FoundAndCopied")
                 FoundAndCopied
               }
               .recover {
                 case NonFatal(ex) =>
                   Logger.warn(s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})", ex)
                   auditService.sendCreateRelationshipAuditEventForMtdVat
+                  mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                   FoundAndFailedToCopy
               }
           } else Future.successful(NotFound)
@@ -317,8 +323,9 @@ class RelationshipsService @Inject() (
     } else
       mappingServiceCall.map { mappingServiceIds =>
         val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
-        Logger.info(s"The sa/es references (${referenceIdSet.getClass.getName}) in mapping store are $mappingServiceIds. " +
-          s"The intersected value between mapping store and DES/ES is $intersected")
+        Logger.info(s"The CESA SA references have been found, " +
+          s"${if(intersected.isEmpty) "but no previous relationship exists"
+          else "and will attempt to copy existing relationship"}")
         intersected
       }
   }
