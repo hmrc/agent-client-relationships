@@ -52,8 +52,8 @@ class EnrolmentTypeSpec extends UnitSpec {
       EnrolmentAsAgent.findEnrolmentIdentifier(enrolments) shouldBe Some(Arn("arn123"))
     }
 
-    "return Vrn for EnrolmentMtdVat if the HMRC-MTD-VAT enrolment exists with an MTDVATID identifier" in {
-      val enrolments = Set(Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("MTDVATID", "101747696")), "activated"))
+    "return Vrn for EnrolmentMtdVat if the HMRC-MTD-VAT enrolment exists with an VRN identifier" in {
+      val enrolments = Set(Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", "101747696")), "activated"))
 
       EnrolmentMtdVat.findEnrolmentIdentifier(enrolments) shouldBe Some(Vrn("101747696"))
     }
