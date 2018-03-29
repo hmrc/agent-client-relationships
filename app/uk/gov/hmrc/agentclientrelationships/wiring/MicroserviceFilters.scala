@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.services
+package uk.gov.hmrc.agentclientrelationships.wiring
 
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.TaxIdentifier
+import javax.inject.{ Inject, Singleton }
 
-import scala.concurrent.{ ExecutionContext, Future }
+import com.kenshoo.play.metrics.MetricsFilter
+import play.api.http.DefaultHttpFilters
+import uk.gov.hmrc.play.bootstrap.filters.{ AuditFilter, CacheControlFilter, LoggingFilter }
 
-trait RecoveryLockService {
-
-  def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
-
-}
+@Singleton
+class MicroserviceFilters @Inject() (
+  metricsFilter: MetricsFilter,
+  auditFilter: AuditFilter,
+  loggingFilter: LoggingFilter,
+  cacheFilter: CacheControlFilter,
+  monitoringFilter: MicroserviceMonitoringFilter) extends DefaultHttpFilters(metricsFilter, monitoringFilter, auditFilter, loggingFilter, cacheFilter)

@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.SessionKeys
@@ -128,7 +128,7 @@ trait AuthStub {
   }
 
   def authorisedAsClient[A](request: FakeRequest[A], mtdItId: String): FakeRequest[A] =
-    authenticated(request, Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId), isAgent = false )
+    authenticated(request, Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId), isAgent = false)
 
   def givenUnauthorisedWith(mdtpDetail: String): Unit = {
     stubFor(post(urlEqualTo("/auth/authorise"))

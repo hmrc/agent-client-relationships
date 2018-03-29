@@ -16,23 +16,23 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{ Inject, Named, Singleton }
 
 import play.api.Logger
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.{ AuditData, AuditService }
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{ raiseError, returnValue }
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
+import uk.gov.hmrc.agentclientrelationships.repository.{ SyncStatus => _, _ }
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 sealed trait CheckAndCopyResult {
@@ -62,18 +62,18 @@ final case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
 case class AgentUser(userId: String, groupId: String, agentCode: AgentCode)
 
 @Singleton
-class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
-                                     des: DesConnector,
-                                     mapping: MappingConnector,
-                                     ugs: UsersGroupsSearchConnector,
-                                     relationshipCopyRepository: RelationshipCopyRecordRepository,
-                                     lockService: RecoveryLockService,
-                                     auditService: AuditService,
-                                     @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
-                                     @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) {
+class RelationshipsService @Inject() (
+  es: EnrolmentStoreProxyConnector,
+  des: DesConnector,
+  mapping: MappingConnector,
+  ugs: UsersGroupsSearchConnector,
+  relationshipCopyRepository: RelationshipCopyRecordRepository,
+  lockService: RecoveryLockService,
+  auditService: AuditService,
+  @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
+  @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean) {
 
-  def getAgentUserFor(arn: Arn)
-                     (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
+  def getAgentUserFor(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     for {
       agentGroupId <- es.getPrincipalGroupIdFor(arn)
       agentUserId <- es.getPrincipalUserIdFor(arn)
@@ -83,31 +83,28 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       _ = auditData.set("agentCode", agentCode)
     } yield AgentUser(agentUserId, agentGroupId, agentCode)
 
-  def checkForRelationship(identifier: TaxIdentifier, agentUser: AgentUser)
-                          (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, Boolean]] =
+  def checkForRelationship(identifier: TaxIdentifier, agentUser: AgentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, Boolean]] =
     for {
       allocatedGroupIds <- es.getDelegatedGroupIdsFor(identifier)
       result <- if (allocatedGroupIds.contains(agentUser.groupId)) returnValue(Right(true))
       else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
     } yield result
 
-  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentUser: Future[AgentUser])
-                                    (implicit ec: ExecutionContext, hc: HeaderCarrier,
-                                     request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier,
+    request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
       if (copyRelationshipFlag) body else returnValue(CopyRelationshipNotEnabled)
 
     identifier match {
-      case mtdItId@MtdItId(_) =>
+      case mtdItId @ MtdItId(_) =>
         ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentUser))
-      case vrn@Vrn(_) =>
+      case vrn @ Vrn(_) =>
         ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
     }
   }
 
-  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId, eventualAgentUser: Future[AgentUser])
-                                                        (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId, eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
     auditData.set("service", "mtd-it")
@@ -118,7 +115,7 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         Logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
-      case maybeRelationshipCopyRecord@_ =>
+      case maybeRelationshipCopyRecord @ _ =>
         for {
           nino <- des.getNinoFor(mtdItId)
           references <- lookupCesaForOldRelationship(arn, nino)
@@ -126,22 +123,22 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
             maybeRelationshipCopyRecord.map(
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
               .getOrElse(createRelationship(arn, mtdItId, eventualAgentUser, references.map(SaRef.apply), true, false)).map { _ =>
-              auditService.sendCreateRelationshipAuditEvent
-              FoundAndCopied
-            }
-              .recover { case NonFatal(ex) =>
-                Logger.warn(s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})", ex)
                 auditService.sendCreateRelationshipAuditEvent
-                FoundAndFailedToCopy
+                FoundAndCopied
+              }
+              .recover {
+                case NonFatal(ex) =>
+                  Logger.warn(s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})", ex)
+                  auditService.sendCreateRelationshipAuditEvent
+                  FoundAndFailedToCopy
               }
           } else Future.successful(NotFound)
         } yield result
     }
   }
 
-  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentUser: Future[AgentUser])
-                                                       (implicit ec: ExecutionContext, hc: HeaderCarrier,
-                                                        request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
+  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier,
+    request: Request[Any], auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingESRelationship")
     auditData.set("service", "mtd-vat")
@@ -151,28 +148,28 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         Logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
-      case maybeRelationshipCopyRecord@_ =>
+      case maybeRelationshipCopyRecord @ _ =>
         for {
           references <- lookupESForOldRelationship(arn, vrn)
           result <- if (references.nonEmpty) {
             maybeRelationshipCopyRecord.map(
               relationshipCopyRecord => recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentUser))
               .getOrElse(createRelationship(arn, vrn, eventualAgentUser, references.map(VatRef.apply), true, false)).map { _ =>
-              auditService.sendCreateRelationshipAuditEventForMtdVat
-              FoundAndCopied
-            }
-              .recover { case NonFatal(ex) =>
-                Logger.warn(s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})", ex)
                 auditService.sendCreateRelationshipAuditEventForMtdVat
-                FoundAndFailedToCopy
+                FoundAndCopied
+              }
+              .recover {
+                case NonFatal(ex) =>
+                  Logger.warn(s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})", ex)
+                  auditService.sendCreateRelationshipAuditEventForMtdVat
+                  FoundAndFailedToCopy
               }
           } else Future.successful(NotFound)
         } yield result
     }
   }
 
-  def lookupCesaForOldRelationship(arn: Arn, nino: Nino)
-                                  (implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
+  def lookupCesaForOldRelationship(arn: Arn, nino: Nino)(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[SaAgentReference]] = {
     auditData.set("nino", nino)
     for {
       references <- des.getClientSaAgentSaReferences(nino)
@@ -188,7 +185,8 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(
-    implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[AgentCode]] = {
+    implicit
+    ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Set[AgentCode]] = {
     auditData.set("vrn", clientVrn)
 
     for {
@@ -222,11 +220,10 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   private def createEsRecord(
-                              arn: Arn,
-                              identifier: TaxIdentifier,
-                              eventualAgentUser: Future[AgentUser],
-                              failIfAllocateAgentInESFails: Boolean
-                            )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+    arn: Arn,
+    identifier: TaxIdentifier,
+    eventualAgentUser: Future[AgentUser],
+    failIfAllocateAgentInESFails: Boolean)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
     (for {
@@ -249,14 +246,13 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
       }
   }
 
-  def createRelationship(arn: Arn,
-                         identifier: TaxIdentifier,
-                         eventualAgentUser: Future[AgentUser],
-                         oldReferences: Set[RelationshipReference],
-                         failIfCreateRecordFails: Boolean,
-                         failIfAllocateAgentInESFails: Boolean
-                        )
-                        (implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+  def createRelationship(
+    arn: Arn,
+    identifier: TaxIdentifier,
+    eventualAgentUser: Future[AgentUser],
+    oldReferences: Set[RelationshipReference],
+    failIfCreateRecordFails: Boolean,
+    failIfAllocateAgentInESFails: Boolean)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     auditData.set("AgentDBRecord", false)
     auditData.set("enrolmentDelegated", false)
@@ -283,9 +279,9 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   private def recoverRelationshipCreation(
-                                           relationshipCopyRecord: RelationshipCopyRecord,
-                                           arn: Arn, identifier: TaxIdentifier,
-                                           eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+    relationshipCopyRecord: RelationshipCopyRecord,
+    arn: Arn, identifier: TaxIdentifier,
+    eventualAgentUser: Future[AgentUser])(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     lockService.tryLock(arn, identifier) {
       def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
@@ -328,7 +324,8 @@ class RelationshipsService @Inject()(es: EnrolmentStoreProxyConnector,
   }
 
   def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
-    implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
+    implicit
+    ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
 
     def esDeAllocation(clientGroupId: String) = (for {
       agentUser <- getAgentUserFor(arn)

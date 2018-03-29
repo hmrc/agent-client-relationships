@@ -17,20 +17,19 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import java.time.{LocalDateTime, ZoneOffset}
-import javax.inject.{Inject, Named, Singleton}
 
+import javax.inject.{ Inject, Named, Singleton }
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json.Reads._
-import play.api.libs.json._
+import play.api.libs.json.{ JsLookupResult, _ }
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.domain.{ Nino, SaAgentReference, TaxIdentifier }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
 
@@ -95,12 +94,13 @@ object RegistrationRelationshipResponse {
 }
 
 @Singleton
-class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
-                             @Named("des.authorizationToken") authorizationToken: String,
-                             @Named("des.environment") environment: String,
-                             httpGet: HttpGet,
-                             httpPost: HttpPost,
-                             metrics: Metrics)
+class DesConnector @Inject() (
+  @Named("des-baseUrl") baseUrl: URL,
+  @Named("des.authorizationToken") authorizationToken: String,
+  @Named("des.environment") environment: String,
+  httpGet: HttpGet,
+  httpPost: HttpPost,
+  metrics: Metrics)
   extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -146,7 +146,8 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
     val regime = clientId match {
       case MtdItId(_) => "ITSA"
-      case Vrn(_) => "TAVC"
+      case Vrn(_) => "VATC"
+      case _ => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
     val url = new URL(baseUrl, s"/registration/relationship")
@@ -177,8 +178,8 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
     }
   }
 
-  private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String, regime: String) = Json.parse(
-    s"""{
+  private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String, regime: String) = {
+    includeIdTypeIfNeeded(Json.parse(s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
@@ -187,10 +188,12 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
             "action": "Authorise",
             "isExclusiveAgent": true
           }
-       }""")
+       }""").as[JsObject])
+  }
 
-  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String) = Json.parse(
-    s"""{
+  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String) = {
+    includeIdTypeIfNeeded(Json.parse(
+      s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
@@ -198,5 +201,13 @@ class DesConnector @Inject()(@Named("des-baseUrl") baseUrl: URL,
           "authorisation": {
             "action": "De-Authorise"
           }
-     }""")
+     }""").as[JsObject])
+  }
+
+  private val includeIdTypeIfNeeded: JsObject => JsObject = { request =>
+    (request \ "regime").toOption match {
+      case Some(JsString("VATC")) => request + ("idType", JsString("VRN"))
+      case _ => request
+    }
+  }
 }

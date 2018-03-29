@@ -18,11 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import reactivemongo.core.errors.GenericDatabaseException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId }
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordRepository {
   private val data: mutable.Map[String, RelationshipCopyRecord] = mutable.Map()
@@ -35,12 +35,11 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
         data += ((record.arn + record.clientIdentifier) → record)
         1
       }
-    }
-    )
+    })
   }
 
   override def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
-    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
+    val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(if (maybeValue.isDefined) {
       maybeValue
     } else {
@@ -49,31 +48,29 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
   }
 
   override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
-    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
+    val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
         data(arn.value + identifier.value) = maybeValue.get.copy(syncToETMPStatus = Some(status))
       } else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
-      }
-    )
+      })
 
   }
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(implicit ec: ExecutionContext): Future[Unit] = {
-    val maybeValue: Option[RelationshipCopyRecord] =data.get(arn.value + identifier.value)
+    val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
         data(arn.value + identifier.value) = maybeValue.get.copy(syncToESStatus = Some(status))
-      }  else {
+      } else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
-      }
-    )
+      })
   }
 
   def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int] = {
     val maybeRemove = data.remove(arn.value + mtdItId.value)
-    if(maybeRemove.isDefined)  Future.successful(1)
+    if (maybeRemove.isDefined) Future.successful(1)
     else Future.successful(0)
   }
 

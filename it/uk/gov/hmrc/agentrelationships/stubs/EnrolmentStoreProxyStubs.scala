@@ -1,9 +1,9 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
+import com.github.tomakehurst.wiremock.matching.{ MatchResult, UrlPattern }
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.time.{ Millis, Seconds, Span }
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -35,7 +35,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
         .withStatus(204)))
   }
 
-  private def urlContains(str: String): UrlPattern = new UrlPattern(containing(str),false){
+  private def urlContains(str: String): UrlPattern = new UrlPattern(containing(str), false) {
     override def `match`(url: String): MatchResult = pattern.`match`(url)
   }
 
@@ -46,7 +46,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
 
   def givenDelegatedGroupIdsExistFor(taxIdentifier: TaxIdentifier, groupIds: Set[String]) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
-    givenDelegatedGroupIdsExistForKey(enrolmentKey,groupIds)
+    givenDelegatedGroupIdsExistForKey(enrolmentKey, groupIds)
   }
 
   def givenDelegatedGroupIdsExistForKey(enrolmentKey: String, groupIds: Set[String]) = {
@@ -70,7 +70,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenDelegatedGroupIdsNotExistForKey(enrolmentKey: String) = {
     stubFor(get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
       .willReturn(aResponse()
-          .withStatus(204)))
+        .withStatus(204)))
   }
 
   def givenDelegatedGroupIdRequestFailsWith(status: Int) = {
@@ -109,35 +109,32 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
              |   "type":"delegated"
              |}
              |""".stripMargin))
+        .withHeader("Content-Type", containing("application/json"))
         .willReturn(
-          aResponse().withStatus(201)
-        )
-    )
+          aResponse().withStatus(201)))
   }
 
-  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey : String, agentCode: String)= {
+  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey: String, agentCode: String) = {
     eventually {
       verify(1, postRequestedFor(
         urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
-          .withRequestBody(similarToJson(
-            s"""
+        .withRequestBody(similarToJson(
+          s"""
                |{
                |   "userId":"$clientUserId",
                |   "type":"delegated"
                |}
-               |""".stripMargin))
-      )
+               |""".stripMargin)))
     }
   }
 
-  def verifyNoEnrolmentHasBeenAllocated()= {
+  def verifyNoEnrolmentHasBeenAllocated() = {
     eventually {
       verify(0, postRequestedFor(urlContains(s"$teBaseUrl/groups/")))
     }
   }
 
-  def givenEnrolmentAllocationFailsWith(responseStatus: Int)
-                                       (groupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
+  def givenEnrolmentAllocationFailsWith(responseStatus: Int)(groupId: String, clientUserId: String, key: String, identifier: String, value: String, agentCode: String) = {
     stubFor(
       post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(
@@ -148,9 +145,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
              |}
              |""".stripMargin))
         .willReturn(
-          aResponse().withStatus(responseStatus)
-        )
-    )
+          aResponse().withStatus(responseStatus)))
   }
 
   def givenEnrolmentDeallocationSucceeds(groupId: String, taxIdentifier: TaxIdentifier, agentCode: String) = {
@@ -158,20 +153,17 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
         .willReturn(
-          aResponse().withStatus(204)
-        )
-    )
+          aResponse().withStatus(204)))
   }
 
-  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: String, agentCode: String)= {
+  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: String, agentCode: String) = {
     eventually {
       verify(1, deleteRequestedFor(
-        urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
-      )
+        urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode")))
     }
   }
 
-  def verifyNoEnrolmentHasBeenDeallocated()= {
+  def verifyNoEnrolmentHasBeenDeallocated() = {
     eventually {
       verify(0, deleteRequestedFor(urlContains(s"$teBaseUrl/groups/")))
     }
@@ -181,19 +173,14 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
         .willReturn(
-          aResponse().withStatus(204)
-        )
-    )
+          aResponse().withStatus(204)))
   }
 
-  def givenEnrolmentDeallocationFailsWith(responseStatus: Int)
-                                         (groupId: String, key: String, identifier: String, value: String, agentCode: String) = {
+  def givenEnrolmentDeallocationFailsWith(responseStatus: Int)(groupId: String, key: String, identifier: String, value: String, agentCode: String) = {
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
         .willReturn(
-          aResponse().withStatus(responseStatus)
-        )
-    )
+          aResponse().withStatus(responseStatus)))
   }
 
   def givenEsIsUnavailable() = {

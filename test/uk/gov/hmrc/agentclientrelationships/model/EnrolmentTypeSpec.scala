@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.auth.core.{ Enrolment, EnrolmentIdentifier }
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -74,8 +74,7 @@ class EnrolmentTypeSpec extends UnitSpec {
       val enrolments = Set(
         Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("NotAgentReferenceNumber", "arn123")), "activated"),
         Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("NotMTDITID", "123")), "activated"),
-        Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("NotMTDVATID", "123")), "activated")
-      )
+        Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("NotVRN", "123")), "activated"))
 
       allEnrolmentTypes.foreach(_.findEnrolmentIdentifier(enrolments) shouldBe None)
     }

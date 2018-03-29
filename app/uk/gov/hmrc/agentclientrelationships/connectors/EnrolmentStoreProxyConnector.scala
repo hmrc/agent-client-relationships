@@ -17,25 +17,31 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{ Inject, Named, Singleton }
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
 import play.api.http.Status
-import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{ RelationshipNotFound, TaxIdentifierSupport }
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
-import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
+import uk.gov.hmrc.domain.{ AgentCode, TaxIdentifier }
 import uk.gov.hmrc.http._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
+
+case class ES8Request(userId: String, `type`: String)
+object ES8Request {
+  implicit val writes = Json.writes[ES8Request]
+}
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseUrl") espBaseUrl: URL,
-                                             @Named("tax-enrolments-baseUrl") teBaseUrl: URL,
-                                             http: HttpGet with HttpPost with HttpDelete, metrics: Metrics)
+class EnrolmentStoreProxyConnector @Inject() (
+  @Named("enrolment-store-proxy-baseUrl") espBaseUrl: URL,
+  @Named("tax-enrolments-baseUrl") teBaseUrl: URL,
+  http: HttpGet with HttpPost with HttpDelete, metrics: Metrics)
   extends TaxIdentifierSupport with HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -74,17 +80,17 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
       if (response.status == 204) throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
       else response.json
     }
-    .map(json => {
-      val groupIds = (json \ "principalGroupIds").as[Seq[String]]
-      if (groupIds.isEmpty) {
-        throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-      } else {
-        if (groupIds.lengthCompare(1) > 0) {
-          Logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
+      .map(json => {
+        val groupIds = (json \ "principalGroupIds").as[Seq[String]]
+        if (groupIds.isEmpty) {
+          throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
+        } else {
+          if (groupIds.lengthCompare(1) > 0) {
+            Logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
+          }
+          groupIds.head
         }
-        groupIds.head
-      }
-    })
+      })
   }
 
   // ES1 - delegated
@@ -107,13 +113,12 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
   }
 
   // ES8
-  def allocateEnrolmentToAgent(groupId: String, userId: String, taxIdentifier: TaxIdentifier, agentCode: AgentCode)
-                              (implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
+  def allocateEnrolmentToAgent(groupId: String, userId: String, taxIdentifier: TaxIdentifier, agentCode: AgentCode)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKeyPrefix.replace("~", "_")}-POST") {
-      http.POSTString[HttpResponse](url.toString, s"""{"userId":"$userId","type":"delegated"}""")
+      http.POST[ES8Request, HttpResponse](url.toString, ES8Request(userId, "delegated"))
     }
       .map(_ => ())
       .recover {
@@ -124,8 +129,7 @@ class EnrolmentStoreProxyConnector @Inject()(@Named("enrolment-store-proxy-baseU
   }
 
   // ES9
-  def deallocateEnrolmentFromAgent(groupId: String, taxIdentifier: TaxIdentifier, agentCode: AgentCode)
-                                  (implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
+  def deallocateEnrolmentFromAgent(groupId: String, taxIdentifier: TaxIdentifier, agentCode: AgentCode)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")

@@ -19,9 +19,10 @@ package uk.gov.hmrc.agentrelationships.controllers
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
+import play.api.libs.ws.WSClient
+import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord }
 import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support.{Http, MongoApp, WireMockSupport}
+import uk.gov.hmrc.agentrelationships.support.{ Http, MongoApp, WireMockSupport }
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -38,7 +39,7 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-    protected def appBuilder: GuiceApplicationBuilder =
+  protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -49,9 +50,11 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
         "microservice.services.agent-mapping.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort,
-        "application.router" -> "testOnlyDoNotUseInAppConf.Routes"
-      )
+        "application.router" -> "testOnlyDoNotUseInAppConf.Routes")
       .configure(mongoConfiguration)
+
+  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
@@ -64,7 +67,7 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
   val mtditid = "ABCDEF123456789"
   val mtdItIdType = "MTDITID"
 
-  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")(HeaderCarrier())
+  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
   "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
@@ -72,14 +75,14 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
 
     "return 204 for a valid arn and mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,mtditid,mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 204
     }
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn,"ABCDEF123456780",mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, "ABCDEF123456780", mtdItIdType))) shouldBe 1
       val result = await(doAgentDeleteRequest(requestPath))
       result.status shouldBe 404
     }

@@ -17,14 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.scalatest.BeforeAndAfterEach
-import uk.gov.hmrc.agentclientrelationships.services.RelationshipCopyRecordRepositorySpec
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec with RelationshipCopyRecordRepositorySpec with BeforeAndAfterEach{
+class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec with BeforeAndAfterEach {
 
-  override val repo = new FakeRelationshipCopyRecordRepository()
+  val repo = new FakeRelationshipCopyRecordRepository()
 
   override protected def beforeEach(): Unit = {
     repo.reset

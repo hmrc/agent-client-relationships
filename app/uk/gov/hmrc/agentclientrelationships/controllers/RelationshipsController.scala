@@ -16,19 +16,19 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{ Action, AnyContent }
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService}
+import uk.gov.hmrc.agentclientrelationships.services.{ AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService }
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.{ Nino, TaxIdentifier }
 import uk.gov.hmrc.http.Upstream5xxResponse
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.microservice.controller.BaseController
@@ -37,9 +37,9 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
-class RelationshipsController @Inject()(
-                                         override val authConnector: AuthConnector,
-                                         service: RelationshipsService)
+class RelationshipsController @Inject() (
+  override val authConnector: AuthConnector,
+  service: RelationshipsService)
   extends BaseController with AuthActions {
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
@@ -67,12 +67,12 @@ class RelationshipsController @Inject()(
             case cesaResult =>
               Right(cesaResult.grantAccess)
           }.recover {
-          case upS: Upstream5xxResponse =>
-            throw upS
-          case NonFatal(ex) =>
-            Logger.warn(s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
-            Left(errorCode)
-        }
+            case upS: Upstream5xxResponse =>
+              throw upS
+            case NonFatal(ex) =>
+              Logger.warn(s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
+              Left(errorCode)
+          }
     }.map {
       case Left(errorCode) => NotFound(toJson(errorCode))
       case Right(false) => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
@@ -89,12 +89,12 @@ class RelationshipsController @Inject()(
         case references if references.nonEmpty => Ok
         case _ => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }.recover {
-      case upS: Upstream5xxResponse =>
-        throw upS
-      case NonFatal(ex) =>
-        Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino", ex)
-        NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-    }
+        case upS: Upstream5xxResponse =>
+          throw upS
+        case NonFatal(ex) =>
+          Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino", ex)
+          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      }
   }
 
   def createForMtdIt(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
@@ -157,14 +157,14 @@ class RelationshipsController @Inject()(
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
         }
       }.recover {
-      case upS: Upstream5xxResponse => throw upS
-      case NonFatal(_) =>
-        Logger.warn("checkWithNino: lookupCesaForOldRelationship failed")
-        NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-    }
+        case upS: Upstream5xxResponse => throw upS
+        case NonFatal(_) =>
+          Logger.warn("checkWithNino: lookupCesaForOldRelationship failed")
+          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+      }
   }
 
-  def getItsaRelationship: Action[AnyContent] = AuthorisedAsItsaClient { implicit request =>clientId =>
+  def getItsaRelationship: Action[AnyContent] = AuthorisedAsItsaClient { implicit request => clientId =>
     service.getItsaRelationshipForClient(clientId).map {
       case Some(relationship) => Ok(Json.toJson(relationship))
       case None => NotFound

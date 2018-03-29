@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{ JsObject, Json }
 
 import scala.concurrent.Future
-import scala.concurrent.Future.{failed, successful}
+import scala.concurrent.Future.{ failed, successful }
 
 object fluentSyntax {
 

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -36,9 +36,9 @@ object EnrolmentType {
   case object EnrolmentMtdVat extends EnrolmentType("HMRC-MTD-VAT", "VRN", Vrn.apply)
 
   def enrolmentTypeFor(identifier: TaxIdentifier): EnrolmentType = identifier match {
-    case _ @ MtdItId(_) => EnrolmentMtdIt
-    case _ @ Vrn(_)     => EnrolmentMtdVat
-    case _ @ Arn(_)     => EnrolmentAsAgent
+    case _@ MtdItId(_) => EnrolmentMtdIt
+    case _@ Vrn(_) => EnrolmentMtdVat
+    case _@ Arn(_) => EnrolmentAsAgent
     case _ => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
 }
