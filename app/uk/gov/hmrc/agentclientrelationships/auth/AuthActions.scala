@@ -18,8 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.auth
 
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment.{ EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentType => TypeOfEnrolment }
+import uk.gov.hmrc.agentclientrelationships.model.{ EnrolmentMtdIt, EnrolmentMtdVat, TypeOfEnrolment }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._

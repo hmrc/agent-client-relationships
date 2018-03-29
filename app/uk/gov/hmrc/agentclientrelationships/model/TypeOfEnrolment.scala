@@ -20,22 +20,23 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.domain.TaxIdentifier
 
-object TypeOfEnrolment {
-  sealed class EnrolmentType(val enrolmentKey: String, val identifierKey: String, val identifierForValue: String => TaxIdentifier) {
-    def findEnrolmentIdentifier(enrolments: Set[Enrolment]): Option[TaxIdentifier] = {
-      val maybeEnrolment: Option[Enrolment] = enrolments.find(_.key equals enrolmentKey)
+sealed class TypeOfEnrolment(val enrolmentKey: String, val identifierKey: String, val identifierForValue: String => TaxIdentifier) {
+  def findEnrolmentIdentifier(enrolments: Set[Enrolment]): Option[TaxIdentifier] = {
+    val maybeEnrolment: Option[Enrolment] = enrolments.find(_.key equals enrolmentKey)
 
-      maybeEnrolment
-        .flatMap(_.identifiers.find(_.key equals identifierKey))
-        .map(enrolmentIdentifier => identifierForValue(enrolmentIdentifier.value))
-    }
+    maybeEnrolment
+      .flatMap(_.identifiers.find(_.key equals identifierKey))
+      .map(enrolmentIdentifier => identifierForValue(enrolmentIdentifier.value))
   }
+}
 
-  case object EnrolmentAsAgent extends EnrolmentType("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
-  case object EnrolmentMtdIt extends EnrolmentType("HMRC-MTD-IT", "MTDITID", MtdItId.apply)
-  case object EnrolmentMtdVat extends EnrolmentType("HMRC-MTD-VAT", "VRN", Vrn.apply)
+case object EnrolmentAsAgent extends TypeOfEnrolment("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
+case object EnrolmentMtdIt extends TypeOfEnrolment("HMRC-MTD-IT", "MTDITID", MtdItId.apply)
+case object EnrolmentMtdVat extends TypeOfEnrolment("HMRC-MTD-VAT", "VRN", Vrn.apply)
 
-  def enrolmentTypeFor(identifier: TaxIdentifier): EnrolmentType = identifier match {
+object TypeOfEnrolment {
+
+  def enrolmentTypeFor(identifier: TaxIdentifier): TypeOfEnrolment = identifier match {
     case _@ MtdItId(_) => EnrolmentMtdIt
     case _@ Vrn(_) => EnrolmentMtdVat
     case _@ Arn(_) => EnrolmentAsAgent
