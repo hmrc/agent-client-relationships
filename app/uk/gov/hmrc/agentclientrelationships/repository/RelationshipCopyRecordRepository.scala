@@ -116,7 +116,7 @@ class MongoRelationshipCopyRecordRepository @Inject() (mongoComponent: ReactiveM
   with RelationshipCopyRecordRepository
   with AtomicUpdate[RelationshipCopyRecord] {
 
-  private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment.enrolmentTypeFor(identifier).identifierKey
+  private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
   override def indexes = Seq(
     Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true))

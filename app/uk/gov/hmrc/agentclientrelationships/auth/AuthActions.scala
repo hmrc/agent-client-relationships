@@ -48,7 +48,7 @@ trait AuthActions extends AuthorisedFunctions {
             case _ => clientId
           }
 
-          val requiredEnrolmentType = TypeOfEnrolment.enrolmentTypeFor(requiredIdentifier)
+          val requiredEnrolmentType = TypeOfEnrolment(requiredIdentifier)
 
           val actualIdFromEnrolment: Option[TaxIdentifier] = requiredEnrolmentType.findEnrolmentIdentifier(enrol.enrolments)
 
@@ -65,8 +65,7 @@ trait AuthActions extends AuthorisedFunctions {
 
   def AuthorisedAsVatClient[A] = AuthorisedAsClient(EnrolmentMtdVat, Vrn.apply)_
 
-  private def AuthorisedAsClient[A, T](enrolmentType: TypeOfEnrolment, wrap: String => T)
-                                      (body: Request[AnyContent] => T => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
+  private def AuthorisedAsClient[A, T](enrolmentType: TypeOfEnrolment, wrap: String => T)(body: Request[AnyContent] => T => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
 
     authorised(

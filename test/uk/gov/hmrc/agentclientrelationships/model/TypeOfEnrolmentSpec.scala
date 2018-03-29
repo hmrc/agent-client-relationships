@@ -25,20 +25,20 @@ import uk.gov.hmrc.play.test.UnitSpec
 class TypeOfEnrolmentSpec extends UnitSpec {
   "enrolmentTypeFor" should {
     "return EnrolmentMtdIt for an MtdItId identifier" in {
-      TypeOfEnrolment.enrolmentTypeFor(MtdItId("")) shouldBe EnrolmentMtdIt
+      TypeOfEnrolment(MtdItId("")) shouldBe EnrolmentMtdIt
     }
 
     "return EnrolmentMtdVat for an Vrn identifier" in {
-      TypeOfEnrolment.enrolmentTypeFor(Vrn("101747696")) shouldBe EnrolmentMtdVat
+      TypeOfEnrolment(Vrn("101747696")) shouldBe EnrolmentMtdVat
     }
 
     "return EnrolmentAsAgent for an Arn identifier" in {
-      TypeOfEnrolment.enrolmentTypeFor(Arn("TARN000001")) shouldBe EnrolmentAsAgent
+      TypeOfEnrolment(Arn("TARN000001")) shouldBe EnrolmentAsAgent
     }
 
     "throw an exception for an unhandled identifier" in {
       intercept[IllegalArgumentException] {
-        TypeOfEnrolment.enrolmentTypeFor(Nino("AA000000A"))
+        TypeOfEnrolment(Nino("AA000000A"))
       }
     }
   }

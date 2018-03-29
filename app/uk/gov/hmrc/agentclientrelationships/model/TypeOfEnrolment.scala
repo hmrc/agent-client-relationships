@@ -36,10 +36,10 @@ case object EnrolmentMtdVat extends TypeOfEnrolment("HMRC-MTD-VAT", "VRN", Vrn.a
 
 object TypeOfEnrolment {
 
-  def enrolmentTypeFor(identifier: TaxIdentifier): TypeOfEnrolment = identifier match {
-    case _@ MtdItId(_) => EnrolmentMtdIt
-    case _@ Vrn(_) => EnrolmentMtdVat
-    case _@ Arn(_) => EnrolmentAsAgent
+  def apply(identifier: TaxIdentifier): TypeOfEnrolment = identifier match {
+    case MtdItId(_) => EnrolmentMtdIt
+    case Vrn(_) => EnrolmentMtdVat
+    case Arn(_) => EnrolmentAsAgent
     case _ => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
 }

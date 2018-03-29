@@ -259,7 +259,7 @@ class RelationshipsService @Inject() (
     auditData.set("etmpRelationshipCreated", false)
 
     def createRelationshipRecord: Future[Unit] = {
-      val identifierType = TypeOfEnrolment.enrolmentTypeFor(identifier).identifierKey
+      val identifierType = TypeOfEnrolment(identifier).identifierKey
       val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
       relationshipCopyRepository.create(record)
         .map(_ => auditData.set("AgentDBRecord", true))
