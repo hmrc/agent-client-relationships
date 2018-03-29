@@ -62,7 +62,7 @@ trait AuthActions extends AuthorisedFunctions {
       }
   }
 
-  def AuthorisedAsClient[A](body: Request[AnyContent] => MtdItId => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
+  def AuthorisedAsItsaClient[A](body: Request[AnyContent] => MtdItId => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
 
     authorised(
