@@ -23,7 +23,7 @@ import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{ AuditData, AuditService }
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{ raiseError, returnValue }
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
+import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{ SyncStatus => _, _ }
@@ -259,7 +259,7 @@ class RelationshipsService @Inject() (
     auditData.set("etmpRelationshipCreated", false)
 
     def createRelationshipRecord: Future[Unit] = {
-      val identifierType = EnrolmentType.enrolmentTypeFor(identifier).identifierKey
+      val identifierType = TypeOfEnrolment.enrolmentTypeFor(identifier).identifierKey
       val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
       relationshipCopyRepository.create(record)
         .map(_ => auditData.set("AgentDBRecord", true))

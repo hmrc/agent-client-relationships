@@ -16,20 +16,20 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType.{ EnrolmentMtdIt, EnrolmentMtdVat }
+import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
+import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment.{ EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentType => TypeOfEnrolment }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.retrieve.Retrievals._
+import uk.gov.hmrc.auth.core.retrieve.~
+import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.play.HeaderCarrierConverter
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
-import uk.gov.hmrc.play.HeaderCarrierConverter
 
 trait AuthActions extends AuthorisedFunctions {
   me: Results =>
@@ -49,7 +49,7 @@ trait AuthActions extends AuthorisedFunctions {
             case _ => clientId
           }
 
-          val requiredEnrolmentType = EnrolmentType.enrolmentTypeFor(requiredIdentifier)
+          val requiredEnrolmentType = TypeOfEnrolment.enrolmentTypeFor(requiredIdentifier)
 
           val actualIdFromEnrolment: Option[TaxIdentifier] = requiredEnrolmentType.findEnrolmentIdentifier(enrol.enrolments)
 
@@ -62,39 +62,27 @@ trait AuthActions extends AuthorisedFunctions {
       }
   }
 
-  def AuthorisedAsItsaClient[A](body: Request[AnyContent] => MtdItId => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
+  def AuthorisedAsItSaClient[A] = AuthorisedAsClient(EnrolmentMtdIt, MtdItId.apply)_
+
+  def AuthorisedAsVatClient[A] = AuthorisedAsClient(EnrolmentMtdVat, Vrn.apply)_
+
+  private def AuthorisedAsClient[A, T](enrolmentType: TypeOfEnrolment, wrap: String => T)
+                                      (body: Request[AnyContent] => T => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
 
     authorised(
-      Enrolment(EnrolmentMtdIt.enrolmentKey)
-        and AuthProviders(GovernmentGateway))
+      Enrolment(enrolmentType.enrolmentKey) and AuthProviders(GovernmentGateway))
       .retrieve(authorisedEnrolments and affinityGroup) {
         case enrolments ~ _ =>
           val id = for {
-            enrolment <- enrolments.getEnrolment(EnrolmentMtdIt.enrolmentKey)
-            identifier <- enrolment.getIdentifier(EnrolmentMtdIt.identifierKey)
+            enrolment <- enrolments.getEnrolment(enrolmentType.enrolmentKey)
+            identifier <- enrolment.getIdentifier(enrolmentType.identifierKey)
           } yield identifier.value
 
-          id.map(x => body(request)(MtdItId(x)))
-            .getOrElse(Future.successful(NoPermissionOnClient))
-      }
-  }
-
-  def AuthorisedAsVatClient[A](body: Request[AnyContent] => Vrn => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
-
-    authorised(
-      Enrolment(EnrolmentMtdVat.enrolmentKey)
-        and AuthProviders(GovernmentGateway))
-      .retrieve(authorisedEnrolments and affinityGroup) {
-        case enrolments ~ _ =>
-          val id = for {
-            enrolment <- enrolments.getEnrolment(EnrolmentMtdVat.enrolmentKey)
-            identifier <- enrolment.getIdentifier(EnrolmentMtdVat.identifierKey)
-          } yield identifier.value
-
-          id.map(x => body(request)(Vrn(x)))
-            .getOrElse(Future.successful(NoPermissionOnClient))
+          id match {
+            case Some(x) => body(request)(wrap(x))
+            case _ => Future.successful(NoPermissionOnClient)
+          }
       }
   }
 }

@@ -29,7 +29,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{ BSONDocument, BSONObjectID }
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
+import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.domain.{ AgentCode, SaAgentReference, TaxIdentifier }
@@ -116,7 +116,7 @@ class MongoRelationshipCopyRecordRepository @Inject() (mongoComponent: ReactiveM
   with RelationshipCopyRecordRepository
   with AtomicUpdate[RelationshipCopyRecord] {
 
-  private def clientIdentifierType(identifier: TaxIdentifier) = EnrolmentType.enrolmentTypeFor(identifier).identifierKey
+  private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment.enrolmentTypeFor(identifier).identifierKey
 
   override def indexes = Seq(
     Index(Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending), Some("arnAndAgentReference"), unique = true))

@@ -16,29 +16,29 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType._
+import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment._
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core.{ Enrolment, EnrolmentIdentifier }
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.test.UnitSpec
 
-class EnrolmentTypeSpec extends UnitSpec {
+class TypeOfEnrolmentSpec extends UnitSpec {
   "enrolmentTypeFor" should {
     "return EnrolmentMtdIt for an MtdItId identifier" in {
-      EnrolmentType.enrolmentTypeFor(MtdItId("")) shouldBe EnrolmentMtdIt
+      TypeOfEnrolment.enrolmentTypeFor(MtdItId("")) shouldBe EnrolmentMtdIt
     }
 
     "return EnrolmentMtdVat for an Vrn identifier" in {
-      EnrolmentType.enrolmentTypeFor(Vrn("101747696")) shouldBe EnrolmentMtdVat
+      TypeOfEnrolment.enrolmentTypeFor(Vrn("101747696")) shouldBe EnrolmentMtdVat
     }
 
     "return EnrolmentAsAgent for an Arn identifier" in {
-      EnrolmentType.enrolmentTypeFor(Arn("TARN000001")) shouldBe EnrolmentAsAgent
+      TypeOfEnrolment.enrolmentTypeFor(Arn("TARN000001")) shouldBe EnrolmentAsAgent
     }
 
     "throw an exception for an unhandled identifier" in {
       intercept[IllegalArgumentException] {
-        EnrolmentType.enrolmentTypeFor(Nino("AA000000A"))
+        TypeOfEnrolment.enrolmentTypeFor(Nino("AA000000A"))
       }
     }
   }

@@ -55,7 +55,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
         Future.successful(Ok)
     }
 
-    def testAuthorisedAsClient = AuthorisedAsItsaClient { implicit request => clientId =>
+    def testAuthorisedAsClient = AuthorisedAsItSaClient { implicit request => _ =>
       Future.successful(Ok)
     }
 
