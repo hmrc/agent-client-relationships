@@ -54,10 +54,25 @@ object ItsaRelationship {
     (JsPath \ "agentReferenceNumber").read[Arn].map(arn => ItsaRelationship(arn))
 }
 
-case class RelationshipResponse(relationship: Seq[ItsaRelationship])
+case class VatRelationship(arn: Arn)
 
-object RelationshipResponse {
-  implicit val relationshipResponseFormat = Json.format[RelationshipResponse]
+object VatRelationship {
+  implicit val relationshipWrites = Json.writes[VatRelationship]
+
+  implicit val reads: Reads[VatRelationship] =
+    (JsPath \ "agentReferenceNumber").read[Arn].map(arn => VatRelationship(arn))
+}
+
+case class ItsaRelationshipResponse(relationship: Seq[ItsaRelationship])
+
+case class VatRelationshipResponse(relationship: Seq[VatRelationship])
+
+object ItsaRelationshipResponse {
+  implicit val relationshipResponseFormat = Json.format[ItsaRelationshipResponse]
+}
+
+object VatRelationshipResponse {
+  implicit val vatRelationshipResponseFormat = Json.format[VatRelationshipResponse]
 }
 
 case class ClientRelationship(agents: Seq[Agent])
@@ -91,29 +106,39 @@ class DesConnector @Inject() (
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
     val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
+
     getWithDesHeaders[NinoBusinessDetails]("GetRegistrationBusinessDetailsByMtdbsa", url).map(_.nino)
   }
 
   def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[MtdItId] = {
     val url = new URL(baseUrl, s"/registration/business-details/nino/${encodePathSegment(nino.value)}")
+
     getWithDesHeaders[MtdItIdBusinessDetails]("GetRegistrationBusinessDetailsByNino", url).map(_.mtdbsa)
   }
 
   def getClientSaAgentSaReferences(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/registration/relationship/nino/${encodePathSegment(nino.value)}")
+
     getWithDesHeaders[ClientRelationship]("GetStatusAgentRelationship", url).map(_.agents
       .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
       .flatMap(_.agentId))
   }
 
   def getActiveClientItsaRelationships(mtdItId: MtdItId)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] = {
-    monitor(s"ConsumedAPI-Get-ITSA-Relationship-GET") {
-      val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
-      val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=ITSA")
+    val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+    val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=ITSA")
 
-      getWithDesHeaders[RelationshipResponse]("GetStatusAgentRelationship", url).map(_.relationship.headOption).recover {
-        case e: NotFoundException => None
-      }
+    getWithDesHeaders[ItsaRelationshipResponse]("GetActiveClientItSaRelationships", url).map(_.relationship.headOption).recover {
+      case e: NotFoundException => None
+    }
+  }
+
+  def getActiveClientVatRelationships(vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] = {
+    val encodedClientId = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
+    val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=VAT")
+
+    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientVatRelationships", url).map(_.relationship.headOption).recover {
+      case e: NotFoundException => None
     }
   }
 
@@ -126,11 +151,13 @@ class DesConnector @Inject() (
 
     val url = new URL(baseUrl, s"/registration/relationship")
     val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, regime)
+
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, requestBody)
   }
 
   def deleteAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
     val url = new URL(baseUrl, s"/registration/relationship")
+
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("DeleteAgentRelationship", url, deleteAgentRelationshipInputJson(mtdbsa.value, arn.value))
   }
 
@@ -180,7 +207,7 @@ class DesConnector @Inject() (
 
   private val includeIdTypeIfNeeded: JsObject => JsObject = { request =>
     (request \ "regime").toOption match {
-      case Some(JsString("VATC")) => request + ("idType", JsString("VRN"))
+      case Some(JsString("VATC")) => request + (("idType", JsString("VRN")))
       case _ => request
     }
   }

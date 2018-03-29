@@ -74,7 +74,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
     else Future.successful(0)
   }
 
-  def reset = {
+  def reset() = {
     data.clear()
   }
 }

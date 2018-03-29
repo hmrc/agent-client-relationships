@@ -13,3 +13,4 @@ GET           /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn            @uk
 
 # List of existing relationships
 GET           /service/HMRC-MTD-IT/client/relationship                       @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationship
+GET           /service/HMRC-MTD-VAT/client/relationship                      @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getVatRelationship
