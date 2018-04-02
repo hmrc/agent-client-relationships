@@ -29,5 +29,4 @@ trait Monitoring {
     kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
   }
 
-
 }

@@ -16,24 +16,24 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{ Inject, Named, Singleton }
 
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.{ AuditData, AuditService }
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{ raiseError, returnValue }
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentType
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentclientrelationships.repository.{ SyncStatus => _, _ }
+import uk.gov.hmrc.agentclientrelationships.support.{ Monitoring, RelationshipNotFound }
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 sealed trait CheckAndCopyResult {
@@ -167,7 +167,7 @@ class RelationshipsService @Inject() (
                 case NonFatal(ex) =>
                   Logger.warn(s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})", ex)
                   auditService.sendCreateRelationshipAuditEventForMtdVat
-                  mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
+                  mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
                   FoundAndFailedToCopy
               }
           } else Future.successful(NotFound)
@@ -324,8 +324,10 @@ class RelationshipsService @Inject() (
       mappingServiceCall.map { mappingServiceIds =>
         val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
         Logger.info(s"The CESA SA references have been found, " +
-          s"${if(intersected.isEmpty) "but no previous relationship exists"
-          else "and will attempt to copy existing relationship"}")
+          s"${
+            if (intersected.isEmpty) "but no previous relationship exists"
+            else "and will attempt to copy existing relationship"
+          }")
         intersected
       }
   }
