@@ -27,7 +27,6 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.domain.{ Nino, SaAgentReference, TaxIdentifier }
-
 import scala.concurrent.{ ExecutionContext, Future }
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
