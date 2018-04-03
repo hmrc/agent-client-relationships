@@ -26,7 +26,6 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{ AgentCode, SaAgentReference }
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
-
 import scala.concurrent.Future
 import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet }
 
