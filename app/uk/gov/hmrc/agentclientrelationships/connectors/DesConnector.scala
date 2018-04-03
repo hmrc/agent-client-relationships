@@ -47,24 +47,29 @@ object MtdItIdBusinessDetails {
   implicit val reads = Json.reads[MtdItIdBusinessDetails]
 }
 
-case class ItsaRelationship(arn: Arn, endDate: LocalDate)
+trait Relationship {
+  val arn: Arn
+  val endDate: Option[LocalDate]
+}
+
+case class ItsaRelationship(arn: Arn, endDate: Option[LocalDate]) extends Relationship
 
 object ItsaRelationship {
   implicit val relationshipWrites = Json.writes[ItsaRelationship]
 
   implicit val reads: Reads[ItsaRelationship] = (
     (JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").read[LocalDate])(ItsaRelationship.apply _)
+    (JsPath \ "dateTo").readNullable[LocalDate])(ItsaRelationship.apply _)
 }
 
-case class VatRelationship(arn: Arn, endDate: LocalDate)
+case class VatRelationship(arn: Arn, endDate: Option[LocalDate]) extends Relationship
 
 object VatRelationship {
   implicit val relationshipWrites = Json.writes[VatRelationship]
 
   implicit val reads: Reads[VatRelationship] = (
     (JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").read[LocalDate])(VatRelationship.apply _)
+    (JsPath \ "dateTo").readNullable[LocalDate])(VatRelationship.apply _)
 }
 
 case class ItsaRelationshipResponse(relationship: Seq[ItsaRelationship])

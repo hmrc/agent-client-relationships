@@ -24,6 +24,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{ Action, AnyContent }
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.connectors.Relationship
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{ AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService }
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
@@ -167,7 +168,7 @@ class RelationshipsController @Inject() (
 
   def getItsaRelationship: Action[AnyContent] = AuthorisedAsItSaClient { implicit request => clientId =>
     service.getItsaRelationshipForClient(clientId).map {
-      case Some(relationship) if relationship.endDate.isAfter(LocalDate.now()) => Ok(Json.toJson(relationship))
+      case Some(relationship) if checkDate(relationship) => Ok(Json.toJson(relationship))
       case Some(_) => NotFound
       case None => NotFound
     }
@@ -175,9 +176,16 @@ class RelationshipsController @Inject() (
 
   def getVatRelationship: Action[AnyContent] = AuthorisedAsVatClient { implicit request => clientId =>
     service.getVatRelationshipForClient(clientId).map {
-      case Some(relationship) if relationship.endDate.isAfter(LocalDate.now()) => Ok(Json.toJson(relationship))
+      case Some(relationship) if checkDate(relationship) => Ok(Json.toJson(relationship))
       case Some(_) => NotFound
       case None => NotFound
+    }
+  }
+
+  private def checkDate(relationship: Relationship): Boolean = {
+    relationship.endDate match {
+      case Some(date) => date.isAfter(LocalDate.now())
+      case None => false
     }
   }
 }
