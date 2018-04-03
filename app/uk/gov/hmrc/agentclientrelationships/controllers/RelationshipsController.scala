@@ -166,14 +166,16 @@ class RelationshipsController @Inject() (
 
   def getItsaRelationship: Action[AnyContent] = AuthorisedAsItSaClient { implicit request => clientId =>
     service.getItsaRelationshipForClient(clientId).map {
-      case Some(relationship) => Ok(Json.toJson(relationship))
+      case Some(relationship) if relationship.endDate.toString() == "9999-12-31" => Ok(Json.toJson(relationship))
+      case Some(_) => NotFound
       case None => NotFound
     }
   }
 
   def getVatRelationship: Action[AnyContent] = AuthorisedAsVatClient { implicit request => clientId =>
     service.getVatRelationshipForClient(clientId).map {
-      case Some(relationship) => Ok(Json.toJson(relationship))
+      case Some(relationship) if relationship.endDate.toString() == "9999-12-31" => Ok(Json.toJson(relationship))
+      case Some(_) => NotFound
       case None => NotFound
     }
   }
