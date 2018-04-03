@@ -18,18 +18,22 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
 import javax.inject.{ Inject, Named, Singleton }
+
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+import org.joda.time.LocalDate
+import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
-import play.api.libs.json.{ JsLookupResult, _ }
+import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.domain.{ Nino, SaAgentReference, TaxIdentifier }
-import scala.concurrent.{ ExecutionContext, Future }
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
+
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class NinoBusinessDetails(nino: Nino)
 
@@ -43,22 +47,24 @@ object MtdItIdBusinessDetails {
   implicit val reads = Json.reads[MtdItIdBusinessDetails]
 }
 
-case class ItsaRelationship(arn: Arn)
+case class ItsaRelationship(arn: Arn, endDate: LocalDate)
 
 object ItsaRelationship {
   implicit val relationshipWrites = Json.writes[ItsaRelationship]
 
-  implicit val reads: Reads[ItsaRelationship] =
-    (JsPath \ "agentReferenceNumber").read[Arn].map(arn => ItsaRelationship(arn))
+  implicit val reads: Reads[ItsaRelationship] = (
+    (JsPath \ "agentReferenceNumber").read[Arn] and
+    (JsPath \ "dateTo").read[LocalDate])(ItsaRelationship.apply _)
 }
 
-case class VatRelationship(arn: Arn)
+case class VatRelationship(arn: Arn, endDate: LocalDate)
 
 object VatRelationship {
   implicit val relationshipWrites = Json.writes[VatRelationship]
 
-  implicit val reads: Reads[VatRelationship] =
-    (JsPath \ "agentReferenceNumber").read[Arn].map(arn => VatRelationship(arn))
+  implicit val reads: Reads[VatRelationship] = (
+    (JsPath \ "agentReferenceNumber").read[Arn] and
+    (JsPath \ "dateTo").read[LocalDate])(VatRelationship.apply _)
 }
 
 case class ItsaRelationshipResponse(relationship: Seq[ItsaRelationship])
