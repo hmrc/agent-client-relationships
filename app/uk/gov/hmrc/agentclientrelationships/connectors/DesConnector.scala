@@ -144,12 +144,13 @@ class DesConnector @Inject() (
 
   def getActiveClientVatRelationships(vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
-    val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=VAT")
+    val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=VATC")
 
-    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientVatRelationships", url).map(_.relationship.headOption).recover {
+    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientItSaRelationships", url).map(_.relationship.headOption).recover {
       case e: NotFoundException => None
     }
   }
+
 
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
     val regime = clientId match {
