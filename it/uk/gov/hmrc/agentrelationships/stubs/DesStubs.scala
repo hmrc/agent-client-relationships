@@ -199,6 +199,52 @@ trait DesStubs {
                |}""".stripMargin)))
   }
 
+  def getClientActiveButSomeEndedAgentRelationships(encodedClientId: String, service: String, agentArn1: String, agentArn2: String, agentArn3: String): Unit = {
+    stubFor(get(urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(
+            s"""
+               |{
+               |"relationship" :[
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn1",
+               |  "organisation" : {
+               |    "organisationName": "someOrganisationName"
+               |  },
+               |  "dateFrom" : "2015-09-10",
+               |  "dateTo" : "2015-12-31",
+               |  "contractAccountCategory" : "01",
+               |  "activity" : "10"
+               |},
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn2",
+               |  "organisation" : {
+               |    "organisationName": "sayOrganisationName"
+               |  },
+               |  "dateFrom" : "2015-09-10",
+               |  "dateTo" : "2016-12-31",
+               |  "contractAccountCategory" : "02",
+               |  "activity" : "09"
+               |},
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn3",
+               |  "organisation" : {
+               |    "organisationName": "noneOrganisationName"
+               |  },
+               |  "dateFrom" : "2014-09-10",
+               |  "dateTo" : "9999-12-31",
+               |  "contractAccountCategory" : "03",
+               |  "activity" : "11"
+               |}
+               |]
+               |}""".stripMargin)))
+  }
+
   def getNotFoundClientActiveAgentRelationships(encodedClientId: String, service: String): Unit = {
     stubFor(get(urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
       .willReturn(

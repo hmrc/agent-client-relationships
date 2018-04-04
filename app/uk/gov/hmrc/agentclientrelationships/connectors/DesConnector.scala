@@ -17,23 +17,23 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{ Inject, Named, Singleton }
+import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.LocalDate
+import org.joda.time.{DateTimeZone, LocalDate}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
-import uk.gov.hmrc.domain.{ Nino, SaAgentReference, TaxIdentifier }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 case class NinoBusinessDetails(nino: Nino)
 
@@ -137,7 +137,8 @@ class DesConnector @Inject() (
     val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
     val url = new URL(s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=ITSA")
 
-    getWithDesHeaders[ItsaRelationshipResponse]("GetActiveClientItSaRelationships", url).map(_.relationship.headOption).recover {
+    getWithDesHeaders[ItsaRelationshipResponse]("GetActiveClientItSaRelationships", url)
+      .map(_.relationship.find(isActive)).recover {
       case e: NotFoundException => None
     }
   }
@@ -146,9 +147,15 @@ class DesConnector @Inject() (
     val encodedClientId = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
     val url = new URL(s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=VATC")
 
-    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientItSaRelationships", url).map(_.relationship.headOption).recover {
+    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientItSaRelationships", url)
+      .map(_.relationship.find(isActive)).recover {
       case e: NotFoundException => None
     }
+  }
+
+  def isActive(r: Relationship):Boolean = r.endDate match {
+    case None => true
+    case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
   }
 
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
