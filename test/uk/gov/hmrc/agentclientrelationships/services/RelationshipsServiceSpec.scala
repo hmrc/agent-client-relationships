@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import com.codahale.metrics.MetricRegistry
+import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{ any, eq => eqs }
 import org.mockito.Mockito._
@@ -27,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{ FakeRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository }
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.{ Monitoring, ResettingMockitoSugar }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.{ HeaderCarrier, Upstream5xxResponse }
@@ -59,6 +61,8 @@ class RelationshipsServiceSpec extends UnitSpec
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]
   val auditService = resettingMock[AuditService]
+  val metrics = resettingMock[Metrics]
+  val monitoring = resettingMock[Monitoring]
 
   val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
 
@@ -72,13 +76,14 @@ class RelationshipsServiceSpec extends UnitSpec
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToESStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
-        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
         val auditData = new AuditData()
         val request = FakeRequest()
 
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
+        metricsStub()
 
         val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
 
@@ -98,13 +103,14 @@ class RelationshipsServiceSpec extends UnitSpec
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
           val relationshipsService = new RelationshipsService(es, des, mapping, ugs,
-            relationshipCopyRepository, lockService, auditService, true, true)
+            relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
 
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItId)
+          metricsStub()
 
           val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItId) {
             relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
@@ -126,7 +132,7 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecord.copy(syncToETMPStatus = status, syncToESStatus = None)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -146,13 +152,14 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
 
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItId)
+          metricsStub()
 
           val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
 
@@ -172,13 +179,14 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
 
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItId)
+          metricsStub()
 
           val maybeCheck = await(lockService.tryLock(arn, mtdItId) {
             relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
@@ -201,7 +209,7 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -224,13 +232,14 @@ class RelationshipsServiceSpec extends UnitSpec
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
 
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItId)
+          metricsStub()
 
           val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
 
@@ -254,7 +263,7 @@ class RelationshipsServiceSpec extends UnitSpec
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -272,7 +281,7 @@ class RelationshipsServiceSpec extends UnitSpec
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
       val auditData = new AuditData()
       val request = FakeRequest()
 
@@ -289,7 +298,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
       val lockService = new FakeLockService
-      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -315,7 +324,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         await(relationshipCopyRepository.create(record))
         val lockService = new FakeLockService
-        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -341,13 +350,14 @@ class RelationshipsServiceSpec extends UnitSpec
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = status, syncToESStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
-        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
         val auditData = new AuditData()
         val request = FakeRequest()
 
         oldESRelationshipExists()
         relationshipWillBeCreated(vrn)
+        metricsStub()
 
         val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
 
@@ -367,13 +377,14 @@ class RelationshipsServiceSpec extends UnitSpec
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
           val relationshipsService = new RelationshipsService(es, des, mapping, ugs,
-            relationshipCopyRepository, lockService, auditService, true, true)
+            relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
 
           oldESRelationshipExists()
           relationshipWillBeCreated(vrn)
+          metricsStub()
 
           val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vrn) {
             relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
@@ -395,7 +406,7 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecordForMtdVat.copy(syncToETMPStatus = status, syncToESStatus = None)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -415,13 +426,14 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
 
           oldESRelationshipExists()
           relationshipWillBeCreated(vrn)
+          metricsStub()
 
           val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
 
@@ -441,13 +453,14 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
 
           oldESRelationshipExists()
           relationshipWillBeCreated(vrn)
+          metricsStub()
 
           val maybeCheck = await(lockService.tryLock(arn, vrn) {
             relationshipsService.checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
@@ -470,7 +483,7 @@ class RelationshipsServiceSpec extends UnitSpec
           val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -493,11 +506,12 @@ class RelationshipsServiceSpec extends UnitSpec
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          metricsStub()
           oldESRelationshipExists()
           relationshipWillBeCreated(vrn)
 
@@ -523,7 +537,7 @@ class RelationshipsServiceSpec extends UnitSpec
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+          val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -541,7 +555,7 @@ class RelationshipsServiceSpec extends UnitSpec
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
       val auditData = new AuditData()
       val request = FakeRequest()
       mappingServiceUnavailableForMtdVat()
@@ -558,7 +572,7 @@ class RelationshipsServiceSpec extends UnitSpec
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
       val lockService = new FakeLockService
-      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -584,7 +598,7 @@ class RelationshipsServiceSpec extends UnitSpec
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         await(relationshipCopyRepository.create(record))
         val lockService = new FakeLockService
-        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+        val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -607,7 +621,7 @@ class RelationshipsServiceSpec extends UnitSpec
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
       val auditData = new AuditData()
       val request = FakeRequest()
 
@@ -624,7 +638,7 @@ class RelationshipsServiceSpec extends UnitSpec
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, true, true)
+      val relationshipsService = new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService, auditService, metrics, true, true)
       val auditData = new AuditData()
       val request = FakeRequest()
 
@@ -649,7 +663,7 @@ class RelationshipsServiceSpec extends UnitSpec
           val lockService = mock[RecoveryLockService]
           val relationshipsService =
             new RelationshipsService(es, des, mapping, ugs, relationshipCopyRepository, lockService,
-              auditService, copyMtdItRelationshipFlag, copyMtdVatRelationshipFlag)
+              auditService, metrics, copyMtdItRelationshipFlag, copyMtdVatRelationshipFlag)
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -711,6 +725,10 @@ class RelationshipsServiceSpec extends UnitSpec
       .thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
     when(es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(identifier), eqs(agentCodeForAsAgent))(eqs(hc), eqs(ec)))
       .thenReturn(Future.successful(()))
+  }
+
+  private def metricsStub(): Unit = {
+    when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
   }
 
   def verifyEtmpRecordCreated(): Unit = {

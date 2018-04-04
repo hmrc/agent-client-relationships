@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
+import org.joda.time.LocalDate
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
@@ -1457,6 +1458,16 @@ class RelationshipsControllerISpec extends UnitSpec
 
       val b = result.json
       (result.json \ "arn").get.as[String] shouldBe arn.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "find relationship but filter out if the end date has been changed from 9999-12-31" in {
+      authorisedAsClient(req, mtdItId.value)
+      givenAuditConnector()
+      getClientActiveButEndedAgentRelationships(mtdItIdEncoded, "ITSA", arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
     }
 
     "return 404 when relationship not found" in {

@@ -72,7 +72,7 @@ The provided error code is to help diagnose potential issues in production and w
 
     DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid
 
-This endpoint de allocates the agent represented by the arn from the client represented by the mtdItId 
+This endpoint de-allocates the agent represented by the arn from the client represented by the mtdItId 
 within Government Gateway.
   
 Possible responses:
