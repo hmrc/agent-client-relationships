@@ -25,14 +25,14 @@ import play.api.libs.ws.WSClient
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
-import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpResponse }
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -79,6 +79,8 @@ class RelationshipsControllerISpec extends UnitSpec
   }
 
   val arn = Arn("AARN0000002")
+  val arn2 = Arn("AARN0000004")
+  val arn3 = Arn("AARN0000006")
   val mtdItId = MtdItId("ABCDEF123456789")
   val nino = Nino("AB123456C")
   val vrn = Vrn("101747641")
@@ -1468,6 +1470,17 @@ class RelationshipsControllerISpec extends UnitSpec
 
       val result = await(doRequest)
       result.status shouldBe 404
+    }
+
+    "find multiple relationships but filter out active and ended relationships" in {
+      authorisedAsClient(req, mtdItId.value)
+      givenAuditConnector()
+      getClientActiveButSomeEndedAgentRelationships(mtdItIdEncoded, "ITSA", arn.value, arn2.value, arn3.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      (result.json \ "arn").get.as[String] shouldBe arn3.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
     "return 404 when relationship not found" in {
