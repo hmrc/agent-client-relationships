@@ -200,7 +200,13 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
 
       verify(1, postRequestedFor(urlPathEqualTo("/registration/relationship"))
-        .withRequestBody(equalToJson(s"""{ "regime": "VATC", "idType" : "VRN" }""", true, true)))
+        .withRequestBody(equalToJson(
+          s"""{
+             |"regime": "VATC",
+             |"idType" : "VRN",
+             |"relationshipType" : "ZA01",
+             |"authProfile" : "ALL00001"
+             |}""".stripMargin, true, true)))
     }
   }
 
