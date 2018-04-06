@@ -17,23 +17,23 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{ Inject, Named, Singleton }
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.{DateTimeZone, LocalDate}
+import org.joda.time.{ DateTimeZone, LocalDate }
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.domain.{ Nino, SaAgentReference, TaxIdentifier }
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class NinoBusinessDetails(nino: Nino)
 
@@ -139,8 +139,8 @@ class DesConnector @Inject() (
 
     getWithDesHeaders[ItsaRelationshipResponse]("GetActiveClientItSaRelationships", url)
       .map(_.relationship.find(isActive)).recover {
-      case e: NotFoundException => None
-    }
+        case e: NotFoundException => None
+      }
   }
 
   def getActiveClientVatRelationships(vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] = {
@@ -149,11 +149,11 @@ class DesConnector @Inject() (
 
     getWithDesHeaders[VatRelationshipResponse]("GetActiveClientItSaRelationships", url)
       .map(_.relationship.find(isActive)).recover {
-      case e: NotFoundException => None
-    }
+        case e: NotFoundException => None
+      }
   }
 
-  def isActive(r: Relationship):Boolean = r.endDate match {
+  def isActive(r: Relationship): Boolean = r.endDate match {
     case None => true
     case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
   }
@@ -171,10 +171,15 @@ class DesConnector @Inject() (
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, requestBody)
   }
 
-  def deleteAgentRelationship(mtdbsa: MtdItId, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
+  def deleteAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
+    val regime = clientId match {
+      case MtdItId(_) => "ITSA"
+      case Vrn(_) => "VATC"
+      case _ => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
+    }
     val url = new URL(baseUrl, s"/registration/relationship")
 
-    postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("DeleteAgentRelationship", url, deleteAgentRelationshipInputJson(mtdbsa.value, arn.value))
+    postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("DeleteAgentRelationship", url, deleteAgentRelationshipInputJson(clientId.value, arn.value, regime))
   }
 
   private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[A] = {
@@ -196,10 +201,11 @@ class DesConnector @Inject() (
   }
 
   private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String, regime: String) = {
-    includeIdTypeIfNeeded(Json.parse(s"""{
+    includeIdTypeIfNeeded(Json.parse(
+      s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
-          "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
+          "refNumber": "$refNum",
           "regime": "$regime",
           "authorisation": {
             "action": "Authorise",
@@ -208,13 +214,13 @@ class DesConnector @Inject() (
        }""").as[JsObject])
   }
 
-  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String) = {
+  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String, regime: String) = {
     includeIdTypeIfNeeded(Json.parse(
       s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
-          "regime": "ITSA",
+          "regime": "$regime",
           "authorisation": {
             "action": "De-Authorise"
           }
@@ -222,9 +228,14 @@ class DesConnector @Inject() (
   }
 
   private val includeIdTypeIfNeeded: JsObject => JsObject = { request =>
-    (request \ "regime").toOption match {
-      case Some(JsString("VATC")) => request + (("idType", JsString("VRN")))
-      case _ => request
+    (request \ "regime").asOpt[String] match {
+      case Some("VATC") =>
+        request +
+          ("idType", JsString("VRN")) +
+          ("relationshipType", JsString("ZA01")) +
+          ("authProfile", JsString("ALL00001"))
+      case _ =>
+        request
     }
   }
 }
