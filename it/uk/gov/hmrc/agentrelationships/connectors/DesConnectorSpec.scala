@@ -37,6 +37,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", httpGet, httpPost, app.injector.instanceOf[Metrics])
 
   val mtdItId = MtdItId("ABCDEF123456789")
+  val vrn = Vrn("101747641")
   val agentARN = Arn("ABCDE123456")
 
   "DesConnector GetRegistrationBusinessDetails" should {
@@ -225,26 +226,49 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   }
 
   "DesConnector GetStatusAgentRelationship" should {
-    val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+    val encodedClientIdMtdItId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+    val encodedClientIdVrn = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
 
-    "return existing active relationships for specified clientId" in {
-      getClientActiveAgentRelationships(encodedClientId, "ITSA", agentARN.value)
+    "return existing active relationships for specified clientId for ItSa service" in {
+      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, "ITSA", agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
-    "return notFound active relationships for specified clientId" in {
-      getNotFoundClientActiveAgentRelationships(encodedClientId, "ITSA")
+    "return existing active relationships for specified clientId for Vat service" in {
+      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, "VATC", agentARN.value)
+
+      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      result.get.arn shouldBe agentARN
+    }
+
+    "return notFound active relationships for specified clientId for ItSa service" in {
+      getNotFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, "ITSA")
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result shouldBe None
     }
 
-    "record metrics for GetStatusAgentRelationship" in {
-      getClientActiveAgentRelationships(encodedClientId, "ITSA", agentARN.value)
+    "return notFound active relationships for specified clientId for Vat service" in {
+      getNotFoundClientActiveAgentRelationshipsVat(encodedClientIdVrn, "VATC")
+
+      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      result shouldBe None
+    }
+
+    "record metrics for GetStatusAgentRelationship for ItSa service" in {
+      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, "ITSA", agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      result.get.arn shouldBe agentARN
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+    }
+
+    "record metrics for GetStatusAgentRelationship for Vat service" in {
+      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, "VATC", agentARN.value)
+
+      val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
     }

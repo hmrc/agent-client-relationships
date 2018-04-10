@@ -123,11 +123,11 @@ class RelationshipsController @Inject() (
       }
   }
 
-  def delete(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = AuthorisedAgentOrClient(arn, mtdItId) { implicit request =>
+  private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = AuthorisedAgentOrClient(arn, taxIdentifier) { implicit request =>
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
-    service.deleteRelationship(arn, mtdItId)
+    service.deleteRelationship(arn, taxIdentifier)
       .map(_ => NoContent)
       .recover {
         case ex: RelationshipNotFound =>
@@ -135,6 +135,10 @@ class RelationshipsController @Inject() (
           NotFound(ex.getMessage)
       }
   }
+
+  def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)
+
+  def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
     service.cleanCopyStatusRecord(arn, mtdItId)

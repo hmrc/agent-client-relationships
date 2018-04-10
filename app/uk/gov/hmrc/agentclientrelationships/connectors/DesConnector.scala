@@ -147,7 +147,7 @@ class DesConnector @Inject() (
     val encodedClientId = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
     val url = new URL(s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=VATC")
 
-    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientItSaRelationships", url)
+    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientVatRelationships", url)
       .map(_.relationship.find(isActive)).recover {
         case e: NotFoundException => None
       }

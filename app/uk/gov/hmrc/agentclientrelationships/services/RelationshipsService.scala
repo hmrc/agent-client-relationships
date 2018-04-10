@@ -332,21 +332,21 @@ class RelationshipsService @Inject() (
       }
   }
 
-  def deleteRelationship(arn: Arn, mtdItId: MtdItId)(
+  def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit
     ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
 
     def esDeAllocation(clientGroupId: String) = (for {
       agentUser <- getAgentUserFor(arn)
-      _ <- checkForRelationship(mtdItId, agentUser).map(_ => es.deallocateEnrolmentFromAgent(clientGroupId, mtdItId, agentUser.agentCode))
+      _ <- checkForRelationship(taxIdentifier, agentUser).map(_ => es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
     } yield ()).recover {
       case ex: RelationshipNotFound =>
         Logger.warn("Could not delete relationship", ex)
     }
 
     for {
-      clientGroupId <- es.getPrincipalGroupIdFor(mtdItId)
-      _ <- des.deleteAgentRelationship(mtdItId, arn)
+      clientGroupId <- es.getPrincipalGroupIdFor(taxIdentifier)
+      _ <- des.deleteAgentRelationship(taxIdentifier, arn)
       _ <- esDeAllocation(clientGroupId)
     } yield ()
   }

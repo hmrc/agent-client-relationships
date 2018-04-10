@@ -1453,7 +1453,7 @@ class RelationshipsControllerISpec extends UnitSpec
     "find relationship and send back Json" in {
       authorisedAsClient(req, mtdItId.value)
       givenAuditConnector()
-      getClientActiveAgentRelationships(mtdItIdEncoded, "ITSA", arn.value)
+      getClientActiveAgentRelationshipsItSa(mtdItIdEncoded, "ITSA", arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1486,7 +1486,7 @@ class RelationshipsControllerISpec extends UnitSpec
     "return 404 when relationship not found" in {
       authorisedAsClient(req, mtdItId.value)
       givenAuditConnector()
-      getNotFoundClientActiveAgentRelationships(mtdItIdEncoded, "ITSA")
+      getNotFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, "ITSA")
 
       val result = await(doRequest)
       result.status shouldBe 404
