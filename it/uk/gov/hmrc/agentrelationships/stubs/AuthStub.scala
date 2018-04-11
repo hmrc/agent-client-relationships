@@ -127,8 +127,11 @@ trait AuthStub {
     this
   }
 
-  def authorisedAsClient[A](request: FakeRequest[A], mtdItId: String): FakeRequest[A] =
+  def authorisedAsClientItSa[A](request: FakeRequest[A], mtdItId: String): FakeRequest[A] =
     authenticated(request, Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId), isAgent = false)
+
+  def authorisedAsClientVat[A](request: FakeRequest[A], vrn: String): FakeRequest[A] =
+    authenticated(request, Enrolment("HMRC-MTD-VAT", "VRN", vrn), isAgent = false)
 
   def givenUnauthorisedWith(mdtpDetail: String): Unit = {
     stubFor(post(urlEqualTo("/auth/authorise"))

@@ -151,7 +151,7 @@ trait DesStubs {
           .withBody(s"""{"reason": "Service unavailable"}""")))
   }
 
-  def getClientActiveAgentRelationships(encodedClientId: String, service: String, agentArn: String): Unit = {
+  def getClientActiveAgentRelationshipsItSa(encodedClientId: String, agentArn: String, service: String = "ITSA"): Unit = {
     stubFor(get(urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
       .willReturn(
         aResponse()
@@ -175,7 +175,31 @@ trait DesStubs {
                |}""".stripMargin)))
   }
 
-  def getClientActiveButEndedAgentRelationships(encodedClientId: String, service: String, agentArn: String): Unit = {
+  def getClientActiveAgentRelationshipsVat(encodedClientId: String, agentArn: String, service: String = "VATC"): Unit = {
+    stubFor(get(urlEqualTo(s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(
+            s"""
+               |{
+               |"relationship" :[
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn",
+               |  "organisation" : {
+               |    "organisationName": "someOrganisationName"
+               |  },
+               |  "dateFrom" : "2015-09-10",
+               |  "dateTo" : "9999-12-31",
+               |  "contractAccountCategory" : "01",
+               |  "activity" : "09"
+               |}
+               |]
+               |}""".stripMargin)))
+  }
+
+  def getClientActiveButEndedAgentRelationshipsItSa(encodedClientId: String, agentArn: String, service: String = "ITSA"): Unit = {
     stubFor(get(urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
       .willReturn(
         aResponse()
@@ -199,7 +223,31 @@ trait DesStubs {
                |}""".stripMargin)))
   }
 
-  def getClientActiveButSomeEndedAgentRelationships(encodedClientId: String, service: String, agentArn1: String, agentArn2: String, agentArn3: String): Unit = {
+  def getClientActiveButEndedAgentRelationshipsVat(encodedClientId: String, agentArn: String, service: String = "VATC"): Unit = {
+    stubFor(get(urlEqualTo(s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(
+            s"""
+               |{
+               |"relationship" :[
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn",
+               |  "organisation" : {
+               |    "organisationName": "someOrganisationName"
+               |  },
+               |  "dateFrom" : "2015-09-10",
+               |  "dateTo" : "2016-12-31",
+               |  "contractAccountCategory" : "01",
+               |  "activity" : "09"
+               |}
+               |]
+               |}""".stripMargin)))
+  }
+
+  def getClientActiveButSomeEndedAgentRelationshipsItSa(encodedClientId: String, agentArn1: String, agentArn2: String, agentArn3: String, service: String = "ITSA"): Unit = {
     stubFor(get(urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
       .willReturn(
         aResponse()
@@ -245,8 +293,61 @@ trait DesStubs {
                |}""".stripMargin)))
   }
 
-  def getNotFoundClientActiveAgentRelationships(encodedClientId: String, service: String): Unit = {
+  def getClientActiveButSomeEndedAgentRelationshipsVat(encodedClientId: String, agentArn1: String, agentArn2: String, agentArn3: String, service: String = "VATC"): Unit = {
+    stubFor(get(urlEqualTo(s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(
+            s"""
+               |{
+               |"relationship" :[
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn1",
+               |  "organisation" : {
+               |    "organisationName": "someOrganisationName"
+               |  },
+               |  "dateFrom" : "2015-09-10",
+               |  "dateTo" : "2015-12-31",
+               |  "contractAccountCategory" : "01",
+               |  "activity" : "10"
+               |},
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn2",
+               |  "organisation" : {
+               |    "organisationName": "sayOrganisationName"
+               |  },
+               |  "dateFrom" : "2015-09-10",
+               |  "dateTo" : "2016-12-31",
+               |  "contractAccountCategory" : "02",
+               |  "activity" : "09"
+               |},
+               |{
+               |  "referenceNumber" : "ABCDE1234567890",
+               |  "agentReferenceNumber" : "$agentArn3",
+               |  "organisation" : {
+               |    "organisationName": "noneOrganisationName"
+               |  },
+               |  "dateFrom" : "2014-09-10",
+               |  "dateTo" : "9999-12-31",
+               |  "contractAccountCategory" : "03",
+               |  "activity" : "11"
+               |}
+               |]
+               |}""".stripMargin)))
+  }
+
+  def getNotFoundClientActiveAgentRelationshipsItSa(encodedClientId: String, service: String = "ITSA"): Unit = {
     stubFor(get(urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
+      .willReturn(
+        aResponse()
+          .withStatus(404)))
+  }
+
+  def getNotFoundClientActiveAgentRelationshipsVat(encodedClientId: String, service: String = "VATC"): Unit = {
+    stubFor(get(urlEqualTo(s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
       .willReturn(
         aResponse()
           .withStatus(404)))

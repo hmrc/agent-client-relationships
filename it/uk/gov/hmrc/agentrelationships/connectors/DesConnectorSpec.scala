@@ -2,12 +2,13 @@ package uk.gov.hmrc.agentrelationships.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock.{ equalToJson, postRequestedFor, urlPathEqualTo, verify }
 import com.kenshoo.play.metrics.Metrics
+import org.joda.time.LocalDate
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentclientrelationships.connectors.{ DesConnector, ItsaRelationship }
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Utr, Vrn }
 import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs }
 import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
 import uk.gov.hmrc.domain.{ Nino, SaAgentReference }
@@ -37,6 +38,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", httpGet, httpPost, app.injector.instanceOf[Metrics])
 
   val mtdItId = MtdItId("ABCDEF123456789")
+  val vrn = Vrn("101747641")
   val agentARN = Arn("ABCDE123456")
 
   "DesConnector GetRegistrationBusinessDetails" should {
@@ -208,45 +210,103 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
              |"authProfile" : "ALL00001"
              |}""".stripMargin, true, true)))
     }
+
+    "throw an IllegalArgumentException when the tax identifier is not supported" in {
+      an[IllegalArgumentException] should be thrownBy await(desConnector.createAgentRelationship(Utr("foo"), Arn("bar")))
+    }
   }
 
   "DesConnector DeleteAgentRelationship" should {
-    "delete relationship between agent and client and return 200" in {
+    "delete relationship between agent and client and return 200 for ItSa service" in {
       givenAgentCanBeDeallocatedInDes(MtdItId("foo"), Arn("bar"))
       givenAuditConnector()
       await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }
 
-    "not delete relationship between agent and client and return 404" in {
+    "delete relationship between agent and client and return 200 for Vat service" in {
+      givenAgentCanBeDeallocatedInDes(Vrn("foo"), Arn("bar"))
+      givenAuditConnector()
+      await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).processingDate should not be null
+    }
+
+    "not delete relationship between agent and client and return 404 for ItSa service" in {
       givenAgentCanNotBeDeallocatedInDes
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
+
+    "not delete relationship between agent and client and return 404 for Vat service" in {
+      givenAgentCanNotBeDeallocatedInDes
+      givenAuditConnector()
+      an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar")))
+    }
+
+    "throw an IllegalArgumentException when the tax identifier is not supported" in {
+      an[IllegalArgumentException] should be thrownBy await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar")))
+    }
   }
 
   "DesConnector GetStatusAgentRelationship" should {
-    val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+    val encodedClientIdMtdItId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+    val encodedClientIdVrn = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
 
-    "return existing active relationships for specified clientId" in {
-      getClientActiveAgentRelationships(encodedClientId, "ITSA", agentARN.value)
+    "return existing active relationships for specified clientId for ItSa service" in {
+      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
-    "return notFound active relationships for specified clientId" in {
-      getNotFoundClientActiveAgentRelationships(encodedClientId, "ITSA")
+    "return existing active relationships for specified clientId for Vat service" in {
+      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, agentARN.value)
+
+      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      result.get.arn shouldBe agentARN
+    }
+
+    "return notFound active relationships for specified clientId for ItSa service" in {
+      getNotFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result shouldBe None
     }
 
-    "record metrics for GetStatusAgentRelationship" in {
-      getClientActiveAgentRelationships(encodedClientId, "ITSA", agentARN.value)
+    "return notFound active relationships for specified clientId for Vat service" in {
+      getNotFoundClientActiveAgentRelationshipsVat(encodedClientIdVrn)
+
+      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      result shouldBe None
+    }
+
+    "record metrics for GetStatusAgentRelationship for ItSa service" in {
+      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+    }
+
+    "record metrics for GetStatusAgentRelationship for Vat service" in {
+      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, agentARN.value)
+
+      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      result.get.arn shouldBe agentARN
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+    }
+  }
+
+  "isActive" should {
+    val noEndRelationship = ItsaRelationship(Arn("foo"), None)
+    val beforeCurrentDateRelationship = ItsaRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")))
+    val afterCurrentDateRelationship = ItsaRelationship(Arn("foo"), Some(LocalDate.parse("2222-11-11")))
+    "return true when the relationship has no end date" in {
+      desConnector.isActive(noEndRelationship) shouldBe true
+    }
+    "return true when the end date is after the current date" in {
+      desConnector.isActive(afterCurrentDateRelationship) shouldBe true
+    }
+    "return false when the end date is before the current date" in {
+      desConnector.isActive(beforeCurrentDateRelationship) shouldBe false
     }
   }
 }
