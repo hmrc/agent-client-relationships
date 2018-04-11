@@ -2,11 +2,12 @@ package uk.gov.hmrc.agentrelationships.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock.{ equalToJson, postRequestedFor, urlPathEqualTo, verify }
 import com.kenshoo.play.metrics.Metrics
+import org.joda.time.LocalDate
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{ DesConnector, ItsaRelationship }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Utr, Vrn }
 import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs }
 import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
@@ -250,35 +251,35 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     val encodedClientIdVrn = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
 
     "return existing active relationships for specified clientId for ItSa service" in {
-      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, "ITSA", agentARN.value)
+      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Vat service" in {
-      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, "VATC", agentARN.value)
+      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, agentARN.value)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result.get.arn shouldBe agentARN
     }
 
     "return notFound active relationships for specified clientId for ItSa service" in {
-      getNotFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, "ITSA")
+      getNotFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result shouldBe None
     }
 
     "return notFound active relationships for specified clientId for Vat service" in {
-      getNotFoundClientActiveAgentRelationshipsVat(encodedClientIdVrn, "VATC")
+      getNotFoundClientActiveAgentRelationshipsVat(encodedClientIdVrn)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result shouldBe None
     }
 
     "record metrics for GetStatusAgentRelationship for ItSa service" in {
-      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, "ITSA", agentARN.value)
+      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result.get.arn shouldBe agentARN
@@ -286,11 +287,26 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "record metrics for GetStatusAgentRelationship for Vat service" in {
-      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, "VATC", agentARN.value)
+      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, agentARN.value)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+    }
+  }
+
+  "isActive" should {
+    val noEndRelationship = ItsaRelationship(Arn("foo"), None)
+    val beforeCurrentDateRelationship = ItsaRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")))
+    val afterCurrentDateRelationship = ItsaRelationship(Arn("foo"), Some(LocalDate.parse("2222-11-11")))
+    "return true when the relationship has no end date" in {
+      desConnector.isActive(noEndRelationship) shouldBe true
+    }
+    "return true when the end date is after the current date" in {
+      desConnector.isActive(afterCurrentDateRelationship) shouldBe true
+    }
+    "return false when the end date is before the current date" in {
+      desConnector.isActive(beforeCurrentDateRelationship) shouldBe false
     }
   }
 }

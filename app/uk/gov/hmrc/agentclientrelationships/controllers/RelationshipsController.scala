@@ -163,7 +163,7 @@ class RelationshipsController @Inject() (
       }.recover {
         case upS: Upstream5xxResponse => throw upS
         case NonFatal(_) =>
-          Logger.warn("checkWithNino: lookupCesaForOldRelationship failed")
+          Logger.warn("checkWithVrn: lookupCesaForOldRelationship failed")
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
   }

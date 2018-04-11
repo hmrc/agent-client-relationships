@@ -1297,6 +1297,18 @@ class RelationshipsControllerISpec extends UnitSpec
     }
   }
 
+  "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
+
+    val requestPath: String = s"/test-only/db/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/$vrn"
+
+    "return 404 for any call" in {
+
+      await(repo.create(RelationshipCopyRecord(arn.value, vrn.value, mtdVatIdType))) shouldBe 1
+      val result = await(doAgentDeleteRequest(requestPath))
+      result.status shouldBe 404
+    }
+  }
+
   "PUT /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
@@ -1451,9 +1463,9 @@ class RelationshipsControllerISpec extends UnitSpec
     val req = FakeRequest()
 
     "find relationship and send back Json" in {
-      authorisedAsClient(req, mtdItId.value)
+      authorisedAsClientItSa(req, mtdItId.value)
       givenAuditConnector()
-      getClientActiveAgentRelationshipsItSa(mtdItIdEncoded, "ITSA", arn.value)
+      getClientActiveAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1464,18 +1476,18 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     "find relationship but filter out if the end date has been changed from 9999-12-31" in {
-      authorisedAsClient(req, mtdItId.value)
+      authorisedAsClientItSa(req, mtdItId.value)
       givenAuditConnector()
-      getClientActiveButEndedAgentRelationships(mtdItIdEncoded, "ITSA", arn.value)
+      getClientActiveButEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 404
     }
 
     "find multiple relationships but filter out active and ended relationships" in {
-      authorisedAsClient(req, mtdItId.value)
+      authorisedAsClientItSa(req, mtdItId.value)
       givenAuditConnector()
-      getClientActiveButSomeEndedAgentRelationships(mtdItIdEncoded, "ITSA", arn.value, arn2.value, arn3.value)
+      getClientActiveButSomeEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value, arn2.value, arn3.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1484,9 +1496,58 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     "return 404 when relationship not found" in {
-      authorisedAsClient(req, mtdItId.value)
+      authorisedAsClientItSa(req, mtdItId.value)
       givenAuditConnector()
-      getNotFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, "ITSA")
+      getNotFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
+  "getVatRelationship" should {
+    val vrnEncoded = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
+    val requestPath: String = s"/agent-client-relationships/service/HMRC-MTD-VAT/client/relationship"
+
+    def doRequest = doAgentGetRequest(requestPath)
+    val req = FakeRequest()
+
+    "find relationship and send back Json" in {
+      authorisedAsClientVat(req, vrn.value)
+      givenAuditConnector()
+      getClientActiveAgentRelationshipsVat(vrnEncoded, arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      val b = result.json
+      (result.json \ "arn").get.as[String] shouldBe arn.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "find relationship but filter out if the end date has been changed from 9999-12-31" in {
+      authorisedAsClientVat(req, vrn.value)
+      givenAuditConnector()
+      getClientActiveButEndedAgentRelationshipsVat(vrnEncoded, arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "find multiple relationships but filter out active and ended relationships" in {
+      authorisedAsClientVat(req, vrn.value)
+      givenAuditConnector()
+      getClientActiveButSomeEndedAgentRelationshipsVat(vrnEncoded, arn.value, arn2.value, arn3.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      (result.json \ "arn").get.as[String] shouldBe arn3.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "return 404 when relationship not found" in {
+      authorisedAsClientVat(req, vrn.value)
+      givenAuditConnector()
+      getNotFoundClientActiveAgentRelationshipsItSa(vrnEncoded)
 
       val result = await(doRequest)
       result.status shouldBe 404
