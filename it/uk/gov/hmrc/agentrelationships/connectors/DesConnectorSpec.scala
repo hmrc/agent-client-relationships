@@ -12,7 +12,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Utr, Vrn }
 import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs }
 import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
 import uk.gov.hmrc.domain.{ Nino, SaAgentReference }
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet, HttpPost }
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse }
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
@@ -180,7 +180,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "not create relationship between agent and client and return 404" in {
-      givenAgentCanNotBeAllocatedInDes
+      givenAgentCanNotBeAllocatedInDes(status = 404)
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
@@ -214,6 +214,16 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(desConnector.createAgentRelationship(Utr("foo"), Arn("bar")))
     }
+
+    "fail when DES is throwing errors" in {
+      givenDesReturnsServerError()
+      an[Upstream5xxResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+    }
+
+    "fail when DES is unavailable" in {
+      givenDesReturnsServiceUnavailable()
+      an[Upstream5xxResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+    }
   }
 
   "DesConnector DeleteAgentRelationship" should {
@@ -230,19 +240,29 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "not delete relationship between agent and client and return 404 for ItSa service" in {
-      givenAgentCanNotBeDeallocatedInDes
+      givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
 
     "not delete relationship between agent and client and return 404 for Vat service" in {
-      givenAgentCanNotBeDeallocatedInDes
+      givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar")))
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar")))
+    }
+
+    "fail when DES is throwing errors" in {
+      givenDesReturnsServerError()
+      an[Upstream5xxResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+    }
+
+    "fail when DES is unavailable" in {
+      givenDesReturnsServiceUnavailable()
+      an[Upstream5xxResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
   }
 

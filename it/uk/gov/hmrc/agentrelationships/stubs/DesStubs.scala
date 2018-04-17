@@ -95,13 +95,13 @@ trait DesStubs {
 
   def givenDesReturnsServerError() = {
     stubFor(
-      get(urlMatching(s"/registration/.*"))
+      any(urlMatching(s"/registration/.*"))
         .willReturn(aResponse().withStatus(500)))
   }
 
   def givenDesReturnsServiceUnavailable() = {
     stubFor(
-      get(urlMatching(s"/registration/.*"))
+      any(urlMatching(s"/registration/.*"))
         .willReturn(aResponse().withStatus(503)))
   }
 
@@ -115,11 +115,11 @@ trait DesStubs {
           .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}""")))
   }
 
-  def givenAgentCanNotBeAllocatedInDes = {
+  def givenAgentCanNotBeAllocatedInDes(status: Int) = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"Authorise\""))
-        .willReturn(aResponse().withStatus(404)
+        .willReturn(aResponse().withStatus(status)
           .withBody(s"""{"reason": "Service unavailable"}""")))
   }
 
@@ -143,11 +143,11 @@ trait DesStubs {
           .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")))
   }
 
-  def givenAgentCanNotBeDeallocatedInDes = {
+  def givenAgentCanNotBeDeallocatedInDes(status: Int) = {
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"De-Authorise\""))
-        .willReturn(aResponse().withStatus(404)
+        .willReturn(aResponse().withStatus(status)
           .withBody(s"""{"reason": "Service unavailable"}""")))
   }
 

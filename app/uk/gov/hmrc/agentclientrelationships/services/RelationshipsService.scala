@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import javax.inject.{ Inject, Named, Singleton }
-
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
 import play.api.mvc.Request
@@ -31,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{ SyncStatus => _, _ }
 import uk.gov.hmrc.agentclientrelationships.support.{ Monitoring, RelationshipNotFound }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{ HeaderCarrier, Upstream4xxResponse, Upstream5xxResponse }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
@@ -212,6 +211,11 @@ class RelationshipsService @Inject() (
   private def createEtmpRecord(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
     val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
 
+    val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
+      Logger.warn(s"Creating ETMP record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", origExc)
+      updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
+    }
+
     (for {
       _ <- updateEtmpSyncStatus(InProgress)
       _ <- des.createAgentRelationship(identifier, arn)
@@ -219,9 +223,10 @@ class RelationshipsService @Inject() (
       _ <- updateEtmpSyncStatus(Success)
     } yield ())
       .recoverWith {
+        case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
+          recoverWithException(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_DES", upstreamCode, reportAs))
         case NonFatal(ex) =>
-          Logger.warn(s"Creating ETMP record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
-          updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DES")))
+          recoverWithException(ex, new Exception("RELATIONSHIP_CREATE_FAILED_DES"))
       }
   }
 
@@ -232,6 +237,14 @@ class RelationshipsService @Inject() (
     failIfAllocateAgentInESFails: Boolean)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
 
     val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
+
+    val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
+      Logger.warn(s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", origExc)
+      updateEsSyncStatus(Failed)
+      if (failIfAllocateAgentInESFails) Future.failed(replacementExc)
+      else Future.successful(())
+    }
+
     (for {
       _ <- updateEsSyncStatus(InProgress)
       agentUser <- eventualAgentUser
@@ -244,11 +257,10 @@ class RelationshipsService @Inject() (
           Logger.warn(s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
             s"not possible because of incomplete data: $errorCode")
           updateEsSyncStatus(IncompleteInputParams)
+        case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
+          recoverWithException(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs))
         case NonFatal(ex) =>
-          Logger.warn(s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", ex)
-          updateEsSyncStatus(Failed)
-          if (failIfAllocateAgentInESFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
-          else Future.successful(())
+          recoverWithException(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
       }
   }
 
