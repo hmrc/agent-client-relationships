@@ -16,23 +16,23 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import javax.inject.{ Inject, Named, Singleton }
 import com.kenshoo.play.metrics.Metrics
+import javax.inject.{Inject, Named, Singleton}
 import play.api.Logger
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.{ AuditData, AuditService }
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{ raiseError, returnValue }
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository.{ SyncStatus => _, _ }
-import uk.gov.hmrc.agentclientrelationships.support.{ Monitoring, RelationshipNotFound }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
-import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
-import uk.gov.hmrc.http.{ HeaderCarrier, Upstream4xxResponse, Upstream5xxResponse }
+import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 sealed trait CheckAndCopyResult {
@@ -238,11 +238,28 @@ class RelationshipsService @Inject() (
 
     val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
 
-    val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
+    def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
       Logger.warn(s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})", origExc)
       updateEsSyncStatus(Failed)
       if (failIfAllocateAgentInESFails) Future.failed(replacementExc)
       else Future.successful(())
+    }
+
+    val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
+      case RelationshipNotFound(errorCode) =>
+        Logger.warn(s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
+          s"not possible because of incomplete data: $errorCode")
+        updateEsSyncStatus(IncompleteInputParams)
+    }
+
+    val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
+      case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
+        logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs))
+    }
+
+    val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
+      case NonFatal(ex) =>
+        logAndMaybeFail(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
     }
 
     (for {
@@ -252,16 +269,11 @@ class RelationshipsService @Inject() (
       _ = auditData.set("enrolmentDelegated", true)
       _ <- updateEsSyncStatus(Success)
     } yield ())
-      .recoverWith {
-        case RelationshipNotFound(errorCode) =>
-          Logger.warn(s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
-            s"not possible because of incomplete data: $errorCode")
-          updateEsSyncStatus(IncompleteInputParams)
-        case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
-          recoverWithException(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs))
-        case NonFatal(ex) =>
-          recoverWithException(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
-      }
+      .recoverWith(
+        recoverAgentUserRelationshipNotFound
+          .orElse(recoverUpstream5xx)
+          .orElse(recoverNonFatal)
+      )
   }
 
   def createRelationship(
