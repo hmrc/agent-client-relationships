@@ -307,7 +307,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAgentCanNotBeAllocatedInDes
+      givenAgentCanNotBeAllocatedInDes(status = 404)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
@@ -724,7 +724,7 @@ class RelationshipsControllerISpec extends UnitSpec
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
-      givenAgentCanNotBeAllocatedInDes
+      givenAgentCanNotBeAllocatedInDes(status = 404)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -1109,6 +1109,28 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 502
     }
 
+    "return 502 when DES is unavailable" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenDesReturnsServiceUnavailable()
+
+      await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+    }
+
+    "return 404 if DES returns 404" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenAgentCanNotBeDeallocatedInDes(status = 404)
+
+      await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+    }
+
     /**
      * Client's Unhappy paths
      */
@@ -1355,12 +1377,57 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when es is unavailable" in {
+    "return 502 when ES1 is unavailable" in {
       givenUserIsSubscribedAgent(arn)
-      givenEsIsUnavailable()
+      givenPrincipalUser(arn, "foo", userId = "user1")
+      givenGroupInfo(groupId = "foo", agentCode = "bar")
+      givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
+    }
+
+    "return 502 when ES8 is unavailable" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo", userId = "user1")
+      givenGroupInfo(groupId = "foo", agentCode = "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenEnrolmentAllocationFailsWith(503)(
+        groupId = "foo",
+        clientUserId = "user1",
+        key = "HMRC-MTD-IT",
+        identifier = "MTDITID",
+        value = mtdItId.value,
+        agentCode = "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 502
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+    }
+
+    "return 502 when DES is unavailable" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenDesReturnsServiceUnavailable()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 502
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+    }
+
+    "return 404 if DES returns 404" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentCanNotBeAllocatedInDes(status = 404)
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 
     /**
@@ -1428,12 +1495,58 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 403
     }
 
-    "return 502 when es is unavailable" in {
+    "return 502 when ES1 is unavailable" in {
       givenUserIsSubscribedAgent(arn)
-      givenEsIsUnavailable()
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
+    }
+
+    "return 502 when ES8 is unavailable" in {
+      givenUserIsSubscribedClient(vrn)
+      givenPrincipalUser(arn, "foo", userId = "user1")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+
+      givenEnrolmentAllocationFailsWith(503)(
+        groupId = "foo",
+        clientUserId = "user1",
+        key = "HMRC-MTD-VAT",
+        identifier = "VRN",
+        value = vrn.value,
+        agentCode = "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 502
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+    }
+
+    "return 502 when DES is unavailable" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo", userId = "user1")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenDesReturnsServiceUnavailable()
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 502
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+    }
+
+    "return 404 if DES returns 404" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo", userId = "user1")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenAgentCanNotBeAllocatedInDes(status = 404)
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 404
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 
     /**
