@@ -139,6 +139,7 @@ class DesConnector @Inject() (
 
     getWithDesHeaders[ItsaRelationshipResponse]("GetActiveClientItSaRelationships", url)
       .map(_.relationship.find(isActive)).recover {
+        case e: BadRequestException => None
         case e: NotFoundException => None
       }
   }
@@ -149,6 +150,7 @@ class DesConnector @Inject() (
 
     getWithDesHeaders[VatRelationshipResponse]("GetActiveClientVatRelationships", url)
       .map(_.relationship.find(isActive)).recover {
+        case e: BadRequestException => None
         case e: NotFoundException => None
       }
   }

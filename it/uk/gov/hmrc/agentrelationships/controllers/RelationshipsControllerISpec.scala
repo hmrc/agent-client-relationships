@@ -1608,10 +1608,19 @@ class RelationshipsControllerISpec extends UnitSpec
       (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
-    "return 404 when relationship not found" in {
+    "return 404 when DES returns 404 relationship not found" in {
       authorisedAsClientItSa(req, mtdItId.value)
       givenAuditConnector()
-      getNotFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded)
+      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns 400 (treated as relationship not found)" in {
+      authorisedAsClientItSa(req, mtdItId.value)
+      givenAuditConnector()
+      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 400)
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -1657,10 +1666,19 @@ class RelationshipsControllerISpec extends UnitSpec
       (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
-    "return 404 when relationship not found" in {
+    "return 404 when DES returns 404 relationship not found" in {
       authorisedAsClientVat(req, vrn.value)
       givenAuditConnector()
-      getNotFoundClientActiveAgentRelationshipsItSa(vrnEncoded)
+      getFailClientActiveAgentRelationshipsVat(vrnEncoded, status = 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns 400 (treated as relationship not found)" in {
+      authorisedAsClientVat(req, vrn.value)
+      givenAuditConnector()
+      getFailClientActiveAgentRelationshipsVat(vrnEncoded, status = 400)
 
       val result = await(doRequest)
       result.status shouldBe 404

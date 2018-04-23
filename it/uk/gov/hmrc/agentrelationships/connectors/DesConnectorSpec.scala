@@ -284,15 +284,29 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       result.get.arn shouldBe agentARN
     }
 
-    "return notFound active relationships for specified clientId for ItSa service" in {
-      getNotFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId)
+    "return None if DES returns 404 for ItSa service" in {
+      getFailFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, status = 404)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result shouldBe None
     }
 
-    "return notFound active relationships for specified clientId for Vat service" in {
-      getNotFoundClientActiveAgentRelationshipsVat(encodedClientIdVrn)
+    "return None if DES returns 404 for Vat service" in {
+      getFailClientActiveAgentRelationshipsVat(encodedClientIdVrn, status = 404)
+
+      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      result shouldBe None
+    }
+
+    "return None if DES returns 400 for ItSa service" in {
+      getFailFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, status = 400)
+
+      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      result shouldBe None
+    }
+
+    "return None if DES returns 400 for Vat service" in {
+      getFailClientActiveAgentRelationshipsVat(encodedClientIdVrn, status = 400)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result shouldBe None
