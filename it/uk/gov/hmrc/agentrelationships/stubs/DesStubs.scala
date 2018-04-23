@@ -339,17 +339,17 @@ trait DesStubs {
                |}""".stripMargin)))
   }
 
-  def getNotFoundClientActiveAgentRelationshipsItSa(encodedClientId: String, service: String = "ITSA"): Unit = {
+  def getFailFoundClientActiveAgentRelationshipsItSa(encodedClientId: String, service: String = "ITSA", status: Int): Unit = {
     stubFor(get(urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
       .willReturn(
         aResponse()
-          .withStatus(404)))
+          .withStatus(status)))
   }
 
-  def getNotFoundClientActiveAgentRelationshipsVat(encodedClientId: String, service: String = "VATC"): Unit = {
+  def getFailClientActiveAgentRelationshipsVat(encodedClientId: String, service: String = "VATC", status: Int): Unit = {
     stubFor(get(urlEqualTo(s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
       .willReturn(
         aResponse()
-          .withStatus(404)))
+          .withStatus(status)))
   }
 }
