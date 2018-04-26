@@ -1017,13 +1017,14 @@ class RelationshipsControllerISpec extends UnitSpec
 
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
-    def verifyDeleteRelationshipAuditSent(arn: String, clientId: String, service: String, currentUserAffinityGroup: String, currentUserGGUserId: String) = {
+    def verifyDeleteRelationshipAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, currentUserGGUserId: String) = {
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.DeleteRelationship,
         detail = Map(
           "arn" -> arn,
           "clientId" -> clientId,
+          "clientIdType" -> clientIdType,
           "service" -> service,
           "currentUserAffinityGroup" -> currentUserAffinityGroup,
           "currentUserGGUserId" -> currentUserGGUserId),
@@ -1050,7 +1051,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send an audit event called DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Agent", "ggUserId-agent")
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Agent", "ggUserId-agent")
       }
     }
 
@@ -1071,7 +1072,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
@@ -1091,7 +1092,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
@@ -1111,7 +1112,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
@@ -1132,7 +1133,7 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
