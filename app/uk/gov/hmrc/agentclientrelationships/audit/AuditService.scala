@@ -34,7 +34,7 @@ import scala.util.Try
 import uk.gov.hmrc.http.HeaderCarrier
 
 object AgentClientRelationshipEvent extends Enumeration {
-  val CreateRelationship, CheckCESA, CheckES = Value
+  val CreateRelationship, CheckCESA, CheckES, DeleteRelationship = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -103,6 +103,13 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     "arn",
     "ESRelationship")
 
+  val deleteRelationshipDetailsFields = Seq(
+    "arn",
+    "clientId",
+    "service",
+    "currentUserAffinityGroup",
+    "currentUserGGUserId")
+
   def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
       collectDetails(auditData.getDetails, createRelationshipDetailsFields))
@@ -121,6 +128,11 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
   def sendCheckESAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
     auditEvent(AgentClientRelationshipEvent.CheckES, "check-es",
       collectDetails(auditData.getDetails, CheckESDetailsFields))
+  }
+
+  def sendDeleteRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
+    auditEvent(AgentClientRelationshipEvent.DeleteRelationship, "delete-relationship",
+      collectDetails(auditData.getDetails, deleteRelationshipDetailsFields))
   }
 
   private[audit] def auditEvent(event: AgentClientRelationshipEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {

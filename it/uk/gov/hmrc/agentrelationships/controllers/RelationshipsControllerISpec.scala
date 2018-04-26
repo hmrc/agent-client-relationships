@@ -1013,150 +1013,261 @@ class RelationshipsControllerISpec extends UnitSpec
     }
   }
 
-  "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
+  "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" when {
 
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
-    "return 204 when the relationship exists and the Arn matches that of current Agent user" in {
-      givenUserIsSubscribedAgent(arn)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
-
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 204
+    def verifyDeleteRelationshipAuditSent(arn: String, clientId: String, service: String, currentUserAffinityGroup: String, currentUserGGUserId: String) = {
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.DeleteRelationship,
+        detail = Map(
+          "arn" -> arn,
+          "clientId" -> clientId,
+          "service" -> service,
+          "currentUserAffinityGroup" -> currentUserAffinityGroup,
+          "currentUserGGUserId" -> currentUserGGUserId),
+        tags = Map(
+          "transactionName" -> "delete-relationship",
+          "path" -> requestPath))
     }
 
-    "return 204 when the relationship exists and the MtdItId matches that of current Client user" in {
-      givenUserIsSubscribedClient(mtdItId)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+    "the relationship exists and the Arn matches that of current Agent user" should {
 
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 204
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send an audit event called DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Agent", "ggUserId-agent")
+      }
     }
 
-    "return 204 when the relationship exists in ETMP and not exist in ES" in {
-      givenUserIsSubscribedClient(mtdItId)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+    "the relationship exists and the MtdItId matches that of current Client user" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(mtdItId, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
 
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 204
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+      }
     }
 
-    "return 204 when the relationship does not exists in ETMP and in ES" in {
-      givenUserIsSubscribedClient(mtdItId)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-      givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+    "the relationship exists in ETMP and not exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(mtdItId, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+      }
 
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 204
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+      }
     }
 
-    "return 204 when the relationship does not exists in ETMP but exists in ES" in {
-      givenUserIsSubscribedClient(mtdItId)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-      givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
-      givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+    "the relationship does not exist in either ETMP or in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(mtdItId, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+      }
 
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 204
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+      }
+    }
+
+    "the relationship does not exist in ETMP but does exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(mtdItId, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "HMRC-MTD-IT", "Individual", "ggUserId-client")
+      }
     }
 
     /**
      * Agent's Unhappy paths
      */
 
-    "return 403 for an agent with a mismatched arn" in {
-      givenUserIsSubscribedAgent(Arn("unmatched"))
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 403
+    "agent has a mismatched arn" should {
+      "return 403" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event DeleteRelationship" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
 
-    "return 403 for an agent with no agent enrolments" in {
+    "agent has no agent enrolments" should {
+      "return 403" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
 
-      givenUserHasNoAgentEnrolments(arn)
-
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 403
+      "not send the audit event DeleteRelationship" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
 
-    "return 502 when es is unavailable" in {
+    "es is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenEsIsUnavailable()
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+      }
 
-      givenUserIsSubscribedAgent(arn)
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
 
-      givenEsIsUnavailable()
-      givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 502
+      "not send the audit event DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
 
-    "return 502 when DES is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-      givenDesReturnsServiceUnavailable()
+    "DES is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenDesReturnsServiceUnavailable()
+      }
 
-      await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
+
+      "not send the audit event DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
 
-    "return 404 if DES returns 404" in {
-      givenUserIsSubscribedAgent(arn)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-      givenAgentCanNotBeDeallocatedInDes(status = 404)
+    "DES responds with 404" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanNotBeDeallocatedInDes(status = 404)
+      }
 
-      await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      "return 404" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event DeleteRelationship" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
 
     /**
      * Client's Unhappy paths
      */
 
-    "return 403 for a client with a mismatched MtdItId" in {
+    "client has a mismatched MtdItId" should {
 
-      givenUserIsSubscribedClient(MtdItId("unmatched"))
+      "return 403" in {
+        givenUserIsSubscribedClient(MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
 
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 403
+      "not send the audit event DeleteRelationship" in {
+        givenUserIsSubscribedClient(MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
 
-    "return 403 for a client with no client enrolments" in {
+    "client has no client enrolments" should {
+      "return 403" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
 
-      givenUserHasNoClientEnrolments
-
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 403
+      "not send the audit event DeleteRelationship" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
 
-    "return 404 when a client has no groupId" in {
-      givenUserIsSubscribedClient(mtdItId)
-      givenPrincipalGroupIdNotExistsFor(mtdItId)
+    "client has no groupId" should {
+      trait StubsForScenario {
+        givenUserIsSubscribedClient(mtdItId)
+        givenPrincipalGroupIdNotExistsFor(mtdItId)
+      }
 
-      val result = await(doAgentDeleteRequest(requestPath))
-      result.status shouldBe 404
+      "return 404" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event DeleteRelationship" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+      }
     }
   }
 

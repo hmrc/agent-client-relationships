@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{ NoPermiss
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.{ Retrieval, ~ }
+import uk.gov.hmrc.auth.core.retrieve.{ Credentials, Retrieval, ~ }
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
@@ -50,9 +50,8 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
     state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {
-    def testAuthActions(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
-      implicit request =>
-        Future.successful(Ok)
+    def testAuthActions(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request => _ =>
+      Future.successful(Ok)
     }
 
     def testAuthorisedAsClient = AuthorisedAsItSaClient { implicit request => _ =>
@@ -62,13 +61,23 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
     override def authConnector: AuthConnector = mockAuthConnector
   }
 
-  def mockAgentAuth(affinityGroup: AffinityGroup = AffinityGroup.Agent, enrolment: Set[Enrolment]) =
-    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any(), any()))
-      .thenReturn(Future successful new ~[Enrolments, Option[AffinityGroup]](Enrolments(enrolment), Some(affinityGroup)))
+  def mockAgentAuth(
+    affinityGroup: AffinityGroup = AffinityGroup.Agent,
+    enrolment: Set[Enrolment],
+    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
+    when(mockAuthConnector.authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
+      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), credentials))
 
-  def mockClientAuth(affinityGroup: AffinityGroup = AffinityGroup.Individual, enrolment: Set[Enrolment]) =
-    when(mockAuthConnector.authorise(any(), any[Retrieval[~[Enrolments, Option[AffinityGroup]]]]())(any(), any()))
-      .thenReturn(Future successful new ~[Enrolments, Option[AffinityGroup]](Enrolments(enrolment), Some(affinityGroup)))
+  def mockClientAuth(
+    affinityGroup: AffinityGroup = AffinityGroup.Individual,
+    enrolment: Set[Enrolment],
+    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
+    when(mockAuthConnector.authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
+      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), credentials))
+
+  def mockClientAuthWithoutCredRetrieval(affinityGroup: AffinityGroup = AffinityGroup.Individual, enrolment: Set[Enrolment]) =
+    when(mockAuthConnector.authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(any(), any()))
+      .thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")
 
@@ -148,13 +157,13 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
 
   "AuthorisedAgentOrClient" should {
     "return Ok if client has HMRC-MTD-IT enrolment" in {
-      mockClientAuth(enrolment = Set(mtdItIdEnrolment))
+      mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdItIdEnrolment))
       val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
       await(result) shouldBe Ok
     }
 
     "return Forbidden if client has other enrolment" in {
-      mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
+      mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdVatIdEnrolment))
       val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
       await(result) shouldBe NoPermissionOnClient
     }

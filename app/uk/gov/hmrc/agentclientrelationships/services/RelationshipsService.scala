@@ -21,6 +21,7 @@ import javax.inject.{ Inject, Named, Singleton }
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{ AuditData, AuditService }
+import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{ raiseError, returnValue }
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
@@ -355,9 +356,14 @@ class RelationshipsService @Inject() (
       }
   }
 
-  def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(
-    implicit
-    ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Unit] = {
+  def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], currentUser: CurrentUser): Future[Unit] = {
+
+    implicit val auditData = new AuditData()
+    auditData.set("arn", arn.value)
+    auditData.set("clientId", taxIdentifier.value)
+    auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
+    auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
+    auditData.set("currentUserGGUserId", currentUser.credentials.providerId)
 
     def esDeAllocation(clientGroupId: String) = (for {
       agentUser <- getAgentUserFor(arn)
@@ -371,7 +377,9 @@ class RelationshipsService @Inject() (
       clientGroupId <- es.getPrincipalGroupIdFor(taxIdentifier)
       _ <- des.deleteAgentRelationship(taxIdentifier, arn)
       _ <- esDeAllocation(clientGroupId)
-    } yield ()
+    } yield {
+      auditService.sendDeleteRelationshipAuditEvent
+    }
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] = {
