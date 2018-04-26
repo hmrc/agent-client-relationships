@@ -17,12 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import javax.inject.{ Inject, Singleton }
-
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{ Action, AnyContent }
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.auth.{ AuthActions, CurrentUser }
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{ AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService }
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
@@ -101,7 +100,8 @@ class RelationshipsController @Inject() (
 
   def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
 
-  private def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request =>
+  private def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request => _ =>
+
     implicit val auditData = new AuditData()
     auditData.set("arn", arn)
 
@@ -123,10 +123,7 @@ class RelationshipsController @Inject() (
       }
   }
 
-  private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = AuthorisedAgentOrClient(arn, taxIdentifier) { implicit request =>
-    implicit val auditData = new AuditData()
-    auditData.set("arn", arn)
-
+  private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = AuthorisedAgentOrClient(arn, taxIdentifier) { implicit request => implicit currentUser =>
     service.deleteRelationship(arn, taxIdentifier)
       .map(_ => NoContent)
       .recover {

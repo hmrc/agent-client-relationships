@@ -23,25 +23,27 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.Retrievals._
-import uk.gov.hmrc.auth.core.retrieve.~
+import uk.gov.hmrc.auth.core.retrieve.{ Credentials, ~ }
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.HeaderCarrierConverter
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
 
+case class CurrentUser(credentials: Credentials, affinityGroup: Option[AffinityGroup])
+
 trait AuthActions extends AuthorisedFunctions {
   me: Results =>
 
   override def authConnector: AuthConnector
 
-  protected type AsyncPlayUserRequest = Request[AnyContent] => Future[Result]
+  protected type RequestAndCurrentUser = Request[AnyContent] => CurrentUser => Future[Result]
 
-  def AuthorisedAgentOrClient(arn: Arn, clientId: TaxIdentifier)(body: AsyncPlayUserRequest): Action[AnyContent] = Action.async {
+  def AuthorisedAgentOrClient(arn: Arn, clientId: TaxIdentifier)(body: RequestAndCurrentUser): Action[AnyContent] = Action.async {
     implicit request =>
       implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
-      authorised(AuthProviders(GovernmentGateway)).retrieve(allEnrolments and affinityGroup) {
-        case enrol ~ affinityG => {
+      authorised(AuthProviders(GovernmentGateway)).retrieve(allEnrolments and affinityGroup and credentials) {
+        case enrol ~ affinityG ~ creds => {
 
           val requiredIdentifier = affinityG match {
             case Some(AffinityGroup.Agent) => arn
@@ -53,7 +55,7 @@ trait AuthActions extends AuthorisedFunctions {
           val actualIdFromEnrolment: Option[TaxIdentifier] = requiredEnrolmentType.findEnrolmentIdentifier(enrol.enrolments)
 
           if (actualIdFromEnrolment.contains(requiredIdentifier)) {
-            body(request)
+            body(request)(CurrentUser(creds, affinityG))
           } else {
             Future successful NoPermissionOnAgencyOrClient
           }

@@ -17,7 +17,7 @@ trait AuthStub {
     this
   }
 
-  def givenUserIsSubscribedAgent(arn: Arn): AuthStub = {
+  def givenUserIsSubscribedAgent(withThisArn: Arn, withThisGgUserId: String = "12345-credId"): AuthStub = {
     stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
         .withStatus(200)
@@ -29,16 +29,20 @@ trait AuthStub {
              |		"key": "HMRC-AS-AGENT",
              |		"identifiers": [{
              |			"key": "AgentReferenceNumber",
-             |			"value": "${arn.value}"
+             |			"value": "${withThisArn.value}"
              |		}],
              |		"state": "Activated"
-             |	}]
+             |	}],
+             |  "credentials": {
+             |    "providerId": "$withThisGgUserId",
+             |    "providerType": "GovernmentGateway"
+             |  }
              |}
        """.stripMargin)))
     this
   }
 
-  def givenUserHasNoAgentEnrolments(arn: Arn): AuthStub = {
+  def givenUserHasNoAgentEnrolments(arn: Arn, withThisGgUserId: String = "12345-credId"): AuthStub = {
     stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
         .withStatus(200)
@@ -53,7 +57,11 @@ trait AuthStub {
              |			"value": "${arn.value}"
              |		}],
              |		"state": "Activated"
-             |	}]
+             |	}],
+             |  "credentials": {
+             |    "providerId": "$withThisGgUserId",
+             |    "providerType": "GovernmentGateway"
+             |  }
              |}
        """.stripMargin)))
     this
@@ -74,13 +82,17 @@ trait AuthStub {
              |			"value": "ID"
              |		}],
              |		"state": "Activated"
-             |	}]
+             |	}],
+             |  "credentials": {
+             |    "providerId": "12345-credId",
+             |    "providerType": "GovernmentGateway"
+             |  }
              |}
        """.stripMargin)))
     this
   }
 
-  def givenUserIsSubscribedClient(identifier: TaxIdentifier): AuthStub = {
+  def givenUserIsSubscribedClient(identifier: TaxIdentifier, withThisGgUserId: String = "12345-credId"): AuthStub = {
     val (service, key, value) = identifier match {
       case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
       case Vrn(v) => ("HMRC-MTD-VAT", "VRN", v)
@@ -121,7 +133,11 @@ trait AuthStub {
              |			"value": "V3264H"
              |		}],
              |		"state": "Activated"
-             |	}]
+             |	}],
+             |  "credentials": {
+             |    "providerId": "$withThisGgUserId",
+             |    "providerType": "GovernmentGateway"
+             |  }
              |}
        """.stripMargin)))
     this
