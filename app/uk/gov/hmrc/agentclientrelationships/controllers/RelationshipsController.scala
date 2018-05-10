@@ -127,7 +127,7 @@ class RelationshipsController @Inject()(override val authConnector: AuthConnecto
         .recover {
           case upS: Upstream5xxResponse => throw upS
           case NonFatal(ex) =>
-            Logger(getClass).warn("Could not create relationship")
+            Logger(getClass).warn("Could not create relationship",ex)
             NotFound(toJson(ex.getMessage))
         }
   }
