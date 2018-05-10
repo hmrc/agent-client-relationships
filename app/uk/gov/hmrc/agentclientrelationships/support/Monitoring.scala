@@ -25,8 +25,7 @@ trait Monitoring {
 
   private lazy val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  def mark[T](name: String): Unit = {
+  def mark[T](name: String): Unit =
     kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
-  }
 
 }

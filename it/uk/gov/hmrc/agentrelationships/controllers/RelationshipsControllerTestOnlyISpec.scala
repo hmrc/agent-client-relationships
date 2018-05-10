@@ -20,21 +20,22 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
-import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord }
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
 import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support.{ Http, MongoApp, WireMockSupport }
+import uk.gov.hmrc.agentrelationships.support.{Http, MongoApp, WireMockSupport}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RelationshipsControllerTestOnlyISpec extends UnitSpec
-  with MongoApp
-  with OneServerPerSuite
-  with WireMockSupport
-  with DesStubs
-  with MappingStubs
-  with DataStreamStub {
+class RelationshipsControllerTestOnlyISpec
+    extends UnitSpec
+    with MongoApp
+    with OneServerPerSuite
+    with WireMockSupport
+    with DesStubs
+    with MappingStubs
+    with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -43,14 +44,15 @@ class RelationshipsControllerTestOnlyISpec extends UnitSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "microservice.services.users-groups-search.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "application.router" -> "testOnlyDoNotUseInAppConf.Routes")
+        "microservice.services.tax-enrolments.port"        -> wireMockPort,
+        "microservice.services.users-groups-search.port"   -> wireMockPort,
+        "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.auth.port"                  -> wireMockPort,
+        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "auditing.consumer.baseUri.host"                   -> wireMockHost,
+        "auditing.consumer.baseUri.port"                   -> wireMockPort,
+        "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes"
+      )
       .configure(mongoConfiguration)
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]

@@ -16,25 +16,25 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
-import uk.gov.hmrc.domain.{ Nino, TaxIdentifier }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait TaxIdentifierSupport {
 
   protected def enrolmentKeyPrefixFor(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
-    case _: Arn => "HMRC-AS-AGENT~AgentReferenceNumber"
+    case _: Arn     => "HMRC-AS-AGENT~AgentReferenceNumber"
     case _: MtdItId => "HMRC-MTD-IT~MTDITID"
-    case _: Vrn => "HMRC-MTD-VAT~VRN"
-    case _: Nino => "HMRC-MTD-IT~NINO"
-    case _ => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
+    case _: Vrn     => "HMRC-MTD-VAT~VRN"
+    case _: Nino    => "HMRC-MTD-IT~NINO"
+    case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
   protected def identifierNickname(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
-    case _: Arn => "ARN"
+    case _: Arn     => "ARN"
     case _: MtdItId => "MTDITID"
-    case _: Vrn => "VRN"
-    case _: Nino => "NINO"
-    case _ => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
+    case _: Vrn     => "VRN"
+    case _: Nino    => "NINO"
+    case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
 }

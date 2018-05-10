@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.domain.TaxIdentifier
 
-sealed class TypeOfEnrolment(val enrolmentKey: String, val identifierKey: String, val identifierForValue: String => TaxIdentifier) {
+sealed class TypeOfEnrolment(
+  val enrolmentKey: String,
+  val identifierKey: String,
+  val identifierForValue: String => TaxIdentifier) {
   def findEnrolmentIdentifier(enrolments: Set[Enrolment]): Option[TaxIdentifier] = {
     val maybeEnrolment: Option[Enrolment] = enrolments.find(_.key equals enrolmentKey)
 
@@ -38,8 +41,8 @@ object TypeOfEnrolment {
 
   def apply(identifier: TaxIdentifier): TypeOfEnrolment = identifier match {
     case MtdItId(_) => EnrolmentMtdIt
-    case Vrn(_) => EnrolmentMtdVat
-    case Arn(_) => EnrolmentAsAgent
-    case _ => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
+    case Vrn(_)     => EnrolmentMtdVat
+    case Arn(_)     => EnrolmentAsAgent
+    case _          => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
 }

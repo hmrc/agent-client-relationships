@@ -25,9 +25,8 @@ class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec with BeforeAndAf
 
   val repo = new FakeRelationshipCopyRecordRepository()
 
-  override protected def beforeEach(): Unit = {
+  override protected def beforeEach(): Unit =
     repo.reset
-  }
   override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
 
 }

@@ -25,28 +25,30 @@ import play.api.libs.ws.WSClient
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{ SaRef, VatRef }
-import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpResponse }
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RelationshipsControllerISpec extends UnitSpec
-  with MongoApp
-  with OneServerPerSuite
-  with WireMockSupport
-  with RelationshipStubs
-  with DesStubs
-  with MappingStubs
-  with DataStreamStub
-  with AuthStub
-  with MockitoSugar {
+//noinspection ScalaStyle
+class RelationshipsControllerISpec
+    extends UnitSpec
+    with MongoApp
+    with OneServerPerSuite
+    with WireMockSupport
+    with RelationshipStubs
+    with DesStubs
+    with MappingStubs
+    with DataStreamStub
+    with AuthStub
+    with MockitoSugar {
 
   lazy val mockAuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
@@ -56,15 +58,16 @@ class RelationshipsControllerISpec extends UnitSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "microservice.services.users-groups-search.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "features.copy-relationship.mtd-it" -> true,
-        "features.copy-relationship.mtd-vat" -> true)
+        "microservice.services.tax-enrolments.port"        -> wireMockPort,
+        "microservice.services.users-groups-search.port"   -> wireMockPort,
+        "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.auth.port"                  -> wireMockPort,
+        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "auditing.consumer.baseUri.host"                   -> wireMockHost,
+        "auditing.consumer.baseUri.port"                   -> wireMockPort,
+        "features.copy-relationship.mtd-it"                -> true,
+        "features.copy-relationship.mtd-vat"               -> true
+      )
       .configure(mongoConfiguration)
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
@@ -106,7 +109,8 @@ class RelationshipsControllerISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
 
-    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
@@ -125,7 +129,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -133,47 +138,47 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(mtdItId.value),
-        'clientIdentifierType(mtdItIdType),
-        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.Success)))
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
+        'clientIdentifierType (mtdItIdType),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.Success))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "service" -> "mtd-it",
-          "clientId" -> mtdItId.value,
-          "clientIdType" -> "mtditid",
-          "CESARelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "nino"                    -> nino.value,
+          "saAgentRef"              -> "foo",
+          "service"                 -> "mtd-it",
+          "clientId"                -> mtdItId.value,
+          "clientIdType"            -> "mtditid",
+          "CESARelationship"        -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "true",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "true",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingCESARelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "bar",
+          "nino"                     -> nino.value,
+          "saAgentRef"               -> "foo",
+          "CESARelationship"         -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
 
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
@@ -184,7 +189,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -192,47 +198,47 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(mtdItId.value),
-        'clientIdentifierType(mtdItIdType),
-        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.IncompleteInputParams)))
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
+        'clientIdentifierType (mtdItIdType),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "",
-          "agentCode" -> "",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "service" -> "mtd-it",
-          "clientId" -> mtdItId.value,
-          "clientIdType" -> "mtditid",
-          "CESARelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "",
+          "agentCode"               -> "",
+          "nino"                    -> nino.value,
+          "saAgentRef"              -> "foo",
+          "service"                 -> "mtd-it",
+          "clientId"                -> mtdItId.value,
+          "clientIdType"            -> "mtditid",
+          "CESARelationship"        -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingCESARelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "",
-          "agentCode" -> "",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "",
+          "agentCode"                -> "",
+          "nino"                     -> nino.value,
+          "saAgentRef"               -> "foo",
+          "CESARelationship"         -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
 
     "return 200 when agent code unknown but relationship exists in cesa" in {
@@ -245,7 +251,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -253,47 +260,47 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(mtdItId.value),
-        'clientIdentifierType(mtdItIdType),
-        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.IncompleteInputParams)))
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
+        'clientIdentifierType (mtdItIdType),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "service" -> "mtd-it",
-          "clientId" -> mtdItId.value,
-          "clientIdType" -> "mtditid",
-          "CESARelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "",
+          "nino"                    -> nino.value,
+          "saAgentRef"              -> "foo",
+          "service"                 -> "mtd-it",
+          "clientId"                -> mtdItId.value,
+          "clientIdType"            -> "mtditid",
+          "CESARelationship"        -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingCESARelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "",
+          "nino"                     -> nino.value,
+          "saAgentRef"               -> "foo",
+          "CESARelationship"         -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
 
     }
 
@@ -310,7 +317,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanNotBeAllocatedInDes(status = 404)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -318,12 +326,13 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(mtdItId.value),
-        'clientIdentifierType(mtdItIdType),
-        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus(Some(SyncStatus.Failed)),
-        'syncToESStatus(None))
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
+        'clientIdentifierType (mtdItIdType),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus (Some(SyncStatus.Failed)),
+        'syncToESStatus (None)
+      )
 
     }
 
@@ -338,7 +347,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
 
       await(query()) shouldBe empty
 
@@ -346,47 +356,47 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(mtdItId.value),
-        'clientIdentifierType(mtdItIdType),
-        'references(Some(Set(SaRef(SaAgentReference("foo"))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.Failed)))
+        'arn (arn.value),
+        'clientIdentifier (mtdItId.value),
+        'clientIdentifierType (mtdItIdType),
+        'references (Some(Set(SaRef(SaAgentReference("foo"))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.Failed))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "service" -> "mtd-it",
-          "clientId" -> mtdItId.value,
-          "clientIdType" -> "mtditid",
-          "CESARelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "nino"                    -> nino.value,
+          "saAgentRef"              -> "foo",
+          "service"                 -> "mtd-it",
+          "clientId"                -> mtdItId.value,
+          "clientIdType"            -> "mtditid",
+          "CESARelationship"        -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingCESARelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingCESARelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "bar",
+          "nino"                     -> nino.value,
+          "saAgentRef"               -> "foo",
+          "CESARelationship"         -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
 
     "return 404 when relationship is not found in es but relationship copy was made before" in {
@@ -402,23 +412,23 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 404 when relationship was previously copied from CESA to ETMP & ES but has since been deleted from ETMP & ES " +
       "(even though the relationship upon which the copy was based still exists in CESA)" in {
-        givenPrincipalUser(arn, "foo")
-        givenGroupInfo("foo", "bar")
-        givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
 
-        givenNinoIsKnownFor(mtdItId, nino)
-        givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenArnIsKnownFor(arn, SaAgentReference("foo"))
-        givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenArnIsKnownFor(arn, SaAgentReference("foo"))
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
-        givenAgentCanBeAllocatedInDes(mtdItId, arn)
-        givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-        await(repo.insert(relationshipCopiedSuccessfully))
-        val result = await(doRequest)
-        result.status shouldBe 404
-        (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-      }
+      await(repo.insert(relationshipCopiedSuccessfully))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
 
     "return 404 when credentials are not found but relationship copy was made before" in {
       givenPrincipalGroupIdNotExistsFor(arn)
@@ -444,7 +454,8 @@ class RelationshipsControllerISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
 
-    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
@@ -455,7 +466,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
       val result = await(doRequest)
@@ -554,7 +566,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -562,45 +575,45 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(vrn.value),
-        'clientIdentifierType(mtdVatIdType),
-        'references(Some(Set(VatRef(AgentCode(oldAgentCode))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.Success)))
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.Success))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "oldAgentCodes" -> oldAgentCode,
-          "service" -> "mtd-vat",
-          "vrn" -> vrn.value,
-          "ESRelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "oldAgentCodes"           -> oldAgentCode,
+          "service"                 -> "mtd-vat",
+          "vrn"                     -> vrn.value,
+          "ESRelationship"          -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "true",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingESRelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "true",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingESRelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "oldAgentCodes" -> oldAgentCode,
-          "vrn" -> vrn.value,
-          "ESRelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-es",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "bar",
+          "oldAgentCodes"            -> oldAgentCode,
+          "vrn"                      -> vrn.value,
+          "ESRelationship"           -> "true"),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
     }
 
     "return 200 when agent credentials unknown but relationship exists in HMCE-VATDEC-ORG" in {
@@ -609,7 +622,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -617,45 +631,45 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(vrn.value),
-        'clientIdentifierType(mtdVatIdType),
-        'references(Some(Set(VatRef(AgentCode(oldAgentCode))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.IncompleteInputParams)))
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "",
-          "agentCode" -> "",
-          "service" -> "mtd-vat",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "ESRelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "",
+          "agentCode"               -> "",
+          "service"                 -> "mtd-vat",
+          "vrn"                     -> vrn.value,
+          "oldAgentCodes"           -> oldAgentCode,
+          "ESRelationship"          -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingESRelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingESRelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn.value,
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "credId" -> "",
-          "agentCode" -> "",
-          "ESRelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-es",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "vrn"                      -> vrn.value,
+          "oldAgentCodes"            -> oldAgentCode,
+          "credId"                   -> "",
+          "agentCode"                -> "",
+          "ESRelationship"           -> "true"),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
     }
 
     "return 200 when agent code unknown but relationship exists in HMCE-VATDEC-ORG" in {
@@ -666,7 +680,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -674,45 +689,45 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(vrn.value),
-        'clientIdentifierType(mtdVatIdType),
-        'references(Some(Set(VatRef(AgentCode(oldAgentCode))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.IncompleteInputParams)))
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "",
-          "service" -> "mtd-vat",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "ESRelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "",
+          "service"                 -> "mtd-vat",
+          "vrn"                     -> vrn.value,
+          "oldAgentCodes"           -> oldAgentCode,
+          "ESRelationship"          -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingESRelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingESRelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "agentCode" -> "",
-          "ESRelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-es",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "vrn"                      -> vrn.value,
+          "oldAgentCodes"            -> oldAgentCode,
+          "agentCode"                -> "",
+          "ESRelationship"           -> "true"),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
 
     }
 
@@ -727,7 +742,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanNotBeAllocatedInDes(status = 404)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -735,12 +751,13 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(vrn.value),
-        'clientIdentifierType(mtdVatIdType),
-        'references(Some(Set(VatRef(AgentCode(oldAgentCode))))),
-        'syncToETMPStatus(Some(SyncStatus.Failed)),
-        'syncToESStatus(None))
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+        'syncToETMPStatus (Some(SyncStatus.Failed)),
+        'syncToESStatus (None)
+      )
     }
 
     "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
@@ -752,7 +769,8 @@ class RelationshipsControllerISpec extends UnitSpec
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, "bar")
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
 
       await(query()) shouldBe empty
 
@@ -760,45 +778,45 @@ class RelationshipsControllerISpec extends UnitSpec
       result.status shouldBe 200
 
       await(query()).head should have(
-        'arn(arn.value),
-        'clientIdentifier(vrn.value),
-        'clientIdentifierType(mtdVatIdType),
-        'references(Some(Set(VatRef(AgentCode(oldAgentCode))))),
-        'syncToETMPStatus(Some(SyncStatus.Success)),
-        'syncToESStatus(Some(SyncStatus.Failed)))
+        'arn (arn.value),
+        'clientIdentifier (vrn.value),
+        'clientIdentifierType (mtdVatIdType),
+        'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+        'syncToETMPStatus (Some(SyncStatus.Success)),
+        'syncToESStatus (Some(SyncStatus.Failed))
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "service" -> "mtd-vat",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "ESRelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "service"                 -> "mtd-vat",
+          "vrn"                     -> vrn.value,
+          "oldAgentCodes"           -> oldAgentCode,
+          "ESRelationship"          -> "true",
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "true",
-          "Journey" -> "CopyExistingESRelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "true",
+          "Journey"                 -> "CopyExistingESRelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "ESRelationship" -> "true",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode),
-        tags = Map(
-          "transactionName" -> "check-es",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "bar",
+          "ESRelationship"           -> "true",
+          "vrn"                      -> vrn.value,
+          "oldAgentCodes"            -> oldAgentCode),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
     }
 
     "return 404 when relationship is not found in es but relationship copy was made before" in {
@@ -814,20 +832,20 @@ class RelationshipsControllerISpec extends UnitSpec
 
     "return 404 when relationship was previously copied from HMCE-VATDEC-ORG to ETMP & ES but has since been deleted from ETMP & ES " +
       "(even though the relationship upon which the copy was based still exists in HMCE-VATDEC-ORG)" in {
-        givenPrincipalUser(arn, "foo")
-        givenGroupInfo("foo", "bar")
-        givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
-        givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
-        givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
 
-        givenAgentCanBeAllocatedInDes(vrn, arn)
-        givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
-        await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
-        val result = await(doRequest)
-        result.status shouldBe 404
-        (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-      }
+      await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
 
     "return 404 when credentials are not found but relationship copy was made before" in {
       givenPrincipalGroupIdNotExistsFor(arn)
@@ -919,15 +937,14 @@ class RelationshipsControllerISpec extends UnitSpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "",
-          "agentCode" -> "",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "",
+          "agentCode"                -> "",
+          "nino"                     -> nino.value,
+          "saAgentRef"               -> "foo",
+          "CESARelationship"         -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
 
     "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
@@ -947,15 +964,14 @@ class RelationshipsControllerISpec extends UnitSpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "",
-          "agentCode" -> "",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "",
+          "agentCode"                -> "",
+          "nino"                     -> nino.value,
+          "saAgentRef"               -> "foo",
+          "CESARelationship"         -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
   }
 
@@ -1001,37 +1017,42 @@ class RelationshipsControllerISpec extends UnitSpec
         1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn.value,
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "credId" -> "",
-          "agentCode" -> "",
-          "ESRelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-es",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "vrn"                      -> vrn.value,
+          "oldAgentCodes"            -> oldAgentCode,
+          "credId"                   -> "",
+          "agentCode"                -> "",
+          "ESRelationship"           -> "true"),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
     }
   }
 
   "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" when {
 
-    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
-    def verifyDeleteRelationshipAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, currentUserGGUserId: String) = {
+    def verifyDeleteRelationshipAuditSent(
+      arn: String,
+      clientId: String,
+      clientIdType: String,
+      service: String,
+      currentUserAffinityGroup: String,
+      currentUserGGUserId: String) =
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.DeleteRelationship,
         detail = Map(
-          "arn" -> arn,
-          "clientId" -> clientId,
-          "clientIdType" -> clientIdType,
-          "service" -> service,
+          "arn"                      -> arn,
+          "clientId"                 -> clientId,
+          "clientIdType"             -> clientIdType,
+          "service"                  -> service,
           "currentUserAffinityGroup" -> currentUserAffinityGroup,
-          "currentUserGGUserId" -> currentUserGGUserId),
-        tags = Map(
-          "transactionName" -> "delete-relationship",
-          "path" -> requestPath))
-    }
+          "currentUserGGUserId"      -> currentUserGGUserId
+        ),
+        tags = Map("transactionName" -> "delete-relationship", "path" -> requestPath)
+      )
 
     "the relationship exists and the Arn matches that of current Agent user" should {
 
@@ -1072,7 +1093,13 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client")
       }
     }
 
@@ -1092,7 +1119,13 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client")
       }
     }
 
@@ -1112,7 +1145,13 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client")
       }
     }
 
@@ -1133,14 +1172,19 @@ class RelationshipsControllerISpec extends UnitSpec
 
       "send the audit event DeleteRelationship" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyDeleteRelationshipAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client")
       }
     }
 
     /**
-     * Agent's Unhappy paths
-     */
-
+      * Agent's Unhappy paths
+      */
     "agent has a mismatched arn" should {
       "return 403" in {
         givenUserIsSubscribedAgent(Arn("unmatched"))
@@ -1225,9 +1269,8 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     /**
-     * Client's Unhappy paths
-     */
-
+      * Client's Unhappy paths
+      */
     "client has a mismatched MtdItId" should {
 
       "return 403" in {
@@ -1445,7 +1488,8 @@ class RelationshipsControllerISpec extends UnitSpec
 
   "PUT /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid" should {
 
-    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in {
       givenUserIsSubscribedAgent(arn)
@@ -1472,9 +1516,8 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     /**
-     * Agent's Unhappy paths
-     */
-
+      * Agent's Unhappy paths
+      */
     "return 403 for an agent with a mismatched arn" in {
       givenUserIsSubscribedAgent(Arn("unmatched"))
 
@@ -1543,9 +1586,8 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     /**
-     * Client's Unhappy paths
-     */
-
+      * Client's Unhappy paths
+      */
     "return 403 for a client with a mismatched MtdItId" in {
       givenUserIsSubscribedClient(MtdItId("unmatched"))
 
@@ -1563,7 +1605,8 @@ class RelationshipsControllerISpec extends UnitSpec
 
   "PUT /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
     val vrn = Vrn("101747641")
-    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in {
       givenUserIsSubscribedAgent(arn)
@@ -1590,9 +1633,8 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     /**
-     * Agent's Unhappy paths
-     */
-
+      * Agent's Unhappy paths
+      */
     "return 403 for an agent with a mismatched arn" in {
       givenUserIsSubscribedAgent(Arn("unmatched"))
 
@@ -1662,9 +1704,8 @@ class RelationshipsControllerISpec extends UnitSpec
     }
 
     /**
-     * Client's Unhappy paths
-     */
-
+      * Client's Unhappy paths
+      */
     "return 403 for a client with a mismatched Vrn" in {
       givenUserIsSubscribedClient(Vrn("unmatched"))
 
@@ -1805,29 +1846,23 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
     givenPrincipalUserIdExistFor(taxIdentifier, userId)
   }
 
-  def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) = {
+  def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) =
     givenDelegatedGroupIdsNotExistFor(mtdItId)
-  }
 
-  def givenDelegatedGroupIdsNotExistForNino(nino: Nino) = {
+  def givenDelegatedGroupIdsNotExistForNino(nino: Nino) =
     givenDelegatedGroupIdsNotExistFor(nino)
-  }
 
-  def givenDelegatedGroupIdsNotExistForMtdVatId(vrn: Vrn) = {
+  def givenDelegatedGroupIdsNotExistForMtdVatId(vrn: Vrn) =
     givenDelegatedGroupIdsNotExistFor(vrn)
-  }
 
-  def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) = {
+  def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, agentCode)
-  }
 
-  def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) = {
+  def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, agentCode)
-  }
 
-  def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) = {
+  def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) =
     givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))
-  }
 
   def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn: Vrn, agentCode: String) = {
     givenDelegatedGroupIdsExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}", Set("oldvatfoo"))
