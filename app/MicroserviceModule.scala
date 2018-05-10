@@ -43,7 +43,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     val appName = "agent-client-relationships"
 
     val loggerDateFormat: Option[String] = configuration.getString("logger.json.dateformat")
-    Logger.info(s"Starting microservice : $appName : in mode : ${environment.mode}")
+    Logger(getClass).info(s"Starting microservice : $appName : in mode : ${environment.mode}")
     MDC.put("appName", appName)
     loggerDateFormat.foreach(str => MDC.put("logger.json.dateformat", str))
 

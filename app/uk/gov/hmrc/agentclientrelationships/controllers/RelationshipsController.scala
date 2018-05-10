@@ -71,7 +71,7 @@ class RelationshipsController @Inject()(override val authConnector: AuthConnecto
                 case upS: Upstream5xxResponse =>
                   throw upS
                 case NonFatal(ex) =>
-                  Logger.warn(
+                  Logger(getClass).warn(
                     s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
                     ex)
                   Left(errorCode)
@@ -98,7 +98,8 @@ class RelationshipsController @Inject()(override val authConnector: AuthConnecto
         case upS: Upstream5xxResponse =>
           throw upS
         case NonFatal(ex) =>
-          Logger.warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino", ex)
+          Logger(getClass)
+            .warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino", ex)
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
   }
@@ -126,7 +127,7 @@ class RelationshipsController @Inject()(override val authConnector: AuthConnecto
         .recover {
           case upS: Upstream5xxResponse => throw upS
           case NonFatal(ex) =>
-            Logger.warn("Could not create relationship")
+            Logger(getClass).warn("Could not create relationship")
             NotFound(toJson(ex.getMessage))
         }
   }
@@ -138,7 +139,7 @@ class RelationshipsController @Inject()(override val authConnector: AuthConnecto
         .map(_ => NoContent)
         .recover {
           case ex: RelationshipNotFound =>
-            Logger.warn("Could not delete relationship", ex)
+            Logger(getClass).warn("Could not delete relationship", ex)
             NotFound(ex.getMessage)
         }
     }
@@ -173,7 +174,7 @@ class RelationshipsController @Inject()(override val authConnector: AuthConnecto
       .recover {
         case upS: Upstream5xxResponse => throw upS
         case NonFatal(_) =>
-          Logger.warn("checkWithVrn: lookupESForOldRelationship failed")
+          Logger(getClass).warn("checkWithVrn: lookupESForOldRelationship failed")
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
   }
