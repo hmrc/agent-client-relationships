@@ -42,18 +42,16 @@ class AuditData {
 
   private val details = new ConcurrentHashMap[String, Any]
 
-  def set(key: String, value: Any): Unit = {
+  def set(key: String, value: Any): Unit =
     details.put(key, value)
-  }
 
-  def getDetails: Map[String, Any] = {
+  def getDetails: Map[String, Any] =
     JavaConversions.mapAsScalaMap(details).toMap
-  }
 
 }
 
 @Singleton
-class AuditService @Inject() (val auditConnector: AuditConnector) {
+class AuditService @Inject()(val auditConnector: AuditConnector) {
 
   private def collectDetails(data: Map[String, Any], fields: Seq[String]): Seq[(String, Any)] = fields.map { f =>
     (f, data.getOrElse(f, ""))
@@ -72,7 +70,8 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     "enrolmentDelegated",
     "nino",
     "AgentDBRecord",
-    "Journey")
+    "Journey"
+  )
 
   val createRelationshipDetailsFieldsForMtdVat = Seq(
     "agentCode",
@@ -87,81 +86,71 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     "AgentDBRecord",
     "Journey")
 
-  val CheckCESADetailsFields = Seq(
-    "agentCode",
-    "credId",
-    "arn",
-    "saAgentRef",
-    "CESARelationship",
-    "nino")
+  val CheckCESADetailsFields = Seq("agentCode", "credId", "arn", "saAgentRef", "CESARelationship", "nino")
 
-  val CheckESDetailsFields = Seq(
-    "agentCode",
-    "credId",
-    "oldAgentCodes",
-    "vrn",
-    "arn",
-    "ESRelationship")
+  val CheckESDetailsFields = Seq("agentCode", "credId", "oldAgentCodes", "vrn", "arn", "ESRelationship")
 
-  val deleteRelationshipDetailsFields = Seq(
-    "arn",
-    "clientId",
-    "clientIdType",
-    "service",
-    "currentUserAffinityGroup",
-    "currentUserGGUserId")
+  val deleteRelationshipDetailsFields =
+    Seq("arn", "clientId", "clientIdType", "service", "currentUserAffinityGroup", "currentUserGGUserId")
 
-  def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
+  def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
+    auditEvent(
+      AgentClientRelationshipEvent.CreateRelationship,
+      "create-relationship",
       collectDetails(auditData.getDetails, createRelationshipDetailsFields))
-  }
 
-  def sendCreateRelationshipAuditEventForMtdVat(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.CreateRelationship, "create-relationship",
+  def sendCreateRelationshipAuditEventForMtdVat(
+    implicit hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData): Unit =
+    auditEvent(
+      AgentClientRelationshipEvent.CreateRelationship,
+      "create-relationship",
       collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat))
-  }
 
-  def sendCheckCESAAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.CheckCESA, "check-cesa",
+  def sendCheckCESAAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
+    auditEvent(
+      AgentClientRelationshipEvent.CheckCESA,
+      "check-cesa",
       collectDetails(auditData.getDetails, CheckCESADetailsFields))
-  }
 
-  def sendCheckESAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.CheckES, "check-es",
+  def sendCheckESAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
+    auditEvent(
+      AgentClientRelationshipEvent.CheckES,
+      "check-es",
       collectDetails(auditData.getDetails, CheckESDetailsFields))
-  }
 
-  def sendDeleteRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.DeleteRelationship, "delete-relationship",
+  def sendDeleteRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
+    auditEvent(
+      AgentClientRelationshipEvent.DeleteRelationship,
+      "delete-relationship",
       collectDetails(auditData.getDetails, deleteRelationshipDetailsFields))
-  }
 
-  private[audit] def auditEvent(event: AgentClientRelationshipEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {
+  private[audit] def auditEvent(
+    event: AgentClientRelationshipEvent,
+    transactionName: String,
+    details: Seq[(String, Any)] = Seq.empty)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] =
     send(createEvent(event, transactionName, details: _*))
-  }
 
-  private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, details: (String, Any)*)(implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
+  private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, details: (String, Any)*)(
+    implicit hc: HeaderCarrier,
+    request: Request[Any]): DataEvent = {
 
     def toString(x: Any): String = x match {
       case t: TaxIdentifier => t.value
-      case _ => x.toString
+      case _                => x.toString
     }
 
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
     val tags = hc.toAuditTags(transactionName, request.path)
-    DataEvent(
-      auditSource = "agent-client-relationships",
-      auditType = event.toString,
-      tags = tags,
-      detail = detail)
+    DataEvent(auditSource = "agent-client-relationships", auditType = event.toString, tags = tags, detail = detail)
   }
 
-  private def send(events: DataEvent*)(implicit hc: HeaderCarrier): Future[Unit] = {
+  private def send(events: DataEvent*)(implicit hc: HeaderCarrier): Future[Unit] =
     Future {
       events.foreach { event =>
         Try(auditConnector.sendEvent(event))
       }
     }
-  }
 
 }

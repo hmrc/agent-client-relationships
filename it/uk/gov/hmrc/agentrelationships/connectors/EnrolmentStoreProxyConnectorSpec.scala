@@ -7,17 +7,23 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
-import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, EnrolmentStoreProxyStubs }
-import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
-import uk.gov.hmrc.domain.{ AgentCode, Nino }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
+import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite with WireMockSupport
-  with EnrolmentStoreProxyStubs with DataStreamStub with MetricTestSupport with MockitoSugar {
+class EnrolmentStoreProxyConnectorSpec
+    extends UnitSpec
+    with OneServerPerSuite
+    with WireMockSupport
+    with EnrolmentStoreProxyStubs
+    with DataStreamStub
+    with MetricTestSupport
+    with MockitoSugar {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -26,15 +32,17 @@ class EnrolmentStoreProxyConnectorSpec extends UnitSpec with OneServerPerSuite w
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort)
+        "microservice.services.tax-enrolments.port"        -> wireMockPort,
+        "auditing.consumer.baseUri.host"                   -> wireMockHost,
+        "auditing.consumer.baseUri.port"                   -> wireMockPort
+      )
 
   implicit val hc = HeaderCarrier()
 
   val httpGet = app.injector.instanceOf[HttpGet with HttpPost with HttpDelete]
 
-  val connector = new EnrolmentStoreProxyConnector(wireMockBaseUrl, wireMockBaseUrl, httpGet, app.injector.instanceOf[Metrics])
+  val connector =
+    new EnrolmentStoreProxyConnector(wireMockBaseUrl, wireMockBaseUrl, httpGet, app.injector.instanceOf[Metrics])
 
   "EnrolmentStoreProxy" should {
 

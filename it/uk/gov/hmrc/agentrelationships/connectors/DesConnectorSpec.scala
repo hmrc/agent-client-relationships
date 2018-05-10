@@ -1,23 +1,29 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{ equalToJson, postRequestedFor, urlPathEqualTo, verify }
+import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
 import com.kenshoo.play.metrics.Metrics
 import org.joda.time.LocalDate
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.connectors.{ DesConnector, ItsaRelationship }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Utr, Vrn }
-import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs }
-import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
-import uk.gov.hmrc.domain.{ Nino, SaAgentReference }
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse }
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, ItsaRelationship}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs}
+import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
 
-class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs with DataStreamStub with MetricTestSupport {
+class DesConnectorSpec
+    extends UnitSpec
+    with OneAppPerSuite
+    with WireMockSupport
+    with DesStubs
+    with DataStreamStub
+    with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -35,7 +41,8 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
   private implicit val hc = HeaderCarrier()
   private implicit val ec = ExecutionContext.global
 
-  val desConnector = new DesConnector(wireMockBaseUrl, "token", "stub", httpGet, httpPost, app.injector.instanceOf[Metrics])
+  val desConnector =
+    new DesConnector(wireMockBaseUrl, "token", "stub", httpGet, httpPost, app.injector.instanceOf[Metrics])
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
@@ -112,7 +119,8 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
       val agentIds = Seq("001", "002", "003", "004", "005", "005", "007")
       givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
       givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
+      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(
+        SaAgentReference.apply)
     }
 
     "return empty seq when client has no active relationship with an agent" in {
@@ -191,8 +199,10 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
       await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("someArn")))
 
-      verify(1, postRequestedFor(urlPathEqualTo("/registration/relationship"))
-        .withRequestBody(equalToJson(s"""{ "regime": "ITSA"}""", true, true)))
+      verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withRequestBody(equalToJson(s"""{ "regime": "ITSA"}""", true, true)))
     }
 
     "request body contains regime as VATC and idType as VRN when client Id is a Vrn" in {
@@ -201,28 +211,37 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
 
       await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
 
-      verify(1, postRequestedFor(urlPathEqualTo("/registration/relationship"))
-        .withRequestBody(equalToJson(
-          s"""{
-             |"regime": "VATC",
-             |"idType" : "VRN",
-             |"relationshipType" : "ZA01",
-             |"authProfile" : "ALL00001"
-             |}""".stripMargin, true, true)))
+      verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withRequestBody(equalToJson(
+            s"""{
+               |"regime": "VATC",
+               |"idType" : "VRN",
+               |"relationshipType" : "ZA01",
+               |"authProfile" : "ALL00001"
+               |}""".stripMargin,
+            true,
+            true
+          ))
+      )
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(desConnector.createAgentRelationship(Utr("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(
+        desConnector.createAgentRelationship(Utr("foo"), Arn("bar")))
     }
 
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
-      an[Upstream5xxResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[Upstream5xxResponse] should be thrownBy await(
+        desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
 
     "fail when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[Upstream5xxResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[Upstream5xxResponse] should be thrownBy await(
+        desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
   }
 
@@ -252,17 +271,20 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(
+        desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar")))
     }
 
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
-      an[Upstream5xxResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[Upstream5xxResponse] should be thrownBy await(
+        desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
 
     "fail when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[Upstream5xxResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[Upstream5xxResponse] should be thrownBy await(
+        desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
   }
 

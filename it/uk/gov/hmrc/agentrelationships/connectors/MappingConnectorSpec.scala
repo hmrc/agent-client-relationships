@@ -5,14 +5,20 @@ import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Vrn }
-import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, MappingStubs }
-import uk.gov.hmrc.agentrelationships.support.{ MetricTestSupport, WireMockSupport }
-import uk.gov.hmrc.domain.{ AgentCode, SaAgentReference }
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpGet, Upstream5xxResponse }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
+import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
-class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSupport with MappingStubs with DataStreamStub with MetricTestSupport {
+class MappingConnectorSpec
+    extends UnitSpec
+    with OneAppPerSuite
+    with WireMockSupport
+    with MappingStubs
+    with DataStreamStub
+    with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -23,8 +29,9 @@ class MappingConnectorSpec extends UnitSpec with OneAppPerSuite with WireMockSup
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort)
+        "auditing.consumer.baseUri.host"           -> wireMockHost,
+        "auditing.consumer.baseUri.port"           -> wireMockPort
+      )
 
   private implicit val hc = HeaderCarrier()
 
