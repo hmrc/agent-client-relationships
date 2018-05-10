@@ -66,7 +66,7 @@ class EnrolmentStoreProxyConnector @Inject()(
           throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
         } else {
           if (userIds.lengthCompare(1) > 0) {
-            Logger.warn(s"Multiple userIds found for $enrolmentKeyPrefix")
+            Logger(getClass).warn(s"Multiple userIds found for $enrolmentKeyPrefix")
           }
           userIds.head
         }
@@ -92,7 +92,7 @@ class EnrolmentStoreProxyConnector @Inject()(
           throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
         } else {
           if (groupIds.lengthCompare(1) > 0) {
-            Logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
+            Logger(getClass).warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
           }
           groupIds.head
         }
@@ -136,7 +136,7 @@ class EnrolmentStoreProxyConnector @Inject()(
     }.map(_ => ())
       .recover {
         case e: Upstream4xxResponse if e.upstreamResponseCode == Status.CONFLICT =>
-          Logger.warn(
+          Logger(getClass).warn(
             s"An attempt to allocate new enrolment $enrolmentKeyPrefix resulted in conflict with an existing one.")
           ()
       }

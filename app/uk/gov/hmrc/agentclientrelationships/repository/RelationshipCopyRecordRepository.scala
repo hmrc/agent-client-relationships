@@ -132,7 +132,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
     insert(record).map { result =>
-      result.writeErrors.foreach(error => Logger.warn(s"Creating RelationshipCopyRecord failed: ${error.errmsg}"))
+      result.writeErrors.foreach(error =>
+        Logger(getClass).warn(s"Creating RelationshipCopyRecord failed: ${error.errmsg}"))
       result.n
     }
 
@@ -153,7 +154,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         "clientIdentifierType"           -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ETMP sync status ($status) failed: $error"))
+      update.writeResult.errMsg.foreach(error =>
+        Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error"))
     })
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
@@ -165,7 +167,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         "clientIdentifierType"           -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error => Logger.warn(s"Updating ES sync status ($status) failed: $error"))
+      update.writeResult.errMsg.foreach(error =>
+        Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error"))
     })
 
   def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int] =
