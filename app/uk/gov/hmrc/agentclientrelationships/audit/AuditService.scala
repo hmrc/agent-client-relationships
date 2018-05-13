@@ -34,7 +34,7 @@ import scala.util.Try
 import uk.gov.hmrc.http.HeaderCarrier
 
 object AgentClientRelationshipEvent extends Enumeration {
-  val CreateRelationship, CheckCESA, CheckES, DeleteRelationship = Value
+  val CreateRelationship, CheckCESA, CheckES, ClientRemovedAgentServiceAuthorisation = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -104,8 +104,8 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     "ESRelationship")
 
   val deleteRelationshipDetailsFields = Seq(
-    "arn",
-    "clientId",
+    "agentReferenceNumber",
+    "clientID",
     "clientIdType",
     "service",
     "currentUserAffinityGroup",
@@ -132,7 +132,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
   }
 
   def sendDeleteRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit = {
-    auditEvent(AgentClientRelationshipEvent.DeleteRelationship, "delete-relationship",
+    auditEvent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation, "client removed agent:service authorisation",
       collectDetails(auditData.getDetails, deleteRelationshipDetailsFields))
   }
 

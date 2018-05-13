@@ -359,8 +359,8 @@ class RelationshipsService @Inject() (
   def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], currentUser: CurrentUser): Future[Unit] = {
 
     implicit val auditData = new AuditData()
-    auditData.set("arn", arn.value)
-    auditData.set("clientId", taxIdentifier.value)
+    auditData.set("agentReferenceNumber", arn.value)
+    auditData.set("clientID", taxIdentifier.value)
     auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
     auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
     auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))

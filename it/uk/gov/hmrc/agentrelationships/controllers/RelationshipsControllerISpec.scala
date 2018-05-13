@@ -1017,19 +1017,19 @@ class RelationshipsControllerISpec extends UnitSpec
 
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
-    def verifyDeleteRelationshipAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, currentUserGGUserId: String) = {
+    def verifyClientRemovedAgentServiceAuthorisationAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, currentUserGGUserId: String) = {
       verifyAuditRequestSent(
         1,
-        event = AgentClientRelationshipEvent.DeleteRelationship,
+        event = AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation,
         detail = Map(
-          "arn" -> arn,
-          "clientId" -> clientId,
+          "agentReferenceNumber" -> arn,
+          "clientID" -> clientId,
           "clientIdType" -> clientIdType,
           "service" -> service,
           "currentUserAffinityGroup" -> currentUserAffinityGroup,
           "currentUserGGUserId" -> currentUserGGUserId),
         tags = Map(
-          "transactionName" -> "delete-relationship",
+          "transactionName" -> "client removed agent:service authorisation",
           "path" -> requestPath))
     }
 
@@ -1049,9 +1049,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
       }
 
-      "send an audit event called DeleteRelationship" in new StubsForThisScenario {
+      "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Agent", "ggUserId-agent")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Agent", "ggUserId-agent")
       }
     }
 
@@ -1070,9 +1070,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
       }
 
-      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
@@ -1090,9 +1090,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
       }
 
-      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
@@ -1110,9 +1110,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
       }
 
-      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
@@ -1131,9 +1131,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
       }
 
-      "send the audit event DeleteRelationship" in new StubsForThisScenario {
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyDeleteRelationshipAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
       }
     }
 
@@ -1147,10 +1147,10 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
       }
 
-      "not send the audit event DeleteRelationship" in {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserIsSubscribedAgent(Arn("unmatched"))
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
 
@@ -1160,10 +1160,10 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
       }
 
-      "not send the audit event DeleteRelationship" in {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserHasNoAgentEnrolments(arn)
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
 
@@ -1178,9 +1178,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
       }
 
-      "not send the audit event DeleteRelationship" in new StubsForThisScenario {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
 
@@ -1198,9 +1198,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
       }
 
-      "not send the audit event DeleteRelationship" in new StubsForThisScenario {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
 
@@ -1218,9 +1218,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
       }
 
-      "not send the audit event DeleteRelationship" in new StubsForThisScenario {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
 
@@ -1235,10 +1235,10 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
       }
 
-      "not send the audit event DeleteRelationship" in {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserIsSubscribedClient(MtdItId("unmatched"))
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
 
@@ -1248,10 +1248,10 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
       }
 
-      "not send the audit event DeleteRelationship" in {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserHasNoClientEnrolments
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
 
@@ -1265,9 +1265,9 @@ class RelationshipsControllerISpec extends UnitSpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
       }
 
-      "not send the audit event DeleteRelationship" in new StubsForScenario {
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.DeleteRelationship)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
       }
     }
   }
