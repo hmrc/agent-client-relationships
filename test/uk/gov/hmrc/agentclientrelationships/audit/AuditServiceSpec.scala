@@ -21,12 +21,12 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.time.{ Millis, Span }
+import org.scalatest.time.{Millis, Span}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.{ AgentCode, Nino }
+import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging.{ Authorization, RequestId, SessionId }
+import uk.gov.hmrc.http.logging.{Authorization, RequestId, SessionId}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.test.UnitSpec
@@ -35,9 +35,7 @@ import scala.concurrent.ExecutionContext
 
 class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
-  implicit val patience = PatienceConfig(
-    timeout = scaled(Span(500, Millis)),
-    interval = scaled(Span(200, Millis)))
+  implicit val patience = PatienceConfig(timeout = scaled(Span(500, Millis)), interval = scaled(Span(200, Millis)))
 
   "auditEvent" should {
     "send an CreateRelationship event with the correct fields" in {
@@ -64,10 +62,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("Journey", "CopyExistingCESARelationship")
       auditData.set("AgentDBRecord", true)
 
-      await(service.sendCreateRelationshipAuditEvent(
-        hc,
-        FakeRequest("GET", "/path"),
-        auditData))
+      await(service.sendCreateRelationshipAuditEvent(hc, FakeRequest("GET", "/path"), auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
@@ -118,10 +113,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("nino", Nino("KS969148D").value)
       auditData.set("CESARelationship", true)
 
-      await(service.sendCheckCESAAuditEvent(
-        hc,
-        FakeRequest("GET", "/path"),
-        auditData))
+      await(service.sendCheckCESAAuditEvent(hc, FakeRequest("GET", "/path"), auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

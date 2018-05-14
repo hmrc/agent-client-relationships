@@ -19,13 +19,13 @@ package uk.gov.hmrc.agentclientrelationships.auth
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatestplus.play.OneAppPerSuite
-import play.api.mvc.{ Result, Results }
+import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{ NoPermissionOnAgencyOrClient, NoPermissionOnClient }
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{NoPermissionOnAgencyOrClient, NoPermissionOnClient}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.{ Credentials, Retrieval, ~ }
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, Retrieval, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.microservice.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
@@ -40,18 +40,22 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   private lazy val mtdItId = "ABCDEFGH"
   private lazy val vrn = "101747641"
 
-  private val agentEnrolment = Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("AgentReferenceNumber", arn)),
-    state = "", delegatedAuthRule = None)
+  private val agentEnrolment = Enrolment(
+    "HMRC-AS-AGENT",
+    Seq(EnrolmentIdentifier("AgentReferenceNumber", arn)),
+    state = "",
+    delegatedAuthRule = None)
 
-  private val mtdItIdEnrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)),
-    state = "", delegatedAuthRule = None)
+  private val mtdItIdEnrolment =
+    Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)), state = "", delegatedAuthRule = None)
 
-  private val mtdVatIdEnrolment = Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)),
-    state = "", delegatedAuthRule = None)
+  private val mtdVatIdEnrolment =
+    Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)), state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {
-    def testAuthActions(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) { implicit request => _ =>
-      Future.successful(Ok)
+    def testAuthActions(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
+      implicit request => _ =>
+        Future.successful(Ok)
     }
 
     def testAuthorisedAsClient = AuthorisedAsItSaClient { implicit request => _ =>
@@ -65,17 +69,23 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
-    when(mockAuthConnector.authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
+    when(
+      mockAuthConnector
+        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
       .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), credentials))
 
   def mockClientAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
-    when(mockAuthConnector.authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
+    when(
+      mockAuthConnector
+        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
       .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), credentials))
 
-  def mockClientAuthWithoutCredRetrieval(affinityGroup: AffinityGroup = AffinityGroup.Individual, enrolment: Set[Enrolment]) =
+  def mockClientAuthWithoutCredRetrieval(
+    affinityGroup: AffinityGroup = AffinityGroup.Individual,
+    enrolment: Set[Enrolment]) =
     when(mockAuthConnector.authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(any(), any()))
       .thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
 
@@ -99,13 +109,15 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
 
       "return NoPermissionOnAgencyOrClient if Agent has a different Arn and different client identifier" in {
         mockAgentAuth(enrolment = Set(agentEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId("NON_MATCHING")).apply(fakeRequest)
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId("NON_MATCHING")).apply(fakeRequest)
         await(result) shouldBe NoPermissionOnAgencyOrClient
       }
 
       "return NoPermissionOnAgencyOrClient if Agent has a different Arn but a matching client identifier" in {
         mockAgentAuth(enrolment = Set(agentEnrolment, mtdItIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId(mtdItId)).apply(fakeRequest)
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId(mtdItId)).apply(fakeRequest)
         await(result) shouldBe NoPermissionOnAgencyOrClient
       }
 

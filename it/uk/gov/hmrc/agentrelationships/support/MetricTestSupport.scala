@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentrelationships.support
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import org.scalatest.{ Matchers, Suite }
+import org.scalatest.{Matchers, Suite}
 import play.api.Application
 
 import scala.collection.JavaConversions
@@ -22,8 +22,7 @@ trait MetricTestSupport {
     metricsRegistry = registry
   }
 
-  def timerShouldExistsAndBeenUpdated(metric: String): Unit = {
+  def timerShouldExistsAndBeenUpdated(metric: String): Unit =
     metricsRegistry.getTimers.get(s"Timer-$metric").getCount should be >= 1L
-  }
 
 }

@@ -25,32 +25,32 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
-import uk.gov.hmrc.agentrelationships.stubs.{ DataStreamStub, DesStubs, MappingStubs }
-import uk.gov.hmrc.agentrelationships.support.{ MongoApp, Resource, WireMockSupport }
-import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference, TaxIdentifier }
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, MappingStubs}
+import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
-class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: ReactiveMongoComponent)
-  extends MongoRelationshipCopyRecordRepository(moduleComponent) {
-  override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] = {
+class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: ReactiveMongoComponent)
+    extends MongoRelationshipCopyRecordRepository(moduleComponent) {
+  override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
     Future.failed(new Exception("Could not connect the mongo db."))
-  }
 }
 
-class RelationshipsControllerWithoutMongoISpec extends UnitSpec
-  with MongoApp
-  with OneServerPerSuite
-  with WireMockSupport
-  with RelationshipStubs
-  with DesStubs
-  with MappingStubs
-  with DataStreamStub {
+class RelationshipsControllerWithoutMongoISpec
+    extends UnitSpec
+    with MongoApp
+    with OneServerPerSuite
+    with WireMockSupport
+    with RelationshipStubs
+    with DesStubs
+    with MappingStubs
+    with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -59,18 +59,18 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "microservice.services.users-groups-search.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort)
+        "microservice.services.tax-enrolments.port"        -> wireMockPort,
+        "microservice.services.users-groups-search.port"   -> wireMockPort,
+        "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.auth.port"                  -> wireMockPort,
+        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "auditing.consumer.baseUri.host"                   -> wireMockHost,
+        "auditing.consumer.baseUri.port"                   -> wireMockPort
+      )
       .configure(mongoConfiguration)
       .overrides(new AbstractModule {
-        override def configure(): Unit = {
+        override def configure(): Unit =
           bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
-        }
       })
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
@@ -92,7 +92,8 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
+    val requestPath =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
 
     //val identifier: TaxIdentifier = mtditid
     val identifierType: String = "MTDITID"
@@ -109,7 +110,8 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
+      def query =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 
@@ -122,36 +124,35 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "service" -> "mtd-it",
-          "clientId" -> mtditid.value,
-          "clientIdType" -> "mtditid",
-          "CESARelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "nino"                    -> nino.value,
+          "saAgentRef"              -> "foo",
+          "service"                 -> "mtd-it",
+          "clientId"                -> mtditid.value,
+          "clientIdType"            -> "mtditid",
+          "CESARelationship"        -> "true",
           "etmpRelationshipCreated" -> "false",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "false",
-          "Journey" -> "CopyExistingCESARelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "false",
+          "Journey"                 -> "CopyExistingCESARelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "bar",
+          "nino"                     -> nino.value,
+          "saAgentRef"               -> "foo",
+          "CESARelationship"         -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
   }
 
@@ -182,34 +183,33 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "service" -> "mtd-vat",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "ESRelationship" -> "true",
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "service"                 -> "mtd-vat",
+          "vrn"                     -> vrn.value,
+          "oldAgentCodes"           -> oldAgentCode,
+          "ESRelationship"          -> "true",
           "etmpRelationshipCreated" -> "false",
-          "enrolmentDelegated" -> "false",
-          "AgentDBRecord" -> "false",
-          "Journey" -> "CopyExistingESRelationship"),
-        tags = Map(
-          "transactionName" -> "create-relationship",
-          "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "AgentDBRecord"           -> "false",
+          "Journey"                 -> "CopyExistingESRelationship"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
-          "arn" -> arn.value,
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "ESRelationship" -> "true",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode),
-        tags = Map(
-          "transactionName" -> "check-es",
-          "path" -> requestPath))
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "bar",
+          "ESRelationship"           -> "true",
+          "vrn"                      -> vrn.value,
+          "oldAgentCodes"            -> oldAgentCode),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
     }
   }
 
@@ -225,7 +225,8 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()
 
-      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+      def query =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
 
       await(query) shouldBe empty
 
@@ -234,24 +235,17 @@ class RelationshipsControllerWithoutMongoISpec extends UnitSpec
 
       await(query) shouldBe empty
 
-      verifyAuditRequestNotSent(
-        event = AgentClientRelationshipEvent.CreateRelationship)
+      verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map(
-          "arn" -> arn.value,
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "CESARelationship" -> "true"),
-        tags = Map(
-          "transactionName" -> "check-cesa",
-          "path" -> requestPath))
+        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "foo", "CESARelationship" -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
   }
 
   private def doAgentRequest(route: String) = new Resource(route, port).get()
 
 }
-

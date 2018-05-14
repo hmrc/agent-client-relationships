@@ -19,10 +19,11 @@ package uk.gov.hmrc.agentclientrelationships.services
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 trait RecoveryLockService {
 
-  def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
+  def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(
+    implicit ec: ExecutionContext): Future[Option[T]]
 
 }

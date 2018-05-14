@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.binders
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Vrn }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.Nino
 
 object PathBinders {

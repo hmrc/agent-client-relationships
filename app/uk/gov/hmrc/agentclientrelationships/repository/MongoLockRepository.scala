@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.lock.LockRepository
 
 @Singleton
-class MongoLockRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent) extends LockRepository()(mongoComponent.mongoConnector.db)
+class MongoLockRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends LockRepository()(mongoComponent.mongoConnector.db)
