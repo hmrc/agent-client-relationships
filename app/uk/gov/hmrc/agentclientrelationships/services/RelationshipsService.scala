@@ -425,12 +425,13 @@ class RelationshipsService @Inject()(
     currentUser: CurrentUser): Future[Unit] = {
 
     implicit val auditData = new AuditData()
-    auditData.set("arn", arn.value)
+    auditData.set("agentReferenceNumber", arn.value)
     auditData.set("clientId", taxIdentifier.value)
     auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
     auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
     auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
-    auditData.set("currentUserGGUserId", currentUser.credentials.providerId)
+    auditData.set("authProviderId", currentUser.credentials.providerId)
+    auditData.set("authProviderIdType", currentUser.credentials.providerType)
 
     def esDeAllocation(clientGroupId: String) =
       (for {
