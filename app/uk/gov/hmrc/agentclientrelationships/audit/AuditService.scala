@@ -97,7 +97,8 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "clientIdType",
       "service",
       "currentUserAffinityGroup",
-      "currentUserGGUserId")
+      "authProviderId",
+      "authProviderIdType")
 
   def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
     auditEvent(

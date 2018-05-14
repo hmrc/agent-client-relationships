@@ -1033,7 +1033,7 @@ class RelationshipsControllerISpec
     val requestPath: String =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
-    def verifyClientRemovedAgentServiceAuthorisationAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, currentUserGGUserId: String) = {
+    def verifyClientRemovedAgentServiceAuthorisationAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, authProviderId: String, authProviderIdType: String) = {
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation,
@@ -1043,7 +1043,8 @@ class RelationshipsControllerISpec
           "clientIdType" -> clientIdType,
           "service" -> service,
           "currentUserAffinityGroup" -> currentUserAffinityGroup,
-          "currentUserGGUserId" -> currentUserGGUserId),
+          "authProviderId" -> authProviderId,
+          "authProviderIdType" -> authProviderIdType),
         tags = Map(
           "transactionName" -> "client removed agent:service authorisation",
           "path" -> requestPath))
@@ -1067,7 +1068,7 @@ class RelationshipsControllerISpec
 
       "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Agent", "ggUserId-agent")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Agent", "ggUserId-agent", "GovernmentGateway")
       }
     }
 
@@ -1088,7 +1089,7 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
       }
     }
 
@@ -1108,7 +1109,7 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
       }
     }
 
@@ -1128,7 +1129,7 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
       }
     }
 
@@ -1149,7 +1150,7 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
       }
     }
 

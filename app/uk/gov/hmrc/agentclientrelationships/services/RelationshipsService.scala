@@ -430,7 +430,8 @@ class RelationshipsService @Inject()(
     auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
     auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
     auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
-    auditData.set("currentUserGGUserId", currentUser.credentials.providerId)
+    auditData.set("authProviderId", currentUser.credentials.providerId)
+    auditData.set("authProviderIdType", currentUser.credentials.providerType)
 
     def esDeAllocation(clientGroupId: String) =
       (for {
