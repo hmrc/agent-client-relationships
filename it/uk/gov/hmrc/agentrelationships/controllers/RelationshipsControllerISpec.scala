@@ -1023,7 +1023,7 @@ class RelationshipsControllerISpec extends UnitSpec
         event = AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation,
         detail = Map(
           "agentReferenceNumber" -> arn,
-          "clientID" -> clientId,
+          "clientId" -> clientId,
           "clientIdType" -> clientIdType,
           "service" -> service,
           "currentUserAffinityGroup" -> currentUserAffinityGroup,

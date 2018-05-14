@@ -105,7 +105,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
 
   val deleteRelationshipDetailsFields = Seq(
     "agentReferenceNumber",
-    "clientID",
+    "clientId",
     "clientIdType",
     "service",
     "currentUserAffinityGroup",

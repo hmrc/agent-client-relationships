@@ -360,7 +360,7 @@ class RelationshipsService @Inject() (
 
     implicit val auditData = new AuditData()
     auditData.set("agentReferenceNumber", arn.value)
-    auditData.set("clientID", taxIdentifier.value)
+    auditData.set("clientId", taxIdentifier.value)
     auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
     auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
     auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
