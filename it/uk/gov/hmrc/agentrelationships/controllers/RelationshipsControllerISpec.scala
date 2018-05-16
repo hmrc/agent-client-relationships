@@ -1036,7 +1036,7 @@ class RelationshipsControllerISpec
     def verifyClientRemovedAgentServiceAuthorisationAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, authProviderId: String, authProviderIdType: String) = {
       verifyAuditRequestSent(
         1,
-        event = AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation,
+        event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
         detail = Map(
           "agentReferenceNumber" -> arn,
           "clientId" -> clientId,
@@ -1166,7 +1166,7 @@ class RelationshipsControllerISpec
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserIsSubscribedAgent(Arn("unmatched"))
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1179,7 +1179,7 @@ class RelationshipsControllerISpec
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserHasNoAgentEnrolments(arn)
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1196,7 +1196,7 @@ class RelationshipsControllerISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1216,7 +1216,7 @@ class RelationshipsControllerISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1236,7 +1236,7 @@ class RelationshipsControllerISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1253,7 +1253,7 @@ class RelationshipsControllerISpec
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserIsSubscribedClient(MtdItId("unmatched"))
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1266,7 +1266,7 @@ class RelationshipsControllerISpec
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
         givenUserHasNoClientEnrolments
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1282,7 +1282,7 @@ class RelationshipsControllerISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation)
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
   }
