@@ -130,7 +130,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   def sendDeleteRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
     auditEvent(
       AgentClientRelationshipEvent.ClientRemovedAgentServiceAuthorisation,
-      "client removed agent:service authorisation",
+      "client terminated agent:service authorisation",
       collectDetails(auditData.getDetails, deleteRelationshipDetailsFields)
     )
 

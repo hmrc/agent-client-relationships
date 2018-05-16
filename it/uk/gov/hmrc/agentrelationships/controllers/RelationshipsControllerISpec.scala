@@ -1046,7 +1046,7 @@ class RelationshipsControllerISpec
           "authProviderId" -> authProviderId,
           "authProviderIdType" -> authProviderIdType),
         tags = Map(
-          "transactionName" -> "client removed agent:service authorisation",
+          "transactionName" -> "client terminated agent:service authorisation",
           "path" -> requestPath))
     }
 
