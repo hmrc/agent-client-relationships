@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
+import play.api.Mode
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentMtdIt, EnrolmentMtdVat, TypeOfEnrolment}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
@@ -86,4 +88,13 @@ trait AuthActions extends AuthorisedFunctions {
           }
       }
   }
+
+  protected def AuthorisedWithStride(strideRole: String)(body: Request[AnyContent] => String => Future[Result]) =
+    Action.async { implicit request =>
+      implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+      authorised(Enrolment(strideRole) and AuthProviders(PrivilegedApplication))
+        .retrieve(credentials) {
+          case Credentials(strideId, _) => body(request)(strideId)
+        }
+    }
 }

@@ -1033,22 +1033,28 @@ class RelationshipsControllerISpec
     val requestPath: String =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
-    def verifyClientRemovedAgentServiceAuthorisationAuditSent(arn: String, clientId: String, clientIdType: String, service: String, currentUserAffinityGroup: String, authProviderId: String, authProviderIdType: String) = {
+    def verifyClientRemovedAgentServiceAuthorisationAuditSent(
+      arn: String,
+      clientId: String,
+      clientIdType: String,
+      service: String,
+      currentUserAffinityGroup: String,
+      authProviderId: String,
+      authProviderIdType: String) =
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
         detail = Map(
-          "agentReferenceNumber" -> arn,
-          "clientId" -> clientId,
-          "clientIdType" -> clientIdType,
-          "service" -> service,
+          "agentReferenceNumber"     -> arn,
+          "clientId"                 -> clientId,
+          "clientIdType"             -> clientIdType,
+          "service"                  -> service,
           "currentUserAffinityGroup" -> currentUserAffinityGroup,
-          "authProviderId" -> authProviderId,
-          "authProviderIdType" -> authProviderIdType),
-        tags = Map(
-          "transactionName" -> "client terminated agent:service authorisation",
-          "path" -> requestPath))
-    }
+          "authProviderId"           -> authProviderId,
+          "authProviderIdType"       -> authProviderIdType
+        ),
+        tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
+      )
 
     "the relationship exists and the Arn matches that of current Agent user" should {
 
@@ -1068,7 +1074,14 @@ class RelationshipsControllerISpec
 
       "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Agent", "ggUserId-agent", "GovernmentGateway")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Agent",
+          "ggUserId-agent",
+          "GovernmentGateway")
       }
     }
 
@@ -1089,7 +1102,14 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
       }
     }
 
@@ -1109,7 +1129,14 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
       }
     }
 
@@ -1129,7 +1156,14 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
       }
     }
 
@@ -1150,7 +1184,14 @@ class RelationshipsControllerISpec
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(arn.value, mtdItId.value, "MtdItId", "HMRC-MTD-IT", "Individual", "ggUserId-client", "GovernmentGateway")
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
       }
     }
 
@@ -1693,7 +1734,7 @@ class RelationshipsControllerISpec
     }
   }
 
-  "getItsaRelationship" should {
+  "getItsaRelationships" should {
     val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
     val requestPath: String = s"/agent-client-relationships/service/HMRC-MTD-IT/client/relationship"
 
@@ -1751,7 +1792,72 @@ class RelationshipsControllerISpec
       result.status shouldBe 404
     }
   }
-  "getVatRelationship" should {
+
+  "getItsaRelationshipsByNino" should {
+    val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+    val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-IT/client/NI/$nino"
+
+    def doRequest = doAgentGetRequest(requestPath)
+    val req = FakeRequest()
+
+    "find relationship and send back Json" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getClientActiveAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      val b = result.json
+      (result.json \ "arn").get.as[String] shouldBe arn.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "find relationship but filter out if the end date has been changed from 9999-12-31" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getClientActiveButEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "find multiple relationships but filter out active and ended relationships" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getClientActiveButSomeEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value, arn2.value, arn3.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      (result.json \ "arn").get.as[String] shouldBe arn3.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "return 404 when DES returns 404 relationship not found" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns 400 (treated as relationship not found)" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 400)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
+
+  "getVatRelationships" should {
     val vrnEncoded = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
     val requestPath: String = s"/agent-client-relationships/service/HMRC-MTD-VAT/client/relationship"
 
@@ -1809,35 +1915,63 @@ class RelationshipsControllerISpec
       result.status shouldBe 404
     }
   }
-}
 
-trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
+  "getVatRelationshipsByVrn" should {
+    val vrnEncoded = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
+    val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
-  def givenPrincipalUser(taxIdentifier: TaxIdentifier, groupId: String, userId: String = "any") = {
-    givenPrincipalGroupIdExistsFor(taxIdentifier, groupId)
-    givenPrincipalUserIdExistFor(taxIdentifier, userId)
-  }
+    def doRequest = doAgentGetRequest(requestPath)
+    val req = FakeRequest()
 
-  def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) =
-    givenDelegatedGroupIdsNotExistFor(mtdItId)
+    "find relationship and send back Json" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      getClientActiveAgentRelationshipsVat(vrnEncoded, arn.value)
 
-  def givenDelegatedGroupIdsNotExistForNino(nino: Nino) =
-    givenDelegatedGroupIdsNotExistFor(nino)
+      val result = await(doRequest)
+      result.status shouldBe 200
 
-  def givenDelegatedGroupIdsNotExistForMtdVatId(vrn: Vrn) =
-    givenDelegatedGroupIdsNotExistFor(vrn)
+      val b = result.json
+      (result.json \ "arn").get.as[String] shouldBe arn.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
 
-  def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, agentCode)
+    "find relationship but filter out if the end date has been changed from 9999-12-31" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      getClientActiveButEndedAgentRelationshipsVat(vrnEncoded, arn.value)
 
-  def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, agentCode)
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
 
-  def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) =
-    givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))
+    "find multiple relationships but filter out active and ended relationships" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      getClientActiveButSomeEndedAgentRelationshipsVat(vrnEncoded, arn.value, arn2.value, arn3.value)
 
-  def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn: Vrn, agentCode: String) = {
-    givenDelegatedGroupIdsExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}", Set("oldvatfoo"))
-    givenGroupInfo("oldvatfoo", agentCode)
+      val result = await(doRequest)
+      result.status shouldBe 200
+      (result.json \ "arn").get.as[String] shouldBe arn3.value
+      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "return 404 when DES returns 404 relationship not found" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      getFailClientActiveAgentRelationshipsVat(vrnEncoded, status = 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns 400 (treated as relationship not found)" in {
+      authorisedAsStrideUser(req, "someStrideId")
+      givenAuditConnector()
+      getFailClientActiveAgentRelationshipsVat(vrnEncoded, status = 400)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
   }
 }

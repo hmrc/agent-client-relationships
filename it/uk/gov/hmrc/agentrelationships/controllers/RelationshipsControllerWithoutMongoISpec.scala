@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import javax.inject.Inject
-
 import com.google.inject.AbstractModule
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
@@ -27,7 +26,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, MappingStubs}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, MappingStubs, RelationshipStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier

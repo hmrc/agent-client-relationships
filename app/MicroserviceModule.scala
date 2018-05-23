@@ -66,6 +66,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 
     bindProperty("des.environment", "des.environment")
     bindProperty("des.authorizationToken", "des.authorization-token")
+    bindProperty1Param("auth.stride.role")
     bindBooleanProperty("features.copy-relationship.mtd-it")
     bindBooleanProperty("features.copy-relationship.mtd-vat")
   }
