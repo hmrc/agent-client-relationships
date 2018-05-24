@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
-import play.api.Mode
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentMtdIt, EnrolmentMtdVat, TypeOfEnrolment}
@@ -41,30 +40,41 @@ trait AuthActions extends AuthorisedFunctions {
 
   protected type RequestAndCurrentUser = Request[AnyContent] => CurrentUser => Future[Result]
 
-  def AuthorisedAgentOrClient(arn: Arn, clientId: TaxIdentifier)(body: RequestAndCurrentUser): Action[AnyContent] =
+  def AuthorisedAgentOrClientOrStrideUser(arn: Arn, clientId: TaxIdentifier, strideRole: String)(
+    body: RequestAndCurrentUser): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
-      authorised(AuthProviders(GovernmentGateway)).retrieve(allEnrolments and affinityGroup and credentials) {
-        case enrol ~ affinityG ~ creds => {
-
-          val requiredIdentifier = affinityG match {
-            case Some(AffinityGroup.Agent) => arn
-            case _                         => clientId
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+      authorised().retrieve(allEnrolments and affinityGroup and credentials) {
+        case enrolments ~ affinity ~ creds =>
+          creds.providerType match {
+            case "GovernmentGateway" if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, arn, clientId) =>
+              body(request)(CurrentUser(creds, affinity))
+            case "PrivilegedApplication" if hasRequiredStrideRole(enrolments, strideRole) =>
+              body(request)(CurrentUser(creds, None))
+            case _ =>
+              Future successful NoPermissionToPerformOperation
           }
-
-          val requiredEnrolmentType = TypeOfEnrolment(requiredIdentifier)
-
-          val actualIdFromEnrolment: Option[TaxIdentifier] =
-            requiredEnrolmentType.findEnrolmentIdentifier(enrol.enrolments)
-
-          if (actualIdFromEnrolment.contains(requiredIdentifier)) {
-            body(request)(CurrentUser(creds, affinityG))
-          } else {
-            Future successful NoPermissionOnAgencyOrClient
-          }
-        }
       }
     }
+
+  def hasRequiredEnrolmentMatchingIdentifier(
+    enrolments: Enrolments,
+    affinity: Option[AffinityGroup],
+    arn: Arn,
+    clientId: TaxIdentifier): Boolean =
+    affinity
+      .map {
+        case AffinityGroup.Agent => arn
+        case _                   => clientId
+      }
+      .exists(
+        requiredIdentifier =>
+          TypeOfEnrolment(requiredIdentifier)
+            .extractIdentifierFrom(enrolments.enrolments)
+            .contains(requiredIdentifier))
+
+  def hasRequiredStrideRole(enrolments: Enrolments, strideRole: String): Boolean =
+    enrolments.enrolments.exists(_.key == strideRole)
 
   def AuthorisedAsItSaClient[A] = AuthorisedAsClient(EnrolmentMtdIt, MtdItId.apply) _
 
@@ -84,7 +94,7 @@ trait AuthActions extends AuthorisedFunctions {
 
           id match {
             case Some(x) => body(request)(wrap(x))
-            case _       => Future.successful(NoPermissionOnClient)
+            case _       => Future.successful(NoPermissionToPerformOperation)
           }
       }
   }

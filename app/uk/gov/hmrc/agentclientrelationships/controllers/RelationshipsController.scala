@@ -111,8 +111,8 @@ class RelationshipsController @Inject()(
 
   def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
 
-  private def create(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
-    implicit request => _ =>
+  private def create(arn: Arn, identifier: TaxIdentifier) =
+    AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRole) { implicit request => _ =>
       implicit val auditData = new AuditData()
       auditData.set("arn", arn)
 
@@ -133,10 +133,10 @@ class RelationshipsController @Inject()(
             Logger(getClass).warn("Could not create relationship", ex)
             NotFound(toJson(ex.getMessage))
         }
-  }
+    }
 
   private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
-    AuthorisedAgentOrClient(arn, taxIdentifier) { implicit request => implicit currentUser =>
+    AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRole) { implicit request => implicit currentUser =>
       service
         .deleteRelationship(arn, taxIdentifier)
         .map(_ => NoContent)

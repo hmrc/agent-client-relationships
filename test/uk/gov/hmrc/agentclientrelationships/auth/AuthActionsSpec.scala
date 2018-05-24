@@ -21,7 +21,7 @@ import org.mockito.Mockito._
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.{NoPermissionOnAgencyOrClient, NoPermissionOnClient}
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionToPerformOperation
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core._
@@ -36,9 +36,10 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
 
   lazy val mockAuthConnector = mock[AuthConnector]
 
-  private lazy val arn = "TARN0000001"
-  private lazy val mtdItId = "ABCDEFGH"
-  private lazy val vrn = "101747641"
+  private val arn = "TARN0000001"
+  private val mtdItId = "ABCDEFGH"
+  private val vrn = "101747641"
+  private val requiredStrideRole = "requiredStrideRole"
 
   private val agentEnrolment = Enrolment(
     "HMRC-AS-AGENT",
@@ -53,10 +54,10 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
     Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)), state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {
-    def testAuthActions(arn: Arn, identifier: TaxIdentifier) = AuthorisedAgentOrClient(arn, identifier) {
-      implicit request => _ =>
+    def testAuthActions(arn: Arn, identifier: TaxIdentifier, strideRole: String) =
+      AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRole) { implicit request => _ =>
         Future.successful(Ok)
-    }
+      }
 
     def testAuthorisedAsClient = AuthorisedAsItSaClient { implicit request => _ =>
       Future.successful(Ok)
@@ -83,6 +84,17 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
         .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
       .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), credentials))
 
+  def mockStrideAuth(
+    strideRole: String,
+    credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication")) =
+    when(
+      mockAuthConnector
+        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
+      .thenReturn(
+        Future successful new ~(
+          new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
+          credentials))
+
   def mockClientAuthWithoutCredRetrieval(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment]) =
@@ -93,81 +105,108 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
 
   val testAuthImpl = new TestAuth
 
-  "AuthorisedAgentOrClient" when {
-    "affinity group is Agent" should {
+  "AuthorisedAgentOrClientOrStrideUser" when {
+    "auth provider is GovernmentGateway and affinity group is Agent" should {
       "return Ok if Agent has matching Arn in its enrolments" in {
         mockAgentAuth(enrolment = Set(agentEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
         await(result) shouldBe Ok
       }
 
-      "return NoPermissionOnAgencyOrClient if Agent doesn't have the correct enrolment" in {
+      "return NoPermissionToPerformOperation if Agent doesn't have the correct enrolment" in {
         mockAgentAuth(enrolment = Set(agentEnrolment.copy(key = "NOT_CORRECT_ENROLMENT")))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
 
-      "return NoPermissionOnAgencyOrClient if Agent has a different Arn and different client identifier" in {
+      "return NoPermissionToPerformOperation if Agent has a different Arn and different client identifier" in {
         mockAgentAuth(enrolment = Set(agentEnrolment))
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId("NON_MATCHING")).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+          testAuthImpl
+            .testAuthActions(Arn("NON_MATCHING"), MtdItId("NON_MATCHING"), requiredStrideRole)
+            .apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
 
-      "return NoPermissionOnAgencyOrClient if Agent has a different Arn but a matching client identifier" in {
+      "return NoPermissionToPerformOperation if Agent has a different Arn but a matching client identifier" in {
         mockAgentAuth(enrolment = Set(agentEnrolment, mtdItIdEnrolment))
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId(mtdItId)).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+          testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
 
-      "return NoPermissionOnAgencyOrClient if Agent has only a matching client identifier" in {
+      "return NoPermissionToPerformOperation if Agent has only a matching client identifier" in {
         mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdItIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
 
-      "return NoPermissionOnAgencyOrClient if Agent has only an enrolment with a different identifier type" in {
+      "return NoPermissionToPerformOperation if Agent has only an enrolment with a different identifier type" in {
         mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
     }
 
-    "affinity group is not Agent" should {
+    "auth provider is GovernmentGateway and affinity group is not Agent" should {
       "return Ok if Client has matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
         await(result) shouldBe Ok
       }
 
       "return Ok if Client has matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn)).apply(fakeRequest)
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn), requiredStrideRole).apply(fakeRequest)
         await(result) shouldBe Ok
       }
 
-      "return NoPermissionOnAgencyOrClient if Client has a non-matching MtdItId in their enrolments" in {
+      "return NoPermissionToPerformOperation if Client has a non-matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING")).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING"), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
 
-      "return NoPermissionOnAgencyOrClient if Client has a non-matching Vrn in their enrolments" in {
+      "return NoPermissionToPerformOperation if Client has a non-matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING")).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING"), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
 
-      "return NoPermissionOnAgencyOrClient if Client has only an enrolment with a different identifier type" in {
+      "return NoPermissionToPerformOperation if Client has only an enrolment with a different identifier type" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId)).apply(fakeRequest)
-        await(result) shouldBe NoPermissionOnAgencyOrClient
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
+      }
+    }
+
+    "auth provider is PrivilegedApplication" should {
+      "return Ok if Stride user has required role" in {
+        mockStrideAuth(requiredStrideRole)
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe Ok
+      }
+
+      "return NoPermissionToPerformOperation if Stride user has unsupported role" in {
+        mockStrideAuth("foo")
+        val result: Future[Result] =
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), requiredStrideRole).apply(fakeRequest)
+        await(result) shouldBe NoPermissionToPerformOperation
       }
     }
   }
 
-  "AuthorisedAgentOrClient" should {
+  "AuthorisedAsClient" should {
     "return Ok if client has HMRC-MTD-IT enrolment" in {
       mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdItIdEnrolment))
       val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
@@ -177,7 +216,29 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
     "return Forbidden if client has other enrolment" in {
       mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdVatIdEnrolment))
       val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
-      await(result) shouldBe NoPermissionOnClient
+      await(result) shouldBe NoPermissionToPerformOperation
     }
+  }
+
+  "hasRequiredStrideRole" should {
+    "return true if enrolments contains required stride role" in {
+      testAuthImpl
+        .hasRequiredStrideRole(Enrolments(Set(new Enrolment("foo", Seq.empty, "", None))), "foo") shouldBe true
+      testAuthImpl.hasRequiredStrideRole(
+        Enrolments(
+          Set(
+            new Enrolment("boo", Seq.empty, "", None),
+            new Enrolment("foo", Seq.empty, "", None),
+            new Enrolment("woo", Seq.empty, "", None))),
+        "foo") shouldBe true
+    }
+
+    "return false if enrolments does not contain required stride role" in {
+      testAuthImpl.hasRequiredStrideRole(
+        Enrolments(Set(new Enrolment("woo", Seq.empty, "", None), new Enrolment("boo", Seq.empty, "", None))),
+        "foo") shouldBe false
+      testAuthImpl.hasRequiredStrideRole(Enrolments(Set.empty), "foo") shouldBe false
+    }
+
   }
 }

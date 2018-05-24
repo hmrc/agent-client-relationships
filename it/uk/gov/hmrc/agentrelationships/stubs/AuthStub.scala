@@ -147,6 +147,27 @@ trait AuthStub {
     this
   }
 
+  def givenUserIsAuthenticatedWithStride(strideRole: String, strideUserId: String): AuthStub = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"affinityGroup": "Individual",
+                         |"allEnrolments": [{
+                         |  "key": "$strideRole"
+                         |	}],
+                         |  "credentials": {
+                         |    "providerId": "$strideUserId",
+                         |    "providerType": "PrivilegedApplication"
+                         |  }
+                         |}
+       """.stripMargin)))
+    this
+  }
+
   def authorisedAsClientItSa[A](request: FakeRequest[A], mtdItId: String): FakeRequest[A] =
     authenticated(request, Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId), isAgent = false)
 
