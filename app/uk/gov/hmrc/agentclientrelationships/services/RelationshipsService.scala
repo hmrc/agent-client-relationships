@@ -466,6 +466,13 @@ class RelationshipsService @Inject()(
     clientId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
     des.getActiveClientItsaRelationships(clientId)
 
+  def getItsaRelationshipForClient(
+    nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
+    for {
+      mtdItId       <- des.getMtdIdFor(nino)
+      relationships <- des.getActiveClientItsaRelationships(mtdItId)
+    } yield relationships
+
   def getVatRelationshipForClient(
     clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] =
     des.getActiveClientVatRelationships(clientId)

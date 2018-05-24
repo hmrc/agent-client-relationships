@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
+import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService}
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
@@ -36,7 +36,10 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
-class RelationshipsController @Inject()(override val authConnector: AuthConnector, service: RelationshipsService)
+class RelationshipsController @Inject()(
+  override val authConnector: AuthConnector,
+  service: RelationshipsService,
+  @Named("auth.stride.role") strideRole: String)
     extends BaseController
     with AuthActions {
 
@@ -179,17 +182,33 @@ class RelationshipsController @Inject()(override val authConnector: AuthConnecto
       }
   }
 
-  def getItsaRelationship: Action[AnyContent] = AuthorisedAsItSaClient { implicit request => clientId =>
+  def getItsaRelationships: Action[AnyContent] = AuthorisedAsItSaClient { implicit request => clientId =>
     service.getItsaRelationshipForClient(clientId).map {
       case Some(relationship) => Ok(Json.toJson(relationship))
       case None               => NotFound
     }
   }
 
-  def getVatRelationship: Action[AnyContent] = AuthorisedAsVatClient { implicit request => clientId =>
+  def getVatRelationships: Action[AnyContent] = AuthorisedAsVatClient { implicit request => clientId =>
     service.getVatRelationshipForClient(clientId).map {
       case Some(relationship) => Ok(Json.toJson(relationship))
       case None               => NotFound
     }
+  }
+
+  def getItsaRelationshipsByNino(nino: Nino): Action[AnyContent] = AuthorisedWithStride(strideRole) {
+    implicit request => _ =>
+      service.getItsaRelationshipForClient(nino).map {
+        case Some(relationship) => Ok(Json.toJson(relationship))
+        case None               => NotFound
+      }
+  }
+
+  def getVatRelationshipsByVrn(vrn: Vrn): Action[AnyContent] = AuthorisedWithStride(strideRole) {
+    implicit request => _ =>
+      service.getVatRelationshipForClient(vrn).map {
+        case Some(relationship) => Ok(Json.toJson(relationship))
+        case None               => NotFound
+      }
   }
 }

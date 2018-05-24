@@ -184,6 +184,28 @@ trait AuthStub {
     request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
   }
 
+  def authorisedAsStrideUser[A](request: FakeRequest[A], strideUserId: String): FakeRequest[A] = {
+    givenAuthorisedFor(
+      s"""
+         |{
+         |  "authorise": [
+         |    { "authProviders": ["PrivilegedApplication"] }
+         |  ],
+         |  "retrieve":["credentials"]
+         |}
+           """.stripMargin,
+      s"""
+         |{
+         |  "credentials":{
+         |    "providerId": "$strideUserId",
+         |    "providerType": "PrivilegedApplication"
+         |  }
+         |}
+       """.stripMargin
+    )
+    request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
+  }
+
   def givenAuthorisedFor(payload: String, responseBody: String): Unit = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
