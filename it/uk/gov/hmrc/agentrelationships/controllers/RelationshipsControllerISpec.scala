@@ -1113,6 +1113,34 @@ class RelationshipsControllerISpec
       }
     }
 
+    "the relationship exists and the user is authenticated with Stride" should {
+      trait StubsForThisScenario {
+        givenUserIsAuthenticatedWithStride("CAAT","strideId-1234456")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "unknown",
+          "strideId-1234456",
+          "PrivilegedApplication")
+      }
+    }
+
     "the relationship exists in ETMP and not exist in ES" should {
       trait StubsForThisScenario {
         givenUserIsSubscribedClient(mtdItId, withThisGgUserId = "ggUserId-client")
@@ -1504,25 +1532,30 @@ class RelationshipsControllerISpec
     val requestPath: String =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
-    "return 201 when the relationship exists and the Arn matches that of current Agent user" in {
-      givenUserIsSubscribedAgent(arn)
+    trait StubsForThisScenario {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+    }
+
+    "return 201 when the relationship exists and the Arn matches that of current Agent user" in new StubsForThisScenario {
+      givenUserIsSubscribedAgent(arn)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
     }
 
-    "return 201 when the relationship exists and the MtdItId matches that of current Client user" in {
+    "return 201 when the relationship exists and the MtdItId matches that of current Client user" in new StubsForThisScenario {
       givenUserIsSubscribedClient(mtdItId)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
-      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 when the relationship exists and the user is authenticated with Stride" in new StubsForThisScenario {
+      givenUserIsAuthenticatedWithStride("CAAT", "strideId-983283")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201

@@ -24,7 +24,8 @@ sealed class TypeOfEnrolment(
   val enrolmentKey: String,
   val identifierKey: String,
   val identifierForValue: String => TaxIdentifier) {
-  def findEnrolmentIdentifier(enrolments: Set[Enrolment]): Option[TaxIdentifier] = {
+
+  def extractIdentifierFrom(enrolments: Set[Enrolment]): Option[TaxIdentifier] = {
     val maybeEnrolment: Option[Enrolment] = enrolments.find(_.key equals enrolmentKey)
 
     maybeEnrolment
