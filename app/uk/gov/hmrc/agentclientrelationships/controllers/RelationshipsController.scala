@@ -22,6 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService}
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
@@ -39,6 +40,7 @@ import scala.util.control.NonFatal
 class RelationshipsController @Inject()(
   override val authConnector: AuthConnector,
   service: RelationshipsService,
+  des: DesConnector,
   @Named("auth.stride.role") strideRole: String)
     extends BaseController
     with AuthActions {
@@ -137,17 +139,22 @@ class RelationshipsController @Inject()(
 
   private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
     AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRole) { implicit request => implicit currentUser =>
-      service
-        .deleteRelationship(arn, taxIdentifier)
-        .map(_ => NoContent)
-        .recover {
+      def futureIdentifier = taxIdentifier match {
+        case nino @ Nino(_) => des.getMtdIdFor(nino)
+        case _              => Future successful taxIdentifier
+      }
+      futureIdentifier.flatMap { id =>
+        service.deleteRelationship(arn, id).map(_ => NoContent).recover {
           case ex: RelationshipNotFound =>
             Logger(getClass).warn("Could not delete relationship", ex)
             NotFound(ex.getMessage)
         }
+      }
     }
 
   def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)
+
+  def deleteItsaRelationshipByNino(arn: Arn, nino: Nino) = delete(arn, nino)
 
   def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
 

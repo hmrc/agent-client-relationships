@@ -24,3 +24,5 @@ GET           /service/HMRC-MTD-VAT/client/relationship                      @uk
 # List existing relationships (authorized by the stride-auth)
 GET           /relationships/service/HMRC-MTD-IT/client/NI/:nino             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationshipsByNino(nino: uk.gov.hmrc.domain.Nino)
 GET           /relationships/service/HMRC-MTD-VAT/client/VRN/:vrn            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getVatRelationshipsByVrn(vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
+
+DELETE        /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteItsaRelationshipByNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
