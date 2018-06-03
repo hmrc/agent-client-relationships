@@ -50,6 +50,8 @@ class RelationshipsControllerISpec
     with AuthStub
     with MockitoSugar {
 
+  //TODO This test is too long!!! Needs to be split up at some point
+
   lazy val mockAuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -1056,6 +1058,26 @@ class RelationshipsControllerISpec
         tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
       )
 
+    def verifyHmrcRemovedAgentServiceAuthorisation(
+      arn: String,
+      clientId: String,
+      service: String,
+      authProviderId: String,
+      authProviderIdType: String) =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
+        detail = Map(
+          "UserID"           -> authProviderId,
+          "ProviderIdType"       -> authProviderIdType,
+          "agentReferenceNumber"     -> arn,
+          "clientID"                 -> clientId,
+          "service"                  -> service
+        ),
+        tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
+      )
+
+
     "the relationship exists and the Arn matches that of current Agent user" should {
 
       trait StubsForThisScenario {
@@ -1128,14 +1150,12 @@ class RelationshipsControllerISpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
       }
 
-      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+      "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+        verifyHmrcRemovedAgentServiceAuthorisation(
           arn.value,
           mtdItId.value,
-          "MtdItId",
           "HMRC-MTD-IT",
-          "unknown",
           "strideId-1234456",
           "PrivilegedApplication")
       }

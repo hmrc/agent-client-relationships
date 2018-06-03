@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Named, Singleton}
+
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -30,6 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 
@@ -424,14 +426,7 @@ class RelationshipsService @Inject()(
     request: Request[Any],
     currentUser: CurrentUser): Future[Unit] = {
 
-    implicit val auditData = new AuditData()
-    auditData.set("agentReferenceNumber", arn.value)
-    auditData.set("clientId", taxIdentifier.value)
-    auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
-    auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
-    auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
-    auditData.set("authProviderId", currentUser.credentials.providerId)
-    auditData.set("authProviderIdType", currentUser.credentials.providerType)
+    implicit val auditData = setAuditDataForUser(currentUser, arn, taxIdentifier)
 
     def esDeAllocation(clientGroupId: String) =
       (for {
@@ -448,7 +443,7 @@ class RelationshipsService @Inject()(
       _             <- des.deleteAgentRelationship(taxIdentifier, arn)
       _             <- esDeAllocation(clientGroupId)
     } yield {
-      auditService.sendDeleteRelationshipAuditEvent
+      sendAuditEventForUser(currentUser)
     }
   }
 
@@ -476,4 +471,33 @@ class RelationshipsService @Inject()(
   def getVatRelationshipForClient(
     clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] =
     des.getActiveClientVatRelationships(clientId)
+
+  private def setAuditDataForUser(currentUser: CurrentUser, arn: Arn, taxIdentifier: TaxIdentifier): AuditData = {
+    val auditData = new AuditData()
+    if (currentUser.credentials.providerType == "GovernmentGateway") {
+      auditData.set("agentReferenceNumber", arn.value)
+      auditData.set("clientId", taxIdentifier.value)
+      auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
+      auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
+      auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
+      auditData.set("authProviderId", currentUser.credentials.providerId)
+      auditData.set("authProviderIdType", currentUser.credentials.providerType)
+      auditData
+    } else if (currentUser.credentials.providerType == "PrivilegedApplication") {
+      auditData.set("UserID", currentUser.credentials.providerId)
+      auditData.set("ProviderType", currentUser.credentials.providerType)
+      auditData.set("agentReferenceNumber", arn.value)
+      auditData.set("clientID", taxIdentifier.value)
+      auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
+      auditData
+    } else throw new IllegalStateException("No providerType found")
+  }
+
+  private def sendAuditEventForUser(
+    currentUser: CurrentUser)(implicit headerCarrier: HeaderCarrier, request: Request[Any], auditData: AuditData) =
+    if (currentUser.credentials.providerType == "GovernmentGateway")
+      auditService.sendDeleteRelationshipAuditEvent
+    else if (currentUser.credentials.providerType == "PrivilegedApplication")
+      auditService.sendHmrcLedDeleteRelationshipAuditEvent
+    else throw new IllegalStateException("No Client Provider Type Found")
 }
