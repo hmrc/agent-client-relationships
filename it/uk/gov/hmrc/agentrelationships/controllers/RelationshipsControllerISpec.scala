@@ -50,6 +50,8 @@ class RelationshipsControllerISpec
     with AuthStub
     with MockitoSugar {
 
+  //TODO This test is too long!!! Needs to be split up at some point
+
   lazy val mockAuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -1028,7 +1030,7 @@ class RelationshipsControllerISpec
     }
   }
 
-  "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" when {
+  "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" when {
 
     val requestPath: String =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
@@ -1055,6 +1057,26 @@ class RelationshipsControllerISpec
         ),
         tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
       )
+
+    def verifyHmrcRemovedAgentServiceAuthorisation(
+      arn: String,
+      clientId: String,
+      service: String,
+      authProviderId: String,
+      authProviderIdType: String) =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
+        detail = Map(
+          "authProviderId"           -> authProviderId,
+          "authProviderIdType"       -> authProviderIdType,
+          "agentReferenceNumber"     -> arn,
+          "clientId"                 -> clientId,
+          "service"                  -> service
+        ),
+        tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
+      )
+
 
     "the relationship exists and the Arn matches that of current Agent user" should {
 
@@ -1128,14 +1150,12 @@ class RelationshipsControllerISpec
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
       }
 
-      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+      "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+        verifyHmrcRemovedAgentServiceAuthorisation(
           arn.value,
           mtdItId.value,
-          "MtdItId",
           "HMRC-MTD-IT",
-          "unknown",
           "strideId-1234456",
           "PrivilegedApplication")
       }
@@ -1356,150 +1376,706 @@ class RelationshipsControllerISpec
     }
   }
 
-  private def doAgentGetRequest(route: String) = new Resource(route, port).get()
+  "DELETE /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino" when {
 
-  private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
-  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
+    def verifyClientRemovedAgentServiceAuthorisationAuditSent(
+                                                               arn: String,
+                                                               clientId: String,
+                                                               clientIdType: String,
+                                                               service: String,
+                                                               currentUserAffinityGroup: String,
+                                                               authProviderId: String,
+                                                               authProviderIdType: String) =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
+        detail = Map(
+          "agentReferenceNumber"     -> arn,
+          "clientId"                 -> clientId,
+          "clientIdType"             -> clientIdType,
+          "service"                  -> service,
+          "currentUserAffinityGroup" -> currentUserAffinityGroup,
+          "authProviderId"           -> authProviderId,
+          "authProviderIdType"       -> authProviderIdType
+        ),
+        tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
+      )
 
-  private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
+    def verifyHmrcRemovedAgentServiceAuthorisation(
+                                                    arn: String,
+                                                    clientId: String,
+                                                    service: String,
+                                                    authProviderId: String,
+                                                    authProviderIdType: String) =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
+        detail = Map(
+          "authProviderId"           -> authProviderId,
+          "authProviderIdType"       -> authProviderIdType,
+          "agentReferenceNumber"     -> arn,
+          "clientId"                 -> clientId,
+          "service"                  -> service
+        ),
+        tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
+      )
 
-    val identifier: TaxIdentifier = if (isMtdItId) mtdItId else nino
 
-    //HAPPY PATH :-)
+    "the relationship exists and the Arn matches that of current Agent user" should {
 
-    "return 200 when relationship exists in es" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
 
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
 
-      await(query()) shouldBe empty
-      val result = await(doRequest)
-      result.status shouldBe 200
-      await(query()) shouldBe empty
+      "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Agent",
+          "ggUserId-agent",
+          "GovernmentGateway")
+      }
     }
 
-    //UNHAPPY PATHS
+    "the relationship exists and the MtdItId matches that of current Client user" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
 
-    "return 404 when credentials are not found in es" in {
-      givenPrincipalGroupIdNotExistsFor(arn)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientIsUnknownInCESAFor(nino)
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
     }
 
-    "return 404 when agent code is not found in ugs" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfoNotExists("foo")
-      givenDelegatedGroupIdsExistFor(identifier, Set("foo"))
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientIsUnknownInCESAFor(nino)
+    "the relationship exists and the user is authenticated with Stride" should {
+      trait StubsForThisScenario {
+        givenUserIsAuthenticatedWithStride("CAAT","strideId-1234456")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyHmrcRemovedAgentServiceAuthorisation(
+          arn.value,
+          mtdItId.value,
+          "HMRC-MTD-IT",
+          "strideId-1234456",
+          "PrivilegedApplication")
+      }
     }
 
-    //CESA CHECK UNHAPPY PATHS
+    "the relationship exists in ETMP and not exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+      }
 
-    "return 404 when agent not allocated to client in es nor identifier not found in des" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistFor(identifier)
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
     }
 
-    "return 404 when agent not allocated to client in es nor cesa" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistFor(identifier)
-      givenNinoIsKnownFor(mtdItId, nino)
-      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+    "the relationship does not exist in either ETMP or in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
     }
 
-    "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistFor(identifier)
-      givenNinoIsKnownFor(mtdItId, nino)
-      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenArnIsUnknownFor(arn)
+    "the relationship does not exist in ETMP but does exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          mtdItId.value,
+          "MtdItId",
+          "HMRC-MTD-IT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
     }
 
-    //FAILURE CASES
+    /**
+      * Agent's Unhappy paths
+      */
+    "agent has a mismatched arn" should {
+      "return 403" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
 
-    "return 502 when ES1/principal returns 5xx" in {
-      givenPrincipalGroupIdRequestFailsWith(500)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-
-      val result = await(doRequest)
-      result.status shouldBe 502
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
     }
 
-    "return 502 when UGS returns 5xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfoFailsWith(500)
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+    "agent has no agent enrolments" should {
+      "return 403" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 502
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
     }
 
-    "return 502 when ES1/delegated returns 5xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
+    "es is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenEsIsUnavailable()
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+      }
 
-      givenDelegatedGroupIdRequestFailsWith(500)
-      val result = await(doRequest)
-      result.status shouldBe 502
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
     }
 
-    "return 400 when ES1/principal returns 4xx" in {
-      givenPrincipalGroupIdRequestFailsWith(400)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+    "DES is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenDesReturnsServiceUnavailable()
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 400
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
     }
 
-    "return 400 when UGS returns 4xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfoFailsWith(400)
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+    "DES responds with 404" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentCanNotBeDeallocatedInDes(status = 404)
+      }
 
-      val result = await(doRequest)
-      result.status shouldBe 400
+      "return 404" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
     }
 
-    "return 400 when ES/delegated returns 4xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdRequestFailsWith(400)
+    /**
+      * Client's Unhappy paths
+      */
+    "client has a mismatched MtdItId" should {
 
-      val result = await(doRequest)
-      result.status shouldBe 400
+      "return 403" in {
+        givenUserIsSubscribedClient(mtdItId)
+        givenMtdItIdIsKnownFor(nino, MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserIsSubscribedClient(mtdItId)
+        givenMtdItIdIsKnownFor(nino, MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "client has no client enrolments" should {
+      "return 403" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "client has no groupId" should {
+      trait StubsForScenario {
+        givenUserIsSubscribedClient(nino)
+        givenPrincipalGroupIdNotExistsFor(mtdItId)
+      }
+
+      "return 404" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+  }
+
+  "DELETE /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" when {
+
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
+
+    def verifyClientRemovedAgentServiceAuthorisationAuditSent(
+                                                               arn: String,
+                                                               clientId: String,
+                                                               clientIdType: String,
+                                                               service: String,
+                                                               currentUserAffinityGroup: String,
+                                                               authProviderId: String,
+                                                               authProviderIdType: String) =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
+        detail = Map(
+          "agentReferenceNumber"     -> arn,
+          "clientId"                 -> clientId,
+          "clientIdType"             -> clientIdType,
+          "service"                  -> service,
+          "currentUserAffinityGroup" -> currentUserAffinityGroup,
+          "authProviderId"           -> authProviderId,
+          "authProviderIdType"       -> authProviderIdType
+        ),
+        tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
+      )
+
+    def verifyHmrcRemovedAgentServiceAuthorisation(
+                                                    arn: String,
+                                                    clientId: String,
+                                                    service: String,
+                                                    authProviderId: String,
+                                                    authProviderIdType: String) =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
+        detail = Map(
+          "authProviderId"           -> authProviderId,
+          "authProviderIdType"       -> authProviderIdType,
+          "agentReferenceNumber"     -> arn,
+          "clientId"                 -> clientId,
+          "service"                  -> service
+        ),
+        tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
+      )
+
+
+    "the relationship exists and the Arn matches that of current Agent user" should {
+
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+        givenAgentCanBeDeallocatedInDes(vrn, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          vrn.value,
+          "Vrn",
+          "HMRC-MTD-VAT",
+          "Agent",
+          "ggUserId-agent",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship exists and the MtdItId matches that of current Client user" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(vrn, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+        givenAgentCanBeDeallocatedInDes(vrn, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          vrn.value,
+          "Vrn",
+          "HMRC-MTD-VAT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship exists and the user is authenticated with Stride" should {
+      trait StubsForThisScenario {
+        givenUserIsAuthenticatedWithStride("CAAT","strideId-1234456")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+        givenAgentCanBeDeallocatedInDes(vrn, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyHmrcRemovedAgentServiceAuthorisation(
+          arn.value,
+          vrn.value,
+          "HMRC-MTD-VAT",
+          "strideId-1234456",
+          "PrivilegedApplication")
+      }
+    }
+
+    "the relationship exists in ETMP and not exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(vrn, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+        givenAgentCanBeDeallocatedInDes(vrn, arn)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          vrn.value,
+          "Vrn",
+          "HMRC-MTD-VAT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship does not exist in either ETMP or in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(vrn, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+        givenAgentHasNoActiveRelationshipInDes(vrn, arn)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          vrn.value,
+          "Vrn",
+          "HMRC-MTD-VAT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship does not exist in ETMP but does exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(vrn, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+        givenAgentHasNoActiveRelationshipInDes(vrn, arn)
+        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          vrn.value,
+          "Vrn",
+          "HMRC-MTD-VAT",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    /**
+      * Agent's Unhappy paths
+      */
+    "agent has a mismatched arn" should {
+      "return 403" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "agent has no agent enrolments" should {
+      "return 403" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "es is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenEsIsUnavailable()
+        givenAgentCanBeDeallocatedInDes(vrn, arn)
+      }
+
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "DES is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+        givenDesReturnsServiceUnavailable()
+      }
+
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "DES responds with 404" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+        givenAgentCanNotBeDeallocatedInDes(status = 404)
+      }
+
+      "return 404" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    /**
+      * Client's Unhappy paths
+      */
+    "client has a mismatched MtdItId" should {
+
+      "return 403" in {
+        givenUserIsSubscribedClient(MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserIsSubscribedClient(MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "client has no client enrolments" should {
+      "return 403" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "client has no groupId" should {
+      trait StubsForScenario {
+        givenUserIsSubscribedClient(vrn)
+        givenPrincipalGroupIdNotExistsFor(vrn)
+      }
+
+      "return 404" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
     }
   }
 
@@ -1767,9 +2343,9 @@ class RelationshipsControllerISpec
     }
   }
 
-  "getItsaRelationships" should {
+  "GET /relationships/service/HMRC-MTD-IT" should {
     val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
-    val requestPath: String = s"/agent-client-relationships/service/HMRC-MTD-IT/client/relationship"
+    val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-IT"
 
     def doRequest = doAgentGetRequest(requestPath)
     val req = FakeRequest()
@@ -1826,7 +2402,7 @@ class RelationshipsControllerISpec
     }
   }
 
-  "getItsaRelationshipsByNino" should {
+  "GET /relationships/service/HMRC-MTD-IT/client/NI/:nino" should {
     val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
     val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-IT/client/NI/$nino"
 
@@ -1890,9 +2466,9 @@ class RelationshipsControllerISpec
     }
   }
 
-  "getVatRelationships" should {
+  "GET /relationships/service/HMRC-MTD-VAT" should {
     val vrnEncoded = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
-    val requestPath: String = s"/agent-client-relationships/service/HMRC-MTD-VAT/client/relationship"
+    val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-VAT"
 
     def doRequest = doAgentGetRequest(requestPath)
     val req = FakeRequest()
@@ -1949,7 +2525,7 @@ class RelationshipsControllerISpec
     }
   }
 
-  "getVatRelationshipsByVrn" should {
+  "GET /relationships/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
     val vrnEncoded = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
     val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
@@ -2005,6 +2581,153 @@ class RelationshipsControllerISpec
 
       val result = await(doRequest)
       result.status shouldBe 404
+    }
+  }
+
+  private def doAgentGetRequest(route: String) = new Resource(route, port).get()
+
+  private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
+
+  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
+
+  private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
+
+    val identifier: TaxIdentifier = if (isMtdItId) mtdItId else nino
+
+    //HAPPY PATH :-)
+
+    "return 200 when relationship exists in es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
+
+      await(query()) shouldBe empty
+      val result = await(doRequest)
+      result.status shouldBe 200
+      await(query()) shouldBe empty
+    }
+
+    //UNHAPPY PATHS
+
+    "return 404 when credentials are not found in es" in {
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientIsUnknownInCESAFor(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
+    }
+
+    "return 404 when agent code is not found in ugs" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoNotExists("foo")
+      givenDelegatedGroupIdsExistFor(identifier, Set("foo"))
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientIsUnknownInCESAFor(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+    }
+
+    //CESA CHECK UNHAPPY PATHS
+
+    "return 404 when agent not allocated to client in es nor identifier not found in des" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(identifier)
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in es nor cesa" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(identifier)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(identifier)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenArnIsUnknownFor(arn)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    //FAILURE CASES
+
+    "return 502 when ES1/principal returns 5xx" in {
+      givenPrincipalGroupIdRequestFailsWith(500)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when UGS returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(500)
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when ES1/delegated returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+
+      givenDelegatedGroupIdRequestFailsWith(500)
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 400 when ES1/principal returns 4xx" in {
+      givenPrincipalGroupIdRequestFailsWith(400)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when UGS returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(400)
+      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when ES/delegated returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdRequestFailsWith(400)
+
+      val result = await(doRequest)
+      result.status shouldBe 400
     }
   }
 }

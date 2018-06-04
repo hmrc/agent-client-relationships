@@ -22,6 +22,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services.{AlreadyCopiedDidNotCheck, CopyRelationshipNotEnabled, RelationshipsService}
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
@@ -29,8 +30,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.Upstream5xxResponse
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -39,6 +40,7 @@ import scala.util.control.NonFatal
 class RelationshipsController @Inject()(
   override val authConnector: AuthConnector,
   service: RelationshipsService,
+  des: DesConnector,
   @Named("auth.stride.role") strideRole: String)
     extends BaseController
     with AuthActions {
@@ -137,9 +139,13 @@ class RelationshipsController @Inject()(
 
   private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
     AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRole) { implicit request => implicit currentUser =>
-      service
-        .deleteRelationship(arn, taxIdentifier)
-        .map(_ => NoContent)
+      (for {
+        id <- taxIdentifier match {
+               case nino @ Nino(_) => des.getMtdIdFor(nino)
+               case _              => Future successful taxIdentifier
+             }
+        _ <- service.deleteRelationship(arn, id)
+      } yield NoContent)
         .recover {
           case ex: RelationshipNotFound =>
             Logger(getClass).warn("Could not delete relationship", ex)
@@ -148,6 +154,8 @@ class RelationshipsController @Inject()(
     }
 
   def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)
+
+  def deleteItsaRelationshipByNino(arn: Arn, nino: Nino) = delete(arn, nino)
 
   def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
 

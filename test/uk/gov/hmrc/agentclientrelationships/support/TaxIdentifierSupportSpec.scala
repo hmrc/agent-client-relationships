@@ -22,7 +22,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
-  "enrolmetKeyPrefixFor" should {
+  "enrolmentKeyPrefixFor" should {
     "return HMRC-AS-AGENT~AgentReferenceNumber when tax identifier is of Arn type" in {
       enrolmentKeyPrefixFor(Arn("foo")) shouldBe "HMRC-AS-AGENT~AgentReferenceNumber"
     }
