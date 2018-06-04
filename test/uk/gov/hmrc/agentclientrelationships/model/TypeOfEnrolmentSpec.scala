@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.test.UnitSpec
@@ -36,9 +35,13 @@ class TypeOfEnrolmentSpec extends UnitSpec {
       TypeOfEnrolment(Arn("TARN000001")) shouldBe EnrolmentAsAgent
     }
 
+    "return EnrolmentNino for a Nino identifier" in {
+      TypeOfEnrolment(Nino("AA000000A")) shouldBe EnrolmentNino
+    }
+
     "throw an exception for an unhandled identifier" in {
       intercept[IllegalArgumentException] {
-        TypeOfEnrolment(Nino("AA000000A"))
+        TypeOfEnrolment(Utr("AA000000A"))
       }
     }
   }

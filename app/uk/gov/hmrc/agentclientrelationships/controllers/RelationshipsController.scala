@@ -30,8 +30,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.Upstream5xxResponse
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -139,17 +139,18 @@ class RelationshipsController @Inject()(
 
   private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
     AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRole) { implicit request => implicit currentUser =>
-      def futureIdentifier = taxIdentifier match {
-        case nino @ Nino(_) => des.getMtdIdFor(nino)
-        case _              => Future successful taxIdentifier
-      }
-      futureIdentifier.flatMap { id =>
-        service.deleteRelationship(arn, id).map(_ => NoContent).recover {
+      (for {
+        id <- taxIdentifier match {
+               case nino @ Nino(_) => des.getMtdIdFor(nino)
+               case _              => Future successful taxIdentifier
+             }
+        _ <- service.deleteRelationship(arn, id)
+      } yield NoContent)
+        .recover {
           case ex: RelationshipNotFound =>
             Logger(getClass).warn("Could not delete relationship", ex)
             NotFound(ex.getMessage)
         }
-      }
     }
 
   def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)

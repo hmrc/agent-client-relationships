@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.Enrolment
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 sealed class TypeOfEnrolment(
   val enrolmentKey: String,
@@ -37,10 +37,12 @@ sealed class TypeOfEnrolment(
 case object EnrolmentAsAgent extends TypeOfEnrolment("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
 case object EnrolmentMtdIt extends TypeOfEnrolment("HMRC-MTD-IT", "MTDITID", MtdItId.apply)
 case object EnrolmentMtdVat extends TypeOfEnrolment("HMRC-MTD-VAT", "VRN", Vrn.apply)
+case object EnrolmentNino extends TypeOfEnrolment("HMRC-NI", "NINO", Nino.apply)
 
 object TypeOfEnrolment {
 
   def apply(identifier: TaxIdentifier): TypeOfEnrolment = identifier match {
+    case Nino(_)    => EnrolmentNino
     case MtdItId(_) => EnrolmentMtdIt
     case Vrn(_)     => EnrolmentMtdVat
     case Arn(_)     => EnrolmentAsAgent

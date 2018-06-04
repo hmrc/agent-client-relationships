@@ -484,10 +484,10 @@ class RelationshipsService @Inject()(
       auditData.set("authProviderIdType", currentUser.credentials.providerType)
       auditData
     } else if (currentUser.credentials.providerType == "PrivilegedApplication") {
-      auditData.set("UserID", currentUser.credentials.providerId)
-      auditData.set("ProviderType", currentUser.credentials.providerType)
+      auditData.set("authProviderId", currentUser.credentials.providerId)
+      auditData.set("authProviderIdType", currentUser.credentials.providerType)
       auditData.set("agentReferenceNumber", arn.value)
-      auditData.set("clientID", taxIdentifier.value)
+      auditData.set("clientId", taxIdentifier.value)
       auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
       auditData
     } else throw new IllegalStateException("No providerType found")

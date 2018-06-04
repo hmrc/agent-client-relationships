@@ -103,10 +103,10 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
 
   val hmrcDeleteRelationshipDetailsFields =
     Seq(
-      "UserID",
-      "ProviderIdType",
+      "authProviderId",
+      "authProviderIdType",
       "agentReferenceNumber",
-      "cliendID",
+      "clientId",
       "service"
     )
 
