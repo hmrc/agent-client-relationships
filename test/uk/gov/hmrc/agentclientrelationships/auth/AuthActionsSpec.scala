@@ -39,7 +39,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   private val arn = "TARN0000001"
   private val mtdItId = "ABCDEFGH"
   private val vrn = "101747641"
-  private val requiredStrideRole = "requiredStrideRole"
+  private val requiredStrideRole = "REQUIREDSTRIDEROLE"
 
   private val agentEnrolment = Enrolment(
     "HMRC-AS-AGENT",
@@ -223,14 +223,14 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results w
   "hasRequiredStrideRole" should {
     "return true if enrolments contains required stride role" in {
       testAuthImpl
-        .hasRequiredStrideRole(Enrolments(Set(new Enrolment("foo", Seq.empty, "", None))), "foo") shouldBe true
+        .hasRequiredStrideRole(Enrolments(Set(new Enrolment("FOO", Seq.empty, "", None))), "FOO") shouldBe true
       testAuthImpl.hasRequiredStrideRole(
         Enrolments(
           Set(
-            new Enrolment("boo", Seq.empty, "", None),
-            new Enrolment("foo", Seq.empty, "", None),
-            new Enrolment("woo", Seq.empty, "", None))),
-        "foo") shouldBe true
+            new Enrolment("BOO", Seq.empty, "", None),
+            new Enrolment("FOO", Seq.empty, "", None),
+            new Enrolment("WOO", Seq.empty, "", None))),
+        "FOO") shouldBe true
     }
 
     "return false if enrolments does not contain required stride role" in {
