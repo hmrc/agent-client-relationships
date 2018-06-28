@@ -62,42 +62,20 @@ final case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case class AgentUser(userId: String, groupId: String, agentCode: AgentCode)
-
 @Singleton
 class RelationshipsService @Inject()(
-  es: EnrolmentStoreProxyConnector,
+  val es: EnrolmentStoreProxyConnector,
   des: DesConnector,
   mapping: MappingConnector,
-  ugs: UsersGroupsSearchConnector,
+  val ugs: UsersGroupsSearchConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: RecoveryLockService,
-  auditService: AuditService,
+  val auditService: AuditService,
   val metrics: Metrics,
   @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
   @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean)
-    extends Monitoring {
-
-  def getAgentUserFor(
-    arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
-    for {
-      agentGroupId <- es.getPrincipalGroupIdFor(arn)
-      agentUserId  <- es.getPrincipalUserIdFor(arn)
-      _ = auditData.set("credId", agentUserId)
-      groupInfo <- ugs.getGroupInfo(agentGroupId)
-      agentCode = groupInfo.agentCode.getOrElse(throw new Exception(s"Missing AgentCode for $arn"))
-      _ = auditData.set("agentCode", agentCode)
-    } yield AgentUser(agentUserId, agentGroupId, agentCode)
-
-  def checkForRelationship(identifier: TaxIdentifier, agentUser: AgentUser)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Either[String, Boolean]] =
-    for {
-      allocatedGroupIds <- es.getDelegatedGroupIdsFor(identifier)
-      result <- if (allocatedGroupIds.contains(agentUser.groupId)) returnValue(Right(true))
-               else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
-    } yield result
+    extends Monitoring
+    with ServiceHelper {
 
   def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentUser: Future[AgentUser])(
     implicit ec: ExecutionContext,
@@ -471,33 +449,4 @@ class RelationshipsService @Inject()(
   def getVatRelationshipForClient(
     clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] =
     des.getActiveClientVatRelationships(clientId)
-
-  private def setAuditDataForUser(currentUser: CurrentUser, arn: Arn, taxIdentifier: TaxIdentifier): AuditData = {
-    val auditData = new AuditData()
-    if (currentUser.credentials.providerType == "GovernmentGateway") {
-      auditData.set("agentReferenceNumber", arn.value)
-      auditData.set("clientId", taxIdentifier.value)
-      auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
-      auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
-      auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
-      auditData.set("authProviderId", currentUser.credentials.providerId)
-      auditData.set("authProviderIdType", currentUser.credentials.providerType)
-      auditData
-    } else if (currentUser.credentials.providerType == "PrivilegedApplication") {
-      auditData.set("authProviderId", currentUser.credentials.providerId)
-      auditData.set("authProviderIdType", currentUser.credentials.providerType)
-      auditData.set("agentReferenceNumber", arn.value)
-      auditData.set("clientId", taxIdentifier.value)
-      auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
-      auditData
-    } else throw new IllegalStateException("No providerType found")
-  }
-
-  private def sendAuditEventForUser(
-    currentUser: CurrentUser)(implicit headerCarrier: HeaderCarrier, request: Request[Any], auditData: AuditData) =
-    if (currentUser.credentials.providerType == "GovernmentGateway")
-      auditService.sendDeleteRelationshipAuditEvent
-    else if (currentUser.credentials.providerType == "PrivilegedApplication")
-      auditService.sendHmrcLedDeleteRelationshipAuditEvent
-    else throw new IllegalStateException("No Client Provider Type Found")
 }
