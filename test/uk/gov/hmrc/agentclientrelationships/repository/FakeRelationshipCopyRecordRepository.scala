@@ -68,8 +68,8 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
     })
   }
 
-  def remove(arn: Arn, mtdItId: MtdItId)(implicit ec: ExecutionContext): Future[Int] = {
-    val maybeRemove = data.remove(arn.value + mtdItId.value)
+  def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] = {
+    val maybeRemove = data.remove(arn.value + identifier.value)
     if (maybeRemove.isDefined) Future.successful(1)
     else Future.successful(0)
   }

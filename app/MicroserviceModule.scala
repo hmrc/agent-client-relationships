@@ -15,14 +15,14 @@
  */
 
 import java.net.URL
-import javax.inject.{Inject, Provider, Singleton}
 
+import javax.inject.{Inject, Provider, Singleton}
 import com.google.inject.AbstractModule
 import com.google.inject.name.{Named, Names}
 import org.slf4j.MDC
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.agentclientrelationships.connectors.MicroserviceAuthConnector
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoLockRepository, MongoRelationshipCopyRecordRepository, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.{MongoRecoveryLockService, RecoveryLockService}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http._
@@ -54,6 +54,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bind(classOf[HttpPut]).to(classOf[HttpVerbs])
     bind(classOf[AuthConnector]).to(classOf[MicroserviceAuthConnector])
     bind(classOf[RelationshipCopyRecordRepository]).to(classOf[MongoRelationshipCopyRecordRepository])
+    bind(classOf[DeleteRecordRepository]).to(classOf[MongoDeleteRecordRepository])
     bind(classOf[LockRepository]).to(classOf[MongoLockRepository])
     bind(classOf[RecoveryLockService]).to(classOf[MongoRecoveryLockService])
 

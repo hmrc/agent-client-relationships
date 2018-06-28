@@ -28,7 +28,7 @@ import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -37,46 +37,45 @@ import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class RelationshipCopyRecord(
+case class DeleteRecord(
   arn: String,
   clientIdentifier: String,
   clientIdentifierType: String,
-  references: Option[Set[RelationshipReference]] = None,
   dateTime: DateTime = now(UTC),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None) {
-  def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
+  def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
-  def needToCreateEtmpRecord = !syncToETMPStatus.contains(Success)
+  def needToDeleteEtmpRecord = !syncToETMPStatus.contains(Success)
 
-  def needToCreateEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
+  def needToDeleteEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
-object RelationshipCopyRecord extends ReactiveMongoFormats {
-  implicit val formats: Format[RelationshipCopyRecord] = format[RelationshipCopyRecord]
+object DeleteRecord extends ReactiveMongoFormats {
+  implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }
 
-trait RelationshipCopyRecordRepository {
-  def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int]
-  def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
+trait DeleteRecordRepository {
+  def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int]
+  def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[DeleteRecord]]
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
     implicit ec: ExecutionContext): Future[Unit]
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
     implicit ec: ExecutionContext): Future[Unit]
 
-  def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
+  def remove(arn: Arn, idntifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
 }
 
 @Singleton
-class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoComponent)
-    extends ReactiveRepository[RelationshipCopyRecord, BSONObjectID](
-      "relationship-copy-record",
+class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoComponent)
+    extends ReactiveRepository[DeleteRecord, BSONObjectID](
+      "delete-record",
       mongoComponent.mongoConnector.db,
       formats,
       ReactiveMongoFormats.objectIdFormats)
-    with RelationshipCopyRecordRepository
-    with AtomicUpdate[RelationshipCopyRecord] {
+    with DeleteRecordRepository
+    with AtomicUpdate[DeleteRecord] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
@@ -87,15 +86,15 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         Some("arnAndAgentReference"),
         unique = true))
 
-  def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
+  def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int] =
     insert(record).map { result =>
       result.writeErrors.foreach(error =>
-        Logger(getClass).warn(s"Creating RelationshipCopyRecord failed: ${error.errmsg}"))
+        Logger(getClass).warn(s"Creating DeleteRecord failed: ${error.errmsg}"))
       result.n
     }
 
   def findBy(arn: Arn, identifier: TaxIdentifier)(
-    implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] =
+    implicit ec: ExecutionContext): Future[Option[DeleteRecord]] =
     find(
       "arn"                  -> arn.value,
       "clientIdentifier"     -> identifier.value,
@@ -135,5 +134,5 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       "clientIdentifierType" -> clientIdentifierType(identifier))
       .map(_.n)
 
-  override def isInsertion(newRecordId: BSONObjectID, oldRecord: RelationshipCopyRecord): Boolean = false
+  override def isInsertion(newRecordId: BSONObjectID, oldRecord: DeleteRecord): Boolean = false
 }
