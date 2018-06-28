@@ -40,18 +40,16 @@ import scala.util.control.NonFatal
 
 @Singleton
 class DeleteRelationshipsService @Inject()(
-  val es: EnrolmentStoreProxyConnector,
+  es: EnrolmentStoreProxyConnector,
   des: DesConnector,
-  mapping: MappingConnector,
-  val ugs: UsersGroupsSearchConnector,
+  ugs: UsersGroupsSearchConnector,
   deleteRecordRepository: DeleteRecordRepository,
   lockService: RecoveryLockService,
+  getRelationshipsService: FindRelationshipsService,
+  agentUserService: AgentUserService,
   val auditService: AuditService,
-  val metrics: Metrics,
-  @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
-  @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean)
-    extends Monitoring
-    with ServiceHelper {
+  val metrics: Metrics)
+    extends Monitoring {
 
   def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
@@ -59,9 +57,14 @@ class DeleteRelationshipsService @Inject()(
     request: Request[Any],
     currentUser: CurrentUser): Future[Unit] = {
 
-    implicit val auditData = setAuditDataForUser(currentUser, arn, taxIdentifier)
+    implicit val auditData: AuditData = setAuditDataForUser(currentUser, arn, taxIdentifier)
+
     val identifierType = TypeOfEnrolment(taxIdentifier).identifierKey
     val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType)
+
+    auditData.set("AgentDBRecord", false)
+    auditData.set("enrolmentDeAllocated", false)
+    auditData.set("etmpRelationshipDeAuthorised", false)
 
     def createDeleteRecord: Future[Unit] =
       deleteRecordRepository
@@ -83,9 +86,10 @@ class DeleteRelationshipsService @Inject()(
     } yield sendAuditEventForUser(currentUser)
   }
 
-  def deleteEtmpRecord(
-    arn: Arn,
-    taxIdentifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData) = {
+  protected def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
+    implicit ec: ExecutionContext,
+    hc: HeaderCarrier,
+    auditData: AuditData): Future[Unit] = {
     val updateEtmpSyncStatus = deleteRecordRepository.updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
 
     val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
@@ -110,7 +114,7 @@ class DeleteRelationshipsService @Inject()(
 
   }
 
-  def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier, clientGroupId: String)(
+  protected def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier, clientGroupId: String)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Unit] = {
@@ -144,9 +148,10 @@ class DeleteRelationshipsService @Inject()(
 
     (for {
       _         <- updateEsSyncStatus(InProgress)
-      agentUser <- getAgentUserFor(arn)
-      _ <- checkForRelationship(taxIdentifier, agentUser).map(_ =>
-            es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
+      agentUser <- agentUserService.getAgentUserFor(arn)
+      _ <- getRelationshipsService
+            .checkForRelationship(taxIdentifier, agentUser)
+            .map(_ => es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
       _ = auditData.set("enrolmentDeAllocated", true)
       _ <- updateEsSyncStatus(Success)
     } yield ()).recoverWith(
@@ -154,4 +159,35 @@ class DeleteRelationshipsService @Inject()(
         .orElse(recoverUpstream5xx)
         .orElse(recoverNonFatal))
   }
+
+  protected def setAuditDataForUser(currentUser: CurrentUser, arn: Arn, taxIdentifier: TaxIdentifier): AuditData = {
+    val auditData = new AuditData()
+    if (currentUser.credentials.providerType == "GovernmentGateway") {
+      auditData.set("agentReferenceNumber", arn.value)
+      auditData.set("clientId", taxIdentifier.value)
+      auditData.set("clientIdType", taxIdentifier.getClass.getSimpleName)
+      auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
+      auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
+      auditData.set("authProviderId", currentUser.credentials.providerId)
+      auditData.set("authProviderIdType", currentUser.credentials.providerType)
+      auditData
+    } else if (currentUser.credentials.providerType == "PrivilegedApplication") {
+      auditData.set("authProviderId", currentUser.credentials.providerId)
+      auditData.set("authProviderIdType", currentUser.credentials.providerType)
+      auditData.set("agentReferenceNumber", arn.value)
+      auditData.set("clientId", taxIdentifier.value)
+      auditData.set("service", TypeOfEnrolment(taxIdentifier).enrolmentKey)
+      auditData
+    } else throw new IllegalStateException("No providerType found")
+  }
+
+  protected def sendAuditEventForUser(currentUser: CurrentUser)(
+    implicit headerCarrier: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData): Unit =
+    if (currentUser.credentials.providerType == "GovernmentGateway")
+      auditService.sendDeleteRelationshipAuditEvent
+    else if (currentUser.credentials.providerType == "PrivilegedApplication")
+      auditService.sendHmrcLedDeleteRelationshipAuditEvent
+    else throw new IllegalStateException("No Client Provider Type Found")
 }

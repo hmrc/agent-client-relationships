@@ -18,20 +18,17 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Named, Singleton}
-
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
-import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
+import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 
@@ -42,40 +39,39 @@ sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
 }
 
-final case object AlreadyCopiedDidNotCheck extends CheckAndCopyResult {
+case object AlreadyCopiedDidNotCheck extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-final case object FoundAndCopied extends CheckAndCopyResult {
+case object FoundAndCopied extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-final case object FoundAndFailedToCopy extends CheckAndCopyResult {
+case object FoundAndFailedToCopy extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-final case object NotFound extends CheckAndCopyResult {
+case object NotFound extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-final case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
+case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
 @Singleton
-class RelationshipsService @Inject()(
-  val es: EnrolmentStoreProxyConnector,
+class CheckAndCopyRelationshipsService @Inject()(
+  es: EnrolmentStoreProxyConnector,
   des: DesConnector,
   mapping: MappingConnector,
-  val ugs: UsersGroupsSearchConnector,
+  ugs: UsersGroupsSearchConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
-  lockService: RecoveryLockService,
+  createRelationshipsService: CreateRelationshipsService,
   val auditService: AuditService,
   val metrics: Metrics,
   @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
   @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean)
-    extends Monitoring
-    with ServiceHelper {
+    extends Monitoring {
 
   def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentUser: Future[AgentUser])(
     implicit ec: ExecutionContext,
@@ -121,9 +117,10 @@ class RelationshipsService @Inject()(
           result <- if (references.nonEmpty) {
                      maybeRelationshipCopyRecord
                        .map(relationshipCopyRecord =>
-                         recoverRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
-                       .getOrElse(
-                         createRelationship(arn, mtdItId, eventualAgentUser, references.map(SaRef.apply), true, false))
+                         createRelationshipsService
+                           .resumeRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
+                       .getOrElse(createRelationshipsService
+                         .createRelationship(arn, mtdItId, eventualAgentUser, references.map(SaRef.apply), true, false))
                        .map { _ =>
                          auditService.sendCreateRelationshipAuditEvent
                          mark("Count-CopyRelationship-ITSA-FoundAndCopied")
@@ -164,9 +161,10 @@ class RelationshipsService @Inject()(
           result <- if (references.nonEmpty) {
                      maybeRelationshipCopyRecord
                        .map(relationshipCopyRecord =>
-                         recoverRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentUser))
-                       .getOrElse(
-                         createRelationship(arn, vrn, eventualAgentUser, references.map(VatRef.apply), true, false))
+                         createRelationshipsService
+                           .resumeRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentUser))
+                       .getOrElse(createRelationshipsService
+                         .createRelationship(arn, vrn, eventualAgentUser, references.map(VatRef.apply), true, false))
                        .map { _ =>
                          auditService.sendCreateRelationshipAuditEventForMtdVat
                          mark("Count-CopyRelationship-VAT-FoundAndCopied")
@@ -229,157 +227,6 @@ class RelationshipsService @Inject()(
     }
   }
 
-  private def createEtmpRecord(
-    arn: Arn,
-    identifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
-    val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
-
-    val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
-      Logger(getClass).warn(
-        s"Creating ETMP record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
-        origExc)
-      updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
-    }
-
-    (for {
-      _ <- updateEtmpSyncStatus(InProgress)
-      _ <- des.createAgentRelationship(identifier, arn)
-      _ = auditData.set("etmpRelationshipCreated", true)
-      _ <- updateEtmpSyncStatus(Success)
-    } yield ())
-      .recoverWith {
-        case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
-          recoverWithException(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_DES", upstreamCode, reportAs))
-        case NonFatal(ex) =>
-          recoverWithException(ex, new Exception("RELATIONSHIP_CREATE_FAILED_DES"))
-      }
-  }
-
-  private def createEsRecord(
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser],
-    failIfAllocateAgentInESFails: Boolean)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] = {
-
-    val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
-
-    def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
-      Logger(getClass).warn(
-        s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
-        origExc)
-      updateEsSyncStatus(Failed)
-      if (failIfAllocateAgentInESFails) Future.failed(replacementExc)
-      else Future.successful(())
-    }
-
-    val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
-      case RelationshipNotFound(errorCode) =>
-        Logger(getClass).warn(
-          s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
-            s"not possible because of incomplete data: $errorCode")
-        updateEsSyncStatus(IncompleteInputParams)
-    }
-
-    val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
-      case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
-        logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs))
-    }
-
-    val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
-      case NonFatal(ex) =>
-        logAndMaybeFail(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
-    }
-
-    (for {
-      _         <- updateEsSyncStatus(InProgress)
-      agentUser <- eventualAgentUser
-      _         <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
-      _ = auditData.set("enrolmentDelegated", true)
-      _ <- updateEsSyncStatus(Success)
-    } yield ())
-      .recoverWith(
-        recoverAgentUserRelationshipNotFound
-          .orElse(recoverUpstream5xx)
-          .orElse(recoverNonFatal))
-  }
-
-  //noinspection ScalaStyle
-  def createRelationship(
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser],
-    oldReferences: Set[RelationshipReference],
-    failIfCreateRecordFails: Boolean,
-    failIfAllocateAgentInESFails: Boolean)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] = {
-
-    auditData.set("AgentDBRecord", false)
-    auditData.set("enrolmentDelegated", false)
-    auditData.set("etmpRelationshipCreated", false)
-
-    def createRelationshipRecord: Future[Unit] = {
-      val identifierType = TypeOfEnrolment(identifier).identifierKey
-      val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
-      relationshipCopyRepository
-        .create(record)
-        .map(_ => auditData.set("AgentDBRecord", true))
-        .recoverWith {
-          case NonFatal(ex) =>
-            Logger(getClass).warn(
-              s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
-              ex)
-            if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
-            else Future.successful(())
-        }
-    }
-
-    for {
-      _ <- createRelationshipRecord
-      _ <- createEtmpRecord(arn, identifier)
-      _ <- createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails)
-    } yield ()
-  }
-
-  private def recoverRelationshipCreation(
-    relationshipCopyRecord: RelationshipCopyRecord,
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser])(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] =
-    lockService
-      .tryLock(arn, identifier) {
-        def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
-
-        def recoverEsRecord() = createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails = false)
-
-        (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
-          case (true, true) =>
-            for {
-              _ <- recoverEtmpRecord()
-              _ <- recoverEsRecord()
-            } yield ()
-          case (false, true) =>
-            recoverEsRecord()
-          case (true, false) =>
-            Logger(getClass).warn(
-              s"ES relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
-                s"This should not happen because we always create the ETMP relationship first,")
-            recoverEtmpRecord()
-          case (false, false) =>
-            Logger(getClass).warn(
-              s"recoverRelationshipCreation called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
-            Future.successful(())
-        }
-      }
-      .map(_ => ())
-
   private def intersection[A](referenceIds: Seq[A])(
     mappingServiceCall: => Future[Seq[A]])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
@@ -398,33 +245,6 @@ class RelationshipsService @Inject()(
       }
   }
 
-  def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
-    currentUser: CurrentUser): Future[Unit] = {
-
-    implicit val auditData = setAuditDataForUser(currentUser, arn, taxIdentifier)
-
-    def esDeAllocation(clientGroupId: String) =
-      (for {
-        agentUser <- getAgentUserFor(arn)
-        _ <- checkForRelationship(taxIdentifier, agentUser).map(_ =>
-              es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
-      } yield ()).recover {
-        case ex: RelationshipNotFound =>
-          Logger(getClass).warn("Could not delete relationship", ex)
-      }
-
-    for {
-      clientGroupId <- es.getPrincipalGroupIdFor(taxIdentifier)
-      _             <- des.deleteAgentRelationship(taxIdentifier, arn)
-      _             <- esDeAllocation(clientGroupId)
-    } yield {
-      sendAuditEventForUser(currentUser)
-    }
-  }
-
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] =
     relationshipCopyRepository.remove(arn, mtdItId).flatMap { n =>
       if (n == 0) {
@@ -434,19 +254,4 @@ class RelationshipsService @Inject()(
         Future.successful(())
       }
     }
-
-  def getItsaRelationshipForClient(
-    clientId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
-    des.getActiveClientItsaRelationships(clientId)
-
-  def getItsaRelationshipForClient(
-    nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
-    for {
-      mtdItId       <- des.getMtdIdFor(nino)
-      relationships <- des.getActiveClientItsaRelationships(mtdItId)
-    } yield relationships
-
-  def getVatRelationshipForClient(
-    clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] =
-    des.getActiveClientVatRelationships(clientId)
 }
