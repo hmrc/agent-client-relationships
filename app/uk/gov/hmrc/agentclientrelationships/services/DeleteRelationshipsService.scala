@@ -160,6 +160,40 @@ class DeleteRelationshipsService @Inject()(
         .orElse(recoverNonFatal))
   }
 
+  def resumeRelationshipRemoval(
+    deleteRecord: DeleteRecord,
+    arn: Arn,
+    identifier: TaxIdentifier,
+    eventualAgentUser: Future[AgentUser],
+    clientGroupId: String
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] =
+    lockService
+      .tryLock(arn, identifier) {
+        def recoverEtmpRecord() = deleteEtmpRecord(arn, identifier)
+
+        def recoverEsRecord() = deleteEsRecord(arn, identifier, clientGroupId)
+
+        (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
+          case (true, true) =>
+            for {
+              _ <- recoverEtmpRecord()
+              _ <- recoverEsRecord()
+            } yield ()
+          case (false, true) =>
+            recoverEsRecord()
+          case (true, false) =>
+            Logger(getClass).warn(
+              s"ETMP relationship existed without ES relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
+                s"This should not happen because we always remove the ETMP relationship first.")
+            recoverEtmpRecord()
+          case (false, false) =>
+            Logger(getClass).warn(
+              s"resumeRelationshipRemoval called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
+            Future.successful(())
+        }
+      }
+      .map(_ => ())
+
   protected def setAuditDataForUser(currentUser: CurrentUser, arn: Arn, taxIdentifier: TaxIdentifier): AuditData = {
     val auditData = new AuditData()
     if (currentUser.credentials.providerType == "GovernmentGateway") {

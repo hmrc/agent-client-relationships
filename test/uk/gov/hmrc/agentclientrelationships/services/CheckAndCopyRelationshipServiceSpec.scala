@@ -38,7 +38,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class RelationshipsServiceSpec extends UnitSpec with BeforeAndAfterEach with ResettingMockitoSugar {
+class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach with ResettingMockitoSugar {
 
   val testDataGenerator = new Generator()
   val arn = Arn("AARN0000002")
