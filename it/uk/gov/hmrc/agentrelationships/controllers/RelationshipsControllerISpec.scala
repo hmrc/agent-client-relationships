@@ -1068,15 +1068,14 @@ class RelationshipsControllerISpec
         1,
         event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
         detail = Map(
-          "authProviderId"           -> authProviderId,
-          "authProviderIdType"       -> authProviderIdType,
-          "agentReferenceNumber"     -> arn,
-          "clientId"                 -> clientId,
-          "service"                  -> service
+          "authProviderId"       -> authProviderId,
+          "authProviderIdType"   -> authProviderIdType,
+          "agentReferenceNumber" -> arn,
+          "clientId"             -> clientId,
+          "service"              -> service
         ),
         tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
       )
-
 
     "the relationship exists and the Arn matches that of current Agent user" should {
 
@@ -1137,7 +1136,7 @@ class RelationshipsControllerISpec
 
     "the relationship exists and the user is authenticated with Stride" should {
       trait StubsForThisScenario {
-        givenUserIsAuthenticatedWithStride("CAAT","strideId-1234456")
+        givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
@@ -1382,13 +1381,13 @@ class RelationshipsControllerISpec
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
     def verifyClientRemovedAgentServiceAuthorisationAuditSent(
-                                                               arn: String,
-                                                               clientId: String,
-                                                               clientIdType: String,
-                                                               service: String,
-                                                               currentUserAffinityGroup: String,
-                                                               authProviderId: String,
-                                                               authProviderIdType: String) =
+      arn: String,
+      clientId: String,
+      clientIdType: String,
+      service: String,
+      currentUserAffinityGroup: String,
+      authProviderId: String,
+      authProviderIdType: String) =
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
@@ -1405,24 +1404,23 @@ class RelationshipsControllerISpec
       )
 
     def verifyHmrcRemovedAgentServiceAuthorisation(
-                                                    arn: String,
-                                                    clientId: String,
-                                                    service: String,
-                                                    authProviderId: String,
-                                                    authProviderIdType: String) =
+      arn: String,
+      clientId: String,
+      service: String,
+      authProviderId: String,
+      authProviderIdType: String) =
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
         detail = Map(
-          "authProviderId"           -> authProviderId,
-          "authProviderIdType"       -> authProviderIdType,
-          "agentReferenceNumber"     -> arn,
-          "clientId"                 -> clientId,
-          "service"                  -> service
+          "authProviderId"       -> authProviderId,
+          "authProviderIdType"   -> authProviderIdType,
+          "agentReferenceNumber" -> arn,
+          "clientId"             -> clientId,
+          "service"              -> service
         ),
         tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
       )
-
 
     "the relationship exists and the Arn matches that of current Agent user" should {
 
@@ -1485,7 +1483,7 @@ class RelationshipsControllerISpec
 
     "the relationship exists and the user is authenticated with Stride" should {
       trait StubsForThisScenario {
-        givenUserIsAuthenticatedWithStride("CAAT","strideId-1234456")
+        givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
@@ -1739,13 +1737,13 @@ class RelationshipsControllerISpec
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     def verifyClientRemovedAgentServiceAuthorisationAuditSent(
-                                                               arn: String,
-                                                               clientId: String,
-                                                               clientIdType: String,
-                                                               service: String,
-                                                               currentUserAffinityGroup: String,
-                                                               authProviderId: String,
-                                                               authProviderIdType: String) =
+      arn: String,
+      clientId: String,
+      clientIdType: String,
+      service: String,
+      currentUserAffinityGroup: String,
+      authProviderId: String,
+      authProviderIdType: String) =
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
@@ -1762,24 +1760,23 @@ class RelationshipsControllerISpec
       )
 
     def verifyHmrcRemovedAgentServiceAuthorisation(
-                                                    arn: String,
-                                                    clientId: String,
-                                                    service: String,
-                                                    authProviderId: String,
-                                                    authProviderIdType: String) =
+      arn: String,
+      clientId: String,
+      service: String,
+      authProviderId: String,
+      authProviderIdType: String) =
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
         detail = Map(
-          "authProviderId"           -> authProviderId,
-          "authProviderIdType"       -> authProviderIdType,
-          "agentReferenceNumber"     -> arn,
-          "clientId"                 -> clientId,
-          "service"                  -> service
+          "authProviderId"       -> authProviderId,
+          "authProviderIdType"   -> authProviderIdType,
+          "agentReferenceNumber" -> arn,
+          "clientId"             -> clientId,
+          "service"              -> service
         ),
         tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
       )
-
 
     "the relationship exists and the Arn matches that of current Agent user" should {
 
@@ -1840,7 +1837,7 @@ class RelationshipsControllerISpec
 
     "the relationship exists and the user is authenticated with Stride" should {
       trait StubsForThisScenario {
-        givenUserIsAuthenticatedWithStride("CAAT","strideId-1234456")
+        givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")

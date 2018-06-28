@@ -76,6 +76,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       formats,
       ReactiveMongoFormats.objectIdFormats)
     with RelationshipCopyRecordRepository
+    with StrictlyEnsureIndexes[RelationshipCopyRecord, BSONObjectID]
     with AtomicUpdate[RelationshipCopyRecord] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey

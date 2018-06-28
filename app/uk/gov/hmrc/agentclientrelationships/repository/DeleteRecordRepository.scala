@@ -75,6 +75,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       formats,
       ReactiveMongoFormats.objectIdFormats)
     with DeleteRecordRepository
+    with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID]
     with AtomicUpdate[DeleteRecord] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
@@ -88,13 +89,11 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
 
   def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int] =
     insert(record).map { result =>
-      result.writeErrors.foreach(error =>
-        Logger(getClass).warn(s"Creating DeleteRecord failed: ${error.errmsg}"))
+      result.writeErrors.foreach(error => Logger(getClass).warn(s"Creating DeleteRecord failed: ${error.errmsg}"))
       result.n
     }
 
-  def findBy(arn: Arn, identifier: TaxIdentifier)(
-    implicit ec: ExecutionContext): Future[Option[DeleteRecord]] =
+  def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[DeleteRecord]] =
     find(
       "arn"                  -> arn.value,
       "clientIdentifier"     -> identifier.value,
