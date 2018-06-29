@@ -49,7 +49,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val agentGroupId = "testGroupId"
   val agentCodeForVatDecAgent = AgentCode("oldAgentCode")
   val agentCodeForAsAgent = AgentCode("ABC1234")
-  val eventualAgentUserForAsAgent = Future successful AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent)
+  val eventualAgentUserForAsAgent = Future successful AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn)
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,

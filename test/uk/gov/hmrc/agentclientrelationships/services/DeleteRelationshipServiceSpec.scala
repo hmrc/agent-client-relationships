@@ -46,7 +46,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
   val agentUserId = "testUserId"
   val agentGroupId = "testGroupId"
   val agentCodeForAsAgent = AgentCode("ABC1234")
-  val eventualAgentUserForAsAgent = Future successful AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent)
+  val agentUser = AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn)
+  val eventualAgentUserForAsAgent = Future successful agentUser
 
   trait TestFixture {
 
@@ -54,7 +55,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
     val des = mock[DesConnector]
     val ugs = mock[UsersGroupsSearchConnector]
     val auditService = mock[AuditService]
-    val findService = mock[FindRelationshipsService]
+    val checkService = mock[CheckRelationshipsService]
     val agentUserService = mock[AgentUserService]
     val metrics = mock[Metrics]
 
@@ -67,7 +68,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       ugs,
       repo,
       lockService,
-      findService,
+      checkService,
       agentUserService,
       auditService,
       metrics)
@@ -83,8 +84,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       when(es.getPrincipalGroupIdFor(mtdItId)).thenReturn(Future.successful("group0001"))
 
       val result =
-        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
-      result shouldBe "Success"
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
+      result shouldBe true
 
       verify(es, never()).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
@@ -101,8 +102,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
         .thenReturn(Future.successful(RegistrationRelationshipResponse(LocalDate.now.toString)))
 
       val result =
-        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
-      result shouldBe "Success"
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
+      result shouldBe true
 
       verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
@@ -115,7 +116,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
 
-    "Retry ETMP deauthorisation when ETMP state is InProgress" in new TestFixture {
+    "Do not retry ETMP deauthorisation when ETMP state is InProgress" in new TestFixture {
       val deleteRecord =
         DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(InProgress), Some(Success))
       repo.create(deleteRecord)
@@ -124,17 +125,17 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
         .thenReturn(Future.successful(RegistrationRelationshipResponse(LocalDate.now.toString)))
 
       val result =
-        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
-      result shouldBe "Success"
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
+      result shouldBe true
 
       verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
         any[ExecutionContext])
-      verify(des, times(1))
+      verify(des, never)
         .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
       val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
-      record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
+      record.flatMap(_.syncToETMPStatus) shouldBe Some(InProgress)
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
 
@@ -142,14 +143,14 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
       repo.create(deleteRecord)
       when(es.getPrincipalGroupIdFor(mtdItId)).thenReturn(Future.successful("group0001"))
-      when(findService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
+      when(checkService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
       when(agentUserService.getAgentUserFor(arn)).thenReturn(Future.successful(eventualAgentUserForAsAgent))
       when(es.deallocateEnrolmentFromAgent("group0001", mtdItId, agentCodeForAsAgent))
         .thenReturn(Future.successful(()))
 
       val result =
-        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
-      result shouldBe "Success"
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
+      result shouldBe true
 
       verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
@@ -162,20 +163,45 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
 
+    "Do not retry ES deallocation when ES state is InProgress" in new TestFixture {
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(InProgress))
+      repo.create(deleteRecord)
+      when(es.getPrincipalGroupIdFor(mtdItId)).thenReturn(Future.successful("group0001"))
+      when(checkService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
+      when(agentUserService.getAgentUserFor(arn)).thenReturn(Future.successful(eventualAgentUserForAsAgent))
+      when(es.deallocateEnrolmentFromAgent("group0001", mtdItId, agentCodeForAsAgent))
+        .thenReturn(Future.successful(()))
+
+      val result =
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
+      result shouldBe true
+
+      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
+        any[HeaderCarrier],
+        any[ExecutionContext])
+      verify(des, never)
+        .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
+
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
+      record.flatMap(_.syncToESStatus) shouldBe Some(InProgress)
+    }
+
     "Retry both ETMP and ES deallocation when both require action" in new TestFixture {
       val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Failed), Some(Failed))
       repo.create(deleteRecord)
       when(es.getPrincipalGroupIdFor(mtdItId)).thenReturn(Future.successful("group0001"))
       when(des.deleteAgentRelationship(mtdItId, arn))
         .thenReturn(Future.successful(RegistrationRelationshipResponse(LocalDate.now.toString)))
-      when(findService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
+      when(checkService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
       when(agentUserService.getAgentUserFor(arn)).thenReturn(Future.successful(eventualAgentUserForAsAgent))
       when(es.deallocateEnrolmentFromAgent("group0001", mtdItId, agentCodeForAsAgent))
         .thenReturn(Future.successful(()))
 
       val result =
-        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
-      result shouldBe "Success"
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
+      result shouldBe true
 
       verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
@@ -197,7 +223,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       when(des.deleteAgentRelationship(mtdItId, arn)).thenReturn(Future.failed(new Exception()))
 
       an[Exception] shouldBe thrownBy {
-        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
       }
 
       verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
@@ -215,13 +241,13 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
       repo.create(deleteRecord)
       when(es.getPrincipalGroupIdFor(mtdItId)).thenReturn(Future.successful("group0001"))
-      when(findService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
+      when(checkService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
       when(agentUserService.getAgentUserFor(arn)).thenReturn(Future.successful(eventualAgentUserForAsAgent))
       when(es.deallocateEnrolmentFromAgent("group0001", mtdItId, AgentCode("")))
         .thenReturn(Future.failed(new Exception()))
 
       an[Exception] shouldBe thrownBy {
-        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
+        await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent))
       }
 
       verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
@@ -233,6 +259,40 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
       val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
       record.flatMap(_.syncToESStatus) shouldBe Some(Failed)
+    }
+  }
+
+  "checkDeleteRecordAndEventuallyResume" should {
+    "return true if there is no pending delete record" in new TestFixture {
+      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, agentUser))
+
+      result shouldBe true
+    }
+    "return true if delete record found and resumption succeeded" in new TestFixture {
+      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      repo.create(deleteRecord)
+      when(es.getPrincipalGroupIdFor(mtdItId)).thenReturn(Future.successful("group0001"))
+      when(checkService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
+      when(agentUserService.getAgentUserFor(arn)).thenReturn(Future.successful(eventualAgentUserForAsAgent))
+      when(es.deallocateEnrolmentFromAgent("group0001", mtdItId, agentCodeForAsAgent))
+        .thenReturn(Future.successful(()))
+
+      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, agentUser))
+
+      result shouldBe true
+    }
+    "return false if delete record found but resumption failed" in new TestFixture {
+      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      repo.create(deleteRecord)
+      when(es.getPrincipalGroupIdFor(mtdItId)).thenReturn(Future.successful("group0001"))
+      when(checkService.checkForRelationship(mtdItId, eventualAgentUserForAsAgent)).thenReturn(Right(true))
+      when(agentUserService.getAgentUserFor(arn)).thenReturn(Future.successful(eventualAgentUserForAsAgent))
+      when(es.deallocateEnrolmentFromAgent("group0001", mtdItId, AgentCode("")))
+        .thenReturn(Future.failed(new Exception()))
+
+      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, agentUser))
+
+      result shouldBe false
     }
   }
 

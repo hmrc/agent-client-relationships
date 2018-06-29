@@ -74,7 +74,7 @@ class CreateRelationshipsService @Inject()(
     }
 
     for {
-      _ <- createRelationshipRecordresult
+      _ <- createRelationshipRecord
       _ <- createEtmpRecord(arn, identifier)
       _ <- createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails)
     } yield ()

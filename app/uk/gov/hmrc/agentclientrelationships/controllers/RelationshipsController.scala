@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipDeletePending, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -39,7 +39,8 @@ import scala.util.control.NonFatal
 @Singleton
 class RelationshipsController @Inject()(
   override val authConnector: AuthConnector,
-  checkAndCopyService: CheckAndCopyRelationshipsService,
+  checkService: CheckRelationshipsService,
+  checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,
   deleteService: DeleteRelationshipsService,
   findService: FindRelationshipsService,
@@ -53,7 +54,8 @@ class RelationshipsController @Inject()(
 
   def checkWithMtdVat(arn: Arn, vrn: Vrn): Action[AnyContent] = checkWithTaxIdentifier(arn, vrn)
 
-  private def checkWithTaxIdentifier(arn: Arn, identifier: TaxIdentifier): Action[AnyContent] = Action.async {
+  //noinspection ScalaStyle
+  private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = Action.async {
     implicit request =>
       implicit val auditData: AuditData = new AuditData()
       auditData.set("arn", arn)
@@ -62,14 +64,16 @@ class RelationshipsController @Inject()(
 
       val result = for {
         agentUser <- agentUserFuture
-        result    <- findService.checkForRelationship(identifier, agentUser)
+        isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, agentUser)
+        result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
+                 else raiseError(RelationshipDeletePending())
       } yield result
 
       result
         .recoverWith {
           case RelationshipNotFound(errorCode) =>
-            checkAndCopyService
-              .checkForOldRelationshipAndCopy(arn, identifier, agentUserFuture)
+            checkOldAndCopyService
+              .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
               .map {
                 case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled =>
                   Left(errorCode)
@@ -81,10 +85,12 @@ class RelationshipsController @Inject()(
                   throw upS
                 case NonFatal(ex) =>
                   Logger(getClass).warn(
-                    s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
+                    s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
                     ex)
                   Left(errorCode)
               }
+          case e @ RelationshipDeletePending() =>
+            Future.successful(Left(e.getMessage))
         }
         .map {
           case Left(errorCode) => NotFound(toJson(errorCode))
@@ -94,10 +100,10 @@ class RelationshipsController @Inject()(
   }
 
   def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
-    implicit val auditData = new AuditData()
+    implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
-    checkAndCopyService
+    checkOldAndCopyService
       .lookupCesaForOldRelationship(arn, nino)
       .map {
         case references if references.nonEmpty => Ok
@@ -124,7 +130,7 @@ class RelationshipsController @Inject()(
 
       (for {
         agentUser <- agentUserService.getAgentUserFor(arn)
-        _ <- findService
+        _ <- checkService
               .checkForRelationship(identifier, agentUser)
               .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
               .recover {
@@ -168,15 +174,13 @@ class RelationshipsController @Inject()(
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
-    checkAndCopyService
+    checkOldAndCopyService
       .lookupESForOldRelationship(arn, vrn)
       .map {
-        case references if references.nonEmpty => {
+        case references if references.nonEmpty =>
           Ok
-        }
-        case _ => {
+        case _ =>
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-        }
       }
       .recover {
         case upS: Upstream5xxResponse => throw upS
@@ -217,7 +221,7 @@ class RelationshipsController @Inject()(
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
-    checkAndCopyService
+    checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
       .recover {

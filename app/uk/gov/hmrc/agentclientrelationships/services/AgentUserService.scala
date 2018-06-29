@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class AgentUser(userId: String, groupId: String, agentCode: AgentCode)
+case class AgentUser(userId: String, groupId: String, agentCode: AgentCode, arn: Arn)
 
 @Singleton
 class AgentUserService @Inject()(
@@ -42,6 +42,6 @@ class AgentUserService @Inject()(
       groupInfo <- ugs.getGroupInfo(agentGroupId)
       agentCode = groupInfo.agentCode.getOrElse(throw new Exception(s"Missing AgentCode for $arn"))
       _ = auditData.set("agentCode", agentCode)
-    } yield AgentUser(agentUserId, agentGroupId, agentCode)
+    } yield AgentUser(agentUserId, agentGroupId, agentCode, arn)
 
 }

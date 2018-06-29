@@ -24,8 +24,8 @@ import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
+import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, DeleteRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -41,7 +41,7 @@ class DeleteRelationshipsService @Inject()(
   ugs: UsersGroupsSearchConnector,
   deleteRecordRepository: DeleteRecordRepository,
   lockService: RecoveryLockService,
-  getRelationshipsService: FindRelationshipsService,
+  checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   val auditService: AuditService,
   val metrics: Metrics)
@@ -69,9 +69,9 @@ class DeleteRelationshipsService @Inject()(
         .recoverWith {
           case NonFatal(ex) =>
             Logger(getClass).warn(
-              s"Inserting relationship record into mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
+              s"Inserting delete record into mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
               ex)
-            Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
+            Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
         }
 
     for {
@@ -79,6 +79,7 @@ class DeleteRelationshipsService @Inject()(
       clientGroupId <- es.getPrincipalGroupIdFor(taxIdentifier)
       _             <- deleteEtmpRecord(arn, taxIdentifier)
       _             <- deleteEsRecord(arn, taxIdentifier, clientGroupId)
+      _             <- removeDeleteRecord(arn, taxIdentifier)
     } yield sendAuditEventForUser(currentUser)
   }
 
@@ -146,7 +147,7 @@ class DeleteRelationshipsService @Inject()(
     (for {
       _         <- updateEsSyncStatus(InProgress)
       agentUser <- agentUserService.getAgentUserFor(arn)
-      _ <- getRelationshipsService
+      _ <- checkService
             .checkForRelationship(taxIdentifier, agentUser)
             .flatMap(_ => es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
       _ = auditData.set("enrolmentDeAllocated", true)
@@ -157,10 +158,43 @@ class DeleteRelationshipsService @Inject()(
         .orElse(recoverNonFatal))
   }
 
+  def removeDeleteRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
+    implicit ec: ExecutionContext,
+    hc: HeaderCarrier): Future[Boolean] =
+    deleteRecordRepository
+      .remove(arn, taxIdentifier)
+      .map(_ > 0)
+      .recoverWith {
+        case NonFatal(ex) =>
+          Logger(getClass).warn(
+            s"Removing delete record from mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
+            ex)
+          Future.successful(false)
+      }
+
+  def checkDeleteRecordAndEventuallyResume(
+    taxIdentifier: TaxIdentifier,
+    agentUser: AgentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] =
+    (for {
+      recordOpt <- deleteRecordRepository.findBy(agentUser.arn, taxIdentifier)
+      isComplete <- recordOpt match {
+                     case Some(record) =>
+                       for {
+                         isDone <- resumeRelationshipRemoval(record, agentUser)
+                         _ <- if (isDone) removeDeleteRecord(agentUser.arn, taxIdentifier)
+                             else Future.successful(false)
+                       } yield isDone
+                     case None => Future.successful(true)
+                   }
+    } yield isComplete)
+      .recover {
+        case NonFatal(_) => false
+      }
+
   def resumeRelationshipRemoval(
     deleteRecord: DeleteRecord,
-    eventualAgentUser: Future[AgentUser]
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+    agentUser: AgentUser
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] = {
     val arn = Arn(deleteRecord.arn)
     val identifier = TaxIdentifierSupport.from(deleteRecord.clientIdentifier, deleteRecord.clientIdentifierType)
     lockService
@@ -171,24 +205,26 @@ class DeleteRelationshipsService @Inject()(
               _             <- deleteEtmpRecord(arn, identifier)
               clientGroupId <- es.getPrincipalGroupIdFor(identifier)
               _             <- deleteEsRecord(arn, identifier, clientGroupId)
-            } yield ()
+            } yield true
           case (false, true) =>
             for {
               clientGroupId <- es.getPrincipalGroupIdFor(identifier)
               _             <- deleteEsRecord(arn, identifier, clientGroupId)
-            } yield ()
+            } yield true
           case (true, false) =>
             Logger(getClass).warn(
               s"ETMP relationship existed without ES relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                 s"This should not happen because we always remove the ETMP relationship first.")
-            deleteEtmpRecord(arn, identifier)
+            for {
+              _ <- deleteEtmpRecord(arn, identifier)
+            } yield true
           case (false, false) =>
             Logger(getClass).warn(
               s"resumeRelationshipRemoval called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
-            Future.successful(())
+            Future.successful(true)
         }
       }
-      .map(_ => ())
+      .map(_.getOrElse(false))
   }
 
   protected def setAuditDataForUser(currentUser: CurrentUser, arn: Arn, taxIdentifier: TaxIdentifier): AuditData = {

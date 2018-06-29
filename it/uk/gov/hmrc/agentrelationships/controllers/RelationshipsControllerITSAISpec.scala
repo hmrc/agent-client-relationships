@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.joda.time.LocalDate
+import org.joda.time.{DateTime, DateTimeZone, LocalDate}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
@@ -25,8 +25,9 @@ import play.api.libs.ws.WSClient
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
@@ -76,6 +77,7 @@ class RelationshipsControllerITSAISpec
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
+  def deleteRecordRepository = app.injector.instanceOf[MongoDeleteRecordRepository]
 
   override def beforeEach() {
     super.beforeEach()
@@ -107,7 +109,160 @@ class RelationshipsControllerITSAISpec
 
     def doRequest = doAgentGetRequest(requestPath)
 
-    behave like aCheckEndpoint(true, doRequest)
+    //HAPPY PATH :-)
+
+    "return 200 when relationship exists in es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+
+      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
+
+      await(query()) shouldBe empty
+      val result = await(doRequest)
+      result.status shouldBe 200
+      await(query()) shouldBe empty
+    }
+
+    //UNHAPPY PATHS
+
+    "return 404 when credentials are not found in es" in {
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientIsUnknownInCESAFor(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
+    }
+
+    "return 404 when agent code is not found in ugs" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoNotExists("foo")
+      givenDelegatedGroupIdsExistFor(mtdItId, Set("foo"))
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientIsUnknownInCESAFor(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+    }
+
+    "return 404 when delete is pending" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+
+      deleteRecordRepository.create(
+        DeleteRecord(
+          arn.value,
+          mtdItId.value,
+          "MTDITID",
+          DateTime.now(DateTimeZone.UTC),
+          Some(SyncStatus.Success),
+          Some(SyncStatus.Failed)))
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_DELETE_PENDING"
+    }
+
+    //CESA CHECK UNHAPPY PATHS
+
+    "return 404 when agent not allocated to client in es nor identifier not found in des" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(mtdItId)
+      givenNinoIsUnknownFor(mtdItId)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in es nor cesa" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistFor(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenArnIsUnknownFor(arn)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+    }
+
+    //FAILURE CASES
+
+    "return 502 when ES1/principal returns 5xx" in {
+      givenPrincipalGroupIdRequestFailsWith(500)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when UGS returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(500)
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when ES1/delegated returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+
+      givenDelegatedGroupIdRequestFailsWith(500)
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 400 when ES1/principal returns 4xx" in {
+      givenPrincipalGroupIdRequestFailsWith(400)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when UGS returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(400)
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when ES/delegated returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdRequestFailsWith(400)
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
 
     //HAPPY PATHS WHEN CHECKING CESA
 
@@ -1515,145 +1670,4 @@ class RelationshipsControllerITSAISpec
   private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
 
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
-
-  private def aCheckEndpoint(isMtdItId: Boolean, doRequest: => HttpResponse) = {
-
-    val identifier: TaxIdentifier = if (isMtdItId) mtdItId else nino
-
-    //HAPPY PATH :-)
-
-    "return 200 when relationship exists in es" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-
-      def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
-
-      await(query()) shouldBe empty
-      val result = await(doRequest)
-      result.status shouldBe 200
-      await(query()) shouldBe empty
-    }
-
-    //UNHAPPY PATHS
-
-    "return 404 when credentials are not found in es" in {
-      givenPrincipalGroupIdNotExistsFor(arn)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientIsUnknownInCESAFor(nino)
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
-    }
-
-    "return 404 when agent code is not found in ugs" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfoNotExists("foo")
-      givenDelegatedGroupIdsExistFor(identifier, Set("foo"))
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientIsUnknownInCESAFor(nino)
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
-    }
-
-    //CESA CHECK UNHAPPY PATHS
-
-    "return 404 when agent not allocated to client in es nor identifier not found in des" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistFor(identifier)
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-    }
-
-    "return 404 when agent not allocated to client in es nor cesa" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistFor(identifier)
-      givenNinoIsKnownFor(mtdItId, nino)
-      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-    }
-
-    "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistFor(identifier)
-      givenNinoIsKnownFor(mtdItId, nino)
-      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenArnIsUnknownFor(arn)
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-    }
-
-    //FAILURE CASES
-
-    "return 502 when ES1/principal returns 5xx" in {
-      givenPrincipalGroupIdRequestFailsWith(500)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-
-      val result = await(doRequest)
-      result.status shouldBe 502
-    }
-
-    "return 502 when UGS returns 5xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfoFailsWith(500)
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-
-      val result = await(doRequest)
-      result.status shouldBe 502
-    }
-
-    "return 502 when ES1/delegated returns 5xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-
-      givenDelegatedGroupIdRequestFailsWith(500)
-      val result = await(doRequest)
-      result.status shouldBe 502
-    }
-
-    "return 400 when ES1/principal returns 4xx" in {
-      givenPrincipalGroupIdRequestFailsWith(400)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-
-      val result = await(doRequest)
-      result.status shouldBe 400
-    }
-
-    "return 400 when UGS returns 4xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfoFailsWith(400)
-      givenAgentIsAllocatedAndAssignedToClient(identifier, "bar")
-
-      val result = await(doRequest)
-      result.status shouldBe 400
-    }
-
-    "return 400 when ES/delegated returns 4xx" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdRequestFailsWith(400)
-
-      val result = await(doRequest)
-      result.status shouldBe 400
-    }
-  }
 }

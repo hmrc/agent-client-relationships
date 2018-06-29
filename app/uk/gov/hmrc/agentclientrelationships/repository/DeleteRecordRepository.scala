@@ -46,7 +46,7 @@ case class DeleteRecord(
   syncToESStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
-  def needToDeleteEtmpRecord = !syncToETMPStatus.contains(Success)
+  def needToDeleteEtmpRecord = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))
 
   def needToDeleteEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
@@ -64,7 +64,7 @@ trait DeleteRecordRepository {
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
     implicit ec: ExecutionContext): Future[Unit]
 
-  def remove(arn: Arn, idntifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
+  def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
 }
 
 @Singleton

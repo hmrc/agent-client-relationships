@@ -18,30 +18,16 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
-import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Vrn}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class FindRelationshipsService @Inject()(es: EnrolmentStoreProxyConnector, des: DesConnector, val metrics: Metrics)
-    extends Monitoring {
-
-  def checkForRelationship(identifier: TaxIdentifier, agentUser: AgentUser)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Either[String, Boolean]] =
-    for {
-      allocatedGroupIds <- es.getDelegatedGroupIdsFor(identifier)
-      result <- if (allocatedGroupIds.contains(agentUser.groupId)) returnValue(Right(true))
-               else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
-    } yield result
+class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics) extends Monitoring {
 
   def getItsaRelationshipForClient(
     clientId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
