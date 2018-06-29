@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Named, Singleton}
-
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -29,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
@@ -86,7 +85,7 @@ class DeleteRelationshipsService @Inject()(
     } yield sendAuditEventForUser(currentUser)
   }
 
-  protected def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
+  def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Unit] = {
@@ -114,10 +113,11 @@ class DeleteRelationshipsService @Inject()(
 
   }
 
-  protected def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier, clientGroupId: String)(
+  def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier, clientGroupId: String)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Unit] = {
+
     val updateEsSyncStatus = deleteRecordRepository.updateEsSyncStatus(arn, taxIdentifier, _: SyncStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
@@ -128,7 +128,7 @@ class DeleteRelationshipsService @Inject()(
       Future.failed(replacementExc)
     }
 
-    val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
+    lazy val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
       case RelationshipNotFound(errorCode) =>
         Logger(getClass).warn(
           s"De-allocating ES record for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}) " +
@@ -136,12 +136,12 @@ class DeleteRelationshipsService @Inject()(
         updateEsSyncStatus(IncompleteInputParams)
     }
 
-    val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
+    lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
       case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
         logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
     }
 
-    val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
+    lazy val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
       case NonFatal(ex) =>
         logAndMaybeFail(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ES"))
     }
@@ -151,7 +151,7 @@ class DeleteRelationshipsService @Inject()(
       agentUser <- agentUserService.getAgentUserFor(arn)
       _ <- getRelationshipsService
             .checkForRelationship(taxIdentifier, agentUser)
-            .map(_ => es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
+            .flatMap(_ => es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
       _ = auditData.set("enrolmentDeAllocated", true)
       _ <- updateEsSyncStatus(Success)
     } yield ()).recoverWith(
@@ -162,30 +162,29 @@ class DeleteRelationshipsService @Inject()(
 
   def resumeRelationshipRemoval(
     deleteRecord: DeleteRecord,
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser],
-    clientGroupId: String
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] =
+    eventualAgentUser: Future[AgentUser]
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
+    val arn = Arn(deleteRecord.arn)
+    val identifier = TaxIdentifierSupport.from(deleteRecord.clientIdentifier, deleteRecord.clientIdentifierType)
     lockService
       .tryLock(arn, identifier) {
-        def recoverEtmpRecord() = deleteEtmpRecord(arn, identifier)
-
-        def recoverEsRecord() = deleteEsRecord(arn, identifier, clientGroupId)
-
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
             for {
-              _ <- recoverEtmpRecord()
-              _ <- recoverEsRecord()
+              _             <- deleteEtmpRecord(arn, identifier)
+              clientGroupId <- es.getPrincipalGroupIdFor(identifier)
+              _             <- deleteEsRecord(arn, identifier, clientGroupId)
             } yield ()
           case (false, true) =>
-            recoverEsRecord()
+            for {
+              clientGroupId <- es.getPrincipalGroupIdFor(identifier)
+              _             <- deleteEsRecord(arn, identifier, clientGroupId)
+            } yield ()
           case (true, false) =>
             Logger(getClass).warn(
               s"ETMP relationship existed without ES relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                 s"This should not happen because we always remove the ETMP relationship first.")
-            recoverEtmpRecord()
+            deleteEtmpRecord(arn, identifier)
           case (false, false) =>
             Logger(getClass).warn(
               s"resumeRelationshipRemoval called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
@@ -193,6 +192,7 @@ class DeleteRelationshipsService @Inject()(
         }
       }
       .map(_ => ())
+  }
 
   protected def setAuditDataForUser(currentUser: CurrentUser, arn: Arn, taxIdentifier: TaxIdentifier): AuditData = {
     val auditData = new AuditData()

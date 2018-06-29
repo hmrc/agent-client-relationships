@@ -114,7 +114,7 @@ class CheckAndCopyRelationshipsService @Inject()(
         for {
           nino       <- des.getNinoFor(mtdItId)
           references <- lookupCesaForOldRelationship(arn, nino)
-          result <- if (references.nonEmpty) {
+          result <- if (references.nonEmpty)
                      maybeRelationshipCopyRecord
                        .map(relationshipCopyRecord =>
                          createRelationshipsService
@@ -134,8 +134,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                            auditService.sendCreateRelationshipAuditEvent
                            mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                            FoundAndFailedToCopy
-                       }
-                   } else Future.successful(NotFound)
+                       } else Future.successful(NotFound)
         } yield result
     }
   }
@@ -158,7 +157,7 @@ class CheckAndCopyRelationshipsService @Inject()(
       case maybeRelationshipCopyRecord @ _ =>
         for {
           references <- lookupESForOldRelationship(arn, vrn)
-          result <- if (references.nonEmpty) {
+          result <- if (references.nonEmpty)
                      maybeRelationshipCopyRecord
                        .map(relationshipCopyRecord =>
                          createRelationshipsService
@@ -178,8 +177,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                            auditService.sendCreateRelationshipAuditEventForMtdVat
                            mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
                            FoundAndFailedToCopy
-                       }
-                   } else Future.successful(NotFound)
+                       } else Future.successful(NotFound)
         } yield result
     }
   }
@@ -247,9 +245,9 @@ class CheckAndCopyRelationshipsService @Inject()(
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] =
     relationshipCopyRepository.remove(arn, mtdItId).flatMap { n =>
-      if (n == 0) {
+      if (n == 0)
         Future.failed(RelationshipNotFound("Nothing has been removed from db."))
-      } else {
+      else {
         Logger(getClass).warn(s"Copy status record(s) has been removed for ${arn.value}, ${mtdItId.value}: $n")
         Future.successful(())
       }
