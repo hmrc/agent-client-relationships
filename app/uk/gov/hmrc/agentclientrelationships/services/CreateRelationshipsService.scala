@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
@@ -74,7 +74,7 @@ class CreateRelationshipsService @Inject()(
     }
 
     for {
-      _ <- createRelationshipRecord
+      _ <- createRelationshipRecordresult
       _ <- createEtmpRecord(arn, identifier)
       _ <- createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails)
     } yield ()

@@ -104,7 +104,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
         await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
       result shouldBe "Success"
 
-      verify(es, never()).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
+      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
         any[ExecutionContext])
       verify(des, times(1))
@@ -127,7 +127,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
         await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
       result shouldBe "Success"
 
-      verify(es, never()).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
+      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
         any[ExecutionContext])
       verify(des, times(1))
@@ -200,7 +200,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach wit
         await(underTest.resumeRelationshipRemoval(deleteRecord, eventualAgentUserForAsAgent).map(_ => "Success"))
       }
 
-      verify(es, never()).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
+      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
         any[HeaderCarrier],
         any[ExecutionContext])
       verify(des, times(1))
