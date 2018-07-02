@@ -90,6 +90,7 @@ class RelationshipsController @Inject()(
                   Left(errorCode)
               }
           case e @ RelationshipDeletePending() =>
+            Logger(getClass).warn("Denied access because relationship removal is pending.")
             Future.successful(Left(e.getMessage))
         }
         .map {
