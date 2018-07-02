@@ -155,18 +155,21 @@ class RelationshipsControllerITSAISpec
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
 
-      deleteRecordRepository.create(
-        DeleteRecord(
-          arn.value,
-          mtdItId.value,
-          "MTDITID",
-          DateTime.now(DateTimeZone.UTC),
-          Some(SyncStatus.Success),
-          Some(SyncStatus.Failed)))
+      await(
+        deleteRecordRepository.create(
+          DeleteRecord(
+            arn.value,
+            mtdItId.value,
+            "MTDITID",
+            DateTime.now(DateTimeZone.UTC),
+            Some(SyncStatus.Success),
+            Some(SyncStatus.Failed))))
 
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_DELETE_PENDING"
+
+      await(deleteRecordRepository.remove(arn, mtdItId))
     }
 
     //CESA CHECK UNHAPPY PATHS
