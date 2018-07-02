@@ -40,9 +40,8 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
     }
 
     "return IllegalArgumentException when tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy {
+      an[IllegalArgumentException] should be thrownBy
         await(enrolmentKeyPrefixFor(Utr("foo")))
-      }
     }
   }
 
@@ -64,8 +63,25 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
     }
 
     "return IllegalArgumentException when tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy {
+      an[IllegalArgumentException] should be thrownBy
         await(identifierNickname(Utr("foo")))
+    }
+  }
+
+  "from" should {
+    "return appropriate tax identifier when given value and type" in {
+      TaxIdentifierSupport.from("foo", "MTDITID") shouldBe MtdItId("foo")
+
+      TaxIdentifierSupport.from("AB123456A", "NINO") shouldBe Nino("AB123456A")
+
+      TaxIdentifierSupport.from("foo", "VRN") shouldBe Vrn("foo")
+
+      TaxIdentifierSupport.from("foo", "AgentReferenceNumber") shouldBe Arn("foo")
+    }
+
+    "throw an expception when tax identifier type is not supported" in {
+      an[Exception] shouldBe thrownBy {
+        TaxIdentifierSupport.from("foo", "UNSUPPORTED")
       }
     }
   }

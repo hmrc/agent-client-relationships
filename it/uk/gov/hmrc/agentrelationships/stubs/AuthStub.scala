@@ -95,9 +95,10 @@ trait AuthStub {
     this
   }
 
+  //noinspection ScalaStyle
   def givenUserIsSubscribedClient(identifier: TaxIdentifier, withThisGgUserId: String = "12345-credId"): AuthStub = {
     val (service, key, value) = identifier match {
-      case Nino(v) => ("HMRC-NI", "NINO", v)
+      case Nino(v)    => ("HMRC-NI", "NINO", v)
       case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
       case Vrn(v)     => ("HMRC-MTD-VAT", "VRN", v)
     }

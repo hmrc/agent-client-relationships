@@ -16,17 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.scalatest.BeforeAndAfterEach
-import uk.gov.hmrc.play.test.UnitSpec
+import play.api.libs.json.{Format, Reads, Writes}
 
-import scala.concurrent.Future
+object SyncStatus extends Enumeration {
+  type SyncStatus = Value
+  val InProgress, IncompleteInputParams, Success, Failed = Value
 
-class FakeRelationshipCopyRecordRepositorySpec extends UnitSpec with BeforeAndAfterEach {
-
-  val repo = new FakeRelationshipCopyRecordRepository()
-
-  override protected def beforeEach(): Unit =
-    repo.reset
-  override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
-
+  implicit val formats = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes.enumNameWrites)
 }
