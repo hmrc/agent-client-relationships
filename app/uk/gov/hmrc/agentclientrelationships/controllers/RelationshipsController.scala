@@ -64,7 +64,7 @@ class RelationshipsController @Inject()(
 
       val result = for {
         agentUser <- agentUserFuture
-        isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, agentUser)
+        isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
         result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
                  else raiseError(RelationshipDeletePending())
       } yield result
