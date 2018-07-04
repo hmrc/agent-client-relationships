@@ -47,6 +47,7 @@ class DeleteRelationshipsService @Inject()(
   val metrics: Metrics)
     extends Monitoring {
 
+  //noinspection ScalaStyle
   def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -56,13 +57,12 @@ class DeleteRelationshipsService @Inject()(
     implicit val auditData: AuditData = setAuditDataForUser(currentUser, arn, taxIdentifier)
 
     val identifierType = TypeOfEnrolment(taxIdentifier).identifierKey
-    val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType)
 
     auditData.set("AgentDBRecord", false)
     auditData.set("enrolmentDeAllocated", false)
     auditData.set("etmpRelationshipDeAuthorised", false)
 
-    def createDeleteRecord: Future[Unit] =
+    def createDeleteRecord(record: DeleteRecord): Future[Unit] =
       deleteRecordRepository
         .create(record)
         .map(_ => auditData.set("AgentDBRecord", true))
@@ -74,13 +74,35 @@ class DeleteRelationshipsService @Inject()(
             Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
         }
 
+    def delete: Future[Unit] = {
+      val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType)
+      for {
+        _             <- createDeleteRecord(record)
+        clientGroupId <- es.getPrincipalGroupIdFor(taxIdentifier)
+        _             <- deleteEtmpRecord(arn, taxIdentifier)
+        _             <- deleteEsRecord(arn, taxIdentifier, clientGroupId)
+        _             <- removeDeleteRecord(arn, taxIdentifier)
+      } yield ()
+    }
+
     for {
-      _             <- createDeleteRecord
-      clientGroupId <- es.getPrincipalGroupIdFor(taxIdentifier)
-      _             <- deleteEtmpRecord(arn, taxIdentifier)
-      _             <- deleteEsRecord(arn, taxIdentifier, clientGroupId)
-      _             <- removeDeleteRecord(arn, taxIdentifier)
-    } yield sendAuditEventForUser(currentUser)
+      recordOpt <- deleteRecordRepository.findBy(arn, taxIdentifier)
+      _ <- recordOpt match {
+            case Some(record) =>
+              for {
+                isDone <- resumeRelationshipRemoval(record)
+                _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier).andThen {
+                      case scala.util.Success(true) =>
+                        sendDeleteRelationshipAuditEvent(currentUser)
+                    } else Future.successful(())
+              } yield isDone
+            case None =>
+              delete.andThen {
+                case scala.util.Success(_) =>
+                  sendDeleteRelationshipAuditEvent(currentUser)
+              }
+          }
+    } yield ()
   }
 
   def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
@@ -174,15 +196,15 @@ class DeleteRelationshipsService @Inject()(
 
   def checkDeleteRecordAndEventuallyResume(
     taxIdentifier: TaxIdentifier,
-    agentUser: AgentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] =
+    arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] =
     (for {
-      recordOpt <- deleteRecordRepository.findBy(agentUser.arn, taxIdentifier)
+      recordOpt <- deleteRecordRepository.findBy(arn, taxIdentifier)
       isComplete <- recordOpt match {
                      case Some(record) =>
                        for {
-                         isDone <- resumeRelationshipRemoval(record, agentUser)
-                         _ <- if (isDone) removeDeleteRecord(agentUser.arn, taxIdentifier)
-                             else Future.successful(false)
+                         isDone <- resumeRelationshipRemoval(record)
+                         _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)
+                             else Future.successful(())
                        } yield isDone
                      case None => Future.successful(true)
                    }
@@ -191,10 +213,10 @@ class DeleteRelationshipsService @Inject()(
         case NonFatal(_) => false
       }
 
-  def resumeRelationshipRemoval(
-    deleteRecord: DeleteRecord,
-    agentUser: AgentUser
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] = {
+  def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(
+    implicit ec: ExecutionContext,
+    hc: HeaderCarrier,
+    auditData: AuditData): Future[Boolean] = {
     val arn = Arn(deleteRecord.arn)
     val identifier = TaxIdentifierSupport.from(deleteRecord.clientIdentifier, deleteRecord.clientIdentifierType)
     lockService
@@ -204,12 +226,14 @@ class DeleteRelationshipsService @Inject()(
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
             for {
+              _             <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
               _             <- deleteEtmpRecord(arn, identifier)
               clientGroupId <- es.getPrincipalGroupIdFor(identifier)
               _             <- deleteEsRecord(arn, identifier, clientGroupId)
             } yield true
           case (false, true) =>
             for {
+              _             <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
               clientGroupId <- es.getPrincipalGroupIdFor(identifier)
               _             <- deleteEsRecord(arn, identifier, clientGroupId)
             } yield true
@@ -218,6 +242,7 @@ class DeleteRelationshipsService @Inject()(
               s"ETMP relationship existed without ES relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                 s"This should not happen because we always remove the ETMP relationship first.")
             for {
+              _ <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
               _ <- deleteEtmpRecord(arn, identifier)
             } yield true
           case (false, false) =>
@@ -250,7 +275,7 @@ class DeleteRelationshipsService @Inject()(
     } else throw new IllegalStateException("No providerType found")
   }
 
-  protected def sendAuditEventForUser(currentUser: CurrentUser)(
+  protected def sendDeleteRelationshipAuditEvent(currentUser: CurrentUser)(
     implicit headerCarrier: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData): Unit =
