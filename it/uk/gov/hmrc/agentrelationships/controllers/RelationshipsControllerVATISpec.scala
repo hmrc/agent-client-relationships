@@ -36,6 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
 
 //noinspection ScalaStyle
 class RelationshipsControllerVATISpec
@@ -49,6 +50,8 @@ class RelationshipsControllerVATISpec
     with DataStreamStub
     with AuthStub
     with MockitoSugar {
+
+  override lazy val port: Int = Random.nextInt(1000) + 19000
 
   lazy val mockAuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder

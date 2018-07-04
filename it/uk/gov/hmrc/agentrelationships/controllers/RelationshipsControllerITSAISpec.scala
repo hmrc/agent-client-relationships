@@ -37,6 +37,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
 
 //noinspection ScalaStyle
 class RelationshipsControllerITSAISpec
@@ -51,7 +52,7 @@ class RelationshipsControllerITSAISpec
     with AuthStub
     with MockitoSugar {
 
-  //TODO This test is too long!!! Needs to be split up at some point
+  override lazy val port: Int = Random.nextInt(1000) + 19000
 
   lazy val mockAuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
