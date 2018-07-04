@@ -25,15 +25,14 @@ import play.api.libs.ws.WSClient
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -772,6 +771,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -784,6 +784,47 @@ class RelationshipsControllerITSAISpec
           "Agent",
           "ggUserId-agent",
           "GovernmentGateway")
+      }
+
+      "resume an ongoing de-auth if unfinished ES delete record found" in new StubsForThisScenario {
+        await(
+          deleteRecordRepository.create(
+            DeleteRecord(
+              arn.value,
+              mtdItId.value,
+              mtdItIdType,
+              DateTime.now.minusMinutes(1),
+              Some(SyncStatus.Success),
+              Some(SyncStatus.Failed))))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
+      }
+
+      "resume an ongoing de-auth if unfinished ETMP delete record found" in new StubsForThisScenario {
+        await(
+          deleteRecordRepository.create(
+            DeleteRecord(
+              arn.value,
+              mtdItId.value,
+              mtdItIdType,
+              DateTime.now.minusMinutes(1),
+              Some(SyncStatus.Failed)
+            )))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
+      }
+
+      "resume an ongoing de-auth if some delete record found" in new StubsForThisScenario {
+        await(
+          deleteRecordRepository.create(
+            DeleteRecord(
+              arn.value,
+              mtdItId.value,
+              mtdItIdType,
+              DateTime.now.minusMinutes(1)
+            )))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
     }
 
@@ -800,6 +841,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -828,6 +870,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -853,6 +896,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -880,6 +924,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -908,6 +953,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -930,6 +976,7 @@ class RelationshipsControllerITSAISpec
       "return 403" in {
         givenUserIsSubscribedAgent(Arn("unmatched"))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -943,6 +990,7 @@ class RelationshipsControllerITSAISpec
       "return 403" in {
         givenUserHasNoAgentEnrolments(arn)
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -961,11 +1009,25 @@ class RelationshipsControllerITSAISpec
 
       "return 502" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        verifyDeleteRecordHasStatuses(None, None)
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
         verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+
+      "try to resume unfinished de-auth and keep delete-record around" in new StubsForThisScenario {
+        await(
+          deleteRecordRepository.create(
+            DeleteRecord(
+              arn.value,
+              mtdItId.value,
+              mtdItIdType,
+              DateTime.now.minusMinutes(1)
+            )))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), None)
       }
     }
 
@@ -981,6 +1043,7 @@ class RelationshipsControllerITSAISpec
 
       "return 502" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), None)
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1001,6 +1064,7 @@ class RelationshipsControllerITSAISpec
 
       "return 404" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), None)
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1017,6 +1081,7 @@ class RelationshipsControllerITSAISpec
       "return 403" in {
         givenUserIsSubscribedClient(MtdItId("unmatched"))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -1030,6 +1095,7 @@ class RelationshipsControllerITSAISpec
       "return 403" in {
         givenUserHasNoClientEnrolments
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -1047,6 +1113,7 @@ class RelationshipsControllerITSAISpec
 
       "return 404" in new StubsForScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+        verifyDeleteRecordHasStatuses(None, None)
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
@@ -1118,6 +1185,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1147,6 +1215,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1176,6 +1245,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1202,6 +1272,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1230,6 +1301,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1259,6 +1331,7 @@ class RelationshipsControllerITSAISpec
 
       "return 204" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+        verifyDeleteRecordNotExists
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1281,6 +1354,7 @@ class RelationshipsControllerITSAISpec
       "return 403" in {
         givenUserIsSubscribedAgent(Arn("unmatched"))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -1294,6 +1368,7 @@ class RelationshipsControllerITSAISpec
       "return 403" in {
         givenUserHasNoAgentEnrolments(arn)
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -1313,6 +1388,7 @@ class RelationshipsControllerITSAISpec
 
       "return 502" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        verifyDeleteRecordHasStatuses(None, None)
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1334,6 +1410,7 @@ class RelationshipsControllerITSAISpec
 
       "return 502" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1355,6 +1432,7 @@ class RelationshipsControllerITSAISpec
 
       "return 404" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), None)
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1372,6 +1450,7 @@ class RelationshipsControllerITSAISpec
         givenUserIsSubscribedClient(mtdItId)
         givenMtdItIdIsKnownFor(nino, MtdItId("unmatched"))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -1386,6 +1465,7 @@ class RelationshipsControllerITSAISpec
       "return 403" in {
         givenUserHasNoClientEnrolments
         await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
@@ -1403,6 +1483,7 @@ class RelationshipsControllerITSAISpec
 
       "return 404" in new StubsForScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+        verifyDeleteRecordNotExists
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
@@ -1674,4 +1755,13 @@ class RelationshipsControllerITSAISpec
   private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
 
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
+
+  private def verifyDeleteRecordHasStatuses(etmpStatus: Option[SyncStatus.Value], esStatus: Option[SyncStatus.Value]) =
+    await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
+      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _)) =>
+    }
+
+  private def verifyDeleteRecordNotExists =
+    await(deleteRecordRepository.findBy(arn, mtdItId)) shouldBe None
+
 }
