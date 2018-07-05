@@ -24,7 +24,6 @@ import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.BSONSerializationPack.Writer
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONObjectID}
