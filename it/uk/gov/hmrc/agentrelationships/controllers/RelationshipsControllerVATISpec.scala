@@ -1061,7 +1061,7 @@ class RelationshipsControllerVATISpec
 
       val b = result.json
       (result.json \ "arn").get.as[String] shouldBe arn.value
-      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
     "find relationship but filter out if the end date has been changed from 9999-12-31" in {
@@ -1081,7 +1081,7 @@ class RelationshipsControllerVATISpec
       val result = await(doRequest)
       result.status shouldBe 200
       (result.json \ "arn").get.as[String] shouldBe arn3.value
-      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
     "return 404 when DES returns 404 relationship not found" in {
@@ -1120,7 +1120,7 @@ class RelationshipsControllerVATISpec
 
       val b = result.json
       (result.json \ "arn").get.as[String] shouldBe arn.value
-      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
     "find relationship but filter out if the end date has been changed from 9999-12-31" in {
@@ -1140,7 +1140,7 @@ class RelationshipsControllerVATISpec
       val result = await(doRequest)
       result.status shouldBe 200
       (result.json \ "arn").get.as[String] shouldBe arn3.value
-      (result.json \ "endDate").get.as[LocalDate].toString() shouldBe "9999-12-31"
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
     "return 404 when DES returns 404 relationship not found" in {

@@ -49,11 +49,11 @@ object MtdItIdBusinessDetails {
 
 trait Relationship {
   val arn: Arn
-  val endDate: Option[LocalDate]
+  val dateTo: Option[LocalDate]
   val dateFrom: Option[LocalDate]
 }
 
-case class ItsaRelationship(arn: Arn, endDate: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
+case class ItsaRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
 
 object ItsaRelationship {
   implicit val relationshipWrites = Json.writes[ItsaRelationship]
@@ -63,7 +63,7 @@ object ItsaRelationship {
     (JsPath \ "dateFrom").readNullable[LocalDate])(ItsaRelationship.apply _)
 }
 
-case class VatRelationship(arn: Arn, endDate: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
+case class VatRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
 
 object VatRelationship {
   implicit val relationshipWrites = Json.writes[VatRelationship]
@@ -165,7 +165,7 @@ class DesConnector @Inject()(
       }
   }
 
-  def isActive(r: Relationship): Boolean = r.endDate match {
+  def isActive(r: Relationship): Boolean = r.dateTo match {
     case None    => true
     case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
   }
