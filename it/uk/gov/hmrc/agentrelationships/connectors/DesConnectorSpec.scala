@@ -352,9 +352,11 @@ class DesConnectorSpec
   }
 
   "isActive" should {
-    val noEndRelationship = ItsaRelationship(Arn("foo"), None)
-    val beforeCurrentDateRelationship = ItsaRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")))
-    val afterCurrentDateRelationship = ItsaRelationship(Arn("foo"), Some(LocalDate.parse("2222-11-11")))
+    val noEndRelationship = ItsaRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")))
+    val beforeCurrentDateRelationship =
+      ItsaRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")))
+    val afterCurrentDateRelationship =
+      ItsaRelationship(Arn("foo"), Some(LocalDate.parse("2222-11-11")), Some(LocalDate.parse("1111-11-11")))
     "return true when the relationship has no end date" in {
       desConnector.isActive(noEndRelationship) shouldBe true
     }

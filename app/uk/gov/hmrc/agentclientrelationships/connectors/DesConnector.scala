@@ -49,25 +49,28 @@ object MtdItIdBusinessDetails {
 
 trait Relationship {
   val arn: Arn
-  val endDate: Option[LocalDate]
+  val dateTo: Option[LocalDate]
+  val dateFrom: Option[LocalDate]
 }
 
-case class ItsaRelationship(arn: Arn, endDate: Option[LocalDate]) extends Relationship
+case class ItsaRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
 
 object ItsaRelationship {
   implicit val relationshipWrites = Json.writes[ItsaRelationship]
 
   implicit val reads: Reads[ItsaRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").readNullable[LocalDate])(ItsaRelationship.apply _)
+    (JsPath \ "dateTo").readNullable[LocalDate] and
+    (JsPath \ "dateFrom").readNullable[LocalDate])(ItsaRelationship.apply _)
 }
 
-case class VatRelationship(arn: Arn, endDate: Option[LocalDate]) extends Relationship
+case class VatRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
 
 object VatRelationship {
   implicit val relationshipWrites = Json.writes[VatRelationship]
 
   implicit val reads: Reads[VatRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").readNullable[LocalDate])(VatRelationship.apply _)
+    (JsPath \ "dateTo").readNullable[LocalDate] and
+    (JsPath \ "dateFrom").readNullable[LocalDate])(VatRelationship.apply _)
 }
 
 case class ItsaRelationshipResponse(relationship: Seq[ItsaRelationship])
@@ -162,7 +165,7 @@ class DesConnector @Inject()(
       }
   }
 
-  def isActive(r: Relationship): Boolean = r.endDate match {
+  def isActive(r: Relationship): Boolean = r.dateTo match {
     case None    => true
     case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
   }
