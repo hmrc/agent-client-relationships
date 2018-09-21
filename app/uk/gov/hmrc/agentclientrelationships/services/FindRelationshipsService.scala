@@ -20,7 +20,7 @@ import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -43,4 +43,12 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
   def getVatRelationshipForClient(
     clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] =
     des.getActiveClientVatRelationships(clientId)
+
+  def getInactiveItsaRelationshipForAgent(
+    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
+    des.getInactiveAgentItsaRelationships(arn)
+
+  def getInactiveVatRelationshipForAgent(
+    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] =
+    des.getInactiveAgentVatRelationships(arn)
 }

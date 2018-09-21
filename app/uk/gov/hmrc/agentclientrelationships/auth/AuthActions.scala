@@ -107,4 +107,30 @@ trait AuthActions extends AuthorisedFunctions {
           case Credentials(strideId, _) => body(request)(strideId)
         }
     }
+
+  protected def withAuthorisedAsAgent[A](
+    body: Arn => Future[Result])(implicit request: Request[A], hc: HeaderCarrier): Future[Result] =
+    withEnrolledAsAgent {
+      case Some(arn) => body(Arn(arn))
+      case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
+    } recoverWith {
+      case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments())
+    }
+
+  protected def withEnrolledAsAgent[A](
+    body: Option[String] => Future[Result])(implicit request: Request[A], hc: HeaderCarrier): Future[Result] =
+    authorised(
+      Enrolment("HMRC-AS-AGENT")
+        and AuthProviders(GovernmentGateway))
+      .retrieve(authorisedEnrolments) { enrolments =>
+        val id = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
+        body(id)
+      }
+
+  private def getEnrolmentValue(enrolments: Enrolments, serviceName: String, identifierKey: String) =
+    for {
+      enrolment  <- enrolments.getEnrolment(serviceName)
+      identifier <- enrolment.getIdentifier(identifierKey)
+    } yield identifier.value
+
 }

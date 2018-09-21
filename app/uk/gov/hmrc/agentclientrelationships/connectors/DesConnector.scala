@@ -165,9 +165,42 @@ class DesConnector @Inject()(
       }
   }
 
+  def getInactiveAgentItsaRelationships(arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext) = {
+    val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
+    val now = LocalDate.now().toString
+    val url = new URL(
+      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=ITSA&from=1970-01-01&to=$now")
+
+    getWithDesHeaders[ItsaRelationshipResponse]("GetAllAgentItsaRelationships", url)
+      .map(_.relationship.find(isNotActive))
+      .recover {
+        case e: BadRequestException => None
+        case e: NotFoundException   => None
+      }
+  }
+
+  def getInactiveAgentVatRelationships(arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext) = {
+    val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
+    val now = LocalDate.now().toString
+    val url = new URL(
+      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=VATC&from=1970-01-01&to=$now")
+
+    getWithDesHeaders[VatRelationshipResponse]("GetAllAgentVatRelationships", url)
+      .map(_.relationship.find(isNotActive))
+      .recover {
+        case e: BadRequestException => None
+        case e: NotFoundException   => None
+      }
+  }
+
   def isActive(r: Relationship): Boolean = r.dateTo match {
     case None    => true
     case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
+  }
+
+  def isNotActive(r: Relationship): Boolean = r.dateTo match {
+    case None    => true
+    case Some(d) => d.isBefore(LocalDate.now(DateTimeZone.UTC))
   }
 
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(

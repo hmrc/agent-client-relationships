@@ -46,6 +46,7 @@ class RelationshipsControllerVATISpec
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
+    with DesStubsGet
     with MappingStubs
     with DataStreamStub
     with AuthStub
@@ -1097,6 +1098,54 @@ class RelationshipsControllerVATISpec
       authorisedAsClientVat(req, vrn.value)
       givenAuditConnector()
       getFailClientActiveAgentRelationshipsVat(vrnEncoded, status = 400)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
+
+  "GET /relationships/inactive/service/HMRC-MTD-VAT" should {
+    val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
+    val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/HMRC-MTD-VAT"
+
+    def doRequest = doAgentGetRequest(requestPath)
+    val req = FakeRequest()
+
+    "find relationship and send it back as Json" in {
+      authorisedAsValidAgent(req, arn.value)
+      givenAuditConnector()
+      getAgentInactiveRelationships(arnEncoded, arn.value, "VATC")
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      val b = result.json
+      (result.json \ "arn").get.as[String] shouldBe arn.value
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "2015-09-21"
+    }
+
+    "find relationship but filter out if the relationship is still active" in {
+      authorisedAsValidAgent(req, arn.value)
+      givenAuditConnector()
+      getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, "VATC")
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns not found" in {
+      authorisedAsValidAgent(req, arn.value)
+      givenAuditConnector()
+      getFailAgentInactiveRelationships(arnEncoded, "VATC", 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns 400" in {
+      authorisedAsValidAgent(req, arn.value)
+      givenAuditConnector()
+      getFailAgentInactiveRelationships(arnEncoded, "VATC", 400)
 
       val result = await(doRequest)
       result.status shouldBe 404
