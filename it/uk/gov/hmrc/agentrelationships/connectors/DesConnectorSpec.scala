@@ -9,7 +9,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, ItsaRelationship}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse}
@@ -22,6 +22,7 @@ class DesConnectorSpec
     with OneAppPerSuite
     with WireMockSupport
     with DesStubs
+    with DesStubsGet
     with DataStreamStub
     with MetricTestSupport {
 
@@ -288,7 +289,7 @@ class DesConnectorSpec
     }
   }
 
-  "DesConnector GetStatusAgentRelationship" should {
+  "DesConnector GetActiveClientItsaRelationships and GetActiveClientItsaRelationships" should {
     val encodedClientIdMtdItId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
     val encodedClientIdVrn = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
 
@@ -348,6 +349,56 @@ class DesConnectorSpec
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+    }
+  }
+
+  "GetInactiveAgentItsaRelationships and GetInactiveAgentVatRelationships" should {
+    val encodedArn = UriEncoding.encodePathSegment(agentARN.value, "UTF-8")
+
+    "return existing inactive relationships for specified clientId for ItSa service" in {
+      getAgentInactiveRelationships(encodedArn, agentARN.value, "ITSA")
+
+      val result = await(desConnector.getInactiveAgentItsaRelationships(agentARN))
+      result.get.arn shouldBe agentARN
+      result.get.dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
+      result.get.dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
+    }
+
+    "return existing inactive relationships for specified clientId for Vat service" in {
+      getAgentInactiveRelationships(encodedArn, agentARN.value, "VATC")
+
+      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      result.get.arn shouldBe agentARN
+      result.get.dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
+      result.get.dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
+    }
+
+    "return None if DES returns 404 for ItSa service" in {
+      getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 404)
+
+      val result = await(desConnector.getInactiveAgentItsaRelationships(agentARN))
+      result shouldBe None
+    }
+
+    "return None if DES returns 404 for Vat service" in {
+      getFailAgentInactiveRelationships(encodedArn, "VATC", status = 404)
+
+      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      result shouldBe None
+    }
+
+    "return None if DES returns 400 for ItSa service" in {
+      getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 400)
+
+      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      result shouldBe None
+    }
+
+    "return None if DES returns 400 for Vat service" in {
+      getFailAgentInactiveRelationships(encodedArn, "VATC", status = 400)
+
+      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      result shouldBe None
     }
   }
 

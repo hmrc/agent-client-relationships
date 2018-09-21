@@ -176,6 +176,32 @@ trait AuthStub {
   def authorisedAsClientVat[A](request: FakeRequest[A], vrn: String): FakeRequest[A] =
     authenticated(request, Enrolment("HMRC-MTD-VAT", "VRN", vrn), isAgent = false)
 
+  def authorisedAsValidAgent[A](request: FakeRequest[A], arn: String) =
+    authenticatedAgent(request, Enrolment("HMRC-AS-AGENT", "AgentReferenceNumber", arn))
+
+  def authenticatedAgent[A](request: FakeRequest[A], enrolment: Enrolment): FakeRequest[A] = {
+    givenAuthorisedFor(
+      s"""
+         |{
+         |  "authorise": [
+         |    { "identifiers":[], "state":"Activated", "enrolment": "${enrolment.serviceName}" },
+         |    { "authProviders": ["GovernmentGateway"] }
+         |  ],
+         |  "retrieve":["authorisedEnrolments"]
+         |}
+           """.stripMargin,
+      s"""
+         |{
+         |"authorisedEnrolments": [
+         |  { "key":"${enrolment.serviceName}", "identifiers": [
+         |    {"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}
+         |  ]}
+         |]}
+          """.stripMargin
+    )
+    request.withSession(SessionKeys.authToken -> "Bearer XYZ")
+  }
+
   def givenUnauthorisedWith(mdtpDetail: String): Unit =
     stubFor(
       post(urlEqualTo("/auth/authorise"))
