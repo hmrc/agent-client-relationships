@@ -1122,6 +1122,7 @@ class RelationshipsControllerVATISpec
       val b = result.json
       (result.json \ "arn").get.as[String] shouldBe arn.value
       (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "2015-09-21"
+      (result.json \ "referenceNumber").get.as[String] shouldBe "ABCDE1234567890"
     }
 
     "find relationship but filter out if the relationship is still active" in {

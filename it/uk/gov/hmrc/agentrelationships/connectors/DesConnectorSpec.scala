@@ -362,6 +362,7 @@ class DesConnectorSpec
       result.get.arn shouldBe agentARN
       result.get.dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result.get.dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
+      result.get.referenceNumber shouldBe "ABCDE1234567890"
     }
 
     "return existing inactive relationships for specified clientId for Vat service" in {
@@ -371,6 +372,7 @@ class DesConnectorSpec
       result.get.arn shouldBe agentARN
       result.get.dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result.get.dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
+      result.get.referenceNumber shouldBe "ABCDE1234567890"
     }
 
     "return None if DES returns 404 for ItSa service" in {
