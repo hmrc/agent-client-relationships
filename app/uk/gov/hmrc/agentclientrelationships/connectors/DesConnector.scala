@@ -63,6 +63,22 @@ object ItsaRelationship {
     (JsPath \ "dateFrom").readNullable[LocalDate])(ItsaRelationship.apply _)
 }
 
+case class ItsaInactiveRelationship(
+  arn: Arn,
+  dateTo: Option[LocalDate],
+  dateFrom: Option[LocalDate],
+  referenceNumber: String)
+    extends Relationship
+
+object ItsaInactiveRelationship {
+  implicit val relationshipWrites = Json.writes[ItsaInactiveRelationship]
+
+  implicit val reads: Reads[ItsaInactiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
+    (JsPath \ "dateTo").readNullable[LocalDate] and
+    (JsPath \ "dateFrom").readNullable[LocalDate] and
+    (JsPath \ "referenceNumber").read[String])(ItsaInactiveRelationship.apply _)
+}
+
 case class VatRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
 
 object VatRelationship {
@@ -73,16 +89,44 @@ object VatRelationship {
     (JsPath \ "dateFrom").readNullable[LocalDate])(VatRelationship.apply _)
 }
 
+case class VatInactiveRelationship(
+  arn: Arn,
+  dateTo: Option[LocalDate],
+  dateFrom: Option[LocalDate],
+  referenceNumber: String)
+    extends Relationship
+
+object VatInactiveRelationship {
+  implicit val relationshipWrites = Json.writes[VatInactiveRelationship]
+
+  implicit val reads: Reads[VatInactiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
+    (JsPath \ "dateTo").readNullable[LocalDate] and
+    (JsPath \ "dateFrom").readNullable[LocalDate] and
+    (JsPath \ "referenceNumber").read[String])(VatInactiveRelationship.apply _)
+}
+
 case class ItsaRelationshipResponse(relationship: Seq[ItsaRelationship])
 
+case class ItsaInactiveRelationshipResponse(relationship: Seq[ItsaInactiveRelationship])
+
 case class VatRelationshipResponse(relationship: Seq[VatRelationship])
+
+case class VatInactiveRelationshipResponse(relationship: Seq[VatInactiveRelationship])
 
 object ItsaRelationshipResponse {
   implicit val relationshipResponseFormat = Json.format[ItsaRelationshipResponse]
 }
 
+object ItsaInactiveRelationshipResponse {
+  implicit val relationshipResponseFormat = Json.format[ItsaInactiveRelationshipResponse]
+}
+
 object VatRelationshipResponse {
   implicit val vatRelationshipResponseFormat = Json.format[VatRelationshipResponse]
+}
+
+object VatInactiveRelationshipResponse {
+  implicit val vatRelationshipResponseFormat = Json.format[VatInactiveRelationshipResponse]
 }
 
 case class ClientRelationship(agents: Seq[Agent])
@@ -171,7 +215,7 @@ class DesConnector @Inject()(
     val url = new URL(
       s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=ITSA&from=1970-01-01&to=$now")
 
-    getWithDesHeaders[ItsaRelationshipResponse]("GetAllAgentItsaRelationships", url)
+    getWithDesHeaders[ItsaInactiveRelationshipResponse]("GetAllAgentItsaRelationships", url)
       .map(_.relationship.find(isNotActive))
       .recover {
         case e: BadRequestException => None
@@ -185,7 +229,7 @@ class DesConnector @Inject()(
     val url = new URL(
       s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=VATC&from=1970-01-01&to=$now")
 
-    getWithDesHeaders[VatRelationshipResponse]("GetAllAgentVatRelationships", url)
+    getWithDesHeaders[VatInactiveRelationshipResponse]("GetAllAgentVatRelationships", url)
       .map(_.relationship.find(isNotActive))
       .recover {
         case e: BadRequestException => None
