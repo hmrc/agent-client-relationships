@@ -45,10 +45,10 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
     des.getActiveClientVatRelationships(clientId)
 
   def getInactiveItsaRelationshipForAgent(
-    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaInactiveRelationship]] =
+    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[ItsaInactiveRelationship]] =
     des.getInactiveAgentItsaRelationships(arn)
 
   def getInactiveVatRelationshipForAgent(
-    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatInactiveRelationship]] =
+    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[VatInactiveRelationship]] =
     des.getInactiveAgentVatRelationships(arn)
 }

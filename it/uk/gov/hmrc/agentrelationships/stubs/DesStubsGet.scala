@@ -71,6 +71,17 @@ trait DesStubsGet {
                      |  "dateTo" : "2015-09-21",
                      |  "contractAccountCategory" : "01",
                      |  "activity" : "09"
+                     |},
+                     |{
+                     |  "referenceNumber" : "JKKL80894713304",
+                     |  "agentReferenceNumber" : "$agentArn",
+                     |  "organisation" : {
+                     |    "organisationName": "someOrganisationName"
+                     |  },
+                     |  "dateFrom" : "2015-09-10",
+                     |  "dateTo" : "${LocalDate.now().toString}",
+                     |  "contractAccountCategory" : "01",
+                     |  "activity" : "09"
                      |}
                      |]
                      |}""".stripMargin)))
