@@ -359,48 +359,57 @@ class DesConnectorSpec
       getAgentInactiveRelationships(encodedArn, agentARN.value, "ITSA")
 
       val result = await(desConnector.getInactiveAgentItsaRelationships(agentARN))
-      result.get.arn shouldBe agentARN
-      result.get.dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
-      result.get.dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result.get.referenceNumber shouldBe "ABCDE1234567890"
+      result(0).arn shouldBe agentARN
+      result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
+      result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
+      result(0).referenceNumber shouldBe "ABCDE1234567890"
+      result(1).arn shouldBe agentARN
+      result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
+      result(1).dateTo shouldBe Some(LocalDate.now())
+      result(1).referenceNumber shouldBe "JKKL80894713304"
     }
 
     "return existing inactive relationships for specified clientId for Vat service" in {
       getAgentInactiveRelationships(encodedArn, agentARN.value, "VATC")
 
       val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
-      result.get.arn shouldBe agentARN
-      result.get.dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
-      result.get.dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result.get.referenceNumber shouldBe "ABCDE1234567890"
+      result(0).arn shouldBe agentARN
+      result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
+      result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
+      result(0).referenceNumber shouldBe "ABCDE1234567890"
+      result(1).arn shouldBe agentARN
+      result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
+      result(1).dateTo shouldBe Some(LocalDate.now())
+      result(1).referenceNumber shouldBe "JKKL80894713304"
+
     }
 
     "return None if DES returns 404 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 404)
 
       val result = await(desConnector.getInactiveAgentItsaRelationships(agentARN))
-      result shouldBe None
+      result shouldBe Seq.empty
     }
 
     "return None if DES returns 404 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, "VATC", status = 404)
 
       val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
-      result shouldBe None
+      result shouldBe Seq.empty
     }
 
     "return None if DES returns 400 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 400)
 
       val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
-      result shouldBe None
+      result shouldBe Seq.empty
     }
 
     "return None if DES returns 400 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, "VATC", status = 400)
 
       val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
-      result shouldBe None
+      result shouldBe Seq.empty
     }
   }
 

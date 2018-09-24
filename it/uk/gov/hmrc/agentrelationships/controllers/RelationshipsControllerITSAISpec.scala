@@ -1703,9 +1703,13 @@ class RelationshipsControllerITSAISpec
       result.status shouldBe 200
 
       val b = result.json
-      (result.json \ "arn").get.as[String] shouldBe arn.value
-      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "2015-09-21"
-      (result.json \ "referenceNumber").get.as[String] shouldBe "ABCDE1234567890"
+      (result.json \\ "arn").head.as[String] shouldBe arn.value
+      (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
+      (result.json \\ "referenceNumber").head.as[String] shouldBe "ABCDE1234567890"
+      (result.json \\ "arn")(1).as[String] shouldBe arn.value
+      (result.json \\ "dateTo")(1).as[LocalDate].toString() shouldBe LocalDate.now().toString
+      (result.json \\ "referenceNumber")(1).as[String] shouldBe "JKKL80894713304"
+
     }
 
     "find relationship but filter out if the relationship is still active" in {
