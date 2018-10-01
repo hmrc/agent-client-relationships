@@ -245,7 +245,7 @@ class DesConnector @Inject()(
   }
 
   def isNotActive(r: Relationship): Boolean = r.dateTo match {
-    case None    => true
+    case None    => false
     case Some(d) => d.isBefore(LocalDate.now(DateTimeZone.UTC)) || d.equals(LocalDate.now(DateTimeZone.UTC))
   }
 

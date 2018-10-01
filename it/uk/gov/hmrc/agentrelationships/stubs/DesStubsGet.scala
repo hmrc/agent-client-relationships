@@ -108,6 +108,27 @@ trait DesStubsGet {
                      |]
                      |}""".stripMargin)))
 
+  def getAgentInactiveRelationshipsNoDateTo(encodedArn: String, agentArn: String, service: String = "ITSA"): Unit =
+    stubFor(get(urlEqualTo(
+      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=1970-01-01&to=${LocalDate.now().toString}"))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(s"""
+                     |{
+                     |"relationship" :[
+                     |{
+                     |  "referenceNumber" : "ABCDE1234567890",
+                     |  "agentReferenceNumber" : "$agentArn",
+                     |  "organisation" : {
+                     |    "organisationName": "someOrganisationName"
+                     |  },
+                     |  "dateFrom" : "2015-09-10",
+                     |  "contractAccountCategory" : "01",
+                     |  "activity" : "09"
+                     |}
+                     |]
+                     |}""".stripMargin)))
+
   def getClientActiveButEndedAgentRelationshipsItSa(
     encodedClientId: String,
     agentArn: String,

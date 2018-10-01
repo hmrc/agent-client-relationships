@@ -1105,6 +1105,7 @@ class RelationshipsControllerVATISpec
   }
 
   "GET /relationships/inactive/service/HMRC-MTD-VAT" should {
+
     val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/HMRC-MTD-VAT"
 
@@ -1129,6 +1130,15 @@ class RelationshipsControllerVATISpec
       authorisedAsValidAgent(req, arn.value)
       givenAuditConnector()
       getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, "VATC")
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "find relationships and filter out relationships that have no dateTo" in {
+      authorisedAsValidAgent(req, arn.value)
+      givenAuditConnector()
+      getAgentInactiveRelationshipsNoDateTo(arnEncoded, arn.value, "ITSA")
 
       val result = await(doRequest)
       result.status shouldBe 404
