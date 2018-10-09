@@ -99,7 +99,8 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "service",
       "currentUserAffinityGroup",
       "authProviderId",
-      "authProviderIdType")
+      "authProviderIdType",
+      "deleteStatus")
 
   val hmrcDeleteRelationshipDetailsFields =
     Seq(
@@ -107,7 +108,8 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "authProviderIdType",
       "agentReferenceNumber",
       "clientId",
-      "service"
+      "service",
+      "deleteStatus"
     )
 
   def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
