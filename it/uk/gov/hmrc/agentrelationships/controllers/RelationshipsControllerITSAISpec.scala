@@ -1015,7 +1015,7 @@ class RelationshipsControllerITSAISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
 
       "try to resume unfinished de-auth and keep delete-record around" in new StubsForThisScenario {
@@ -1049,7 +1049,7 @@ class RelationshipsControllerITSAISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1070,7 +1070,7 @@ class RelationshipsControllerITSAISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1119,7 +1119,7 @@ class RelationshipsControllerITSAISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
   }
@@ -1394,7 +1394,7 @@ class RelationshipsControllerITSAISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 
@@ -1438,7 +1438,7 @@ class RelationshipsControllerITSAISpec
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
 

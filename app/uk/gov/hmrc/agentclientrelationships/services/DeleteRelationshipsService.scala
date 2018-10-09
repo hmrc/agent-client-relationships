@@ -93,12 +93,20 @@ class DeleteRelationshipsService @Inject()(
                 isDone <- resumeRelationshipRemoval(record)
                 _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier).andThen {
                       case scala.util.Success(true) =>
+                        auditData.set("deleteStatus", "success of retry")
+                        sendDeleteRelationshipAuditEvent(currentUser)
+                      case scala.util.Failure(e) =>
+                        auditData.set("deleteStatus", s"exception when retried: $e")
                         sendDeleteRelationshipAuditEvent(currentUser)
                     } else Future.successful(())
               } yield isDone
             case None =>
               delete.andThen {
                 case scala.util.Success(_) =>
+                  auditData.set("deleteStatus", "success")
+                  sendDeleteRelationshipAuditEvent(currentUser)
+                case scala.util.Failure(e) =>
+                  auditData.set("deleteStatus", s"exception: $e")
                   sendDeleteRelationshipAuditEvent(currentUser)
               }
           }
