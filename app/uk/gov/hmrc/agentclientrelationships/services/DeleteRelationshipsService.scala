@@ -77,11 +77,10 @@ class DeleteRelationshipsService @Inject()(
     def delete: Future[Unit] = {
       val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType)
       for {
-        _             <- createDeleteRecord(record)
-        clientGroupId <- es.getPrincipalGroupIdFor(taxIdentifier)
-        _             <- deleteEtmpRecord(arn, taxIdentifier)
-        _             <- deleteEsRecord(arn, taxIdentifier, clientGroupId)
-        _             <- removeDeleteRecord(arn, taxIdentifier)
+        _ <- createDeleteRecord(record)
+        _ <- deleteEtmpRecord(arn, taxIdentifier)
+        _ <- deleteEsRecord(arn, taxIdentifier)
+        _ <- removeDeleteRecord(arn, taxIdentifier)
       } yield ()
     }
 
@@ -141,7 +140,7 @@ class DeleteRelationshipsService @Inject()(
 
   }
 
-  def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier, clientGroupId: String)(
+  def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Unit] = {
@@ -179,7 +178,7 @@ class DeleteRelationshipsService @Inject()(
       agentUser <- agentUserService.getAgentUserFor(arn)
       _ <- checkService
             .checkForRelationship(taxIdentifier, agentUser)
-            .flatMap(_ => es.deallocateEnrolmentFromAgent(clientGroupId, taxIdentifier, agentUser.agentCode))
+            .flatMap(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier, agentUser.agentCode))
       _ = auditData.set("enrolmentDeAllocated", true)
       _ <- updateEsSyncStatus(Success)
     } yield ()).recoverWith(
@@ -234,16 +233,14 @@ class DeleteRelationshipsService @Inject()(
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
             for {
-              _             <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
-              _             <- deleteEtmpRecord(arn, identifier)
-              clientGroupId <- es.getPrincipalGroupIdFor(identifier)
-              _             <- deleteEsRecord(arn, identifier, clientGroupId)
+              _ <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
+              _ <- deleteEtmpRecord(arn, identifier)
+              _ <- deleteEsRecord(arn, identifier)
             } yield true
           case (false, true) =>
             for {
-              _             <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
-              clientGroupId <- es.getPrincipalGroupIdFor(identifier)
-              _             <- deleteEsRecord(arn, identifier, clientGroupId)
+              _ <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
+              _ <- deleteEsRecord(arn, identifier)
             } yield true
           case (true, false) =>
             Logger(getClass).warn(
