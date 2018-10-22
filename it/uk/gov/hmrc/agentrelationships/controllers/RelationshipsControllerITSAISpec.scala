@@ -764,10 +764,9 @@ class RelationshipsControllerITSAISpec
         givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -834,10 +833,9 @@ class RelationshipsControllerITSAISpec
         givenUserIsSubscribedClient(mtdItId, withThisGgUserId = "ggUserId-client")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -863,10 +861,9 @@ class RelationshipsControllerITSAISpec
         givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -946,10 +943,9 @@ class RelationshipsControllerITSAISpec
         givenUserIsSubscribedClient(mtdItId, withThisGgUserId = "ggUserId-client")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1010,7 +1006,7 @@ class RelationshipsControllerITSAISpec
 
       "return 502" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
-        verifyDeleteRecordHasStatuses(None, None)
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1028,7 +1024,7 @@ class RelationshipsControllerITSAISpec
               DateTime.now.minusMinutes(1)
             )))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
-        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), None)
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
       }
     }
 
@@ -1105,23 +1101,6 @@ class RelationshipsControllerITSAISpec
         verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
     }
-
-    "client has no groupId" should {
-      trait StubsForScenario {
-        givenUserIsSubscribedClient(mtdItId)
-        givenPrincipalGroupIdNotExistsFor(mtdItId)
-      }
-
-      "return 404" in new StubsForScenario {
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
-        verifyDeleteRecordHasStatuses(None, None)
-      }
-
-      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
-        await(doAgentDeleteRequest(requestPath))
-        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
-      }
-    }
   }
 
   "DELETE /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino" when {
@@ -1178,10 +1157,9 @@ class RelationshipsControllerITSAISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1208,10 +1186,9 @@ class RelationshipsControllerITSAISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1238,10 +1215,9 @@ class RelationshipsControllerITSAISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1324,10 +1300,9 @@ class RelationshipsControllerITSAISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1389,7 +1364,7 @@ class RelationshipsControllerITSAISpec
 
       "return 502" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
-        verifyDeleteRecordHasStatuses(None, None)
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {

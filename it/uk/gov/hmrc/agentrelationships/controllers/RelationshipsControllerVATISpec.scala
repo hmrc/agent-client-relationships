@@ -623,10 +623,9 @@ class RelationshipsControllerVATISpec
         givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -651,10 +650,9 @@ class RelationshipsControllerVATISpec
         givenUserIsSubscribedClient(vrn, withThisGgUserId = "ggUserId-client")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -679,10 +677,9 @@ class RelationshipsControllerVATISpec
         givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -759,10 +756,9 @@ class RelationshipsControllerVATISpec
         givenUserIsSubscribedClient(vrn, withThisGgUserId = "ggUserId-client")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentHasNoActiveRelationshipInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("clientGroupId", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
       }
 
       "return 204" in new StubsForThisScenario {
