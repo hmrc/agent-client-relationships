@@ -199,45 +199,45 @@ class EnrolmentStoreProxyConnectorSpec
 
     "de-allocate an enrolment from an agent" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationSucceeds("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      givenEnrolmentDeallocationSucceeds("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
+      await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
     }
 
     "throw an exception if de-allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(404)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentDeallocationFailsWith(404)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
       an[NotFoundException] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
     }
 
     "throw an exception if de-allocation failed because of bad request" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(400)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentDeallocationFailsWith(400)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
       an[BadRequestException] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
     }
 
     "throw an exception if de-allocation failed because of unauthorized" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(401)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentDeallocationFailsWith(401)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
       an[Upstream4xxResponse] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
     }
 
     "throw an exception if service not available when de-allocating enrolment" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(503)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentDeallocationFailsWith(503)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
       an[Upstream5xxResponse] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
     }
   }
 }

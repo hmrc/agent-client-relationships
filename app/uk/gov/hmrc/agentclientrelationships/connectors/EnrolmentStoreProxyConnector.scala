@@ -62,12 +62,11 @@ class EnrolmentStoreProxyConnector @Inject()(
       }
       .map(json => {
         val userIds = (json \ "principalUserIds").as[Seq[String]]
-        if (userIds.isEmpty) {
+        if (userIds.isEmpty)
           throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-        } else {
-          if (userIds.lengthCompare(1) > 0) {
+        else {
+          if (userIds.lengthCompare(1) > 0)
             Logger(getClass).warn(s"Multiple userIds found for $enrolmentKeyPrefix")
-          }
           userIds.head
         }
       })
@@ -88,12 +87,11 @@ class EnrolmentStoreProxyConnector @Inject()(
       }
       .map(json => {
         val groupIds = (json \ "principalGroupIds").as[Seq[String]]
-        if (groupIds.isEmpty) {
+        if (groupIds.isEmpty)
           throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-        } else {
-          if (groupIds.lengthCompare(1) > 0) {
+        else {
+          if (groupIds.lengthCompare(1) > 0)
             Logger(getClass).warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
-          }
           groupIds.head
         }
       })
@@ -143,14 +141,12 @@ class EnrolmentStoreProxyConnector @Inject()(
   }
 
   // ES9
-  def deallocateEnrolmentFromAgent(groupId: String, taxIdentifier: TaxIdentifier, agentCode: AgentCode)(
+  def deallocateEnrolmentFromAgent(groupId: String, taxIdentifier: TaxIdentifier)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Unit] = {
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
-    val url = new URL(
-      teBaseUrl,
-      s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")
+    val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey")
     monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKeyPrefix.replace("~", "_")}-DELETE") {
       http.DELETE[HttpResponse](url.toString)
     }.map(_ => ())

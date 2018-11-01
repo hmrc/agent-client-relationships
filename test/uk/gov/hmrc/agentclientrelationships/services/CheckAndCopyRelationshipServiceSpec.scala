@@ -213,6 +213,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditData = new AuditData()
         val request = FakeRequest()
 
+        previousRelationshipWillBeRemoved(mtdItId)
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
         metricsStub()
@@ -619,6 +620,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         oldESRelationshipExists()
+        previousRelationshipWillBeRemoved(vrn)
         relationshipWillBeCreated(vrn)
         metricsStub()
 
@@ -1030,6 +1032,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(ugs.getGroupInfo(eqs("test2"))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo("test2", Some("Agent"), None))
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
+  }
+
+  private def previousRelationshipWillBeRemoved(identifier: TaxIdentifier): Unit = {
+    when(es.getDelegatedGroupIdsFor(eqs(identifier))(any(), any())).thenReturn(Future.successful(Set("foo", "bar")))
+    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(identifier))(any(), any())).thenReturn(Future.successful(()))
+    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(identifier))(any(), any())).thenReturn(Future.successful(()))
   }
 
   private def relationshipWillBeCreated(identifier: TaxIdentifier): Unit = {

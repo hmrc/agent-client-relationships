@@ -13,11 +13,17 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) =
     givenDelegatedGroupIdsNotExistFor(mtdItId)
 
+  def givenDelegatedGroupIdsExistForMtdItId(mtdItId: MtdItId) =
+    givenDelegatedGroupIdsExistFor(mtdItId, Set("bar", "foo"))
+
   def givenDelegatedGroupIdsNotExistForNino(nino: Nino) =
     givenDelegatedGroupIdsNotExistFor(nino)
 
   def givenDelegatedGroupIdsNotExistForMtdVatId(vrn: Vrn) =
     givenDelegatedGroupIdsNotExistFor(vrn)
+
+  def givenDelegatedGroupIdsExistForMtdVatId(vrn: Vrn) =
+    givenDelegatedGroupIdsExistFor(vrn, Set("bar", "foo"))
 
   def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, agentCode)

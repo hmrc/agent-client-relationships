@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -144,9 +144,16 @@ class CreateRelationshipsService @Inject()(
         logAndMaybeFail(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
     }
 
+    def deallocatePreviousRelationsipIfAny: Future[Unit] =
+      for {
+        existingAgents <- es.getDelegatedGroupIdsFor(identifier)
+        _              <- Future.sequence(existingAgents.map(groupId => es.deallocateEnrolmentFromAgent(groupId, identifier)))
+      } yield ()
+
     (for {
       _         <- updateEsSyncStatus(InProgress)
       agentUser <- eventualAgentUser
+      _         <- deallocatePreviousRelationsipIfAny
       _         <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
       _ <- updateEsSyncStatus(Success)

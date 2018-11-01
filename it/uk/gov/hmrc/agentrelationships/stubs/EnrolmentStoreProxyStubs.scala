@@ -154,19 +154,16 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
                                           |""".stripMargin))
         .willReturn(aResponse().withStatus(responseStatus)))
 
-  def givenEnrolmentDeallocationSucceeds(groupId: String, taxIdentifier: TaxIdentifier, agentCode: String) = {
+  def givenEnrolmentDeallocationSucceeds(groupId: String, taxIdentifier: TaxIdentifier) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(
-      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey"))
         .willReturn(aResponse().withStatus(204)))
   }
 
-  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: String, agentCode: String) =
+  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: String) =
     eventually {
-      verify(
-        1,
-        deleteRequestedFor(
-          urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode")))
+      verify(1, deleteRequestedFor(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey")))
     }
 
   def verifyNoEnrolmentHasBeenDeallocated() =
@@ -174,20 +171,15 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
       verify(0, deleteRequestedFor(urlContains(s"$teBaseUrl/groups/")))
     }
 
-  def givenEnrolmentDeallocationSucceeds(
-    groupId: String,
-    key: String,
-    identifier: String,
-    value: String,
-    agentCode: String) =
+  def givenEnrolmentDeallocationSucceeds(groupId: String, key: String, identifier: String, value: String) =
     stubFor(
-      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value"))
         .willReturn(aResponse().withStatus(204)))
 
   def givenEnrolmentDeallocationFailsWith(
-    responseStatus: Int)(groupId: String, key: String, identifier: String, value: String, agentCode: String) =
+    responseStatus: Int)(groupId: String, key: String, identifier: String, value: String) =
     stubFor(
-      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value"))
         .willReturn(aResponse().withStatus(responseStatus)))
 
   def givenEsIsUnavailable() = {

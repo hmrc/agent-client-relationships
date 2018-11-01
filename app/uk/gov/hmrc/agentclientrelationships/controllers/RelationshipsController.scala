@@ -131,13 +131,7 @@ class RelationshipsController @Inject()(
 
       (for {
         agentUser <- agentUserService.getAgentUserFor(arn)
-        _ <- checkService
-              .checkForRelationship(identifier, agentUser)
-              .map(_ => throw new Exception("RELATIONSHIP_ALREADY_EXISTS"))
-              .recover {
-                case RelationshipNotFound("RELATIONSHIP_NOT_FOUND") => ()
-              }
-        _ <- createService.createRelationship(arn, identifier, Future.successful(agentUser), Set(), false, true)
+        _         <- createService.createRelationship(arn, identifier, Future.successful(agentUser), Set(), false, true)
       } yield ())
         .map(_ => Created)
         .recover {

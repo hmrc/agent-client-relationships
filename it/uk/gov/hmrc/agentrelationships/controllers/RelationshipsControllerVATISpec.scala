@@ -625,7 +625,7 @@ class RelationshipsControllerVATISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -652,7 +652,7 @@ class RelationshipsControllerVATISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -679,7 +679,7 @@ class RelationshipsControllerVATISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -758,7 +758,7 @@ class RelationshipsControllerVATISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentHasNoActiveRelationshipInDes(vrn, arn)
-        givenEnrolmentDeallocationSucceeds("foo", vrn, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", vrn)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -932,8 +932,10 @@ class RelationshipsControllerVATISpec
       givenUserIsSubscribedAgent(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenDelegatedGroupIdsExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenEnrolmentDeallocationSucceeds("foo", vrn)
+      givenEnrolmentDeallocationSucceeds("bar", vrn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
       val result = await(doAgentPutRequest(requestPath))
