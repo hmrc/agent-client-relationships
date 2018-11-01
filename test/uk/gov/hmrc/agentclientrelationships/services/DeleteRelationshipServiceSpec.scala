@@ -106,6 +106,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.findBy(arn, mtdItId)) should matchPattern {
         case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), None, None)) =>
       }
+      await(repo.remove(arn, mtdItId))
     }
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
