@@ -178,7 +178,7 @@ class DeleteRelationshipsService @Inject()(
       agentUser <- agentUserService.getAgentUserFor(arn)
       _ <- checkService
             .checkForRelationship(taxIdentifier, agentUser)
-            .flatMap(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier, agentUser.agentCode))
+            .flatMap(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier))
       _ = auditData.set("enrolmentDeAllocated", true)
       _ <- updateEsSyncStatus(Success)
     } yield ()).recoverWith(

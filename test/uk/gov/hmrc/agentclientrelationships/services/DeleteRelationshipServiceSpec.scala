@@ -106,9 +106,11 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.findBy(arn, mtdItId)) should matchPattern {
         case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), None, None)) =>
       }
+      await(repo.remove(arn, mtdItId))
     }
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
+      await(repo.remove(arn, mtdItId))
       val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
       repo.create(deleteRecord)
       givenAgentExists
@@ -261,7 +263,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       repo.create(deleteRecord)
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
-      when(es.deallocateEnrolmentFromAgent("group0001", mtdItId, AgentCode("")))
+      when(es.deallocateEnrolmentFromAgent("group0001", mtdItId))
         .thenReturn(Future.failed(new Exception()))
 
       an[Exception] shouldBe thrownBy {
@@ -357,22 +359,20 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         .thenReturn(Future.failed(new Exception))
 
     def givenESDeAllocationSucceeds =
-      when(es.deallocateEnrolmentFromAgent(agentGroupId, mtdItId, agentCodeForAsAgent))
+      when(es.deallocateEnrolmentFromAgent(agentGroupId, mtdItId))
         .thenReturn(Future.successful(()))
 
     def givenESDeAllocationFails =
-      when(es.deallocateEnrolmentFromAgent(agentGroupId, mtdItId, agentCodeForAsAgent))
+      when(es.deallocateEnrolmentFromAgent(agentGroupId, mtdItId))
         .thenReturn(Future.failed(new Exception))
 
     def verifyESDeAllocateHasBeenPerformed =
-      verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
-        any[HeaderCarrier],
-        any[ExecutionContext])
+      verify(es, times(1))
+        .deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier])(any[HeaderCarrier], any[ExecutionContext])
 
     def verifyESDeAllocateHasNOTBeenPerformed =
-      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier], any[AgentCode])(
-        any[HeaderCarrier],
-        any[ExecutionContext])
+      verify(es, never)
+        .deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier])(any[HeaderCarrier], any[ExecutionContext])
 
     def verifyETMPDeAuthorisationHasBeenPerformed =
       verify(des, times(1))

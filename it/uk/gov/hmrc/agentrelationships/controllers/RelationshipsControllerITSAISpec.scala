@@ -766,7 +766,7 @@ class RelationshipsControllerITSAISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -835,7 +835,7 @@ class RelationshipsControllerITSAISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -863,7 +863,7 @@ class RelationshipsControllerITSAISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -945,7 +945,7 @@ class RelationshipsControllerITSAISpec
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1159,7 +1159,7 @@ class RelationshipsControllerITSAISpec
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1188,7 +1188,7 @@ class RelationshipsControllerITSAISpec
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1217,7 +1217,7 @@ class RelationshipsControllerITSAISpec
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1302,7 +1302,7 @@ class RelationshipsControllerITSAISpec
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
-        givenEnrolmentDeallocationSucceeds("foo", mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1489,8 +1489,10 @@ class RelationshipsControllerITSAISpec
     trait StubsForThisScenario {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenDelegatedGroupIdsExistForMtdItId(mtdItId)
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+      givenEnrolmentDeallocationSucceeds("bar", mtdItId)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
     }
 
