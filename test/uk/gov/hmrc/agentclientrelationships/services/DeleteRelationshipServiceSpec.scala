@@ -110,6 +110,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
+      await(repo.remove(arn, mtdItId))
       val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
       repo.create(deleteRecord)
       givenAgentExists
