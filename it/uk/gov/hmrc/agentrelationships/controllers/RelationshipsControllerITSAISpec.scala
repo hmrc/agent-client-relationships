@@ -1489,6 +1489,8 @@ class RelationshipsControllerITSAISpec
     trait StubsForThisScenario {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
+      givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenDelegatedGroupIdsExistForMtdItId(mtdItId)
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenEnrolmentDeallocationSucceeds("foo", mtdItId)
@@ -1516,6 +1518,18 @@ class RelationshipsControllerITSAISpec
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
     }
+
+    "return 201 when the relationship exists and previous relationships too but ARNs not found" in new StubsForThisScenario {
+      givenUserIsSubscribedAgent(arn)
+      givenDelegatedGroupIdsExistForMtdItId(mtdItId, "zoo")
+      givenEnrolmentNotExistsForGroupId("zoo")
+      givenEnrolmentDeallocationSucceeds("zoo", mtdItId)
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    //test for when there are no relationships to deallocate
 
     /**
       * Agent's Unhappy paths

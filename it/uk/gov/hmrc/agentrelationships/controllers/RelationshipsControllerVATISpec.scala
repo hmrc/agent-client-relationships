@@ -934,6 +934,8 @@ class RelationshipsControllerVATISpec
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
+      givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenEnrolmentDeallocationSucceeds("foo", vrn)
       givenEnrolmentDeallocationSucceeds("bar", vrn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")

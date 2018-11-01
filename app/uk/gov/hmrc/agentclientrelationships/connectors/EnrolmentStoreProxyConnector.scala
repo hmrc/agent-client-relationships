@@ -17,16 +17,16 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
 
+import javax.inject.{Inject, Named, Singleton}
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logger
 import play.api.http.Status
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
 import uk.gov.hmrc.http._
 
@@ -117,6 +117,26 @@ class EnrolmentStoreProxyConnector @Inject()(
     }.map { response =>
       if (response.status == 204) Set.empty
       else (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
+    }
+  }
+
+  //ES3 - Query Enrolments allocated to a Group
+  def getAgentReferenceNumberFor(
+    groupId: String)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Arn]] = {
+    val url =
+      new URL(
+        espBaseUrl,
+        s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT")
+    monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
+      http.GET[HttpResponse](url.toString)
+    }.map { response =>
+      if (response.status == 204) None
+      else
+        (response.json \ "enrolments")
+          .as[Seq[JsObject]]
+          .headOption
+          .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
+          .map(Arn.apply)
     }
   }
 

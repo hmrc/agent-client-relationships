@@ -13,8 +13,8 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) =
     givenDelegatedGroupIdsNotExistFor(mtdItId)
 
-  def givenDelegatedGroupIdsExistForMtdItId(mtdItId: MtdItId) =
-    givenDelegatedGroupIdsExistFor(mtdItId, Set("bar", "foo"))
+  def givenDelegatedGroupIdsExistForMtdItId(mtdItId: MtdItId, ids: String*) =
+    givenDelegatedGroupIdsExistFor(mtdItId, Set("bar", "foo") ++ ids.toSet)
 
   def givenDelegatedGroupIdsNotExistForNino(nino: Nino) =
     givenDelegatedGroupIdsNotExistFor(nino)
