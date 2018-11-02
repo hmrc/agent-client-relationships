@@ -70,6 +70,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bindProperty1Param("auth.stride.role")
     bindBooleanProperty("features.copy-relationship.mtd-it")
     bindBooleanProperty("features.copy-relationship.mtd-vat")
+    bindIntegerProperty("deauth-schedule")
   }
 
   private def bindBaseUrl(serviceName: String) =
@@ -109,6 +110,17 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
         .getBoolean(confKey)
         .getOrElse(throw new IllegalStateException(s"No value found for configuration property $confKey"))
     override lazy val get: Boolean = getConfBool(confKey, getBooleanFromRoot)
+  }
+
+  private def bindIntegerProperty(propertyName: String) =
+    bind(classOf[Int])
+      .annotatedWith(Names.named(propertyName))
+      .toProvider(new IntegerPropertyProvider(propertyName))
+
+  private class IntegerPropertyProvider(confKey: String) extends Provider[Int] {
+    override lazy val get: Int = configuration
+      .getInt(confKey)
+      .getOrElse(throw new IllegalStateException(s"No value found for configuration property $confKey"))
   }
 
   import com.google.inject.binder.ScopedBindingBuilder
@@ -164,6 +176,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
           override lazy val get = getConfBool(propertyName, false)
         }
       }
+
   }
 
 }
