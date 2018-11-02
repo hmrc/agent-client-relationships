@@ -1529,7 +1529,17 @@ class RelationshipsControllerITSAISpec
       result.status shouldBe 201
     }
 
-    //test for when there are no relationships to deallocate
+    "return 201 when there are no previous relationships to deallocate" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
 
     /**
       * Agent's Unhappy paths

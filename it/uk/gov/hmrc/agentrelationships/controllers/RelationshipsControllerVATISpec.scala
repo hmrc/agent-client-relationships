@@ -956,6 +956,34 @@ class RelationshipsControllerVATISpec
       result.status shouldBe 201
     }
 
+    "return 201 when the relationship exists and previous relationships too but ARNs not found" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsExistForMtdVatId(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenEnrolmentNotExistsForGroupId("bar")
+      givenEnrolmentNotExistsForGroupId("foo")
+      givenEnrolmentDeallocationSucceeds("foo", vrn)
+      givenEnrolmentDeallocationSucceeds("bar", vrn)
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 when there are no previous relationships to deallocate" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
     /**
       * Agent's Unhappy paths
       */
