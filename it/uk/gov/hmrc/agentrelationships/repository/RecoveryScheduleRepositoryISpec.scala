@@ -1,13 +1,10 @@
 package uk.gov.hmrc.agentrelationships.repository
 
-import java.util.UUID
-
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.DateTime
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord}
 import uk.gov.hmrc.agentrelationships.support.MongoApp
 import uk.gov.hmrc.play.test.UnitSpec
 
