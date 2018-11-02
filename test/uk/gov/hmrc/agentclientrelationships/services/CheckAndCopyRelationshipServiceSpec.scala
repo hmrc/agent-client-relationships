@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository.{FakeRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain._
@@ -73,6 +73,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val auditService = resettingMock[AuditService]
   val metrics = resettingMock[Metrics]
   val monitoring = resettingMock[Monitoring]
+  val deleteRecordRepository = resettingMock[DeleteRecordRepository]
 
   val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
 
@@ -92,7 +93,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -130,7 +137,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -171,7 +184,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -197,13 +216,22 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
+        when(deleteRecordRepository.create(any[DeleteRecord])(any[ExecutionContext])).thenReturn(Future.successful(1))
+        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier])(any[ExecutionContext]))
+          .thenReturn(Future.successful(1))
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
           des,
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -213,6 +241,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditData = new AuditData()
         val request = FakeRequest()
 
+        arnExistsForGroupId
         previousRelationshipWillBeRemoved(mtdItId)
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
@@ -243,7 +272,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -285,7 +320,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -320,7 +361,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -363,7 +410,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -393,7 +446,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -422,7 +481,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -460,7 +525,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -498,7 +569,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -536,7 +613,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -577,7 +660,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -603,13 +692,22 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
+        when(deleteRecordRepository.create(any[DeleteRecord])(any[ExecutionContext])).thenReturn(Future.successful(1))
+        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier])(any[ExecutionContext]))
+          .thenReturn(Future.successful(1))
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
           des,
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -619,6 +717,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditData = new AuditData()
         val request = FakeRequest()
 
+        arnExistsForGroupId
         oldESRelationshipExists()
         previousRelationshipWillBeRemoved(vrn)
         relationshipWillBeCreated(vrn)
@@ -649,7 +748,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -691,7 +796,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -726,7 +837,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -769,7 +886,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           mapping,
           ugs,
           relationshipCopyRepository,
-          new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+          new CreateRelationshipsService(
+            es,
+            des,
+            relationshipCopyRepository,
+            lockService,
+            deleteRecordRepository,
+            metrics),
           auditService,
           metrics,
           true,
@@ -799,7 +922,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -828,7 +957,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -866,7 +1001,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -901,7 +1042,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -929,7 +1076,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         mapping,
         ugs,
         relationshipCopyRepository,
-        new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          metrics),
         auditService,
         metrics,
         true,
@@ -967,7 +1120,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             mapping,
             ugs,
             relationshipCopyRepository,
-            new CreateRelationshipsService(es, des, relationshipCopyRepository, lockService, metrics),
+            new CreateRelationshipsService(
+              es,
+              des,
+              relationshipCopyRepository,
+              lockService,
+              deleteRecordRepository,
+              metrics),
             auditService,
             metrics,
             copyMtdItRelationshipFlag,
@@ -1032,6 +1191,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(ugs.getGroupInfo(eqs("test2"))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo("test2", Some("Agent"), None))
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
+  }
+
+  private def arnExistsForGroupId: Unit = {
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("fooArn"))))
+    when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("barArn"))))
   }
 
   private def previousRelationshipWillBeRemoved(identifier: TaxIdentifier): Unit = {

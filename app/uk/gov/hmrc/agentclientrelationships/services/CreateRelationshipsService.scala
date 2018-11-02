@@ -38,6 +38,7 @@ class CreateRelationshipsService @Inject()(
   des: DesConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: RecoveryLockService,
+  deleteRecordRepository: DeleteRecordRepository,
   val metrics: Metrics)
     extends Monitoring {
 
@@ -144,10 +145,56 @@ class CreateRelationshipsService @Inject()(
         logAndMaybeFail(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
     }
 
+    def createDeleteRecord(record: DeleteRecord): Future[Unit] =
+      deleteRecordRepository
+        .create(record)
+        .map(_ => ())
+        .recover {
+          case NonFatal(ex) =>
+            Logger(getClass).warn(
+              s"Inserting delete record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
+              ex)
+            ()
+        }
+
+    def removeDeleteRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
+      implicit ec: ExecutionContext,
+      hc: HeaderCarrier): Future[Boolean] =
+      deleteRecordRepository
+        .remove(arn, taxIdentifier)
+        .map(_ > 0)
+        .recoverWith {
+          case NonFatal(ex) =>
+            Logger(getClass).warn(
+              s"Removing delete record from mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
+              ex)
+            Future.successful(false)
+        }
+
     def deallocatePreviousRelationsipIfAny: Future[Unit] =
       for {
         existingAgents <- es.getDelegatedGroupIdsFor(identifier)
-        _              <- Future.sequence(existingAgents.map(groupId => es.deallocateEnrolmentFromAgent(groupId, identifier)))
+        _ <- Future.sequence(existingAgents.map { groupId =>
+              for {
+                maybeArn <- es.getAgentReferenceNumberFor(groupId)
+                _ <- maybeArn match {
+                      case None =>
+                        Future { Logger(getClass).warn(s"Arn not found for provided groupId: $groupId") }
+                      case Some(arnToRemove) =>
+                        createDeleteRecord(
+                          DeleteRecord(
+                            arnToRemove.value,
+                            identifier.value,
+                            TypeOfEnrolment(identifier).identifierKey,
+                            syncToETMPStatus = Some(Success)))
+                    }
+                _ <- es.deallocateEnrolmentFromAgent(groupId, identifier)
+                _ <- maybeArn match {
+                      case None             => Future successful ()
+                      case Some(removedArn) => removeDeleteRecord(removedArn, identifier)
+                    }
+              } yield ()
+            })
       } yield ()
 
     (for {

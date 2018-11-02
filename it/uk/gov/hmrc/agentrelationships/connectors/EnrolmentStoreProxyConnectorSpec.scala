@@ -143,6 +143,18 @@ class EnrolmentStoreProxyConnectorSpec
         await(connector.getPrincipalUserIdFor(Vrn("foo")))
       }
     }
+
+    "return some ARN for the known groupId" in {
+      givenAuditConnector()
+      givenEnrolmentExistsForGroupId("bar", Arn("foo"))
+      await(connector.getAgentReferenceNumberFor("bar")) shouldBe Some(Arn("foo"))
+    }
+
+    "return None for unknown groupId" in {
+      givenAuditConnector()
+      givenEnrolmentNotExistsForGroupId("bar")
+      await(connector.getAgentReferenceNumberFor("bar")) shouldBe None
+    }
   }
 
   "TaxEnrolments" should {

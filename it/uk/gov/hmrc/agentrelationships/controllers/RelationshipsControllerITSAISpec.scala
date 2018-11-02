@@ -1489,6 +1489,8 @@ class RelationshipsControllerITSAISpec
     trait StubsForThisScenario {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
+      givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenDelegatedGroupIdsExistForMtdItId(mtdItId)
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenEnrolmentDeallocationSucceeds("foo", mtdItId)
@@ -1512,6 +1514,28 @@ class RelationshipsControllerITSAISpec
 
     "return 201 when the relationship exists and the user is authenticated with Stride" in new StubsForThisScenario {
       givenUserIsAuthenticatedWithStride("CAAT", "strideId-983283")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 when the relationship exists and previous relationships too but ARNs not found" in new StubsForThisScenario {
+      givenUserIsSubscribedAgent(arn)
+      givenDelegatedGroupIdsExistForMtdItId(mtdItId, "zoo")
+      givenEnrolmentNotExistsForGroupId("zoo")
+      givenEnrolmentDeallocationSucceeds("zoo", mtdItId)
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 when there are no previous relationships to deallocate" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201

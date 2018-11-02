@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
+import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -11,13 +12,13 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
 
   private implicit val patience = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
 
-  private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store/enrolments"
+  private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store"
   private val teBaseUrl = s"/tax-enrolments"
 
   def givenPrincipalGroupIdExistsFor(taxIdentifier: TaxIdentifier, groupId: String) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=principal"))
         .willReturn(aResponse()
           .withBody(s"""
                        |{
@@ -31,7 +32,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenPrincipalGroupIdNotExistsFor(taxIdentifier: TaxIdentifier) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=principal"))
         .willReturn(aResponse()
           .withStatus(204)))
   }
@@ -52,7 +53,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
 
   def givenDelegatedGroupIdsExistForKey(enrolmentKey: String, groupIds: Set[String]) =
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=delegated"))
         .willReturn(aResponse()
           .withBody(s"""
                        |{
@@ -69,7 +70,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
 
   def givenDelegatedGroupIdsNotExistForKey(enrolmentKey: String) =
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/groups?type=delegated"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=delegated"))
         .willReturn(aResponse()
           .withStatus(204)))
 
@@ -81,7 +82,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenPrincipalUserIdExistFor(taxIdentifier: TaxIdentifier, userId: String) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/users?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/users?type=principal"))
         .willReturn(aResponse()
           .withBody(s"""
                        |{
@@ -95,7 +96,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenPrincipalUserIdNotExistFor(taxIdentifier: TaxIdentifier) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/$enrolmentKey/users?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/users?type=principal"))
         .willReturn(aResponse()
           .withStatus(204)))
   }
@@ -190,6 +191,43 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
       any(urlMatching(s"$teBaseUrl/.*"))
         .willReturn(aResponse().withStatus(503)))
   }
+
+  def givenEnrolmentExistsForGroupId(groupId: String, taxIdentifier: TaxIdentifier): Unit = {
+    val enrolmentKey = TypeOfEnrolment(taxIdentifier)
+    stubFor(
+      get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |    "startRecord": 1,
+                         |    "totalRecords": 1,
+                         |    "enrolments": [
+                         |        {
+                         |           "service": "${enrolmentKey.enrolmentKey}",
+                         |           "state": "active",
+                         |           "friendlyName": "My First Client's PAYE Enrolment",
+                         |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
+                         |           "failedActivationCount": 1,
+                         |           "activationDate": "2018-10-13T17:36:00.000Z",
+                         |           "identifiers": [
+                         |              {
+                         |                 "key": "${enrolmentKey.identifierKey}",
+                         |                 "value": "${taxIdentifier.value}"
+                         |              }
+                         |           ]
+                         |        }
+                         |    ]
+                         |}
+             """.stripMargin)))
+  }
+
+  def givenEnrolmentNotExistsForGroupId(groupId: String): Unit =
+    stubFor(
+      get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
+        .willReturn(aResponse()
+          .withStatus(204)))
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
 

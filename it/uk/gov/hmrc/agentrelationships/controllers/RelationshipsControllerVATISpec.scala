@@ -934,6 +934,8 @@ class RelationshipsControllerVATISpec
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
+      givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenEnrolmentDeallocationSucceeds("foo", vrn)
       givenEnrolmentDeallocationSucceeds("bar", vrn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
@@ -944,6 +946,34 @@ class RelationshipsControllerVATISpec
 
     "return 201 when the relationship exists and the Vrn matches that of current Client user" in {
       givenUserIsSubscribedClient(vrn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 when the relationship exists and previous relationships too but ARNs not found" in {
+      givenUserIsSubscribedAgent(arn)
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsExistForMtdVatId(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenEnrolmentNotExistsForGroupId("bar")
+      givenEnrolmentNotExistsForGroupId("foo")
+      givenEnrolmentDeallocationSucceeds("foo", vrn)
+      givenEnrolmentDeallocationSucceeds("bar", vrn)
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
+    "return 201 when there are no previous relationships to deallocate" in {
+      givenUserIsSubscribedAgent(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
