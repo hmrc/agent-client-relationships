@@ -27,27 +27,28 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
-case class RecoveryRecord(uid: String, runAt: String)
+case class RecoveryRecord(uid: String, runAt: DateTime)
 
 object RecoveryRecord extends ReactiveMongoFormats {
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 
 trait RecoveryScheduleRepository {
-  def create(record: RecoveryRecord)(implicit ec: ExecutionContext): Future[Int]
-  def findBy(uid: String)(implicit ec: ExecutionContext): Future[Option[RecoveryRecord]]
-  def update(uid: String, newUid: String, newRunAt: String)(implicit ec: ExecutionContext): Future[Unit]
+  def read(implicit ec: ExecutionContext): Future[RecoveryRecord]
+  def write(nextUid: String, nextRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit]
 }
 
 @Singleton
 class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoComponent)
     extends ReactiveRepository[RecoveryRecord, BSONObjectID](
-      "deauth-failure-record",
+      "recovery-schedule",
       mongoComponent.mongoConnector.db,
       RecoveryRecord.formats,
       ReactiveMongoFormats.objectIdFormats)
@@ -55,23 +56,28 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
     with StrictlyEnsureIndexes[RecoveryRecord, BSONObjectID]
     with AtomicUpdate[RecoveryRecord] {
 
+  import ImplicitBSONHandlers._
+
   override def indexes =
     Seq(Index(Seq("uid" -> Ascending, "runAt" -> Ascending), unique = true))
 
-  def create(record: RecoveryRecord)(implicit ec: ExecutionContext): Future[Int] =
-    insert(record).map { result =>
-      result.writeErrors.foreach(error => Logger(getClass).warn(s"Creating DeleteRecord failed: ${error.errmsg}"))
-      result.n
-    }
+  def read(implicit ec: ExecutionContext): Future[RecoveryRecord] =
+    findAll().flatMap(_.headOption match {
+      case Some(record) => Future.successful(record)
+      case None =>
+        val record = RecoveryRecord(UUID.randomUUID().toString, DateTime.now())
+        insert(record).map(_ => record).recoverWith {
+          case NonFatal(error) =>
+            Logger(getClass).warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
+            Future.failed(error)
+        }
+    })
 
-  def findBy(uid: String)(implicit ec: ExecutionContext): Future[Option[RecoveryRecord]] =
-    find("uid" -> uid)
-      .map(_.headOption)
-
-  def update(uid: String, newUid: String, newRunAt: String)(implicit ec: ExecutionContext): Future[Unit] =
+  def write(newUid: String, newRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit] =
     atomicUpdate(
-      finder = BSONDocument("uid"        -> uid),
-      modifierBson = BSONDocument("$set" -> BSONDocument("uid" -> newUid, "runAt" -> newRunAt))
+      finder = BSONDocument(),
+      modifierBson = BSONDocument(
+        "$set" -> BSONDocument("uid" -> newUid, "runAt" -> ReactiveMongoFormats.dateTimeWrite.writes(newRunAt)))
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error =>
         Logger(getClass).warn(s"Updating uid and runAt failed with error: $error"))

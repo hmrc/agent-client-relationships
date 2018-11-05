@@ -1,5 +1,7 @@
 package uk.gov.hmrc.agentrelationships.repository
 
+import java.util.UUID
+
 import org.joda.time.DateTime
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
@@ -25,23 +27,29 @@ class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with OneApp
     await(repo.ensureIndexes)
   }
 
-  val newDate = DateTime.now().toString()
+  val uid = UUID.randomUUID()
+  val newDate = DateTime.now()
 
   "RecoveryRepository" should {
-    "create, find and update" in {
-      val recoveryRecord = RecoveryRecord("foo", "2017-10-31T23:22:50.971Z")
+    "read and write" in {
+      val recoveryRecord = RecoveryRecord("foo", DateTime.parse("2017-10-31T23:22:50.971Z"))
+      val newRecoveryRecord = RecoveryRecord("foo", DateTime.parse("2019-10-31T23:22:50.971Z"))
 
-      val newRecoveryRecord = RecoveryRecord("boo", newDate)
+      await(repo.insert(recoveryRecord))
 
-      await(repo.create(recoveryRecord)) shouldBe 1
+      await(repo.read) shouldBe recoveryRecord
 
-      await(repo.findBy("foo")) shouldBe Some(recoveryRecord)
+      await(repo.removeAll())
 
-      await(repo.update("foo", "boo", newDate))
+      await(repo.read)
 
-      await(repo.findBy("foo")) shouldBe None
+      await(repo.findAll()).length shouldBe 1
 
-      await(repo.findBy("boo")) shouldBe Some(newRecoveryRecord)
+      await(repo.write("foo", DateTime.parse("2019-10-31T23:22:50.971Z")))
+
+      await(repo.findAll()).head shouldBe newRecoveryRecord
+
+      await(repo.findAll()).length shouldBe 1
 
     }
   }

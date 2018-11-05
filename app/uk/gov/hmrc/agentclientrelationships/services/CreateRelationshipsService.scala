@@ -40,7 +40,6 @@ class CreateRelationshipsService @Inject()(
   es: EnrolmentStoreProxyConnector,
   des: DesConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
-  recoveryScheduleRepository: RecoveryScheduleRepository,
   lockService: RecoveryLockService,
   deleteRecordRepository: DeleteRecordRepository,
   val metrics: Metrics)
@@ -139,14 +138,6 @@ class CreateRelationshipsService @Inject()(
         updateEsSyncStatus(IncompleteInputParams)
     }
 
-    val recoverDeauthorisation: PartialFunction[Throwable, Future[Unit]] = {
-      case error =>
-        Logger(getClass).warn(s"Dealloction failed: $error")
-        recoveryScheduleRepository
-          .create(RecoveryRecord(UUID.randomUUID().toString, DateTime.now().toString))
-          .map(_ => ())
-    }
-
     val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
       case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
         logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs))
@@ -202,7 +193,6 @@ class CreateRelationshipsService @Inject()(
                     }
                 _ <- es
                       .deallocateEnrolmentFromAgent(groupId, identifier)
-                      .recoverWith(recoverDeauthorisation)
                 _ <- maybeArn match {
                       case None             => Future successful ()
                       case Some(removedArn) => removeDeleteRecord(removedArn, identifier)

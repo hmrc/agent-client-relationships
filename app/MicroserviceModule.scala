@@ -20,10 +20,12 @@ import javax.inject.{Inject, Provider, Singleton}
 import com.google.inject.AbstractModule
 import com.google.inject.name.{Named, Names}
 import org.slf4j.MDC
+import play.api.inject.bind
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.agentclientrelationships.connectors.MicroserviceAuthConnector
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.{MongoRecoveryLockService, RecoveryLockService}
+import uk.gov.hmrc.agentclientrelationships.support.RecoveryScheduler
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.lock.LockRepository
@@ -57,6 +59,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bind(classOf[DeleteRecordRepository]).to(classOf[MongoDeleteRecordRepository])
     bind(classOf[LockRepository]).to(classOf[MongoLockRepository])
     bind(classOf[RecoveryLockService]).to(classOf[MongoRecoveryLockService])
+    bind(classOf[RecoveryScheduleRepository]).to(classOf[MongoRecoveryScheduleRepository])
 
     bindBaseUrl("enrolment-store-proxy")
     bindBaseUrl("tax-enrolments")
@@ -70,7 +73,10 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bindProperty1Param("auth.stride.role")
     bindBooleanProperty("features.copy-relationship.mtd-it")
     bindBooleanProperty("features.copy-relationship.mtd-vat")
-    bindIntegerProperty("deauth-schedule")
+    bindBooleanProperty("features.recovery-enable")
+    bindIntegerProperty("recovery-interval")
+
+    bind(classOf[RecoveryScheduler]).asEagerSingleton()
   }
 
   private def bindBaseUrl(serviceName: String) =

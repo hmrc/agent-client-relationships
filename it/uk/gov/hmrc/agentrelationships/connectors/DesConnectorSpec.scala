@@ -37,7 +37,8 @@ class DesConnectorSpec
       .configure(
         "microservice.services.des.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort)
+        "auditing.consumer.baseUri.port" -> wireMockPort
+      )
 
   private implicit val hc = HeaderCarrier()
   private implicit val ec = ExecutionContext.global
