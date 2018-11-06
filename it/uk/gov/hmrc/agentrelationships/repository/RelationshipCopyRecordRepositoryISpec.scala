@@ -4,7 +4,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.agentrelationships.support.MongoApp
 import uk.gov.hmrc.play.test.UnitSpec
@@ -15,6 +15,9 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
+      .configure(
+        "features.recovery-enable" -> false
+      )
       .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()

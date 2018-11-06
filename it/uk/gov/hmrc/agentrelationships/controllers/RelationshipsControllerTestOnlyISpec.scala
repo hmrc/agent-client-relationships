@@ -51,7 +51,8 @@ class RelationshipsControllerTestOnlyISpec
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes"
+        "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes",
+        "features.recovery-enable"                         -> false
       )
       .configure(mongoConfiguration)
 

@@ -34,7 +34,8 @@ class EnrolmentStoreProxyConnectorSpec
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
         "microservice.services.tax-enrolments.port"        -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort
+        "auditing.consumer.baseUri.port"                   -> wireMockPort,
+        "features.recovery-enable"                         -> "false"
       )
 
   implicit val hc = HeaderCarrier()

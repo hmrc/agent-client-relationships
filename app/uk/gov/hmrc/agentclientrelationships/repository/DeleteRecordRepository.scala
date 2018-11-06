@@ -24,9 +24,11 @@ import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.{CursorProducer, ReadPreference}
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONObjectID}
+import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONInteger, BSONObjectID}
+import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
@@ -44,7 +46,8 @@ case class DeleteRecord(
   dateTime: DateTime = now(UTC),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None,
-  lastRecoveryAttempt: Option[DateTime] = None) {
+  lastRecoveryAttempt: Option[DateTime] = None,
+  numberOfAttempts: Int = 0) {
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
   def needToDeleteEtmpRecord = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))
@@ -65,6 +68,7 @@ trait DeleteRecordRepository {
     implicit ec: ExecutionContext): Future[Unit]
   def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Unit]
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
+  def selectNextToRecover(implicit executionContext: ExecutionContext): Future[Option[DeleteRecord]]
 }
 
 @Singleton
@@ -77,6 +81,9 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
     with DeleteRecordRepository
     with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID]
     with AtomicUpdate[DeleteRecord] {
+
+  import ImplicitBSONHandlers._
+  import play.api.libs.json.Json.JsValueWrapper
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
@@ -133,7 +140,9 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
         "clientIdentifier"     -> identifier.value,
         "clientIdentifierType" -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument(
-        "$set" -> BSONDocument("lastRecoveryAttempt" -> BSONDateTime(DateTime.now(DateTimeZone.UTC).getMillis)))
+        "$set" -> BSONDocument("lastRecoveryAttempt" -> BSONDateTime(DateTime.now(DateTimeZone.UTC).getMillis)),
+        "$inc" -> BSONDocument("numberOfAttempts"    -> BSONInteger(1))
+      )
     ).map(_.foreach { update =>
       update.writeResult.errMsg.foreach(error => Logger(getClass).warn(s"Marking recovery attempt failed: $error"))
     })
@@ -144,6 +153,16 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       "clientIdentifier"     -> identifier.value,
       "clientIdentifierType" -> clientIdentifierType(identifier))
       .map(_.n)
+
+  override def selectNextToRecover(implicit ec: ExecutionContext): Future[Option[DeleteRecord]] =
+    collection
+      .find(Json.obj())
+      .sort(JsObject(Seq("lastRecoveryAttempt" -> JsNumber(1))))
+      .cursor[DeleteRecord](ReadPreference.primaryPreferred)(
+        implicitly[collection.pack.Reader[DeleteRecord]],
+        ec,
+        implicitly[CursorProducer[DeleteRecord]])
+      .headOption
 
   override def isInsertion(newRecordId: BSONObjectID, oldRecord: DeleteRecord): Boolean = false
 }

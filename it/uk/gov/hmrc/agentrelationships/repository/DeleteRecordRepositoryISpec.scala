@@ -4,6 +4,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.{Failed, Success}
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.agentrelationships.support.MongoApp
@@ -15,6 +16,9 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
+      .configure(
+        "features.recovery-enable" -> false
+      )
       .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
@@ -49,6 +53,86 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
       val removeResult = await(repo.remove(Arn("TARN0000001"), Vrn("101747696")))
       removeResult shouldBe 1
     }
+
+    "select not attempted delete record first" in {
+      val deleteRecord1 = DeleteRecord(
+        "TARN0000001",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now(DateTimeZone.UTC),
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(1))
+      )
+      val deleteRecord2 = DeleteRecord(
+        "TARN0000002",
+        "ABCDEF0000000002",
+        "MTDITID",
+        DateTime.now(DateTimeZone.UTC),
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = None)
+      val deleteRecord3 = DeleteRecord(
+        "TARN0000003",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now(DateTimeZone.UTC),
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(5))
+      )
+
+      val createResult1 = await(repo.create(deleteRecord1))
+      createResult1 shouldBe 1
+      val createResult2 = await(repo.create(deleteRecord2))
+      createResult2 shouldBe 1
+      val createResult3 = await(repo.create(deleteRecord3))
+      createResult3 shouldBe 1
+
+      val result = await(repo.selectNextToRecover)
+      result shouldBe Some(deleteRecord2)
+    }
+
+    "select the oldest attempted delete record first" in {
+      val deleteRecord1 = DeleteRecord(
+        "TARN0000001",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now(DateTimeZone.UTC),
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(1))
+      )
+      val deleteRecord2 = DeleteRecord(
+        "TARN0000002",
+        "ABCDEF0000000002",
+        "MTDITID",
+        DateTime.now(DateTimeZone.UTC),
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(13))
+      )
+      val deleteRecord3 = DeleteRecord(
+        "TARN0000003",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now(DateTimeZone.UTC),
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(5))
+      )
+
+      val createResult1 = await(repo.create(deleteRecord1))
+      createResult1 shouldBe 1
+      val createResult2 = await(repo.create(deleteRecord2))
+      createResult2 shouldBe 1
+      val createResult3 = await(repo.create(deleteRecord3))
+      createResult3 shouldBe 1
+
+      val result = await(repo.selectNextToRecover)
+      result shouldBe Some(deleteRecord2)
+    }
+
   }
 
 }

@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import java.util.UUID
+
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
+import org.joda.time.DateTime
 import play.api.Logger
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -188,7 +191,8 @@ class CreateRelationshipsService @Inject()(
                             TypeOfEnrolment(identifier).identifierKey,
                             syncToETMPStatus = Some(Success)))
                     }
-                _ <- es.deallocateEnrolmentFromAgent(groupId, identifier)
+                _ <- es
+                      .deallocateEnrolmentFromAgent(groupId, identifier)
                 _ <- maybeArn match {
                       case None             => Future successful ()
                       case Some(removedArn) => removeDeleteRecord(removedArn, identifier)

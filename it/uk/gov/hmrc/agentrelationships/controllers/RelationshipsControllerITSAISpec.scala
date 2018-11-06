@@ -70,7 +70,8 @@ class RelationshipsControllerITSAISpec
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
         "features.copy-relationship.mtd-it"                -> true,
-        "features.copy-relationship.mtd-vat"               -> true
+        "features.copy-relationship.mtd-vat"               -> true,
+        "features.recovery-enable"                         -> false
       )
       .configure(mongoConfiguration)
 
@@ -1813,7 +1814,7 @@ class RelationshipsControllerITSAISpec
 
   private def verifyDeleteRecordHasStatuses(etmpStatus: Option[SyncStatus.Value], esStatus: Option[SyncStatus.Value]) =
     await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
-      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _)) =>
+      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _)) =>
     }
 
   private def verifyDeleteRecordNotExists =
