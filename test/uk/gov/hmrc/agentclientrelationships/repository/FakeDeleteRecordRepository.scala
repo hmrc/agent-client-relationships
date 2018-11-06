@@ -30,11 +30,13 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
 
   override def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int] =
     findBy(Arn(record.arn), MtdItId(record.clientIdentifier)).map(
-      _ => {
-        data += ((record.arn + record.clientIdentifier) → record)
-        1
-      }
-    )
+      result =>
+        if (result.isDefined)
+          throw GenericDatabaseException("duplicate key error collection", code = Some(2))
+        else {
+          data += ((record.arn + record.clientIdentifier) → record)
+          1
+      })
 
   override def findBy(arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext): Future[Option[DeleteRecord]] = {
