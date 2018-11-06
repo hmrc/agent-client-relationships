@@ -40,6 +40,8 @@ class RecoveryScheduler @Inject()(
   deleteRelationshipsService: DeleteRelationshipsService,
   actorSystem: ActorSystem,
   @Named("recovery-interval") recoveryInterval: Int,
+  @Named("recovery-start-time-hour") recoveryStartTimeHour: Int,
+  @Named("recovery-start-now") recoveryStartNow: Boolean,
   @Named("features.recovery-enable") recoveryEnable: Boolean,
   executionContextProvider: ExecutionContextProvider) {
 
@@ -51,7 +53,13 @@ class RecoveryScheduler @Inject()(
 
   if (recoveryEnable) {
     val taskActor: ActorRef = actorSystem.actorOf(Props {
-      new TaskActor(mongoRecoveryScheduleRepository, executionContextProvider, recoveryInterval, recover)
+      new TaskActor(
+        mongoRecoveryScheduleRepository,
+        executionContextProvider,
+        recoveryInterval,
+        recoveryStartTimeHour,
+        recoveryStartNow,
+        recover)
     })
 
     actorSystem.scheduler.scheduleOnce(5.seconds, taskActor, "<start>")
@@ -81,6 +89,8 @@ class TaskActor(
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
   executionContextProvider: ExecutionContextProvider,
   recoveryInterval: Int,
+  recoveryStartTimeHour: Int,
+  recoveryStartNow: Boolean,
   recover: => Future[Unit])
     extends Actor {
 
@@ -90,7 +100,12 @@ class TaskActor(
     case uid: String =>
       mongoRecoveryScheduleRepository.read.flatMap {
         case RecoveryRecord(recordUid, runAt) =>
-          val now = DateTime.now()
+          val now =
+            if (recoveryStartNow) DateTime.now()
+            else
+              DateTime
+                .now()
+                .withTime(recoveryStartTimeHour, 0, 0, 0)
           if (uid == recordUid) {
             val newUid = UUID.randomUUID().toString
             val nextRunAt = runAt.plusSeconds(recoveryInterval)
