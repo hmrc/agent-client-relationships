@@ -85,6 +85,9 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
   }
 
+  override def selectNextToRecover(implicit executionContext: ExecutionContext): Future[Option[DeleteRecord]] =
+    Future.successful(data.toSeq.map(_._2).sortBy(_.lastRecoveryAttempt.map(_.getMillis).getOrElse(0L)).headOption)
+
   def reset() =
     data.clear()
 

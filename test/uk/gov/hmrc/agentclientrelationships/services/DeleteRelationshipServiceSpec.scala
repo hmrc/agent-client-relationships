@@ -84,7 +84,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyETMPDeAuthorisationHasBeenPerformed
 
       await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), None)) =>
+        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), None, _)) =>
       }
     }
 
@@ -104,7 +104,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyETMPDeAuthorisationHasBeenPerformed
 
       await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), None, None)) =>
+        case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), None, None, _)) =>
       }
       await(repo.remove(arn, mtdItId))
     }
@@ -308,8 +308,94 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
       result shouldBe false
       await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), Some(_))) =>
+        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), Some(_), _)) =>
       }
+    }
+  }
+
+  "tryToResume" should {
+    "select not attempted delete record first" in new TestFixture {
+      val deleteRecord1 = DeleteRecord(
+        arn.value + "1",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now,
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(1)))
+      val deleteRecord2 = DeleteRecord(
+        arn.value,
+        mtdItId.value,
+        "MTDITID",
+        DateTime.now,
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = None)
+      val deleteRecord3 = DeleteRecord(
+        arn.value + "3",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now,
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(5)))
+
+      await(repo.create(deleteRecord1))
+      await(repo.create(deleteRecord2))
+      await(repo.create(deleteRecord3))
+
+      await(repo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord2)
+
+      givenRelationshipBetweenAgentAndClientExists
+      givenAgentExists
+      givenESDeAllocationSucceeds
+
+      val result = await(underTest.tryToResume)
+
+      result shouldBe true
+      await(repo.findBy(arn, mtdItId)) shouldBe None
+    }
+
+    "select the oldest attempted delete record first" in new TestFixture {
+      val deleteRecord1 = DeleteRecord(
+        arn.value + "1",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now,
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(1)))
+      val deleteRecord2 = DeleteRecord(
+        arn.value,
+        mtdItId.value,
+        "MTDITID",
+        DateTime.now,
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(13)))
+      val deleteRecord3 = DeleteRecord(
+        arn.value + "3",
+        "ABCDEF0000000001",
+        "MTDITID",
+        DateTime.now,
+        Some(Success),
+        Some(Failed),
+        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(5)))
+
+      await(repo.create(deleteRecord1))
+      await(repo.create(deleteRecord2))
+      await(repo.create(deleteRecord3))
+
+      await(repo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord2)
+
+      givenRelationshipBetweenAgentAndClientExists
+      givenAgentExists
+      givenESDeAllocationSucceeds
+
+      val result = await(underTest.tryToResume)
+
+      result shouldBe true
+      await(repo.findBy(arn, mtdItId)) shouldBe None
     }
   }
 

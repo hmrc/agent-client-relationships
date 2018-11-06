@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.auth
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
-import org.scalatestplus.play.OneAppPerSuite
 import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionToPerformOperation
@@ -32,7 +31,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results with OneAppPerSuite {
+class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   lazy val mockAuthConnector = mock[AuthConnector]
 

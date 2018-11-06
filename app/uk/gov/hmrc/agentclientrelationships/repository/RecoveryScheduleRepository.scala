@@ -74,14 +74,13 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
     })
 
   def write(newUid: String, newRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit] =
-    atomicUpdate(
+    atomicUpsert(
       finder = BSONDocument(),
       modifierBson = BSONDocument(
         "$set" -> BSONDocument("uid" -> newUid, "runAt" -> ReactiveMongoFormats.dateTimeWrite.writes(newRunAt)))
-    ).map(_.foreach { update =>
+    ).map(update =>
       update.writeResult.errMsg.foreach(error =>
-        Logger(getClass).warn(s"Updating uid and runAt failed with error: $error"))
-    })
+        Logger(getClass).warn(s"Updating uid and runAt failed with error: $error")))
 
   override def isInsertion(newRecordId: BSONObjectID, oldRecord: RecoveryRecord): Boolean = false
 }

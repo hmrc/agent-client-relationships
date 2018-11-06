@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, DeleteRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound, TaxIdentifierSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 
@@ -201,6 +201,20 @@ class DeleteRelationshipsService @Inject()(
           Future.successful(false)
       }
 
+  def tryToResume(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] =
+    deleteRecordRepository.selectNextToRecover.flatMap {
+      case Some(record) =>
+        record.clientIdentifierType match {
+          case "MTDITID" =>
+            checkDeleteRecordAndEventuallyResume(MtdItId(record.clientIdentifier), Arn(record.arn))
+          case "VRN" =>
+            checkDeleteRecordAndEventuallyResume(Vrn(record.clientIdentifier), Arn(record.arn))
+        }
+      case None =>
+        Logger(getClass).info("No Delete Record Found")
+        Future.successful(true)
+    }
+
   def checkDeleteRecordAndEventuallyResume(
     taxIdentifier: TaxIdentifier,
     arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] =
@@ -229,7 +243,7 @@ class DeleteRelationshipsService @Inject()(
     lockService
       .tryLock(arn, identifier) {
         Logger(getClass).info(
-          s"Resuming unfinished removal of the ${identifier.getClass.getName} relationship between ${arn.value} and ${identifier.value}.")
+          s"Resuming unfinished removal of the ${identifier.getClass.getName} relationship between ${arn.value} and ${identifier.value}. Attempt: ${deleteRecord.numberOfAttempts + 1}")
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
             for {

@@ -16,11 +16,10 @@
 
 import java.net.URL
 
-import javax.inject.{Inject, Provider, Singleton}
 import com.google.inject.AbstractModule
 import com.google.inject.name.{Named, Names}
+import javax.inject.{Inject, Provider, Singleton}
 import org.slf4j.MDC
-import play.api.inject.bind
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.agentclientrelationships.connectors.MicroserviceAuthConnector
 import uk.gov.hmrc.agentclientrelationships.repository._
@@ -76,7 +75,9 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bindBooleanProperty("features.recovery-enable")
     bindIntegerProperty("recovery-interval")
 
-    bind(classOf[RecoveryScheduler]).asEagerSingleton()
+    if (configuration.getBoolean("features.recovery-enable").getOrElse(false)) {
+      bind(classOf[RecoveryScheduler]).asEagerSingleton()
+    }
   }
 
   private def bindBaseUrl(serviceName: String) =
