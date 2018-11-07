@@ -52,11 +52,8 @@ class RecoveryScheduler @Inject()(
   } else
     Logger(getClass).warn("Recovery job scheduler not enabled.")
 
-  def recover: Future[Unit] = {
-    implicit val hc: HeaderCarrier = HeaderCarrier()
-    implicit val ad: AuditData = new AuditData
-    deleteRelationshipsService.tryToResume.map(_ => ())
-  }
+  def recover: Future[Unit] =
+    deleteRelationshipsService.tryToResume(ec, new AuditData).map(_ => ())
 }
 
 class TaskActor(

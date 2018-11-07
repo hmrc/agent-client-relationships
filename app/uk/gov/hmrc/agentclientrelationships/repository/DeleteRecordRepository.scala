@@ -83,6 +83,8 @@ object DeleteRecord {
       (JsPath \ "gaToken").readNullable[String]
   )((a, s, t, g) => HeaderCarrier(authorization = a, sessionId = s, token = t, gaToken = g))
 
+  import ReactiveMongoFormats._
+
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }
 

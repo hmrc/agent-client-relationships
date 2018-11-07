@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import org.joda.time.{DateTime, LocalDate}
-import org.mockito.ArgumentMatchers.{any, eq => equalsTo}
+import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.scalatest.mockito.MockitoSugar.mock
 import play.api.test.FakeRequest
@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DeleteRelationshipServiceSpec extends UnitSpec {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
-  implicit val testAuditData: AuditData = mock[AuditData]
+  implicit val testAuditData: AuditData = new AuditData
 
   val arn = Arn("AARN0000002")
   val mtdItId = MtdItId("ABCDEF123456789")
@@ -330,7 +330,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         DateTime.now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = None)
+        lastRecoveryAttempt = None,
+        headerCarrier = None)
       val deleteRecord3 = DeleteRecord(
         arn.value + "3",
         "ABCDEF0000000001",
@@ -350,7 +351,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAgentExists
       givenESDeAllocationSucceeds
 
-      val result = await(underTest.tryToResume)
+      val result = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItId)) shouldBe None
@@ -392,7 +393,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAgentExists
       givenESDeAllocationSucceeds
 
-      val result = await(underTest.tryToResume)
+      val result = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItId)) shouldBe None
@@ -424,32 +425,28 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       metrics)
 
     def givenAgentExists =
-      when(
-        agentUserService.getAgentUserFor(equalsTo[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+      when(agentUserService.getAgentUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
         .thenReturn(Future.successful(agentUser))
 
     def givenRelationshipBetweenAgentAndClientExists =
-      when(
-        checkService.checkForRelationship(equalsTo(mtdItId), equalsTo(agentUser))(
-          any[ExecutionContext],
-          any[HeaderCarrier],
-          any[AuditData]))
+      when(checkService
+        .checkForRelationship(eqs(mtdItId), eqs(agentUser))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
         .thenReturn(Right(true))
 
     def givenETMPDeAuthSucceeds =
-      when(des.deleteAgentRelationship(mtdItId, arn))
+      when(des.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.successful(RegistrationRelationshipResponse(LocalDate.now.toString)))
 
     def givenETMPDeAuthFails =
-      when(des.deleteAgentRelationship(mtdItId, arn))
+      when(des.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.failed(new Exception))
 
     def givenESDeAllocationSucceeds =
-      when(es.deallocateEnrolmentFromAgent(agentGroupId, mtdItId))
+      when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItId))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.successful(()))
 
     def givenESDeAllocationFails =
-      when(es.deallocateEnrolmentFromAgent(agentGroupId, mtdItId))
+      when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItId))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.failed(new Exception))
 
     def verifyESDeAllocateHasBeenPerformed =
