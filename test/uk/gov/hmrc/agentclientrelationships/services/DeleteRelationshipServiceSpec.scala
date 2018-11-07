@@ -84,7 +84,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyETMPDeAuthorisationHasBeenPerformed
 
       await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), None, _)) =>
+        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), None, _, _)) =>
       }
     }
 
@@ -104,7 +104,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyETMPDeAuthorisationHasBeenPerformed
 
       await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), None, None, _)) =>
+        case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), None, None, _, _)) =>
       }
       await(repo.remove(arn, mtdItId))
     }
@@ -308,7 +308,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
       result shouldBe false
       await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), Some(_), _)) =>
+        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), Some(_), _, _)) =>
       }
     }
   }

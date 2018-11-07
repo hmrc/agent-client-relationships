@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import java.util.concurrent.RejectedExecutionHandler
+
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime.now
 import org.joda.time.DateTimeZone.UTC
@@ -34,6 +36,8 @@ import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.{HeaderCarrier, Token}
+import uk.gov.hmrc.http.logging.{Authorization, RequestChain, SessionId}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
@@ -47,7 +51,8 @@ case class DeleteRecord(
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None,
   lastRecoveryAttempt: Option[DateTime] = None,
-  numberOfAttempts: Int = 0) {
+  numberOfAttempts: Int = 0,
+  headerCarrier: Option[HeaderCarrier] = None) {
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
   def needToDeleteEtmpRecord = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))
@@ -55,7 +60,29 @@ case class DeleteRecord(
   def needToDeleteEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
-object DeleteRecord extends ReactiveMongoFormats {
+object DeleteRecord {
+  implicit val hcWrites = new OWrites[HeaderCarrier] {
+    override def writes(hc: HeaderCarrier): JsObject =
+      JsObject(
+        Seq(
+          "authorization" -> hc.authorization.map(_.value),
+          "sessionId"     -> hc.sessionId.map(_.value),
+          "token"         -> hc.token.map(_.value),
+          "gaToken"       -> hc.gaToken
+        ).collect {
+          case (key, Some(value)) => (key, JsString(value))
+        })
+  }
+
+  import play.api.libs.functional.syntax._
+
+  implicit val reads: Reads[HeaderCarrier] = (
+    (JsPath \ "authorization").readNullable[String].map(_.map(Authorization.apply)) and
+      (JsPath \ "sessionId").readNullable[String].map(_.map(SessionId.apply)) and
+      (JsPath \ "token").readNullable[String].map(_.map(Token.apply)) and
+      (JsPath \ "gaToken").readNullable[String]
+  )((a, s, t, g) => HeaderCarrier(authorization = a, sessionId = s, token = t, gaToken = g))
+
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }
 
