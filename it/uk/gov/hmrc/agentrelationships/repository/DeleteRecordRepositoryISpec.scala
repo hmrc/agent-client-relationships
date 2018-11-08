@@ -38,7 +38,11 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "VRN",
         DateTime.now(DateTimeZone.UTC),
         Some(SyncStatus.Failed),
-        Some(SyncStatus.Failed))
+        Some(SyncStatus.Failed),
+        numberOfAttempts = 3,
+        lastRecoveryAttempt = None,
+        headerCarrier = None
+      )
       val createResult = await(repo.create(deleteRecord))
       createResult shouldBe 1
       val findResult = await(repo.findBy(Arn("TARN0000001"), Vrn("101747696")))

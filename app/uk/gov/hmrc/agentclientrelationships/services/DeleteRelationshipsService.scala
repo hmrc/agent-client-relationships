@@ -75,7 +75,7 @@ class DeleteRelationshipsService @Inject()(
         }
 
     def delete: Future[Unit] = {
-      val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType)
+      val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType, headerCarrier = Some(hc))
       for {
         _ <- createDeleteRecord(record)
         _ <- deleteEtmpRecord(arn, taxIdentifier)
@@ -149,7 +149,7 @@ class DeleteRelationshipsService @Inject()(
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
       Logger(getClass).warn(
-        s"Creating ES record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
+        s"De-allocating ES record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
         origExc)
       updateEsSyncStatus(Failed)
       Future.failed(replacementExc)
@@ -201,14 +201,21 @@ class DeleteRelationshipsService @Inject()(
           Future.successful(false)
       }
 
-  def tryToResume(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] =
+  def tryToResume(implicit ec: ExecutionContext, auditData: AuditData): Future[Boolean] =
     deleteRecordRepository.selectNextToRecover.flatMap {
       case Some(record) =>
+        val headerCarrier = record.headerCarrier.getOrElse(HeaderCarrier())
         record.clientIdentifierType match {
           case "MTDITID" =>
-            checkDeleteRecordAndEventuallyResume(MtdItId(record.clientIdentifier), Arn(record.arn))
+            checkDeleteRecordAndEventuallyResume(MtdItId(record.clientIdentifier), Arn(record.arn))(
+              ec,
+              headerCarrier,
+              auditData)
           case "VRN" =>
-            checkDeleteRecordAndEventuallyResume(Vrn(record.clientIdentifier), Arn(record.arn))
+            checkDeleteRecordAndEventuallyResume(Vrn(record.clientIdentifier), Arn(record.arn))(
+              ec,
+              headerCarrier,
+              auditData)
         }
       case None =>
         Logger(getClass).info("No Delete Record Found")

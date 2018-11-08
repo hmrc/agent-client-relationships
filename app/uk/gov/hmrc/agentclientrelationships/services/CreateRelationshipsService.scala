@@ -16,11 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import java.util.UUID
-
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
-import org.joda.time.DateTime
 import play.api.Logger
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -29,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -189,7 +186,8 @@ class CreateRelationshipsService @Inject()(
                             arnToRemove.value,
                             identifier.value,
                             TypeOfEnrolment(identifier).identifierKey,
-                            syncToETMPStatus = Some(Success)))
+                            syncToETMPStatus = Some(Success),
+                            headerCarrier = Some(hc)))
                     }
                 _ <- es
                       .deallocateEnrolmentFromAgent(groupId, identifier)
