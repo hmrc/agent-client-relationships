@@ -4,6 +4,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.{Failed, Success}
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
@@ -56,6 +57,65 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         deleteRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToESStatus = Some(SyncStatus.Success)))
       val removeResult = await(repo.remove(Arn("TARN0000001"), Vrn("101747696")))
       removeResult shouldBe 1
+    }
+
+    "create a  new record when an old record with the same arn already exists" in {
+      val deleteRecordOld = DeleteRecord(
+        "TARN0000001",
+        "101747696",
+        "VRN",
+        DateTime.now(DateTimeZone.UTC),
+        Some(SyncStatus.Failed),
+        Some(SyncStatus.Failed),
+        numberOfAttempts = 3,
+        lastRecoveryAttempt = None,
+        headerCarrier = None
+      )
+      val deleteRecordNew = DeleteRecord(
+        "TARN0000001",
+        "101747697",
+        "VRN",
+        DateTime.now(DateTimeZone.UTC),
+        Some(SyncStatus.Failed),
+        Some(SyncStatus.Failed),
+        numberOfAttempts = 3,
+        lastRecoveryAttempt = None,
+        headerCarrier = None
+      )
+      val createResultOld = await(repo.create(deleteRecordOld))
+      createResultOld shouldBe 1
+      val createResultNew = await(repo.create(deleteRecordNew))
+      createResultNew shouldBe 1
+    }
+
+    "fail to create a  new record when an old record with the same arn, clientId and clientIdType already exists" in {
+      val deleteRecordOld = DeleteRecord(
+        "TARN0000001",
+        "101747696",
+        "VRN",
+        DateTime.now(DateTimeZone.UTC),
+        Some(SyncStatus.Failed),
+        Some(SyncStatus.Failed),
+        numberOfAttempts = 3,
+        lastRecoveryAttempt = None,
+        headerCarrier = None
+      )
+      val deleteRecordNew = DeleteRecord(
+        "TARN0000001",
+        "101747696",
+        "VRN",
+        DateTime.now(DateTimeZone.UTC),
+        Some(SyncStatus.Success),
+        Some(SyncStatus.Success),
+        numberOfAttempts = 5,
+        lastRecoveryAttempt = None,
+        headerCarrier = None
+      )
+      val createResultOld = await(repo.create(deleteRecordOld))
+      createResultOld shouldBe 1
+      an[DatabaseException] shouldBe thrownBy {
+        await(repo.create(deleteRecordNew))
+      }
     }
 
     "select not attempted delete record first" in {
