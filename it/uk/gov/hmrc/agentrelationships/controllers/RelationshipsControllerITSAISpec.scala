@@ -1506,6 +1506,16 @@ class RelationshipsControllerITSAISpec
       result.status shouldBe 201
     }
 
+    "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
+      givenUserIsSubscribedAgent(arn)
+      givenDelegatedGroupIdsExistForMtdItId(mtdItId, "zoo")
+      givenEnrolmentExistsForGroupId("zoo", Arn("zooArn"))
+      givenEnrolmentDeallocationFailsWith(502, "zoo", mtdItId)
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 201
+    }
+
     "return 201 when the relationship exists and the MtdItId matches that of current Client user" in new StubsForThisScenario {
       givenUserIsSubscribedClient(mtdItId)
 
