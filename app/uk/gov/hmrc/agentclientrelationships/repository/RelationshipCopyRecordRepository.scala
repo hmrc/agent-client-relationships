@@ -27,6 +27,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
@@ -53,7 +54,7 @@ case class RelationshipCopyRecord(
 }
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
-  implicit val formats: Format[RelationshipCopyRecord] = format[RelationshipCopyRecord]
+  implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 
 trait RelationshipCopyRecordRepository {
@@ -81,6 +82,9 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
+  import ImplicitBSONHandlers._
+  import play.api.libs.json.Json.JsValueWrapper
+
   override def indexes =
     Seq(
       Index(
@@ -89,11 +93,21 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         unique = true))
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
-    insert(record).map { result =>
-      result.writeErrors.foreach(error =>
-        Logger(getClass).warn(s"Creating RelationshipCopyRecord failed: ${error.errmsg}"))
-      result.n
-    }
+    collection
+      .update[JsObject, RelationshipCopyRecord](
+        JsObject(
+          Seq(
+            "arn"                  -> JsString(record.arn),
+            "clientIdentifier"     -> JsString(record.clientIdentifier),
+            "clientIdentifierType" -> JsString(record.clientIdentifierType))),
+        record,
+        upsert = true
+      )
+      .map { result =>
+        result.writeErrors.foreach(error =>
+          Logger(getClass).warn(s"Creating RelationshipCopyRecord failed: ${error.errmsg}"))
+        result.n
+      }
 
   def findBy(arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] =

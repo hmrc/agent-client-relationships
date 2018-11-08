@@ -190,6 +190,8 @@ class RecoverySchedulerISpec
       givenPrincipalUserIdExistFor(arn, "userId")
       givenPrincipalGroupIdExistsFor(arn, "foo")
 
+      await(recoveryRepo.removeAll())
+
       await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).minusDays(2)))
       await(recoveryRepo.findAll()).length shouldBe 1
 
@@ -204,15 +206,14 @@ class RecoverySchedulerISpec
         )
 
         givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}", Set("foo"))
-        if (index == 5) {
+        if (index == 5)
           givenEnrolmentDeallocationFailsWith(502)(
             "foo",
             "HMRC-MTD-IT",
             deleteRecord.clientIdentifierType,
             deleteRecord.clientIdentifier)
-        } else {
+        else
           givenEnrolmentDeallocationSucceeds("foo", MtdItId(mtdItId.value + index))
-        }
 
         await(deleteRepo.create(deleteRecord))
       }
