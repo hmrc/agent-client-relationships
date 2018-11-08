@@ -175,7 +175,7 @@ class CreateRelationshipsService @Inject()(
       for {
         existingAgents <- es.getDelegatedGroupIdsFor(identifier)
         _ <- Future.sequence(existingAgents.map { groupId =>
-              for {
+              (for {
                 maybeArn <- es.getAgentReferenceNumberFor(groupId)
                 _ <- maybeArn match {
                       case None =>
@@ -195,7 +195,10 @@ class CreateRelationshipsService @Inject()(
                       case None             => Future successful ()
                       case Some(removedArn) => removeDeleteRecord(removedArn, identifier)
                     }
-              } yield ()
+              } yield ()).recover {
+                case NonFatal(ex) =>
+                  Logger(getClass).error(s"Could not deallocate previous relationship because of: $ex. Will try later.")
+              }
             })
       } yield ()
 

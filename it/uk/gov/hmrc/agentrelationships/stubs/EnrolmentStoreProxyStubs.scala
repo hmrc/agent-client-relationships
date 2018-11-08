@@ -177,6 +177,13 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value"))
         .willReturn(aResponse().withStatus(204)))
 
+  def givenEnrolmentDeallocationFailsWith(responseStatus: Int, groupId: String, taxIdentifier: TaxIdentifier) = {
+    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+    stubFor(
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey"))
+        .willReturn(aResponse().withStatus(responseStatus)))
+  }
+
   def givenEnrolmentDeallocationFailsWith(
     responseStatus: Int)(groupId: String, key: String, identifier: String, value: String) =
     stubFor(
