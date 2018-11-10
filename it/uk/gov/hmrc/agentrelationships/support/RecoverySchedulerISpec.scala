@@ -184,7 +184,7 @@ class RecoverySchedulerISpec
 
     }
 
-    "attempt to recover multiple DeleteRecords when one of them constantly fails" in {
+    "attempt to recover multiple DeleteRecords when one of them constantly fails and other fails because auth token has expired" in {
       givenAuditConnector()
       givenGroupInfo("foo", "bar")
       givenPrincipalUserIdExistFor(arn, "userId")
@@ -212,7 +212,13 @@ class RecoverySchedulerISpec
             "HMRC-MTD-IT",
             deleteRecord.clientIdentifierType,
             deleteRecord.clientIdentifier)
-        else
+        else if (index == 6) {
+          givenEnrolmentDeallocationFailsWith(401)(
+            "foo",
+            "HMRC-MTD-IT",
+            deleteRecord.clientIdentifierType,
+            deleteRecord.clientIdentifier)
+        } else
           givenEnrolmentDeallocationSucceeds("foo", MtdItId(mtdItId.value + index))
 
         await(deleteRepo.create(deleteRecord))

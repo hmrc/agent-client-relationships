@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -140,6 +140,7 @@ class DeleteRelationshipsService @Inject()(
 
   }
 
+  //noinspection ScalaStyle
   def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -168,6 +169,11 @@ class DeleteRelationshipsService @Inject()(
         logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
     }
 
+    lazy val recoverUnauthorized: PartialFunction[Throwable, Future[Unit]] = {
+      case ex: Upstream4xxResponse if ex.upstreamResponseCode == 401 =>
+        logAndMaybeFail(ex, ex)
+    }
+
     lazy val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
       case NonFatal(ex) =>
         logAndMaybeFail(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ES"))
@@ -184,6 +190,7 @@ class DeleteRelationshipsService @Inject()(
     } yield ()).recoverWith(
       recoverAgentUserRelationshipNotFound
         .orElse(recoverUpstream5xx)
+        .orElse(recoverUnauthorized)
         .orElse(recoverNonFatal))
   }
 
@@ -237,8 +244,11 @@ class DeleteRelationshipsService @Inject()(
                      case None => Future.successful(true)
                    }
     } yield isComplete)
-      .recover {
-        case NonFatal(_) => false
+      .recoverWith {
+        case e: Upstream4xxResponse if e.upstreamResponseCode == 401 =>
+          removeDeleteRecord(arn, taxIdentifier).map(_ => false)
+        case NonFatal(_) =>
+          Future.successful(false)
       }
 
   def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(
