@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -44,7 +45,8 @@ class DeleteRelationshipsService @Inject()(
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   val auditService: AuditService,
-  val metrics: Metrics)
+  val metrics: Metrics,
+  @Named("recovery-timeout") recoveryTimeout: Int)
     extends Monitoring {
 
   //noinspection ScalaStyle
@@ -236,17 +238,25 @@ class DeleteRelationshipsService @Inject()(
       recordOpt <- deleteRecordRepository.findBy(arn, taxIdentifier)
       isComplete <- recordOpt match {
                      case Some(record) =>
-                       for {
-                         isDone <- resumeRelationshipRemoval(record)
-                         _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)
-                             else Future.successful(())
-                       } yield isDone
+                       if (record.dateTime.plusSeconds(recoveryTimeout).isAfter(DateTime.now(DateTimeZone.UTC))) {
+                         for {
+                           isDone <- resumeRelationshipRemoval(record)
+                           _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)
+                               else Future.successful(())
+                         } yield isDone
+                       } else {
+                         Logger(getClass).error(
+                           s"Terminating recovery of failed de-authorisation $record because timeout has passed.")
+                         removeDeleteRecord(arn, taxIdentifier).map(_ => true)
+                       }
                      case None => Future.successful(true)
                    }
     } yield isComplete)
       .recoverWith {
         case e: Upstream4xxResponse if e.upstreamResponseCode == 401 =>
-          removeDeleteRecord(arn, taxIdentifier).map(_ => false)
+          Logger(getClass).error(
+            s"Terminating recovery of failed de-authorisation ($arn, $taxIdentifier) because auth token is invalid")
+          removeDeleteRecord(arn, taxIdentifier).map(_ => true)
         case NonFatal(_) =>
           Future.successful(false)
       }

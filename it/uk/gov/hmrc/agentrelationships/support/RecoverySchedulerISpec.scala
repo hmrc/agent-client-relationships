@@ -200,7 +200,7 @@ class RecoverySchedulerISpec
           arn.value,
           mtdItId.value + index,
           mtdItIdType,
-          DateTime.parse("2017-10-31T23:22:50.971Z"),
+          DateTime.now(DateTimeZone.UTC).minusDays(index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Success)
         )

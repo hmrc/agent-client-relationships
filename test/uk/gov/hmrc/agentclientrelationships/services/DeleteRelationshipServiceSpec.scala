@@ -311,7 +311,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), Some(_), _, _)) =>
       }
     }
-    "return false if delete record found but resumption failed because of missing authorisation" in new TestFixture {
+    "return true if delete record found but resumption failed because of missing authorisation" in new TestFixture {
       val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
@@ -320,7 +320,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
       val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
-      result shouldBe false
+      result shouldBe true
       await(repo.findBy(arn, mtdItId)) shouldBe None
     }
   }
@@ -434,7 +434,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       checkService,
       agentUserService,
       auditService,
-      metrics)
+      metrics,
+      3600)
 
     def givenAgentExists =
       when(agentUserService.getAgentUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
