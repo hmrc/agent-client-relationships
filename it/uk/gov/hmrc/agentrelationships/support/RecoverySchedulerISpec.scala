@@ -6,6 +6,7 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
@@ -237,6 +238,16 @@ class RecoverySchedulerISpec
         deleteRecords.length shouldBe 1
         deleteRecords.head.numberOfAttempts should (be > 1)
       }
+
+      verifyAuditRequestSent(
+        4,
+        AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
+        detail = Map("abandonmentReason" -> "timeout", "numberOfAttempts" -> "1"))
+
+      verifyAuditRequestSent(
+        1,
+        AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
+        detail = Map("abandonmentReason" -> "unauthorised", "numberOfAttempts" -> "1"))
 
     }
   }

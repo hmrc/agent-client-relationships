@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, DeleteRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound, TaxIdentifierSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream4xxResponse, Upstream5xxResponse}
@@ -238,6 +238,8 @@ class DeleteRelationshipsService @Inject()(
       recordOpt <- deleteRecordRepository.findBy(arn, taxIdentifier)
       isComplete <- recordOpt match {
                      case Some(record) =>
+                       auditData.set("initialDeleteDateTime", record.dateTime)
+                       auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
                        if (record.dateTime.plusSeconds(recoveryTimeout).isAfter(DateTime.now(DateTimeZone.UTC))) {
                          for {
                            isDone <- resumeRelationshipRemoval(record)
@@ -247,6 +249,9 @@ class DeleteRelationshipsService @Inject()(
                        } else {
                          Logger(getClass).error(
                            s"Terminating recovery of failed de-authorisation $record because timeout has passed.")
+                         implicit val request: Request[Any] = NoRequest
+                         auditData.set("abandonmentReason", "timeout")
+                         auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
                          removeDeleteRecord(arn, taxIdentifier).map(_ => true)
                        }
                      case None => Future.successful(true)
@@ -256,6 +261,9 @@ class DeleteRelationshipsService @Inject()(
         case e: Upstream4xxResponse if e.upstreamResponseCode == 401 =>
           Logger(getClass).error(
             s"Terminating recovery of failed de-authorisation ($arn, $taxIdentifier) because auth token is invalid")
+          implicit val request: Request[Any] = NoRequest
+          auditData.set("abandonmentReason", "unauthorised")
+          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
           removeDeleteRecord(arn, taxIdentifier).map(_ => true)
         case NonFatal(_) =>
           Future.successful(false)
