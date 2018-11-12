@@ -107,6 +107,7 @@ class CreateRelationshipsService @Inject()(
       }
   }
 
+  //noinspection ScalaStyle
   private def createEsRecord(
     arn: Arn,
     identifier: TaxIdentifier,
@@ -171,7 +172,7 @@ class CreateRelationshipsService @Inject()(
             Future.successful(false)
         }
 
-    def deallocatePreviousRelationsipIfAny: Future[Unit] =
+    def deallocatePreviousRelationshipIfAny: Future[Unit] =
       for {
         existingAgents <- es.getDelegatedGroupIdsFor(identifier)
         _ <- Future.sequence(existingAgents.map { groupId =>
@@ -205,7 +206,7 @@ class CreateRelationshipsService @Inject()(
     (for {
       _         <- updateEsSyncStatus(InProgress)
       agentUser <- eventualAgentUser
-      _         <- deallocatePreviousRelationsipIfAny
+      _         <- deallocatePreviousRelationshipIfAny
       _         <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
       _ <- updateEsSyncStatus(Success)

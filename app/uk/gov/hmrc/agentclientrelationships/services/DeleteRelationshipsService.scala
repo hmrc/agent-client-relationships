@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -26,10 +27,10 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, DeleteRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound, TaxIdentifierSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -44,7 +45,8 @@ class DeleteRelationshipsService @Inject()(
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   val auditService: AuditService,
-  val metrics: Metrics)
+  val metrics: Metrics,
+  @Named("recovery-timeout") recoveryTimeout: Int)
     extends Monitoring {
 
   //noinspection ScalaStyle
@@ -140,6 +142,7 @@ class DeleteRelationshipsService @Inject()(
 
   }
 
+  //noinspection ScalaStyle
   def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -168,6 +171,11 @@ class DeleteRelationshipsService @Inject()(
         logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
     }
 
+    lazy val recoverUnauthorized: PartialFunction[Throwable, Future[Unit]] = {
+      case ex: Upstream4xxResponse if ex.upstreamResponseCode == 401 =>
+        logAndMaybeFail(ex, ex)
+    }
+
     lazy val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
       case NonFatal(ex) =>
         logAndMaybeFail(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ES"))
@@ -184,6 +192,7 @@ class DeleteRelationshipsService @Inject()(
     } yield ()).recoverWith(
       recoverAgentUserRelationshipNotFound
         .orElse(recoverUpstream5xx)
+        .orElse(recoverUnauthorized)
         .orElse(recoverNonFatal))
   }
 
@@ -229,16 +238,35 @@ class DeleteRelationshipsService @Inject()(
       recordOpt <- deleteRecordRepository.findBy(arn, taxIdentifier)
       isComplete <- recordOpt match {
                      case Some(record) =>
-                       for {
-                         isDone <- resumeRelationshipRemoval(record)
-                         _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)
-                             else Future.successful(())
-                       } yield isDone
+                       auditData.set("initialDeleteDateTime", record.dateTime)
+                       auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
+                       if (record.dateTime.plusSeconds(recoveryTimeout).isAfter(DateTime.now(DateTimeZone.UTC))) {
+                         for {
+                           isDone <- resumeRelationshipRemoval(record)
+                           _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)
+                               else Future.successful(())
+                         } yield isDone
+                       } else {
+                         Logger(getClass).error(
+                           s"Terminating recovery of failed de-authorisation $record because timeout has passed.")
+                         implicit val request: Request[Any] = NoRequest
+                         auditData.set("abandonmentReason", "timeout")
+                         auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
+                         removeDeleteRecord(arn, taxIdentifier).map(_ => true)
+                       }
                      case None => Future.successful(true)
                    }
     } yield isComplete)
-      .recover {
-        case NonFatal(_) => false
+      .recoverWith {
+        case e: Upstream4xxResponse if e.upstreamResponseCode == 401 =>
+          Logger(getClass).error(
+            s"Terminating recovery of failed de-authorisation ($arn, $taxIdentifier) because auth token is invalid")
+          implicit val request: Request[Any] = NoRequest
+          auditData.set("abandonmentReason", "unauthorised")
+          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
+          removeDeleteRecord(arn, taxIdentifier).map(_ => true)
+        case NonFatal(_) =>
+          Future.successful(false)
       }
 
   def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(

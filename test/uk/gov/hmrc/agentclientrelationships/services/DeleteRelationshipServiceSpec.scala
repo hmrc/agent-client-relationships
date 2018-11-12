@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, FakeDelete
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain._
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream4xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -311,6 +311,18 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), Some(_), _, _)) =>
       }
     }
+    "return true if delete record found but resumption failed because of missing authorisation" in new TestFixture {
+      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      await(repo.create(deleteRecord))
+      givenAgentExists
+      givenRelationshipBetweenAgentAndClientExists
+      givenESDeAllocationFailsWith(Upstream4xxResponse("", 401, 401))
+
+      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+
+      result shouldBe true
+      await(repo.findBy(arn, mtdItId)) shouldBe None
+    }
   }
 
   "tryToResume" should {
@@ -422,7 +434,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       checkService,
       agentUserService,
       auditService,
-      metrics)
+      metrics,
+      3600)
 
     def givenAgentExists =
       when(agentUserService.getAgentUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
@@ -448,6 +461,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     def givenESDeAllocationFails =
       when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItId))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.failed(new Exception))
+
+    def givenESDeAllocationFailsWith(ex: Exception) =
+      when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItId))(any[HeaderCarrier], any[ExecutionContext]))
+        .thenReturn(Future.failed(ex))
 
     def verifyESDeAllocateHasBeenPerformed =
       verify(es, times(1))

@@ -35,7 +35,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 object AgentClientRelationshipEvent extends Enumeration {
   val CreateRelationship, CheckCESA, CheckES, ClientTerminatedAgentServiceAuthorisation,
-  HmrcRemovedAgentServiceAuthorisation = Value
+  RecoveryOfDeleteRelationshipHasBeenAbandoned, HmrcRemovedAgentServiceAuthorisation = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -112,6 +112,19 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "deleteStatus"
     )
 
+  val recoveryOfDeleteRelationshipDetailsFields = Seq(
+    "agentReferenceNumber",
+    "clientId",
+    "clientIdType",
+    "service",
+    "currentUserAffinityGroup",
+    "authProviderId",
+    "authProviderIdType",
+    "initialDeleteDateTime",
+    "numberOfAttempts",
+    "abandonmentReason"
+  )
+
   def sendCreateRelationshipAuditEvent(implicit hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Unit =
     auditEvent(
       AgentClientRelationshipEvent.CreateRelationship,
@@ -144,6 +157,16 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
       "client terminated agent:service authorisation",
       collectDetails(auditData.getDetails, deleteRelationshipDetailsFields)
+    )
+
+  def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent(
+    implicit hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData): Unit =
+    auditEvent(
+      AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
+      "recovery-of-delete-relationship-abandoned",
+      collectDetails(auditData.getDetails, recoveryOfDeleteRelationshipDetailsFields)
     )
 
   def sendHmrcLedDeleteRelationshipAuditEvent(

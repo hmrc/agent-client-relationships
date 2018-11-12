@@ -6,6 +6,7 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
@@ -184,7 +185,7 @@ class RecoverySchedulerISpec
 
     }
 
-    "attempt to recover multiple DeleteRecords when one of them constantly fails" in {
+    "attempt to recover multiple DeleteRecords when one of them constantly fails and other fails because auth token has expired" in {
       givenAuditConnector()
       givenGroupInfo("foo", "bar")
       givenPrincipalUserIdExistFor(arn, "userId")
@@ -200,7 +201,7 @@ class RecoverySchedulerISpec
           arn.value,
           mtdItId.value + index,
           mtdItIdType,
-          DateTime.parse("2017-10-31T23:22:50.971Z"),
+          DateTime.now(DateTimeZone.UTC).minusDays(index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Success)
         )
@@ -212,7 +213,13 @@ class RecoverySchedulerISpec
             "HMRC-MTD-IT",
             deleteRecord.clientIdentifierType,
             deleteRecord.clientIdentifier)
-        else
+        else if (index == 6) {
+          givenEnrolmentDeallocationFailsWith(401)(
+            "foo",
+            "HMRC-MTD-IT",
+            deleteRecord.clientIdentifierType,
+            deleteRecord.clientIdentifier)
+        } else
           givenEnrolmentDeallocationSucceeds("foo", MtdItId(mtdItId.value + index))
 
         await(deleteRepo.create(deleteRecord))
@@ -231,6 +238,16 @@ class RecoverySchedulerISpec
         deleteRecords.length shouldBe 1
         deleteRecords.head.numberOfAttempts should (be > 1)
       }
+
+      verifyAuditRequestSent(
+        4,
+        AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
+        detail = Map("abandonmentReason" -> "timeout", "numberOfAttempts" -> "1"))
+
+      verifyAuditRequestSent(
+        1,
+        AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
+        detail = Map("abandonmentReason" -> "unauthorised", "numberOfAttempts" -> "1"))
 
     }
   }

@@ -74,6 +74,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bindBooleanProperty("features.copy-relationship.mtd-vat")
     bindBooleanProperty("features.recovery-enable")
     bindIntegerProperty("recovery-interval")
+    bindIntegerProperty("recovery-timeout")
 
     if (configuration.getBoolean("features.recovery-enable").getOrElse(false)) {
       bind(classOf[RecoveryScheduler]).asEagerSingleton()
