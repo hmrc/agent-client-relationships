@@ -97,6 +97,8 @@ class RelationshipsControllerITSAISpec
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
 
+  val STRIDE_ROLE = "Maintain Agent client relationships"
+
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
     arn.value,
     mtdItId.value,
@@ -859,7 +861,7 @@ class RelationshipsControllerITSAISpec
 
     "the relationship exists and the user is authenticated with Stride" should {
       trait StubsForThisScenario {
-        givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
+        givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
@@ -1212,7 +1214,7 @@ class RelationshipsControllerITSAISpec
 
     "the relationship exists and the user is authenticated with Stride" should {
       trait StubsForThisScenario {
-        givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
+        givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
@@ -1524,7 +1526,7 @@ class RelationshipsControllerITSAISpec
     }
 
     "return 201 when the relationship exists and the user is authenticated with Stride" in new StubsForThisScenario {
-      givenUserIsAuthenticatedWithStride("CAAT", "strideId-983283")
+      givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-983283")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201

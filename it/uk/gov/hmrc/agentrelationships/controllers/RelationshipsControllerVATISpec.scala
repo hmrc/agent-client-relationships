@@ -95,6 +95,8 @@ class RelationshipsControllerVATISpec
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
 
+  val STRIDE_ROLE = "Maintain Agent client relationships"
+
   val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
     arn.value,
     vrn.value,
@@ -675,7 +677,7 @@ class RelationshipsControllerVATISpec
 
     "the relationship exists and the user is authenticated with Stride" should {
       trait StubsForThisScenario {
-        givenUserIsAuthenticatedWithStride("CAAT", "strideId-1234456")
+        givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
