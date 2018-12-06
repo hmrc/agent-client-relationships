@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import java.net.URL
+import java.net.{URL, URLDecoder}
 
 import com.google.inject.AbstractModule
 import com.google.inject.name.{Named, Names}
@@ -69,7 +69,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 
     bindProperty("des.environment", "des.environment")
     bindProperty("des.authorizationToken", "des.authorization-token")
-    bindProperty1Param("auth.stride.role")
+    bindProperty1Param("auth.stride.role", URLDecoder.decode(_, "utf-8"))
     bindBooleanProperty("features.copy-relationship.mtd-it")
     bindBooleanProperty("features.copy-relationship.mtd-vat")
     bindBooleanProperty("features.recovery-enable")
@@ -96,14 +96,15 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
       getConfString(confKey, throw new IllegalStateException(s"No value found for configuration property $confKey"))
   }
 
-  private def bindProperty1Param(propertyName: String) =
+  private def bindProperty1Param(propertyName: String, mapFx: String => String = identity) =
     bind(classOf[String])
       .annotatedWith(Names.named(propertyName))
-      .toProvider(new PropertyProviderFor1Param(propertyName))
+      .toProvider(new PropertyProviderFor1Param(propertyName, mapFx))
 
-  private class PropertyProviderFor1Param(confKey: String) extends Provider[String] {
+  private class PropertyProviderFor1Param(confKey: String, mapFx: String => String) extends Provider[String] {
     override lazy val get = configuration
       .getString(confKey)
+      .map(mapFx)
       .getOrElse(throw new IllegalStateException(s"No value found for configuration property $confKey"))
   }
 

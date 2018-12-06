@@ -74,7 +74,7 @@ trait AuthActions extends AuthorisedFunctions {
             .contains(requiredIdentifier))
 
   def hasRequiredStrideRole(enrolments: Enrolments, strideRole: String): Boolean =
-    enrolments.enrolments.exists(_.key.toUpperCase() == strideRole)
+    enrolments.enrolments.exists(_.key.toUpperCase() == strideRole.toUpperCase())
 
   def AuthorisedAsItSaClient[A] = AuthorisedAsClient(EnrolmentMtdIt, MtdItId.apply) _
 
