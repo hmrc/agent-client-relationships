@@ -5,12 +5,14 @@ import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class MappingConnectorSpec
     extends UnitSpec
@@ -36,7 +38,11 @@ class MappingConnectorSpec
 
   private implicit val hc = HeaderCarrier()
 
-  val mappingConnector = new MappingConnector(wireMockBaseUrl, httpGet, app.injector.instanceOf[Metrics])
+  val mappingConnector = new MappingConnector(
+    wireMockBaseUrl,
+    httpGet,
+    app.injector.instanceOf[Metrics]
+  )
 
   "MappingConnector" should {
 

@@ -17,17 +17,16 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
 
+import javax.inject.{Inject, Named, Singleton}
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
 
 case class SaMappings(mappings: Seq[SaMapping])
@@ -53,14 +52,15 @@ class MappingConnector @Inject()(@Named("agent-mapping-baseUrl") baseUrl: URL, h
     extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  def getSaAgentReferencesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
+  def getSaAgentReferencesFor(
+    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/agent-mapping/mappings/${arn.value}")
     monitor(s"ConsumedAPI-Digital-Mappings-GET") { httpGet.GET[SaMappings](url.toString) }
       .map(_.mappings.map(_.saAgentReference))
 
   }
 
-  def getAgentCodesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[AgentCode]] = {
+  def getAgentCodesFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[AgentCode]] = {
     val url = new URL(baseUrl, s"/agent-mapping/mappings/agentcode/${arn.value}")
     monitor(s"ConsumedAPI-Digital-Mappings-GET") { httpGet.GET[AgentCodeMappings](url.toString) }
       .map(_.mappings.map(_.agentCode))

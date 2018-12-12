@@ -27,9 +27,8 @@ import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class CurrentUser(credentials: Credentials, affinityGroup: Option[AffinityGroup])
 
@@ -41,7 +40,7 @@ trait AuthActions extends AuthorisedFunctions {
   protected type RequestAndCurrentUser = Request[AnyContent] => CurrentUser => Future[Result]
 
   def AuthorisedAgentOrClientOrStrideUser(arn: Arn, clientId: TaxIdentifier, strideRole: String)(
-    body: RequestAndCurrentUser): Action[AnyContent] =
+    body: RequestAndCurrentUser)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       authorised().retrieve(allEnrolments and affinityGroup and credentials) {
@@ -76,30 +75,32 @@ trait AuthActions extends AuthorisedFunctions {
   def hasRequiredStrideRole(enrolments: Enrolments, strideRole: String): Boolean =
     enrolments.enrolments.exists(_.key.toUpperCase() == strideRole.toUpperCase())
 
-  def AuthorisedAsItSaClient[A] = AuthorisedAsClient(EnrolmentMtdIt, MtdItId.apply) _
+  def AuthorisedAsItSaClient[A](implicit ec: ExecutionContext) = AuthorisedAsClient(EnrolmentMtdIt, MtdItId.apply) _
 
-  def AuthorisedAsVatClient[A] = AuthorisedAsClient(EnrolmentMtdVat, Vrn.apply) _
+  def AuthorisedAsVatClient[A](implicit ec: ExecutionContext) = AuthorisedAsClient(EnrolmentMtdVat, Vrn.apply) _
 
   private def AuthorisedAsClient[A, T](enrolmentType: TypeOfEnrolment, wrap: String => T)(
-    body: Request[AnyContent] => T => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+    body: Request[AnyContent] => T => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
+    Action.async { implicit request =>
+      implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
 
-    authorised(Enrolment(enrolmentType.enrolmentKey) and AuthProviders(GovernmentGateway))
-      .retrieve(authorisedEnrolments and affinityGroup) {
-        case enrolments ~ _ =>
-          val id = for {
-            enrolment  <- enrolments.getEnrolment(enrolmentType.enrolmentKey)
-            identifier <- enrolment.getIdentifier(enrolmentType.identifierKey)
-          } yield identifier.value
+      authorised(Enrolment(enrolmentType.enrolmentKey) and AuthProviders(GovernmentGateway))
+        .retrieve(authorisedEnrolments and affinityGroup) {
+          case enrolments ~ _ =>
+            val id = for {
+              enrolment  <- enrolments.getEnrolment(enrolmentType.enrolmentKey)
+              identifier <- enrolment.getIdentifier(enrolmentType.identifierKey)
+            } yield identifier.value
 
-          id match {
-            case Some(x) => body(request)(wrap(x))
-            case _       => Future.successful(NoPermissionToPerformOperation)
-          }
-      }
-  }
+            id match {
+              case Some(x) => body(request)(wrap(x))
+              case _       => Future.successful(NoPermissionToPerformOperation)
+            }
+        }
+    }
 
-  protected def AuthorisedWithStride(strideRole: String)(body: Request[AnyContent] => String => Future[Result]) =
+  protected def AuthorisedWithStride(strideRole: String)(body: Request[AnyContent] => String => Future[Result])(
+    implicit ec: ExecutionContext) =
     Action.async { implicit request =>
       implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       authorised(Enrolment(strideRole) and AuthProviders(PrivilegedApplication))
@@ -108,8 +109,10 @@ trait AuthActions extends AuthorisedFunctions {
         }
     }
 
-  protected def withAuthorisedAsAgent[A](
-    body: Arn => Future[Result])(implicit request: Request[A], hc: HeaderCarrier): Future[Result] =
+  protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(
+    implicit request: Request[A],
+    hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Result] =
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
       case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
@@ -117,8 +120,10 @@ trait AuthActions extends AuthorisedFunctions {
       case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments())
     }
 
-  protected def withEnrolledAsAgent[A](
-    body: Option[String] => Future[Result])(implicit request: Request[A], hc: HeaderCarrier): Future[Result] =
+  protected def withEnrolledAsAgent[A](body: Option[String] => Future[Result])(
+    implicit request: Request[A],
+    hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Result] =
     authorised(
       Enrolment("HMRC-AS-AGENT")
         and AuthProviders(GovernmentGateway))

@@ -29,11 +29,12 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   lazy val mockAuthConnector = mock[AuthConnector]
+  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   private val arn = "TARN0000001"
   private val mtdItId = "ABCDEFGH"
@@ -58,7 +59,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
         Future.successful(Ok)
       }
 
-    def testAuthorisedAsClient = AuthorisedAsItSaClient { implicit request => _ =>
+    def testAuthorisedAsClient = AuthorisedAsItSaClient(ec) { implicit request => _ =>
       Future.successful(Ok)
     }
 

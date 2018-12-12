@@ -18,6 +18,7 @@ import java.net.{URL, URLDecoder}
 
 import com.google.inject.AbstractModule
 import com.google.inject.name.{Named, Names}
+import com.typesafe.config.Config
 import javax.inject.{Inject, Provider, Singleton}
 import org.slf4j.MDC
 import play.api.{Configuration, Environment, Logger}
@@ -191,7 +192,10 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 }
 
 @Singleton
-class HttpVerbs @Inject()(val auditConnector: AuditConnector, @Named("appName") val appName: String)
+class HttpVerbs @Inject()(
+  val auditConnector: AuditConnector,
+  @Named("appName") val appName: String,
+  val config: Configuration)
     extends HttpGet
     with HttpPost
     with HttpPut
@@ -200,4 +204,5 @@ class HttpVerbs @Inject()(val auditConnector: AuditConnector, @Named("appName") 
     with WSHttp
     with HttpAuditing {
   override val hooks = Seq(AuditingHook)
+  override protected def configuration: Option[Config] = Some(config.underlying)
 }

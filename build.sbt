@@ -16,13 +16,13 @@ lazy val scoverageSettings = {
 
 lazy val compileDeps = Seq(
   ws,
-  "uk.gov.hmrc" %% "bootstrap-play-25" % "1.6.0",
+  "uk.gov.hmrc" %% "bootstrap-play-25" % "4.2.0",
   "uk.gov.hmrc" %% "auth-client" % "2.6.0",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.10.0",
+  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.12.0",
   "de.threedimensions" %% "metrics-play" % "2.5.13",
   "uk.gov.hmrc" %% "domain" % "5.1.0",
   "com.github.blemale" %% "scaffeine" % "2.5.0",
-  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "3.0.1",
+  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "3.3.0",
   "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
   "uk.gov.hmrc" %% "mongo-lock" % "5.1.0",
   "org.typelevel" %% "cats" % "0.9.0",
