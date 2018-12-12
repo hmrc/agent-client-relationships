@@ -1148,19 +1148,19 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   private def cesaRelationshipDoesNotExist(): Unit = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq())
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
   }
 
   private def oldESRelationshipDoesNotExist(): Unit = {
     when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set.empty[String])
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Seq.empty))
   }
 
   private def mappingServiceUnavailable(): Unit = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any()))
       .thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
 
@@ -1169,14 +1169,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future successful Set(agentGroupId))
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent)))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc)))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any()))
       .thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
 
   private def cesaRelationshipExists(): Unit = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq(saAgentRef))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any())).thenReturn(Future successful Seq(saAgentRef))
   }
 
   private def oldESRelationshipExists(): Unit = {
@@ -1190,7 +1190,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future successful GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123"))))
     when(ugs.getGroupInfo(eqs("test2"))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo("test2", Some("Agent"), None))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any())).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
 
   private def arnExistsForGroupId: Unit = {
@@ -1255,11 +1255,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
-    verify(auditService).sendCheckCESAAuditEvent(any[HeaderCarrier], any[Request[Any]], auditDataCaptor.capture())
+    verify(auditService)
+      .sendCheckCESAAuditEvent(any[HeaderCarrier], any[Request[Any]], auditDataCaptor.capture(), any())
     val auditData: AuditData = auditDataCaptor.getValue
-    // controller sets arn and agentCode, not service, so since this test is unit testing the service we cannot test them here
-    //    auditData.get("agentCode") shouldBe agentCode
-    //    auditData.get("arn") shouldBe arn
     val auditDetails = auditData.getDetails
     auditDetails("saAgentRef") shouldBe saAgentRef.value
     auditDetails("CESARelationship") shouldBe true
@@ -1269,11 +1267,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   def verifyESAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
-    verify(auditService).sendCheckESAuditEvent(any[HeaderCarrier], any[Request[Any]], auditDataCaptor.capture())
+    verify(auditService).sendCheckESAuditEvent(any[HeaderCarrier], any[Request[Any]], auditDataCaptor.capture(), any())
     val auditData: AuditData = auditDataCaptor.getValue
-    // controller sets arn and agentCode, not service, so since this test is unit testing the service we cannot test them here
-    //    auditData.get("agentCode") shouldBe agentCode
-    //    auditData.get("arn") shouldBe arn
     val auditDetails = auditData.getDetails
     auditDetails("vrn") shouldBe vrn
     auditDetails("ESRelationship") shouldBe true

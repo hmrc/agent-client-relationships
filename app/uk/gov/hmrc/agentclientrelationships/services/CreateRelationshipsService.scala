@@ -193,7 +193,7 @@ class CreateRelationshipsService @Inject()(
                 _ <- es
                       .deallocateEnrolmentFromAgent(groupId, identifier)
                 _ <- maybeArn match {
-                      case None             => Future successful ()
+                      case None             => Future successful (())
                       case Some(removedArn) => removeDeleteRecord(removedArn, identifier)
                     }
               } yield ()).recover {

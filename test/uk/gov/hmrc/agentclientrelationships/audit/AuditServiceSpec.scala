@@ -32,6 +32,7 @@ import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
@@ -62,7 +63,9 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("Journey", "CopyExistingCESARelationship")
       auditData.set("AgentDBRecord", true)
 
-      await(service.sendCreateRelationshipAuditEvent(hc, FakeRequest("GET", "/path"), auditData))
+      await(
+        service
+          .sendCreateRelationshipAuditEvent(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext]))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
@@ -87,7 +90,6 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sentEvent.detail("AgentDBRecord") shouldBe "true"
 
         sentEvent.tags.contains("Authorization") shouldBe false
-//        sentEvent.detail("Authorization") shouldBe "dummy bearer token"
 
         sentEvent.tags("transactionName") shouldBe "create-relationship"
         sentEvent.tags("path") shouldBe "/path"
@@ -113,7 +115,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("nino", Nino("KS969148D").value)
       auditData.set("CESARelationship", true)
 
-      await(service.sendCheckCESAAuditEvent(hc, FakeRequest("GET", "/path"), auditData))
+      await(service.sendCheckCESAAuditEvent(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext]))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
@@ -131,7 +133,6 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sentEvent.detail("CESARelationship") shouldBe "true"
 
         sentEvent.tags.contains("Authorization") shouldBe false
-//        sentEvent.detail("Authorization") shouldBe "dummy bearer token"
 
         sentEvent.tags("transactionName") shouldBe "check-cesa"
         sentEvent.tags("path") shouldBe "/path"

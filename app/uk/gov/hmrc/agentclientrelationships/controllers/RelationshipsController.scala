@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject, Named, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
@@ -31,9 +31,8 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.Upstream5xxResponse
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @Singleton
@@ -46,9 +45,12 @@ class RelationshipsController @Inject()(
   findService: FindRelationshipsService,
   agentUserService: AgentUserService,
   des: DesConnector,
+  ecp: Provider[ExecutionContext],
   @Named("auth.stride.role") strideRole: String)
     extends BaseController
     with AuthActions {
+
+  implicit val ec: ExecutionContext = ecp.get
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
 
@@ -185,14 +187,14 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def getItsaRelationships: Action[AnyContent] = AuthorisedAsItSaClient { implicit request => clientId =>
+  def getItsaRelationships: Action[AnyContent] = AuthorisedAsItSaClient(ec) { implicit request => clientId =>
     findService.getItsaRelationshipForClient(clientId).map {
       case Some(relationship) => Ok(Json.toJson(relationship))
       case None               => NotFound
     }
   }
 
-  def getVatRelationships: Action[AnyContent] = AuthorisedAsVatClient { implicit request => clientId =>
+  def getVatRelationships: Action[AnyContent] = AuthorisedAsVatClient(ec) { implicit request => clientId =>
     findService.getVatRelationshipForClient(clientId).map {
       case Some(relationship) => Ok(Json.toJson(relationship))
       case None               => NotFound
