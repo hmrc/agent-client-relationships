@@ -1472,6 +1472,36 @@ class RelationshipsControllerITSAISpec
     }
   }
 
+  "GET /agent/service/HMRC-MTD-IT/client/NI/:nino" should {
+
+    val requestPath: String =
+      s"/agent-client-relationships/agent/service/HMRC-MTD-IT/client/NI/${nino.value}"
+
+    val req = FakeRequest()
+    def doRequest = doAgentGetRequest(requestPath)
+
+    "return relationship in Json form if it exists" in {
+      val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+      authorisedAsValidAgent(req, arn.value)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getClientActiveAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      result.body shouldBe s"""{"arn":"${arn.value}","dateTo":"9999-12-31","dateFrom":"2015-09-10"}"""
+    }
+
+    "return NotFound if no relationship exists" in {
+      val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+      authorisedAsValidAgent(req, arn.value)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
+
   "DELETE /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid" should {
 
     val requestPath: String = s"/test-only/db/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/$mtdItId"

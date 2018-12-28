@@ -3,11 +3,13 @@ GET           /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk
 PUT           /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForMtdIt(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
 DELETE        /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteItsaRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
 DELETE        /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteItsaRelationshipByNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
+GET           /agent/service/HMRC-MTD-IT/client/NI/:nino                     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationshipForAgent(nino: uk.gov.hmrc.domain.Nino)
 
 # MTD-VAT relationship
 PUT           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 GET           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 DELETE        /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteVatRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
+GET           /agent/service/HMRC-MTD-VAT/client/VRN/:vrn                     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getVatRelationshipsForAgent(vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 
 # Checks implemented for BTA
 GET           /agent/:arn/service/IR-SA/client/ni/:nino                      @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)

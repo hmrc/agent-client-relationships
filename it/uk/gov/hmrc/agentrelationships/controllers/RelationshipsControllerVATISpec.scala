@@ -1253,6 +1253,34 @@ class RelationshipsControllerVATISpec
     }
   }
 
+  "GET /agent/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
+
+    val requestPath: String =
+      s"/agent-client-relationships/agent/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
+
+    val req = FakeRequest()
+    def doRequest = doAgentGetRequest(requestPath)
+
+    "return relationship in Json form if it exists" in {
+      val vrnEncoded = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
+      authorisedAsValidAgent(req, arn.value)
+      getClientActiveAgentRelationshipsVat(vrnEncoded, arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      result.body shouldBe s"""{"arn":"${arn.value}","dateTo":"9999-12-31","dateFrom":"2015-09-10"}"""
+    }
+
+    "return NotFound if no relationship exists" in {
+      val vrnEncoded = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
+      authorisedAsValidAgent(req, arn.value)
+      getFailFoundClientActiveAgentRelationshipsItSa(vrnEncoded, status = 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
+
   private def doAgentGetRequest(route: String) = new Resource(route, port).get()
 
   private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")

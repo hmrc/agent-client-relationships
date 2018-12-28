@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.support.{RelationshipDeletePending, 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.Upstream5xxResponse
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -194,10 +194,28 @@ class RelationshipsController @Inject()(
     }
   }
 
+  def getItsaRelationshipForAgent(clientNino: Nino) = Action.async { implicit request =>
+    withAuthorisedAsAgent { arn =>
+      findService.getItsaRelationshipForClient(clientNino).map {
+        case Some(relationship) if relationship.arn == arn => Ok(Json.toJson(relationship))
+        case _                                             => NotFound
+      }
+    }
+  }
+
   def getVatRelationships: Action[AnyContent] = AuthorisedAsVatClient(ec) { implicit request => clientId =>
     findService.getVatRelationshipForClient(clientId).map {
       case Some(relationship) => Ok(Json.toJson(relationship))
       case None               => NotFound
+    }
+  }
+
+  def getVatRelationshipsForAgent(clientVrn: Vrn) = Action.async { implicit request =>
+    withAuthorisedAsAgent { arn =>
+      findService.getVatRelationshipForClient(clientVrn).map {
+        case Some(relationship) if relationship.arn == arn => Ok(Json.toJson(relationship))
+        case _                                             => NotFound
+      }
     }
   }
 
