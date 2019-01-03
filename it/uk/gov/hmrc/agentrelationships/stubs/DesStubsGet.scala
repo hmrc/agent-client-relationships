@@ -5,7 +5,10 @@ import org.joda.time.LocalDate
 
 trait DesStubsGet {
 
-  def getClientActiveAgentRelationshipsItSa(encodedClientId: String, agentArn: String, service: String = "ITSA"): Unit =
+  def givenClientHasActiveAgentRelationshipForITSA(
+    encodedClientId: String,
+    agentArn: String,
+    service: String = "ITSA"): Unit =
     stubFor(
       get(
         urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
@@ -29,7 +32,10 @@ trait DesStubsGet {
                          |]
                          |}""".stripMargin)))
 
-  def getClientActiveAgentRelationshipsVat(encodedClientId: String, agentArn: String, service: String = "VATC"): Unit =
+  def givenClientHasActiveAgentRelationshipForVAT(
+    encodedClientId: String,
+    agentArn: String,
+    service: String = "VATC"): Unit =
     stubFor(
       get(urlEqualTo(
         s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
@@ -129,7 +135,7 @@ trait DesStubsGet {
                      |]
                      |}""".stripMargin)))
 
-  def getClientActiveButEndedAgentRelationshipsItSa(
+  def givenClientHasInactiveAgentRelationshipForITSA(
     encodedClientId: String,
     agentArn: String,
     service: String = "ITSA"): Unit =
@@ -156,7 +162,7 @@ trait DesStubsGet {
                          |]
                          |}""".stripMargin)))
 
-  def getClientActiveButEndedAgentRelationshipsVat(
+  def givenClientHasInactiveAgentRelationshipForVAT(
     encodedClientId: String,
     agentArn: String,
     service: String = "VATC"): Unit =
@@ -285,7 +291,7 @@ trait DesStubsGet {
                          |]
                          |}""".stripMargin)))
 
-  def getFailFoundClientActiveAgentRelationshipsItSa(
+  def givenClientAgentRelationshipCheckForITSAFailsWith(
     encodedClientId: String,
     service: String = "ITSA",
     status: Int): Unit =
@@ -295,7 +301,10 @@ trait DesStubsGet {
         .willReturn(aResponse()
           .withStatus(status)))
 
-  def getFailClientActiveAgentRelationshipsVat(encodedClientId: String, service: String = "VATC", status: Int): Unit =
+  def givenClientAgentRelationshipCheckForVATFailsWith(
+    encodedClientId: String,
+    service: String = "VATC",
+    status: Int): Unit =
     stubFor(
       get(urlEqualTo(
         s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))

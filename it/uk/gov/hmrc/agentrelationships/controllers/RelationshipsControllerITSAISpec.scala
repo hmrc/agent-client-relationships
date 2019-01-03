@@ -17,87 +17,18 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import org.joda.time.{DateTime, DateTimeZone, LocalDate}
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneServerPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.ws.WSClient
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support._
-import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.domain.SaAgentReference
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Random
 
 //noinspection ScalaStyle
-class RelationshipsControllerITSAISpec
-    extends UnitSpec
-    with MongoApp
-    with OneServerPerSuite
-    with WireMockSupport
-    with RelationshipStubs
-    with DesStubs
-    with DesStubsGet
-    with MappingStubs
-    with DataStreamStub
-    with AuthStub
-    with MockitoSugar {
-
-  override lazy val port: Int = Random.nextInt(1000) + 19000
-
-  lazy val mockAuthConnector = mock[PlayAuthConnector]
-  override implicit lazy val app: Application = appBuilder
-    .build()
-
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.copy-relationship.mtd-it"                -> true,
-        "features.copy-relationship.mtd-vat"               -> true,
-        "features.recovery-enable"                         -> false
-      )
-      .configure(mongoConfiguration)
-
-  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  implicit val hc: HeaderCarrier = HeaderCarrier()
-
-  def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
-  def deleteRecordRepository = app.injector.instanceOf[MongoDeleteRecordRepository]
-
-  override def beforeEach() {
-    super.beforeEach()
-    givenAuditConnector()
-    await(repo.ensureIndexes)
-  }
-
-  val arn = Arn("AARN0000002")
-  val arn2 = Arn("AARN0000004")
-  val arn3 = Arn("AARN0000006")
-  val mtdItId = MtdItId("ABCDEF123456789")
-  val nino = Nino("AB123456C")
-  val mtdItIdType = "MTDITID"
-  val oldAgentCode = "oldAgentCode"
-  val testAgentUser = "testAgentUser"
-  val testAgentGroup = "testAgentGroup"
-
-  val STRIDE_ROLE = "Maintain Agent client relationships"
+class RelationshipsControllerITSAISpec extends RelationshipsControllerISpec {
 
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
     arn.value,
@@ -1643,16 +1574,16 @@ class RelationshipsControllerITSAISpec
   }
 
   "GET /relationships/service/HMRC-MTD-IT" should {
-    val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+
     val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-IT"
 
     def doRequest = doAgentGetRequest(requestPath)
     val req = FakeRequest()
 
     "find relationship and send back Json" in {
-      authorisedAsClientItSa(req, mtdItId.value)
-      givenAuditConnector()
-      getClientActiveAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
+      givenAuthorisedAsClientItSa(req, mtdItId.value)
+
+      givenClientHasActiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1663,18 +1594,18 @@ class RelationshipsControllerITSAISpec
     }
 
     "find relationship but filter out if the end date has been changed from 9999-12-31" in {
-      authorisedAsClientItSa(req, mtdItId.value)
-      givenAuditConnector()
-      getClientActiveButEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
+      givenAuthorisedAsClientItSa(req, mtdItId.value)
+
+      givenClientHasInactiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 404
     }
 
     "find multiple relationships but filter out active and ended relationships" in {
-      authorisedAsClientItSa(req, mtdItId.value)
-      givenAuditConnector()
-      getClientActiveButSomeEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value, arn2.value, arn3.value)
+      givenAuthorisedAsClientItSa(req, mtdItId.value)
+
+      getClientActiveButSomeEndedAgentRelationshipsItSa(mtdItIdUriEncoded, arn.value, arn2.value, arn3.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1683,18 +1614,18 @@ class RelationshipsControllerITSAISpec
     }
 
     "return 404 when DES returns 404 relationship not found" in {
-      authorisedAsClientItSa(req, mtdItId.value)
-      givenAuditConnector()
-      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 404)
+      givenAuthorisedAsClientItSa(req, mtdItId.value)
+
+      givenClientAgentRelationshipCheckForITSAFailsWith(mtdItIdUriEncoded, status = 404)
 
       val result = await(doRequest)
       result.status shouldBe 404
     }
 
     "return 404 when DES returns 400 (treated as relationship not found)" in {
-      authorisedAsClientItSa(req, mtdItId.value)
-      givenAuditConnector()
-      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 400)
+      givenAuthorisedAsClientItSa(req, mtdItId.value)
+
+      givenClientAgentRelationshipCheckForITSAFailsWith(mtdItIdUriEncoded, status = 400)
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -1709,8 +1640,8 @@ class RelationshipsControllerITSAISpec
     val req = FakeRequest()
 
     "find relationship and send it back as Json" in {
-      authorisedAsValidAgent(req, arn.value)
-      givenAuditConnector()
+      givenAuthorisedAsValidAgent(req, arn.value)
+
       getAgentInactiveRelationships(arnEncoded, arn.value, "ITSA")
 
       val result = await(doRequest)
@@ -1727,8 +1658,8 @@ class RelationshipsControllerITSAISpec
     }
 
     "find relationship but filter out if the relationship is still active" in {
-      authorisedAsValidAgent(req, arn.value)
-      givenAuditConnector()
+      givenAuthorisedAsValidAgent(req, arn.value)
+
       getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, "ITSA")
 
       val result = await(doRequest)
@@ -1736,8 +1667,8 @@ class RelationshipsControllerITSAISpec
     }
 
     "return 404 when DES returns not found" in {
-      authorisedAsValidAgent(req, arn.value)
-      givenAuditConnector()
+      givenAuthorisedAsValidAgent(req, arn.value)
+
       getFailAgentInactiveRelationships(arnEncoded, "ITSA", 404)
 
       val result = await(doRequest)
@@ -1745,8 +1676,8 @@ class RelationshipsControllerITSAISpec
     }
 
     "return 404 when DES returns 400" in {
-      authorisedAsValidAgent(req, arn.value)
-      givenAuditConnector()
+      givenAuthorisedAsValidAgent(req, arn.value)
+
       getFailAgentInactiveRelationships(arnEncoded, "ITSA", 400)
 
       val result = await(doRequest)
@@ -1755,17 +1686,17 @@ class RelationshipsControllerITSAISpec
   }
 
   "GET /relationships/service/HMRC-MTD-IT/client/NI/:nino" should {
-    val mtdItIdEncoded = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
+
     val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-MTD-IT/client/NI/$nino"
 
     def doRequest = doAgentGetRequest(requestPath)
     val req = FakeRequest()
 
     "find relationship and send back Json" in {
-      authorisedAsStrideUser(req, "someStrideId")
-      givenAuditConnector()
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      getClientActiveAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
+      givenClientHasActiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1776,20 +1707,20 @@ class RelationshipsControllerITSAISpec
     }
 
     "find relationship but filter out if the end date has been changed from 9999-12-31" in {
-      authorisedAsStrideUser(req, "someStrideId")
-      givenAuditConnector()
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      getClientActiveButEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value)
+      givenClientHasInactiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 404
     }
 
     "find multiple relationships but filter out active and ended relationships" in {
-      authorisedAsStrideUser(req, "someStrideId")
-      givenAuditConnector()
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      getClientActiveButSomeEndedAgentRelationshipsItSa(mtdItIdEncoded, arn.value, arn2.value, arn3.value)
+      getClientActiveButSomeEndedAgentRelationshipsItSa(mtdItIdUriEncoded, arn.value, arn2.value, arn3.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -1798,38 +1729,24 @@ class RelationshipsControllerITSAISpec
     }
 
     "return 404 when DES returns 404 relationship not found" in {
-      authorisedAsStrideUser(req, "someStrideId")
-      givenAuditConnector()
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 404)
+      givenClientAgentRelationshipCheckForITSAFailsWith(mtdItIdUriEncoded, status = 404)
 
       val result = await(doRequest)
       result.status shouldBe 404
     }
 
     "return 404 when DES returns 400 (treated as relationship not found)" in {
-      authorisedAsStrideUser(req, "someStrideId")
-      givenAuditConnector()
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      getFailFoundClientActiveAgentRelationshipsItSa(mtdItIdEncoded, status = 400)
+      givenClientAgentRelationshipCheckForITSAFailsWith(mtdItIdUriEncoded, status = 400)
 
       val result = await(doRequest)
       result.status shouldBe 404
     }
   }
-
-  private def doAgentGetRequest(route: String) = new Resource(route, port).get()
-
-  private def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
-
-  private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
-
-  private def verifyDeleteRecordHasStatuses(etmpStatus: Option[SyncStatus.Value], esStatus: Option[SyncStatus.Value]) =
-    await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
-      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _)) =>
-    }
-
-  private def verifyDeleteRecordNotExists =
-    await(deleteRecordRepository.findBy(arn, mtdItId)) shouldBe None
 
 }

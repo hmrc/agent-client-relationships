@@ -14,6 +14,7 @@ GET           /agent/:arn/service/IR-SA/client/ni/:nino                      @uk
 GET           /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithVrn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 
 # List existing relationships of the current client
+GET           /relationships/active                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationships
 GET           /relationships/service/HMRC-MTD-IT                             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationships
 GET           /relationships/service/HMRC-MTD-VAT                            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getVatRelationships
 GET           /relationships/inactive/service/HMRC-MTD-IT                    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveItsaRelationshipsAgent

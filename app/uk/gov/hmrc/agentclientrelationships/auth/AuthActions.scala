@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.auth
 
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentMtdIt, EnrolmentMtdVat, TypeOfEnrolment}
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.Retrievals._
@@ -82,7 +83,7 @@ trait AuthActions extends AuthorisedFunctions {
   private def AuthorisedAsClient[A, T](enrolmentType: TypeOfEnrolment, wrap: String => T)(
     body: Request[AnyContent] => T => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
 
       authorised(Enrolment(enrolmentType.enrolmentKey) and AuthProviders(GovernmentGateway))
         .retrieve(authorisedEnrolments and affinityGroup) {
@@ -98,6 +99,29 @@ trait AuthActions extends AuthorisedFunctions {
             }
         }
     }
+
+  def withAuthorisedAsClient[A, T](body: Map[EnrolmentService, EnrolmentIdentifierValue] => Future[Result])(
+    implicit ec: ExecutionContext,
+    request: Request[AnyContent],
+    hc: HeaderCarrier): Future[Result] =
+    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
+      .retrieve(allEnrolments) { enrolments =>
+        val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = Seq(EnrolmentMtdIt, EnrolmentMtdVat)
+          .map(e => enrolments.getEnrolment(e.enrolmentKey))
+          .collect {
+            case Some(x) => x
+          }
+          .map(e => e.identifiers.headOption.map(i => (EnrolmentService(e.key), EnrolmentIdentifierValue(i.value))))
+          .collect({
+            case Some(x) => x
+          })
+          .toMap
+
+        identifiers match {
+          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
+          case _              => body(identifiers)
+        }
+      }
 
   protected def AuthorisedWithStride(strideRole: String)(body: Request[AnyContent] => String => Future[Result])(
     implicit ec: ExecutionContext) =

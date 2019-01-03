@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipDeletePending, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
@@ -187,11 +188,21 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def getItsaRelationships: Action[AnyContent] = AuthorisedAsItSaClient(ec) { implicit request => clientId =>
-    findService.getItsaRelationshipForClient(clientId).map {
-      case Some(relationship) => Ok(Json.toJson(relationship))
-      case None               => NotFound
+  def getActiveRelationships: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsClient { identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =>
+      findService
+        .getActiveRelationshipsForClient(identifiers)
+        .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.value, v) })))
     }
+  }
+
+  def getItsaRelationships: Action[AnyContent] = AuthorisedAsItSaClient(ec) { implicit request => clientId =>
+    findService
+      .getItsaRelationshipForClient(clientId)
+      .map {
+        case Some(relationship) => Ok(Json.toJson(relationship))
+        case None               => NotFound
+      }
   }
 
   def getVatRelationships: Action[AnyContent] = AuthorisedAsVatClient(ec) { implicit request => clientId =>
