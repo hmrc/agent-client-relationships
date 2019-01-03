@@ -295,49 +295,49 @@ class DesConnectorSpec
     val encodedClientIdVrn = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
 
     "return existing active relationships for specified clientId for ItSa service" in {
-      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, agentARN.value)
+      givenClientHasActiveAgentRelationshipForITSA(encodedClientIdMtdItId, agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Vat service" in {
-      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, agentARN.value)
+      givenClientHasActiveAgentRelationshipForVAT(encodedClientIdVrn, agentARN.value)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result.get.arn shouldBe agentARN
     }
 
     "return None if DES returns 404 for ItSa service" in {
-      getFailFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, status = 404)
+      givenClientAgentRelationshipCheckForITSAFailsWith(encodedClientIdMtdItId, status = 404)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if DES returns 404 for Vat service" in {
-      getFailClientActiveAgentRelationshipsVat(encodedClientIdVrn, status = 404)
+      givenClientAgentRelationshipCheckForVATFailsWith(encodedClientIdVrn, status = 404)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result shouldBe None
     }
 
     "return None if DES returns 400 for ItSa service" in {
-      getFailFoundClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, status = 400)
+      givenClientAgentRelationshipCheckForITSAFailsWith(encodedClientIdMtdItId, status = 400)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if DES returns 400 for Vat service" in {
-      getFailClientActiveAgentRelationshipsVat(encodedClientIdVrn, status = 400)
+      givenClientAgentRelationshipCheckForVATFailsWith(encodedClientIdVrn, status = 400)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result shouldBe None
     }
 
     "record metrics for GetStatusAgentRelationship for ItSa service" in {
-      getClientActiveAgentRelationshipsItSa(encodedClientIdMtdItId, agentARN.value)
+      givenClientHasActiveAgentRelationshipForITSA(encodedClientIdMtdItId, agentARN.value)
 
       val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
       result.get.arn shouldBe agentARN
@@ -345,7 +345,7 @@ class DesConnectorSpec
     }
 
     "record metrics for GetStatusAgentRelationship for Vat service" in {
-      getClientActiveAgentRelationshipsVat(encodedClientIdVrn, agentARN.value)
+      givenClientHasActiveAgentRelationshipForVAT(encodedClientIdVrn, agentARN.value)
 
       val result = await(desConnector.getActiveClientVatRelationships(vrn))
       result.get.arn shouldBe agentARN

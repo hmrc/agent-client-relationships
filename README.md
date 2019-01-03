@@ -91,6 +91,23 @@ If de allocation fails then a 404 NotFound will be returned with a JSON structur
 
 The provided error code is to help diagnose potential issues in production and will usually be "RELATIONSHIP_NOT_FOUND". 
 
+### Get list of existing relationships for the current authenticated individual or organisation 
+
+    GET /relationships/active
+
+This endpoint returns a map of existing relationships for the current user.
+  
+Possible responses:
+
+#### OK
+
+    {
+        "HMRC-MTD-IT": ["AARN0000002"],
+        "HMRC-MTD-VAT": ["AARN0000006", "AARN0000004"]
+    }
+    
+or empty object if none relationship exists
+
 ### Future development
 
 It is anticipated that additional methods for other services will be added and will use a similar utl structure.

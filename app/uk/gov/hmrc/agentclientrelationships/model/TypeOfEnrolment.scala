@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ sealed class TypeOfEnrolment(
       .flatMap(_.identifiers.find(_.key equals identifierKey))
       .map(enrolmentIdentifier => identifierForValue(enrolmentIdentifier.value))
   }
+
+  def enrolmentService: EnrolmentService = EnrolmentService(enrolmentKey)
 }
 
 case object EnrolmentAsAgent extends TypeOfEnrolment("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
@@ -48,4 +50,14 @@ object TypeOfEnrolment {
     case Arn(_)     => EnrolmentAsAgent
     case _          => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
+}
+
+case class EnrolmentService(value: String)
+
+object EnrolmentService {}
+
+case class EnrolmentIdentifierValue(value: String) {
+
+  def asMtdItId: MtdItId = MtdItId(value)
+  def asVrn: Vrn = Vrn(value)
 }

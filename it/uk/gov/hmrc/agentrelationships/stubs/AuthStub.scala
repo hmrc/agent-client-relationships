@@ -170,13 +170,37 @@ trait AuthStub {
     this
   }
 
-  def authorisedAsClientItSa[A](request: FakeRequest[A], mtdItId: String): FakeRequest[A] =
-    authenticated(request, Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId), isAgent = false)
+  def givenAuthorisedAsClientItSa[A](request: FakeRequest[A], mtdItId: String): FakeRequest[A] =
+    authenticated(request, Seq(Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId)), isAgent = false)
 
-  def authorisedAsClientVat[A](request: FakeRequest[A], vrn: String): FakeRequest[A] =
-    authenticated(request, Enrolment("HMRC-MTD-VAT", "VRN", vrn), isAgent = false)
+  def givenAuthorisedAsClientVat[A](request: FakeRequest[A], vrn: String): FakeRequest[A] =
+    authenticated(request, Seq(Enrolment("HMRC-MTD-VAT", "VRN", vrn)), isAgent = false)
 
-  def authorisedAsValidAgent[A](request: FakeRequest[A], arn: String) =
+  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn): FakeRequest[A] = {
+    val enrolments =
+      Seq(Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value), Enrolment("HMRC-MTD-VAT", "VRN", vrn.value))
+
+    givenAuthorisedFor(
+      s"""
+         |{
+         |  "retrieve":["allEnrolments"]
+         |}
+           """.stripMargin,
+      s"""
+         |{
+         |"allEnrolments": [
+         |  ${enrolments
+           .map(enrolment =>
+             s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}""")
+           .mkString(", ")}
+         |]}
+          """.stripMargin
+    )
+
+    request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
+  }
+
+  def givenAuthorisedAsValidAgent[A](request: FakeRequest[A], arn: String) =
     authenticatedAgent(request, Enrolment("HMRC-AS-AGENT", "AgentReferenceNumber", arn))
 
   def authenticatedAgent[A](request: FakeRequest[A], enrolment: Enrolment): FakeRequest[A] = {
@@ -210,12 +234,12 @@ trait AuthStub {
             .withStatus(401)
             .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")))
 
-  def authenticated[A](request: FakeRequest[A], enrolment: Enrolment, isAgent: Boolean): FakeRequest[A] = {
+  def authenticated[A](request: FakeRequest[A], enrolments: Seq[Enrolment], isAgent: Boolean): FakeRequest[A] = {
     givenAuthorisedFor(
       s"""
          |{
          |  "authorise": [
-         |    { "identifiers":[], "state":"Activated", "enrolment": "${enrolment.serviceName}" },
+         |    { "identifiers":[], "state":"Activated", "enrolment": "${enrolments.map(_.serviceName).mkString(",")}" },
          |    { "authProviders": ["GovernmentGateway"] }
          |  ],
          |  "retrieve":["authorisedEnrolments"]
@@ -224,16 +248,17 @@ trait AuthStub {
       s"""
          |{
          |"authorisedEnrolments": [
-         |  { "key":"${enrolment.serviceName}", "identifiers": [
-         |    {"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}
-         |  ]}
+         |  ${enrolments
+           .map(enrolment =>
+             s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}""")
+           .mkString(", ")}
          |]}
           """.stripMargin
     )
     request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def authorisedAsStrideUser[A](request: FakeRequest[A], strideUserId: String): FakeRequest[A] = {
+  def givenAuthorisedAsStrideUser[A](request: FakeRequest[A], strideUserId: String): FakeRequest[A] = {
     givenAuthorisedFor(
       s"""
          |{
