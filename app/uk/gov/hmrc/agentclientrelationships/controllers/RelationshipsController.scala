@@ -57,6 +57,10 @@ class RelationshipsController @Inject()(
 
   def checkWithMtdVat(arn: Arn, vrn: Vrn): Action[AnyContent] = checkWithTaxIdentifier(arn, vrn)
 
+  def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
+    des.getMtdIdFor(nino).flatMap(checkWithTaxIdentifier(arn, _)(request))
+  }
+
   //noinspection ScalaStyle
   private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = Action.async {
     implicit request =>
@@ -103,7 +107,7 @@ class RelationshipsController @Inject()(
         }
   }
 
-  def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
+  def checkLegacyWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 

@@ -538,6 +538,35 @@ class RelationshipsControllerITSAISpec extends RelationshipsControllerISpec {
     }
   }
 
+  "GET /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino" should {
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
+
+    def doRequest = doAgentGetRequest(requestPath)
+
+    //HAPPY PATH :-)
+
+    "return 200 when relationship exists in es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+    }
+
+    "return 404 when relationship does not exists in es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
+
   "GET /agent/:arn/service/IR-SA/client/ni/:identifierValue" should {
 
     val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/IR-SA/client/ni/${nino.value}"
