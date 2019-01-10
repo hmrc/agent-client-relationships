@@ -86,6 +86,8 @@ class CheckAndCopyRelationshipsService @Inject()(
           checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentUser))
       case vrn @ Vrn(_) =>
         ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
+
+      case _ => Future.successful(NotFound)
     }
   }
 

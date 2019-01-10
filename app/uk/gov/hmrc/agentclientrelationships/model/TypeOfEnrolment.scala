@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
@@ -40,6 +40,7 @@ case object EnrolmentAsAgent extends TypeOfEnrolment("HMRC-AS-AGENT", "AgentRefe
 case object EnrolmentMtdIt extends TypeOfEnrolment("HMRC-MTD-IT", "MTDITID", MtdItId.apply)
 case object EnrolmentMtdVat extends TypeOfEnrolment("HMRC-MTD-VAT", "VRN", Vrn.apply)
 case object EnrolmentNino extends TypeOfEnrolment("HMRC-NI", "NINO", Nino.apply)
+case object EnrolmentNiOrg extends TypeOfEnrolment("HMRC-NI-ORG", "NIEORI", Eori.apply)
 
 object TypeOfEnrolment {
 
@@ -48,6 +49,7 @@ object TypeOfEnrolment {
     case MtdItId(_) => EnrolmentMtdIt
     case Vrn(_)     => EnrolmentMtdVat
     case Arn(_)     => EnrolmentAsAgent
+    case Eori(_)    => EnrolmentNiOrg
     case _          => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
 }
