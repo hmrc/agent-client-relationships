@@ -3,6 +3,10 @@
 [![Build Status](https://travis-ci.org/hmrc/agent-client-relationships.svg)](https://travis-ci.org/hmrc/agent-client-relationships) [ ![Download](https://api.bintray.com/packages/hmrc/releases/agent-client-relationships/images/download.svg) ](https://bintray.com/hmrc/releases/agent-client-relationships/_latestVersion)
 
 This is a backend microservice whose domain is Agent Client Relationships.
+It is used to manage relationships between agents and clients for the following services:
+ - HMRC-MTD-IT
+ - HMRC-MTD-VAT
+ - HMRC-NI-ORG
 
 ## Running the tests
 
@@ -22,11 +26,23 @@ This is a backend microservice whose domain is Agent Client Relationships.
 
 We're still building this service so some/all of the API described here might not be implemented yet!
 
-### Check whether a relationship exists between an Agent and a client for service HMRC-MTD-IT
+### Check whether a relationship exists between an Agent and a client
+
+HMRC-MTD-IT service:
 
     GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid
+    
+    GET /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino
+    
+HMRC-MTD-VAT service:    
+    
+    GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn
+    
+HMRC-NI-ORG service:    
+    
+    GET /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori
 
-This endpoint checks whether the agent represented by the arn is allocated to the client represented by the mtdItId 
+These endpoints check whether the agent represented by the arn is allocated to the client represented by the mtdItId, nino, vrn or eori 
 within Government Gateway or in CESA.
   
 Possible responses:
@@ -68,11 +84,51 @@ If the agent is not allocated to the client then a 404 Not Found will be returne
 
 The provided error code is to help diagnose potential issues in production and will usually be "RELATIONSHIP_NOT_FOUND".
  
-### Delete a relationship between an Agent and a client for service HMRC-MTD-IT
+### Create a relationship between an Agent and a client
+
+HMRC-MTD-IT service:
+
+    PUT /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId
+    
+HMRC-MTD-VAT service:    
+    
+    PUT /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn
+    
+HMRC-NI-ORG service:    
+    
+    PUT /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori
+    
+These endpoints allocate the agent represented by the arn to the client represented by the mtditid, vrn or eori 
+within GovernmentGateway or in CESA.
+
+Possible responses:
+
+### Created
+
+If the agent is allocated to the client then a 201 Created will be returned with an empty body
+
+### NotFound
+
+If the relationship could not be created then 404 NotFound will be returned with the failure message 
+as body to help diagnose the issue
+ 
+### Delete a relationship between an Agent and a client
+
+HMRC-MTD-IT service:
 
     DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtditid
+    
+    DELETE /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino
+    
+HMRC-MTD-VAT service:    
+    
+    DELETE /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn
+    
+HMRC-NI-ORG service:    
+    
+    DELETE /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori  
 
-This endpoint de-allocates the agent represented by the arn from the client represented by the mtdItId 
+These endpoints de-allocate the agent represented by the arn from the client represented by the mtdItId, nino, vrn or eori 
 within Government Gateway.
   
 Possible responses:
@@ -110,7 +166,7 @@ or empty object if none relationship exists
 
 ### Future development
 
-It is anticipated that additional methods for other services will be added and will use a similar utl structure.
+It is anticipated that additional methods for other services will be added and will use a similar url structure.
 
 ### License
 
