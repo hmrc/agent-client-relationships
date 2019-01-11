@@ -190,8 +190,8 @@ class DesConnector @Inject()(
     getWithDesHeaders[ItsaRelationshipResponse]("GetActiveClientItSaRelationships", url)
       .map(_.relationship.find(isActive))
       .recover {
-        case e: BadRequestException => None
-        case e: NotFoundException   => None
+        case _: BadRequestException => None
+        case _: NotFoundException   => None
       }
   }
 
@@ -204,8 +204,8 @@ class DesConnector @Inject()(
     getWithDesHeaders[VatRelationshipResponse]("GetActiveClientVatRelationships", url)
       .map(_.relationship.find(isActive))
       .recover {
-        case e: BadRequestException => None
-        case e: NotFoundException   => None
+        case _: BadRequestException => None
+        case _: NotFoundException   => None
       }
   }
 
@@ -219,8 +219,8 @@ class DesConnector @Inject()(
     getWithDesHeaders[ItsaInactiveRelationshipResponse]("GetAllAgentItsaRelationships", url)
       .map(_.relationship.filter(isNotActive))
       .recover {
-        case e: BadRequestException => Seq.empty
-        case e: NotFoundException   => Seq.empty
+        case _: BadRequestException => Seq.empty
+        case _: NotFoundException   => Seq.empty
       }
   }
 
@@ -234,8 +234,8 @@ class DesConnector @Inject()(
     getWithDesHeaders[VatInactiveRelationshipResponse]("GetAllAgentVatRelationships", url)
       .map(_.relationship.filter(isNotActive))
       .recover {
-        case e: BadRequestException => Seq.empty
-        case e: NotFoundException   => Seq.empty
+        case _: BadRequestException => Seq.empty
+        case _: NotFoundException   => Seq.empty
       }
   }
 
@@ -252,15 +252,9 @@ class DesConnector @Inject()(
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
-    val regime = clientId match {
-      case MtdItId(_) => "ITSA"
-      case Vrn(_)     => "VATC"
-      case Eori(_)    => "NI"
-      case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
-    }
 
     val url = new URL(baseUrl, s"/registration/relationship")
-    val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, regime)
+    val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId))
 
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, requestBody)
   }
@@ -268,19 +262,21 @@ class DesConnector @Inject()(
   def deleteAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
-    val regime = clientId match {
+
+    val url = new URL(baseUrl, s"/registration/relationship")
+    postWithDesHeaders[JsValue, RegistrationRelationshipResponse](
+      "DeleteAgentRelationship",
+      url,
+      deleteAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId)))
+  }
+
+  private def getRegimeFor(clientId: TaxIdentifier): String =
+    clientId match {
       case MtdItId(_) => "ITSA"
       case Vrn(_)     => "VATC"
       case Eori(_)    => "NI"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
-    val url = new URL(baseUrl, s"/registration/relationship")
-
-    postWithDesHeaders[JsValue, RegistrationRelationshipResponse](
-      "DeleteAgentRelationship",
-      url,
-      deleteAgentRelationshipInputJson(clientId.value, arn.value, regime))
-  }
 
   private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(
     implicit hc: HeaderCarrier,
