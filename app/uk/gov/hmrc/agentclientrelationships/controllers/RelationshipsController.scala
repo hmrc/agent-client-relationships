@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipDeletePending, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.Upstream5xxResponse
@@ -54,8 +54,8 @@ class RelationshipsController @Inject()(
   implicit val ec: ExecutionContext = ecp.get
 
   def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
-
   def checkWithMtdVat(arn: Arn, vrn: Vrn): Action[AnyContent] = checkWithTaxIdentifier(arn, vrn)
+  def checkWithNiOrg(arn: Arn, eori: Eori): Action[AnyContent] = checkWithTaxIdentifier(arn, eori)
 
   def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
     des.getMtdIdFor(nino).flatMap(checkWithTaxIdentifier(arn, _)(request))
@@ -128,8 +128,8 @@ class RelationshipsController @Inject()(
   }
 
   def createForMtdIt(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
-
   def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
+  def createForNiOrg(arn: Arn, eori: Eori) = create(arn, eori)
 
   private def create(arn: Arn, identifier: TaxIdentifier) =
     AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRole) { implicit request => _ =>
@@ -150,10 +150,9 @@ class RelationshipsController @Inject()(
     }
 
   def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)
-
   def deleteItsaRelationshipByNino(arn: Arn, nino: Nino) = delete(arn, nino)
-
   def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
+  def deleteNiOrgRelationship(arn: Arn, eori: Eori) = delete(arn, eori)
 
   private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
     AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRole) { implicit request => implicit currentUser =>
