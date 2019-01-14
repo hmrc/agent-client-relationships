@@ -72,11 +72,9 @@ class TaskActor(
           val now = DateTime.now()
           if (uid == recordUid) {
             val newUid = UUID.randomUUID().toString
-            val nextRunAt = runAt.plusSeconds(recoveryInterval)
-            val delay = (if (nextRunAt.isBefore(now)) recoveryInterval
-                         else
-                           new Interval(now, nextRunAt).toPeriod(PeriodType.seconds()).getValue(0) + Random
-                             .nextInt(Math.min(60, recoveryInterval))).seconds
+            val nextRunAt = (if (runAt.isBefore(now)) now else runAt)
+              .plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
+            val delay = new Interval(now, nextRunAt).toPeriod(PeriodType.seconds()).getValue(0).seconds
             mongoRecoveryScheduleRepository
               .write(newUid, nextRunAt)
               .map(_ => {
@@ -85,10 +83,9 @@ class TaskActor(
                 recover
               })
           } else {
-            val delay = (if (runAt.isBefore(now)) recoveryInterval
-                         else
-                           new Interval(DateTime.now(), runAt).toPeriod(PeriodType.seconds()).getValue(0) + Random
-                             .nextInt(Math.min(60, recoveryInterval))).seconds
+            val dateTime = if (runAt.isBefore(now)) now else runAt
+            val delay = (new Interval(now, dateTime).toPeriod(PeriodType.seconds()).getValue(0) + Random.nextInt(
+              Math.min(60, recoveryInterval))).seconds
             context.system.scheduler.scheduleOnce(delay, self, recordUid)
             Future.successful(())
           }
