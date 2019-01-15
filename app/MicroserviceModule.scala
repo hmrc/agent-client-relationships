@@ -16,6 +16,7 @@
 
 import java.net.{URL, URLDecoder}
 
+import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.{Named, Names}
 import com.typesafe.config.Config
@@ -195,7 +196,8 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 class HttpVerbs @Inject()(
   val auditConnector: AuditConnector,
   @Named("appName") val appName: String,
-  val config: Configuration)
+  val config: Configuration,
+  val actorSystem: ActorSystem)
     extends HttpGet
     with HttpPost
     with HttpPut

@@ -326,10 +326,10 @@ class DesConnector @Inject()(
   private val includeIdTypeIfNeeded: JsObject => JsObject = { request =>
     (request \ "regime").asOpt[String] match {
       case Some("VATC") =>
-        request +
-          ("idType", JsString("VRN")) +
-          ("relationshipType", JsString("ZA01")) +
-          ("authProfile", JsString("ALL00001"))
+        (request) +
+          (("idType", JsString("VRN"))) +
+          (("relationshipType", JsString("ZA01"))) +
+          (("authProfile", JsString("ALL00001")))
       case _ =>
         request
     }
