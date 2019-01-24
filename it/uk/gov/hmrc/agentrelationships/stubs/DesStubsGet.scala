@@ -61,7 +61,7 @@ trait DesStubsGet {
 
   def getAgentInactiveRelationships(encodedArn: String, agentArn: String, service: String = "ITSA"): Unit =
     stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=1970-01-01&to=${LocalDate.now().toString}"))
+      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -94,7 +94,7 @@ trait DesStubsGet {
 
   def getAgentInactiveRelationshipsButActive(encodedArn: String, agentArn: String, service: String = "ITSA"): Unit =
     stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=1970-01-01&to=${LocalDate.now().toString}"))
+      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""

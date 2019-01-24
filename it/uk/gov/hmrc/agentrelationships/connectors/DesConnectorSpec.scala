@@ -44,7 +44,7 @@ class DesConnectorSpec
   private implicit val ec = ExecutionContext.global
 
   val desConnector =
-    new DesConnector(wireMockBaseUrl, "token", "stub", httpGet, httpPost, app.injector.instanceOf[Metrics])
+    new DesConnector(wireMockBaseUrl, "token", "stub", "30 days", httpGet, httpPost, app.injector.instanceOf[Metrics])
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
