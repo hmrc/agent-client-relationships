@@ -154,7 +154,7 @@ class DesConnector @Inject()(
   @Named("des-baseUrl") baseUrl: URL,
   @Named("des.authorizationToken") authorizationToken: String,
   @Named("des.environment") environment: String,
-  @Named("features.inactive-relationships.show-last-days") showInactiveRelationshipsDuration: String,
+  @Named("inactive-relationships.show-last-days") showInactiveRelationshipsDuration: String,
   httpGet: HttpGet,
   httpPost: HttpPost,
   metrics: Metrics)

@@ -71,7 +71,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 
     bindProperty("des.environment", "des.environment")
     bindProperty("des.authorizationToken", "des.authorization-token")
-    bindProperty1Param("features.inactive-relationships.show-last-days")
+    bindProperty1Param("inactive-relationships.show-last-days")
     bindProperty1Param("auth.stride.role", URLDecoder.decode(_, "utf-8"))
     bindBooleanProperty("features.copy-relationship.mtd-it")
     bindBooleanProperty("features.copy-relationship.mtd-vat")
