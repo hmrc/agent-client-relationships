@@ -154,7 +154,7 @@ class DesConnector @Inject()(
   @Named("des-baseUrl") baseUrl: URL,
   @Named("des.authorizationToken") authorizationToken: String,
   @Named("des.environment") environment: String,
-  @Named("inactive-relationships.show-last-days") showInactiveRelationshipsDuration: String,
+  @Named("inactive-relationships.show-last-days") showInactiveRelationshipsDuration: Duration,
   httpGet: HttpGet,
   httpPost: HttpPost,
   metrics: Metrics)
@@ -211,13 +211,11 @@ class DesConnector @Inject()(
       }
   }
 
-  private val inactiveRelationshipDuration: Duration = Duration(showInactiveRelationshipsDuration.replace('_', ' '))
-
   def getInactiveAgentItsaRelationships(
     arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Seq[ItsaInactiveRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now: String = LocalDate.now().toString
-    val from: String = LocalDate.now().minusDays(inactiveRelationshipDuration.toDays.toInt).toString
+    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
     val url = new URL(
       s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=ITSA&from=$from&to=$now")
 
@@ -233,7 +231,7 @@ class DesConnector @Inject()(
     arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Seq[VatInactiveRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
-    val from: String = LocalDate.now().minusDays(inactiveRelationshipDuration.toDays.toInt).toString
+    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
     val url = new URL(
       s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=VATC&from=$from&to=$now")
 
