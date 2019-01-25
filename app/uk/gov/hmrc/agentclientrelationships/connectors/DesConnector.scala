@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-
 import javax.inject.{Inject, Named, Singleton}
+
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import org.joda.time.{DateTimeZone, LocalDate}
@@ -33,6 +33,7 @@ import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 case class NinoBusinessDetails(nino: Nino)
@@ -153,6 +154,7 @@ class DesConnector @Inject()(
   @Named("des-baseUrl") baseUrl: URL,
   @Named("des.authorizationToken") authorizationToken: String,
   @Named("des.environment") environment: String,
+  @Named("inactive-relationships.show-last-days") showInactiveRelationshipsDuration: Duration,
   httpGet: HttpGet,
   httpPost: HttpPost,
   metrics: Metrics)
@@ -212,9 +214,10 @@ class DesConnector @Inject()(
   def getInactiveAgentItsaRelationships(
     arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Seq[ItsaInactiveRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
-    val now = LocalDate.now().toString
+    val now: String = LocalDate.now().toString
+    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
     val url = new URL(
-      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=ITSA&from=1970-01-01&to=$now")
+      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=ITSA&from=$from&to=$now")
 
     getWithDesHeaders[ItsaInactiveRelationshipResponse]("GetAllAgentItsaRelationships", url)
       .map(_.relationship.filter(isNotActive))
@@ -228,8 +231,9 @@ class DesConnector @Inject()(
     arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Seq[VatInactiveRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
+    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
     val url = new URL(
-      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=VATC&from=1970-01-01&to=$now")
+      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=VATC&from=$from&to=$now")
 
     getWithDesHeaders[VatInactiveRelationshipResponse]("GetAllAgentVatRelationships", url)
       .map(_.relationship.filter(isNotActive))
