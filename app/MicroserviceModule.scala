@@ -161,10 +161,19 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
             .toProvider(new DurationServiceConfigPropertyProvider(propertyName))
 
         private class DurationServiceConfigPropertyProvider(propertyName: String) extends Provider[Duration] {
-          override lazy val get = getConfDuration(
+          override lazy val get = getConfDurationCustom(
             propertyName,
             throw new RuntimeException(s"No service configuration value found for $propertyName"))
         }
+
+        private def getConfDurationCustom(confKey: String, defDur: => Duration) =
+          runModeConfiguration
+            .getString(s"$rootServices.$confKey")
+            .orElse(runModeConfiguration.getString(s"$services.$confKey"))
+            .orElse(runModeConfiguration.getString(s"$playServices.$confKey")) match {
+            case Some(s) => Duration.create(s.replace("_", " "))
+            case None    => defDur
+          }
       }
 
   }
