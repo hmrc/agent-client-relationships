@@ -126,7 +126,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         "clientIdentifierType"           -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error =>
+      update.writeResult.errmsg.foreach(error =>
         Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error"))
     })
 
@@ -139,7 +139,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         "clientIdentifierType"           -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error =>
+      update.writeResult.errmsg.foreach(error =>
         Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error"))
     })
 
