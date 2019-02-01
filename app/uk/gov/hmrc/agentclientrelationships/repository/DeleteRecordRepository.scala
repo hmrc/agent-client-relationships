@@ -145,7 +145,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
         "clientIdentifierType"           -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error =>
+      update.writeResult.errmsg.foreach(error =>
         Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error"))
     })
 
@@ -158,7 +158,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
         "clientIdentifierType"           -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error =>
+      update.writeResult.errmsg.foreach(error =>
         Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error"))
     })
 
@@ -173,7 +173,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
         "$inc" -> BSONDocument("numberOfAttempts"    -> BSONInteger(1))
       )
     ).map(_.foreach { update =>
-      update.writeResult.errMsg.foreach(error => Logger(getClass).warn(s"Marking recovery attempt failed: $error"))
+      update.writeResult.errmsg.foreach(error => Logger(getClass).warn(s"Marking recovery attempt failed: $error"))
     })
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] =
@@ -189,7 +189,6 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       .sort(JsObject(Seq("lastRecoveryAttempt" -> JsNumber(1))))
       .cursor[DeleteRecord](ReadPreference.primaryPreferred)(
         implicitly[collection.pack.Reader[DeleteRecord]],
-        ec,
         implicitly[CursorProducer[DeleteRecord]])
       .headOption
 
