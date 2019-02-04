@@ -23,7 +23,7 @@ lazy val compileDeps = Seq(
   "uk.gov.hmrc" %% "domain" % "5.3.0",
   "com.github.blemale" %% "scaffeine" % "2.5.0",
   "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "3.4.0",
-  "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.9.0-play-25",
   "uk.gov.hmrc" %% "mongo-lock" % "6.6.0-play-25",
   "org.typelevel" %% "cats" % "0.9.0",
   "com.typesafe.akka" %% "akka-actor" % "2.4.14"
