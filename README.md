@@ -6,7 +6,6 @@ This is a backend microservice whose domain is Agent Client Relationships.
 It is used to manage relationships between agents and clients for the following services:
  - HMRC-MTD-IT
  - HMRC-MTD-VAT
- - HMRC-NI-ORG
 
 ## Running the tests
 
@@ -37,12 +36,8 @@ HMRC-MTD-IT service:
 HMRC-MTD-VAT service:    
     
     GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn
-    
-HMRC-NI-ORG service:    
-    
-    GET /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori
 
-These endpoints check whether the agent represented by the arn is allocated to the client represented by the mtdItId, nino, vrn or eori 
+These endpoints check whether the agent represented by the arn is allocated to the client represented by the mtdItId, nino, or vrn 
 within Government Gateway or in CESA.
   
 Possible responses:
@@ -94,11 +89,7 @@ HMRC-MTD-VAT service:
     
     PUT /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn
     
-HMRC-NI-ORG service:    
-    
-    PUT /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori
-    
-These endpoints allocate the agent represented by the arn to the client represented by the mtditid, vrn or eori 
+These endpoints allocate the agent represented by the arn to the client represented by the mtditid or vrn
 within GovernmentGateway or in CESA.
 
 Possible responses:
@@ -123,12 +114,8 @@ HMRC-MTD-IT service:
 HMRC-MTD-VAT service:    
     
     DELETE /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn
-    
-HMRC-NI-ORG service:    
-    
-    DELETE /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori  
 
-These endpoints de-allocate the agent represented by the arn from the client represented by the mtdItId, nino, vrn or eori 
+These endpoints de-allocate the agent represented by the arn from the client represented by the mtdItId, nino or vrn
 within Government Gateway.
   
 Possible responses:

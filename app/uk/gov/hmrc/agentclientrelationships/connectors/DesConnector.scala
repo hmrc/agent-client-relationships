@@ -28,7 +28,7 @@ import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
@@ -278,7 +278,6 @@ class DesConnector @Inject()(
     clientId match {
       case MtdItId(_) => "ITSA"
       case Vrn(_)     => "VATC"
-      case Eori(_)    => "NI"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 

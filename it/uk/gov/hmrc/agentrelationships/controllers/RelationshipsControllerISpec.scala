@@ -6,7 +6,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core.{AuthConnector, PlayAuthConnector}
@@ -14,8 +14,8 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.util.Random
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
 
 trait RelationshipsControllerISpec
     extends UnitSpec
@@ -75,10 +75,8 @@ trait RelationshipsControllerISpec
   val vrn = Vrn("101747641")
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
   val nino = Nino("AB123456C")
-  val eori = Eori("AQ886940109600")
   val mtdItIdType = "MTDITID"
   val mtdVatIdType = "VRN"
-  val niEoriType = "NIEORI"
   val oldAgentCode = "oldAgentCode"
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"

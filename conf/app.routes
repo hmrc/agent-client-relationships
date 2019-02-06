@@ -10,12 +10,6 @@ PUT           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk
 GET           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 DELETE        /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteVatRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 
-
-#NI-ORG relationship
-PUT           /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForNiOrg(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, eori: uk.gov.hmrc.agentmtdidentifiers.model.Eori)
-GET           /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithNiOrg(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, eori: uk.gov.hmrc.agentmtdidentifiers.model.Eori)
-DELETE        /agent/:arn/service/HMRC-NI-ORG/client/EORI/:eori             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteNiOrgRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, eori: uk.gov.hmrc.agentmtdidentifiers.model.Eori)
-
 # Checks implemented for BTA
 GET           /agent/:arn/service/IR-SA/client/ni/:nino                      @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkLegacyWithNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
 GET           /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithVrn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
