@@ -39,10 +39,6 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
       enrolmentKeyPrefixFor(Nino("AB123456A")) shouldBe "HMRC-MTD-IT~NINO"
     }
 
-    "return HMRC-NI-ORG~NIEORI when tax identifier is of Eori type" in {
-      enrolmentKeyPrefixFor(Eori("AQ886940109600")) shouldBe "HMRC-NI-ORG~NIEORI"
-    }
-
     "return IllegalArgumentException when tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy
         await(enrolmentKeyPrefixFor(Utr("foo")))
@@ -66,10 +62,6 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
       identifierNickname(Nino("AB123456A")) shouldBe "NINO"
     }
 
-    "return NIEORI when tax identifier is of Eori type" in {
-      identifierNickname(Eori("AQ886940109600")) shouldBe "NIEORI"
-    }
-
     "return IllegalArgumentException when tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy
         await(identifierNickname(Utr("foo")))
@@ -85,11 +77,9 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
       TaxIdentifierSupport.from("foo", "VRN") shouldBe Vrn("foo")
 
       TaxIdentifierSupport.from("foo", "AgentReferenceNumber") shouldBe Arn("foo")
-
-      TaxIdentifierSupport.from("AQ886940109600", "NIEORI") shouldBe Eori("AQ886940109600")
     }
 
-    "throw an expception when tax identifier type is not supported" in {
+    "throw an exception when tax identifier type is not supported" in {
       an[Exception] shouldBe thrownBy {
         TaxIdentifierSupport.from("foo", "UNSUPPORTED")
       }
