@@ -80,7 +80,7 @@ trait RelationshipsControllerISpec
   val oldAgentCode = "oldAgentCode"
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
-  val STRIDE_ROLE = "Maintain Agent client relationships"
+  val STRIDE_ROLE = "maintain agent relationships"
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
 
