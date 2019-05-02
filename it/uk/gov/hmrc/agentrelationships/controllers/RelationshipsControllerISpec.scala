@@ -81,6 +81,7 @@ trait RelationshipsControllerISpec
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
   val STRIDE_ROLE = "maintain agent relationships"
+  val NEW_STRIDE_ROLE = "maintain_agent_relationships"
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
 
