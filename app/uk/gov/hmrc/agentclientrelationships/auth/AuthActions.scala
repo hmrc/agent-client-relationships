@@ -40,7 +40,7 @@ trait AuthActions extends AuthorisedFunctions {
 
   protected type RequestAndCurrentUser = Request[AnyContent] => CurrentUser => Future[Result]
 
-  def AuthorisedAgentOrClientOrStrideUser(arn: Arn, clientId: TaxIdentifier, strideRole: String)(
+  def AuthorisedAgentOrClientOrStrideUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(
     body: RequestAndCurrentUser)(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
@@ -49,7 +49,7 @@ trait AuthActions extends AuthorisedFunctions {
           creds.providerType match {
             case "GovernmentGateway" if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, arn, clientId) =>
               body(request)(CurrentUser(creds, affinity))
-            case "PrivilegedApplication" if hasRequiredStrideRole(enrolments, strideRole) =>
+            case "PrivilegedApplication" if hasRequiredStrideRole(enrolments, strideRoles) =>
               body(request)(CurrentUser(creds, None))
             case _ =>
               Future successful NoPermissionToPerformOperation
@@ -73,8 +73,8 @@ trait AuthActions extends AuthorisedFunctions {
             .extractIdentifierFrom(enrolments.enrolments)
             .contains(requiredIdentifier))
 
-  def hasRequiredStrideRole(enrolments: Enrolments, strideRole: String): Boolean =
-    enrolments.enrolments.exists(_.key.toUpperCase() == strideRole.toUpperCase())
+  def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean =
+    strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
 
   def AuthorisedAsItSaClient[A](implicit ec: ExecutionContext) = AuthorisedAsClient(EnrolmentMtdIt, MtdItId.apply) _
 
@@ -123,11 +123,11 @@ trait AuthActions extends AuthorisedFunctions {
         }
       }
 
-  protected def AuthorisedWithStride(strideRole: String)(body: Request[AnyContent] => String => Future[Result])(
-    implicit ec: ExecutionContext) =
+  protected def AuthorisedWithStride(oldStrideRole: String, newStrideRole: String)(
+    body: Request[AnyContent] => String => Future[Result])(implicit ec: ExecutionContext) =
     Action.async { implicit request =>
       implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
-      authorised(Enrolment(strideRole) and AuthProviders(PrivilegedApplication))
+      authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
         .retrieve(credentials) {
           case Credentials(strideId, _) => body(request)(strideId)
         }

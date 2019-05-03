@@ -47,9 +47,12 @@ class RelationshipsController @Inject()(
   agentUserService: AgentUserService,
   des: DesConnector,
   ecp: Provider[ExecutionContext],
-  @Named("auth.stride.role") strideRole: String)
+  @Named("old.auth.stride.role") oldStrideRole: String,
+  @Named("new.auth.stride.role") newStrideRole: String)
     extends BaseController
     with AuthActions {
+
+  private val strideRoles = Seq(oldStrideRole, newStrideRole)
 
   implicit val ec: ExecutionContext = ecp.get
 
@@ -130,7 +133,7 @@ class RelationshipsController @Inject()(
   def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
 
   private def create(arn: Arn, identifier: TaxIdentifier) =
-    AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRole) { implicit request => _ =>
+    AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRoles) { implicit request => _ =>
       implicit val auditData: AuditData = new AuditData()
       auditData.set("arn", arn)
 
@@ -152,7 +155,7 @@ class RelationshipsController @Inject()(
   def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
 
   private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
-    AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRole) { implicit request => implicit currentUser =>
+    AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request => implicit currentUser =>
       (for {
         id <- taxIdentifier match {
                case nino @ Nino(_) => des.getMtdIdFor(nino)
@@ -212,7 +215,7 @@ class RelationshipsController @Inject()(
     }
   }
 
-  def getItsaRelationshipsByNino(nino: Nino): Action[AnyContent] = AuthorisedWithStride(strideRole) {
+  def getItsaRelationshipsByNino(nino: Nino): Action[AnyContent] = AuthorisedWithStride(oldStrideRole, newStrideRole) {
     implicit request => _ =>
       findService.getItsaRelationshipForClient(nino).map {
         case Some(relationship) => Ok(Json.toJson(relationship))
@@ -220,7 +223,7 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def getVatRelationshipsByVrn(vrn: Vrn): Action[AnyContent] = AuthorisedWithStride(strideRole) {
+  def getVatRelationshipsByVrn(vrn: Vrn): Action[AnyContent] = AuthorisedWithStride(oldStrideRole, newStrideRole) {
     implicit request => _ =>
       findService.getVatRelationshipForClient(vrn).map {
         case Some(relationship) => Ok(Json.toJson(relationship))
