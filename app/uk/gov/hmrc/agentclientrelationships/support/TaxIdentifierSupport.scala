@@ -41,10 +41,10 @@ trait TaxIdentifierSupport {
 
 object TaxIdentifierSupport {
   def from(value: String, `type`: String): TaxIdentifier = `type` match {
-    case "MTDITID" => MtdItId(value)
-    case "NINO" => Nino(value)
-    case "VRN" => Vrn(value)
+    case "MTDITID"              => MtdItId(value)
+    case "NINO"                 => Nino(value)
+    case "VRN"                  => Vrn(value)
     case "AgentReferenceNumber" => Arn(value)
-    case _ => throw new Exception(s"Invalid tax identifier type ${`type`}")
+    case _                      => throw new Exception("Invalid tax identifier type " + `type`)
   }
 }

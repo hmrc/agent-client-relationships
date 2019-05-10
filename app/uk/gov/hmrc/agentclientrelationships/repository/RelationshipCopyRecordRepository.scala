@@ -94,7 +94,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
 
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
     collection
-      .update[JsObject, RelationshipCopyRecord](
+      .update(ordered = false)
+      .one[JsObject, RelationshipCopyRecord](
         JsObject(
           Seq(
             "arn"                  -> JsString(record.arn),

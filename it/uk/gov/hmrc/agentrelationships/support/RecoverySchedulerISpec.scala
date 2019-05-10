@@ -1,7 +1,7 @@
 package uk.gov.hmrc.agentrelationships.support
 
 import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application

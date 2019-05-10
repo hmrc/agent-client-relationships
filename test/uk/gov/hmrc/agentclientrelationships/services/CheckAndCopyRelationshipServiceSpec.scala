@@ -241,7 +241,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditData = new AuditData()
         val request = FakeRequest()
 
-        arnExistsForGroupId
+        arnExistsForGroupId()
         previousRelationshipWillBeRemoved(mtdItId)
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
@@ -1193,7 +1193,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any())).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
 
-  private def arnExistsForGroupId: Unit = {
+  private def arnExistsForGroupId(): Unit = {
     when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("fooArn"))))
     when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("barArn"))))
   }
