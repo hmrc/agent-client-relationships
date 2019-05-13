@@ -1,7 +1,7 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
 import com.kenshoo.play.metrics.Metrics
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder

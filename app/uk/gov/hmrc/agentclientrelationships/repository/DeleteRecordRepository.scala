@@ -30,7 +30,6 @@ import reactivemongo.api.{CursorProducer, ReadPreference}
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONInteger, BSONObjectID}
-import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
@@ -111,7 +110,6 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
     with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID]
     with AtomicUpdate[DeleteRecord] {
 
-  import ImplicitBSONHandlers._
   import play.api.libs.json.Json.JsValueWrapper
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
@@ -183,14 +181,16 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       "clientIdentifierType" -> clientIdentifierType(identifier))
       .map(_.n)
 
-  override def selectNextToRecover(implicit ec: ExecutionContext): Future[Option[DeleteRecord]] =
+  override def selectNextToRecover(implicit ec: ExecutionContext): Future[Option[DeleteRecord]] = {
+    import reactivemongo.play.json.ImplicitBSONHandlers.JsObjectDocumentWriter
     collection
-      .find(Json.obj())
+      .find(selector = Json.obj(), projection = None)
       .sort(JsObject(Seq("lastRecoveryAttempt" -> JsNumber(1))))
       .cursor[DeleteRecord](ReadPreference.primaryPreferred)(
-        implicitly[collection.pack.Reader[DeleteRecord]],
+        domainFormatImplicit,
         implicitly[CursorProducer[DeleteRecord]])
       .headOption
+  }
 
   override def isInsertion(newRecordId: BSONObjectID, oldRecord: DeleteRecord): Boolean = false
 }
