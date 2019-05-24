@@ -75,8 +75,8 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
     when(
       mockAuthConnector
-        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
-      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), credentials))
+        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(any(), any()))
+      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockClientAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
@@ -84,19 +84,19 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
     when(
       mockAuthConnector
-        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
-      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), credentials))
+        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(any(), any()))
+      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockStrideAuth(
     strideRole: String,
     credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication")) =
     when(
       mockAuthConnector
-        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Credentials]]())(any(), any()))
+        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(any(), any()))
       .thenReturn(
         Future successful new ~(
           new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
-          credentials))
+          Some(credentials)))
 
   def mockClientAuthWithoutCredRetrieval(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,

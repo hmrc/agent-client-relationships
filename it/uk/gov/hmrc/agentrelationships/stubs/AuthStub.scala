@@ -34,7 +34,7 @@ trait AuthStub {
                          |		}],
                          |		"state": "Activated"
                          |	}],
-                         |  "credentials": {
+                         |  "optionalCredentials": {
                          |    "providerId": "$withThisGgUserId",
                          |    "providerType": "GovernmentGateway"
                          |  }
@@ -60,7 +60,7 @@ trait AuthStub {
                          |		}],
                          |		"state": "Activated"
                          |	}],
-                         |  "credentials": {
+                         |  "optionalCredentials": {
                          |    "providerId": "$withThisGgUserId",
                          |    "providerType": "GovernmentGateway"
                          |  }
@@ -86,7 +86,7 @@ trait AuthStub {
                          |		}],
                          |		"state": "Activated"
                          |	}],
-                         |  "credentials": {
+                         |  "optionalCredentials": {
                          |    "providerId": "12345-credId",
                          |    "providerType": "GovernmentGateway"
                          |  }
@@ -140,7 +140,7 @@ trait AuthStub {
                          |		}],
                          |		"state": "Activated"
                          |	}],
-                         |  "credentials": {
+                         |  "optionalCredentials": {
                          |    "providerId": "$withThisGgUserId",
                          |    "providerType": "GovernmentGateway"
                          |  }
@@ -161,7 +161,7 @@ trait AuthStub {
                          |"allEnrolments": [{
                          |  "key": "$strideRole"
                          |	}],
-                         |  "credentials": {
+                         |  "optionalCredentials": {
                          |    "providerId": "$strideUserId",
                          |    "providerType": "PrivilegedApplication"
                          |  }
@@ -265,12 +265,12 @@ trait AuthStub {
          |  "authorise": [
          |    { "authProviders": ["PrivilegedApplication"] }
          |  ],
-         |  "retrieve":["credentials"]
+         |  "retrieve":["optionalCredentials"]
          |}
            """.stripMargin,
       s"""
          |{
-         |  "credentials":{
+         |  "optionalCredentials":{
          |    "providerId": "$strideUserId",
          |    "providerType": "PrivilegedApplication"
          |  }
