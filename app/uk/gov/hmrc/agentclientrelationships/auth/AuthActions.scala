@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.Retrievals._
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
@@ -45,15 +45,19 @@ trait AuthActions extends AuthorisedFunctions {
     Action.async { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       authorised().retrieve(allEnrolments and affinityGroup and credentials) {
-        case enrolments ~ affinity ~ creds =>
-          creds.providerType match {
-            case "GovernmentGateway" if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, arn, clientId) =>
+        case enrolments ~ affinity ~ optCreds =>
+          optCreds
+            .collect {
+              case creds @ Credentials(_, "GovernmentGateway")
+                  if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, arn, clientId) =>
+                creds
+              case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+                creds
+            }
+            .map { creds =>
               body(request)(CurrentUser(creds, affinity))
-            case "PrivilegedApplication" if hasRequiredStrideRole(enrolments, strideRoles) =>
-              body(request)(CurrentUser(creds, None))
-            case _ =>
-              Future successful NoPermissionToPerformOperation
-          }
+            }
+            .getOrElse(Future successful NoPermissionToPerformOperation)
       }
     }
 
@@ -129,7 +133,8 @@ trait AuthActions extends AuthorisedFunctions {
       implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
         .retrieve(credentials) {
-          case Credentials(strideId, _) => body(request)(strideId)
+          case Some(Credentials(strideId, _)) => body(request)(strideId)
+          case _                              => Future.successful(NoPermissionToPerformOperation)
         }
     }
 
