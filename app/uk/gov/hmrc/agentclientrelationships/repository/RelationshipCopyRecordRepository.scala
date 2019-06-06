@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import javax.inject.{Inject, Singleton}
-import org.joda.time.DateTime
-import org.joda.time.DateTime.now
-import org.joda.time.DateTimeZone.UTC
+import java.time.ZonedDateTime
+import java.time.ZonedDateTime.now
+import java.time.ZoneOffset.UTC
 import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
@@ -31,7 +31,7 @@ import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
@@ -43,7 +43,7 @@ case class RelationshipCopyRecord(
   clientIdentifier: String,
   clientIdentifierType: String,
   references: Option[Set[RelationshipReference]] = None,
-  dateTime: DateTime = now(UTC),
+  zonedDateTime: ZonedDateTime = now(UTC),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord

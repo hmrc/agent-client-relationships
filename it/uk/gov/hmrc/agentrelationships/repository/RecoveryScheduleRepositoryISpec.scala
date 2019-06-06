@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentrelationships.repository
 
 import java.util.UUID
 
-import org.joda.time.DateTime
+import java.time.ZonedDateTime
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
