@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentrelationships.repository
 
 import java.util.UUID
 
-import org.joda.time.DateTime
+import java.time.ZonedDateTime
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -31,12 +31,12 @@ class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with OneApp
   }
 
   val uid = UUID.randomUUID()
-  val newDate = DateTime.now()
+  val newDate = ZonedDateTime.now()
 
   "RecoveryRepository" should {
     "read and write" in {
-      val recoveryRecord = RecoveryRecord("foo", DateTime.parse("2017-10-31T23:22:50.971Z"))
-      val newRecoveryRecord = RecoveryRecord("foo", DateTime.parse("2019-10-31T23:22:50.971Z"))
+      val recoveryRecord = RecoveryRecord("foo", ZonedDateTime.parse("2017-10-31T23:22:50.971Z"))
+      val newRecoveryRecord = RecoveryRecord("foo", ZonedDateTime.parse("2019-10-31T23:22:50.971Z"))
 
       await(repo.insert(recoveryRecord))
 
@@ -48,7 +48,7 @@ class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with OneApp
 
       await(repo.findAll()).length shouldBe 1
 
-      await(repo.write("foo", DateTime.parse("2019-10-31T23:22:50.971Z")))
+      await(repo.write("foo", ZonedDateTime.parse("2019-10-31T23:22:50.971Z")))
 
       await(repo.findAll()).head shouldBe newRecoveryRecord
 

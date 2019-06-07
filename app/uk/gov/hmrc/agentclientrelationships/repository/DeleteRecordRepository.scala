@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import java.util.concurrent.RejectedExecutionHandler
-
 import javax.inject.{Inject, Singleton}
-import org.joda.time.DateTime.now
-import org.joda.time.DateTimeZone.UTC
-import org.joda.time.{DateTime, DateTimeZone}
+import java.time.ZonedDateTime.now
+import java.time.ZoneOffset.UTC
+import java.time.{Instant, ZonedDateTime}
+
 import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
@@ -33,11 +32,11 @@ import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONInteger, BSONObjectID
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Token}
-import uk.gov.hmrc.http.logging.{Authorization, RequestChain, SessionId}
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.http.logging.{Authorization, SessionId}
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,10 +45,10 @@ case class DeleteRecord(
   arn: String,
   clientIdentifier: String,
   clientIdentifierType: String,
-  dateTime: DateTime = now(UTC),
+  zonedDateTime: ZonedDateTime = now(UTC),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None,
-  lastRecoveryAttempt: Option[DateTime] = None,
+  lastRecoveryAttempt: Option[ZonedDateTime] = None,
   numberOfAttempts: Int = 0,
   headerCarrier: Option[HeaderCarrier] = None) {
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
@@ -82,8 +81,6 @@ object DeleteRecord {
       (JsPath \ "gaToken").readNullable[String]
   )((a, s, t, g) => HeaderCarrier(authorization = a, sessionId = s, token = t, gaToken = g))
 
-  import ReactiveMongoFormats._
-
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }
 
@@ -105,7 +102,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       "delete-record",
       mongoComponent.mongoConnector.db,
       formats,
-      ReactiveMongoFormats.objectIdFormats)
+      objectIdFormats)
     with DeleteRecordRepository
     with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID]
     with AtomicUpdate[DeleteRecord] {
@@ -167,7 +164,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
         "clientIdentifier"     -> identifier.value,
         "clientIdentifierType" -> clientIdentifierType(identifier)),
       modifierBson = BSONDocument(
-        "$set" -> BSONDocument("lastRecoveryAttempt" -> BSONDateTime(DateTime.now(DateTimeZone.UTC).getMillis)),
+        "$set" -> BSONDocument("lastRecoveryAttempt" -> BSONDateTime(Instant.now.toEpochMilli)),
         "$inc" -> BSONDocument("numberOfAttempts"    -> BSONInteger(1))
       )
     ).map(_.foreach { update =>

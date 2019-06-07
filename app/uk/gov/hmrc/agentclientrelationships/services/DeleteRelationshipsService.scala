@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import java.time.{ZoneOffset, ZonedDateTime}
+
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Named, Singleton}
 import org.joda.time.{DateTime, DateTimeZone}
@@ -238,9 +240,11 @@ class DeleteRelationshipsService @Inject()(
       recordOpt <- deleteRecordRepository.findBy(arn, taxIdentifier)
       isComplete <- recordOpt match {
                      case Some(record) =>
-                       auditData.set("initialDeleteDateTime", record.dateTime)
+                       auditData.set("initialDeleteDateTime", record.zonedDateTime)
                        auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
-                       if (record.dateTime.plusSeconds(recoveryTimeout).isAfter(DateTime.now(DateTimeZone.UTC))) {
+                       if (record.zonedDateTime
+                             .plusSeconds(recoveryTimeout)
+                             .isAfter(ZonedDateTime.now(ZoneOffset.UTC))) {
                          for {
                            isDone <- resumeRelationshipRemoval(record)
                            _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)

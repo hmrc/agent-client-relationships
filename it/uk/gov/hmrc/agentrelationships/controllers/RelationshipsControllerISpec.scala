@@ -98,5 +98,4 @@ trait RelationshipsControllerISpec
 
   protected def verifyDeleteRecordNotExists =
     await(deleteRecordRepository.findBy(arn, mtdItId)) shouldBe None
-
 }

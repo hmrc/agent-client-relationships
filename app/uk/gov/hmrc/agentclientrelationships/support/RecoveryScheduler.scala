@@ -16,17 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import javax.inject.{Inject, Named, Singleton}
-import org.joda.time.{DateTime, Interval, PeriodType}
 import play.api.Logger
 import play.api.libs.concurrent.ExecutionContextProvider
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoDeleteRecordRepository, MongoRecoveryScheduleRepository, RecoveryRecord}
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
-import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -69,24 +69,26 @@ class TaskActor(
     case uid: String =>
       mongoRecoveryScheduleRepository.read.flatMap {
         case RecoveryRecord(recordUid, runAt) =>
-          val now = DateTime.now()
+          val recoveryIntervalOffset = Random.nextInt(Math.min(60, recoveryInterval))
+          val now = ZonedDateTime.now()
+          val delay: (ZonedDateTime, Int) => FiniteDuration =
+            (dateTime, riOffset) =>
+              FiniteDuration(ChronoUnit.SECONDS.between(now, dateTime), SECONDS) + (recoveryIntervalOffset + riOffset).seconds
+          val dateOfRecordRecovery = if (runAt.isBefore(now)) now else runAt
+
           if (uid == recordUid) {
             val newUid = UUID.randomUUID().toString
-            val nextRunAt = (if (runAt.isBefore(now)) now else runAt)
-              .plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
-            val delay = new Interval(now, nextRunAt).toPeriod(PeriodType.seconds()).getValue(0).seconds
             mongoRecoveryScheduleRepository
-              .write(newUid, nextRunAt)
+              .write(newUid, dateOfRecordRecovery)
               .map(_ => {
-                context.system.scheduler.scheduleOnce(delay, self, newUid)
+                context.system.scheduler
+                  .scheduleOnce(delay(dateOfRecordRecovery, recoveryInterval + recoveryIntervalOffset), self, newUid)
                 Logger(getClass).info("About to start recovery job.")
                 recover
               })
+
           } else {
-            val dateTime = if (runAt.isBefore(now)) now else runAt
-            val delay = (new Interval(now, dateTime).toPeriod(PeriodType.seconds()).getValue(0) + Random.nextInt(
-              Math.min(60, recoveryInterval))).seconds
-            context.system.scheduler.scheduleOnce(delay, self, recordUid)
+            context.system.scheduler.scheduleOnce(delay(dateOfRecordRecovery, recoveryIntervalOffset), self, recordUid)
             Future.successful(())
           }
       }

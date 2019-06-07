@@ -1,7 +1,7 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.joda.time.LocalDate
+import java.time.LocalDate
 
 trait DesStubsGet {
 

@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentrelationships.repository
 
-import org.joda.time.{DateTime, DateTimeZone}
+import java.time.{ZonedDateTime, ZoneOffset}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -37,7 +37,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
         "101747696",
         "VRN",
         None,
-        DateTime.now(DateTimeZone.UTC),
+        ZonedDateTime.now(ZoneOffset.UTC),
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed))
       val createResult = await(repo.create(relationshipCopyRecord))
@@ -64,7 +64,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
         "101747696",
         "VRN",
         None,
-        DateTime.now(DateTimeZone.UTC),
+        ZonedDateTime.now(ZoneOffset.UTC),
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed))
       val createResult1 = await(repo.create(relationshipCopyRecord1))
@@ -74,7 +74,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
         "101747696",
         "VRN",
         None,
-        DateTime.now(DateTimeZone.UTC).plusDays(1),
+        ZonedDateTime.now(ZoneOffset.UTC).plusDays(1),
         None,
         None)
       val createResult2 = await(repo.create(relationshipCopyRecord2))
