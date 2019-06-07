@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.joda.time.{DateTime, DateTimeZone, LocalDate}
+import java.time.{ZoneOffset, LocalDate, ZonedDateTime}
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
@@ -96,7 +96,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsControllerISpec {
             arn.value,
             mtdItId.value,
             "MTDITID",
-            DateTime.now(DateTimeZone.UTC),
+            ZonedDateTime.now(ZoneOffset.UTC),
             Some(SyncStatus.Success),
             Some(SyncStatus.Failed))))
 
@@ -756,7 +756,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsControllerISpec {
               arn.value,
               mtdItId.value,
               mtdItIdType,
-              DateTime.now.minusMinutes(1),
+              ZonedDateTime.now.minusMinutes(1),
               Some(SyncStatus.Success),
               Some(SyncStatus.Failed))))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
@@ -770,7 +770,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsControllerISpec {
               arn.value,
               mtdItId.value,
               mtdItIdType,
-              DateTime.now.minusMinutes(1),
+              ZonedDateTime.now.minusMinutes(1),
               Some(SyncStatus.Failed)
             )))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
@@ -784,7 +784,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsControllerISpec {
               arn.value,
               mtdItId.value,
               mtdItIdType,
-              DateTime.now.minusMinutes(1)
+              ZonedDateTime.now.minusMinutes(1)
             )))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 204
         verifyDeleteRecordNotExists
@@ -984,7 +984,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsControllerISpec {
               arn.value,
               mtdItId.value,
               mtdItIdType,
-              DateTime.now.minusMinutes(1)
+              ZonedDateTime.now.minusMinutes(1)
             )))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 502
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))

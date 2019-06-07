@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.{DateTime, LocalDate}
+import java.time.{LocalDate, ZonedDateTime}
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -111,7 +111,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
       await(repo.remove(arn, mtdItId))
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -134,7 +135,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     // HAPPY PATHS :-)
 
     "Do nothing if ETMP and ES are in successful states" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Success))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(Success))
       await(repo.create(deleteRecord))
 
       val result =
@@ -146,7 +148,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry ETMP de-authorisation when only ETMP requires action" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Failed), Some(Success))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Failed), Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
 
@@ -164,7 +167,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     "Do not retry ETMP de-authorisation when ETMP state is InProgress" in new TestFixture {
       val deleteRecord =
-        DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(InProgress), Some(Success))
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(InProgress), Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
 
@@ -181,7 +184,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry ES de-allocation when only ES requires action" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -201,7 +205,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     "Do not retry ES de-allocation when ES state is InProgress" in new TestFixture {
       val deleteRecord =
-        DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(InProgress))
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(InProgress))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -220,7 +224,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry both ETMP and ES de-allocation when both require action" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Failed), Some(Failed))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Failed), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -242,7 +247,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     // FAILURE SCENARIOS
 
     "When retry ETMP de-authorisation fails keep status Failed" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Failed), Some(Success))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Failed), Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthFails
 
@@ -259,7 +265,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "When retry ES de-allocation fails keep status failed" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -286,7 +293,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       result shouldBe true
     }
     "return true if delete record found and resumption succeeded" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenRelationshipBetweenAgentAndClientExists
       givenAgentExists
@@ -298,7 +306,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.findBy(arn, mtdItId)) shouldBe None
     }
     "return false if delete record found but resumption failed" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -312,7 +321,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       }
     }
     "return true if delete record found but resumption failed because of missing authorisation" in new TestFixture {
-      val deleteRecord = DeleteRecord(arn.value, mtdItId.value, "MTDITID", DateTime.now, Some(Success), Some(Failed))
+      val deleteRecord =
+        DeleteRecord(arn.value, mtdItId.value, "MTDITID", ZonedDateTime.now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -331,15 +341,15 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         arn.value + "1",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now,
+        ZonedDateTime.now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(1)))
+        lastRecoveryAttempt = Some(ZonedDateTime.now.minusMinutes(1)))
       val deleteRecord2 = DeleteRecord(
         arn.value,
         mtdItId.value,
         "MTDITID",
-        DateTime.now,
+        ZonedDateTime.now,
         Some(Success),
         Some(Failed),
         lastRecoveryAttempt = None,
@@ -348,10 +358,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         arn.value + "3",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now,
+        ZonedDateTime.now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(5)))
+        lastRecoveryAttempt = Some(ZonedDateTime.now.minusMinutes(5)))
 
       await(repo.create(deleteRecord1))
       await(repo.create(deleteRecord2))
@@ -374,26 +384,26 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         arn.value + "1",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now,
+        ZonedDateTime.now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(1)))
+        lastRecoveryAttempt = Some(ZonedDateTime.now.minusMinutes(1)))
       val deleteRecord2 = DeleteRecord(
         arn.value,
         mtdItId.value,
         "MTDITID",
-        DateTime.now,
+        ZonedDateTime.now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(13)))
+        lastRecoveryAttempt = Some(ZonedDateTime.now.minusMinutes(13)))
       val deleteRecord3 = DeleteRecord(
         arn.value + "3",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now,
+        ZonedDateTime.now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now.minusMinutes(5)))
+        lastRecoveryAttempt = Some(ZonedDateTime.now.minusMinutes(5)))
 
       await(repo.create(deleteRecord1))
       await(repo.create(deleteRecord2))

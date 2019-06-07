@@ -20,7 +20,9 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import javax.inject.{Inject, Named, Singleton}
-import org.joda.time.{DateTime, Interval, PeriodType}
+import java.time.ZonedDateTime
+import java.time.temporal.{ChronoUnit, TemporalUnit}
+
 import play.api.Logger
 import play.api.libs.concurrent.ExecutionContextProvider
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -66,15 +68,17 @@ class TaskActor(
   implicit val ec: ExecutionContext = executionContextProvider.get()
 
   def receive = {
-    case uid: String =>
+
+      case uid: String =>
       mongoRecoveryScheduleRepository.read.flatMap {
         case RecoveryRecord(recordUid, runAt) =>
-          val now = DateTime.now()
+          val now = ZonedDateTime.now()
+          val recoveryIntervalOffset = Random.nextInt(Math.min(60, recoveryInterval))
           if (uid == recordUid) {
             val newUid = UUID.randomUUID().toString
             val nextRunAt = (if (runAt.isBefore(now)) now else runAt)
-              .plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
-            val delay = new Interval(now, nextRunAt).toPeriod(PeriodType.seconds()).getValue(0).seconds
+              .plusSeconds(recoveryInterval + recoveryIntervalOffset)
+            val delay = FiniteDuration(ChronoUnit.SECONDS.between(now, nextRunAt), SECONDS)
             mongoRecoveryScheduleRepository
               .write(newUid, nextRunAt)
               .map(_ => {
@@ -83,12 +87,11 @@ class TaskActor(
                 recover
               })
           } else {
-            val dateTime = if (runAt.isBefore(now)) now else runAt
-            val delay = (new Interval(now, dateTime).toPeriod(PeriodType.seconds()).getValue(0) + Random.nextInt(
-              Math.min(60, recoveryInterval))).seconds
+            val dateTime = (if (runAt.isBefore(now)) now else runAt)
+            val delay = FiniteDuration(ChronoUnit.SECONDS.between(now, dateTime), SECONDS) + recoveryIntervalOffset.seconds
             context.system.scheduler.scheduleOnce(delay, self, recordUid)
             Future.successful(())
           }
       }
-  }
+    }
 }

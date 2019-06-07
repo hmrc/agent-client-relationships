@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import java.time.{LocalDate, LocalDateTime, ZoneOffset, ZonedDateTime}
+import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset, ZonedDateTime}
 
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -25,32 +25,38 @@ import scala.util.{Failure, Success}
 
 trait JsonReactiveMongoFormats {
 
+  private val utcOffset = ZoneOffset.UTC
+
   implicit val localDateRead: Reads[LocalDate] =
     (__ \ "$date").read[Long].map { date =>
-      new LocalDate(date, ZoneOffset.UTC)
+      Instant.ofEpochMilli(date).atZone(utcOffset).toLocalDate
     }
 
   implicit val localDateWrite: Writes[LocalDate] = new Writes[LocalDate] {
     def writes(localDate: LocalDate): JsValue = Json.obj(
-      "$date" -> localDate.atStartOfDay(ZoneOffset.UTC).toInstant.toEpochMilli
+      "$date" -> localDate.atStartOfDay(utcOffset).toInstant.toEpochMilli
     )
   }
 
   implicit val localDateTimeRead: Reads[LocalDateTime] =
     (__ \ "$date").read[Long].map { dateTime =>
-      new LocalDateTime(dateTime, ZoneOffset.UTC)
-
+      LocalDateTime.ofInstant(Instant.ofEpochMilli((dateTime)), utcOffset)
     }
+
+//  implicit val localDateTimeRead: Reads[LocalDateTime] =
+//    (__ \ "$date").read[Long].map { dateTime =>
+//      new LocalDateTime(dateTime, utcOffset)
+//    }
 
   implicit val localDateTimeWrite: Writes[LocalDateTime] = new Writes[LocalDateTime] {
     def writes(dateTime: LocalDateTime): JsValue = Json.obj(
-      "$date" -> dateTime.atZone(ZoneOffset.UTC).toInstant.toEpochMilli
+      "$date" -> dateTime.atZone(utcOffset).toInstant.toEpochMilli
     )
   }
 
   implicit val dateTimeRead: Reads[ZonedDateTime] =
     (__ \ "$date").read[Long].map { dateTime =>
-      new ZonedDateTime(dateTime, ZoneOffset.UTC)
+      ZonedDateTime.ofInstant(Instant.ofEpochMilli(dateTime), utcOffset)
     }
 
   implicit val dateTimeWrite: Writes[ZonedDateTime] = new Writes[ZonedDateTime] {

@@ -21,7 +21,7 @@ import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.{DateTimeZone, LocalDate}
+import java.time.{LocalDate, ZoneOffset}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
@@ -245,12 +245,12 @@ class DesConnector @Inject()(
 
   def isActive(r: Relationship): Boolean = r.dateTo match {
     case None    => true
-    case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
+    case Some(d) => d.isAfter(LocalDate.now(ZoneOffset.UTC))
   }
 
   def isNotActive(r: Relationship): Boolean = r.dateTo match {
     case None    => false
-    case Some(d) => d.isBefore(LocalDate.now(DateTimeZone.UTC)) || d.equals(LocalDate.now(DateTimeZone.UTC))
+    case Some(d) => d.isBefore(LocalDate.now(ZoneOffset.UTC)) || d.equals(LocalDate.now(ZoneOffset.UTC))
   }
 
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
