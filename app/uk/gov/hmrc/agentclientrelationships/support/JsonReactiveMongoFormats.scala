@@ -43,11 +43,6 @@ trait JsonReactiveMongoFormats {
       LocalDateTime.ofInstant(Instant.ofEpochMilli((dateTime)), utcOffset)
     }
 
-//  implicit val localDateTimeRead: Reads[LocalDateTime] =
-//    (__ \ "$date").read[Long].map { dateTime =>
-//      new LocalDateTime(dateTime, utcOffset)
-//    }
-
   implicit val localDateTimeWrite: Writes[LocalDateTime] = new Writes[LocalDateTime] {
     def writes(dateTime: LocalDateTime): JsValue = Json.obj(
       "$date" -> dateTime.atZone(utcOffset).toInstant.toEpochMilli

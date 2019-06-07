@@ -33,7 +33,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.fo
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -53,7 +53,7 @@ case class RelationshipCopyRecord(
   def needToCreateEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
-object RelationshipCopyRecord extends ReactiveMongoFormats {
+object RelationshipCopyRecord extends JsonReactiveMongoFormats {
   implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 
@@ -75,7 +75,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       "relationship-copy-record",
       mongoComponent.mongoConnector.db,
       formats,
-      ReactiveMongoFormats.objectIdFormats)
+      JsonReactiveMongoFormats.objectIdFormats)
     with RelationshipCopyRecordRepository
     with StrictlyEnsureIndexes[RelationshipCopyRecord, BSONObjectID]
     with AtomicUpdate[RelationshipCopyRecord] {

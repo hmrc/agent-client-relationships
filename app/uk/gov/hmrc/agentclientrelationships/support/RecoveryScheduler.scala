@@ -69,7 +69,7 @@ class TaskActor(
 
   def receive = {
 
-      case uid: String =>
+    case uid: String =>
       mongoRecoveryScheduleRepository.read.flatMap {
         case RecoveryRecord(recordUid, runAt) =>
           val now = ZonedDateTime.now()
@@ -93,5 +93,5 @@ class TaskActor(
             Future.successful(())
           }
       }
-    }
+  }
 }

@@ -32,7 +32,7 @@ import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONInteger, BSONObjectID
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats
+import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Token}
@@ -102,7 +102,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       "delete-record",
       mongoComponent.mongoConnector.db,
       formats,
-      JsonReactiveMongoFormats.objectIdFormats)
+      objectIdFormats)
     with DeleteRecordRepository
     with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID]
     with AtomicUpdate[DeleteRecord] {

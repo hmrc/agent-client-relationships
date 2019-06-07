@@ -15,7 +15,6 @@
  */
 
 package uk.gov.hmrc.agentrelationships.controllers
-
 import java.time.{ZoneOffset, LocalDate, ZonedDateTime}
 import play.api.test.FakeRequest
 import play.utils.UriEncoding

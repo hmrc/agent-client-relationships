@@ -29,16 +29,15 @@ import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers
-import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
+import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 case class RecoveryRecord(uid: String, runAt: ZonedDateTime)
 
-object RecoveryRecord extends ReactiveMongoFormats {
+object RecoveryRecord extends JsonReactiveMongoFormats {
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 
@@ -53,7 +52,7 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
       "recovery-schedule",
       mongoComponent.mongoConnector.db,
       RecoveryRecord.formats,
-      ReactiveMongoFormats.objectIdFormats)
+      JsonReactiveMongoFormats.objectIdFormats)
     with RecoveryScheduleRepository
     with StrictlyEnsureIndexes[RecoveryRecord, BSONObjectID]
     with AtomicUpdate[RecoveryRecord] {
