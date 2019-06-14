@@ -123,9 +123,10 @@ class CreateRelationshipsService @Inject()(
       Logger(getClass).warn(
         s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
         origExc)
-      updateEsSyncStatus(Failed)
-      if (failIfAllocateAgentInESFails) Future.failed(replacementExc)
-      else Future.successful(())
+      updateEsSyncStatus(Failed).flatMap { _ =>
+        if (failIfAllocateAgentInESFails) Future.failed(replacementExc)
+        else Future.successful(())
+      }
     }
 
     val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
