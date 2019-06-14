@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentrelationships.support
 
-import java.time.{ZonedDateTime, ZoneOffset}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.OneServerPerSuite
@@ -73,7 +73,7 @@ class RecoverySchedulerISpec
         arn.value,
         mtdItId.value,
         mtdItIdType,
-        ZonedDateTime.parse("2017-10-31T23:22:50.971Z"),
+        DateTime.parse("2017-10-31T23:22:50.971Z"),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Success)
       )
@@ -98,14 +98,14 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenAuditConnector()
 
-      await(recoveryRepo.write("1", ZonedDateTime.now(ZoneOffset.UTC).plusSeconds(2)))
+      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).plusSeconds(2)))
       await(recoveryRepo.findAll()).length shouldBe 1
 
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItId.value,
         mtdItIdType,
-        ZonedDateTime.parse("2017-10-31T23:22:50.971Z"),
+        DateTime.parse("2017-10-31T23:22:50.971Z"),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Success)
       )
@@ -129,14 +129,14 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenAuditConnector()
 
-      await(recoveryRepo.write("1", ZonedDateTime.now(ZoneOffset.UTC).minusDays(2)))
+      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).minusDays(2)))
       await(recoveryRepo.findAll()).length shouldBe 1
 
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItId.value,
         mtdItIdType,
-        ZonedDateTime.parse("2017-10-31T23:22:50.971Z"),
+        DateTime.parse("2017-10-31T23:22:50.971Z"),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Success)
       )
@@ -158,7 +158,7 @@ class RecoverySchedulerISpec
       givenPrincipalUserIdExistFor(arn, "userId")
       givenPrincipalGroupIdExistsFor(arn, "foo")
 
-      await(recoveryRepo.write("1", ZonedDateTime.now(ZoneOffset.UTC).minusDays(2)))
+      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).minusDays(2)))
       await(recoveryRepo.findAll()).length shouldBe 1
 
       (0 to 10) foreach { index =>
@@ -166,7 +166,7 @@ class RecoverySchedulerISpec
           arn.value,
           mtdItId.value + index,
           mtdItIdType,
-          ZonedDateTime.parse("2017-10-31T23:22:50.971Z"),
+          DateTime.parse("2017-10-31T23:22:50.971Z"),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Success)
         )
@@ -193,7 +193,7 @@ class RecoverySchedulerISpec
 
       await(recoveryRepo.removeAll())
 
-      await(recoveryRepo.write("1", ZonedDateTime.now(ZoneOffset.UTC).minusDays(2)))
+      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).minusDays(2)))
       await(recoveryRepo.findAll()).length shouldBe 1
 
       (0 to 10) foreach { index =>
@@ -201,7 +201,7 @@ class RecoverySchedulerISpec
           arn.value,
           mtdItId.value + index,
           mtdItIdType,
-          ZonedDateTime.now(ZoneOffset.UTC).minusDays(index),
+          DateTime.now(DateTimeZone.UTC).minusDays(index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Success)
         )
