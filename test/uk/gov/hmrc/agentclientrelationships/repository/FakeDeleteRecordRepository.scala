@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import java.time.{ZoneOffset, ZonedDateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 import reactivemongo.core.errors.GenericDatabaseException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
@@ -80,14 +80,13 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
     Future.successful(
       if (maybeValue.isDefined)
         data(arn.value + identifier.value) =
-          maybeValue.get.copy(lastRecoveryAttempt = Some(ZonedDateTime.now(ZoneOffset.UTC)))
+          maybeValue.get.copy(lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC)))
       else
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
   }
 
   override def selectNextToRecover(implicit executionContext: ExecutionContext): Future[Option[DeleteRecord]] =
-    Future.successful(
-      data.toSeq.map(_._2).sortBy(_.lastRecoveryAttempt.map(_.toInstant.toEpochMilli).getOrElse(0L)).headOption)
+    Future.successful(data.toSeq.map(_._2).sortBy(_.lastRecoveryAttempt.map(_.getMillis).getOrElse(0L)).headOption)
 
   def reset() =
     data.clear()

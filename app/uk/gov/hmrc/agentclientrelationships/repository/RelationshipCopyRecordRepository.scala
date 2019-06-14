@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import javax.inject.{Inject, Singleton}
-import java.time.ZonedDateTime
-import java.time.ZonedDateTime.now
-import java.time.ZoneOffset.UTC
+import org.joda.time.DateTime
+import org.joda.time.DateTime.now
+import org.joda.time.DateTimeZone.UTC
 import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
@@ -31,9 +31,9 @@ import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats
+import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +43,7 @@ case class RelationshipCopyRecord(
   clientIdentifier: String,
   clientIdentifierType: String,
   references: Option[Set[RelationshipReference]] = None,
-  zonedDateTime: ZonedDateTime = now(UTC),
+  dateTime: DateTime = now(UTC),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
@@ -53,7 +53,7 @@ case class RelationshipCopyRecord(
   def needToCreateEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
-object RelationshipCopyRecord extends JsonReactiveMongoFormats {
+object RelationshipCopyRecord extends ReactiveMongoFormats {
   implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 
@@ -75,7 +75,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       "relationship-copy-record",
       mongoComponent.mongoConnector.db,
       formats,
-      JsonReactiveMongoFormats.objectIdFormats)
+      ReactiveMongoFormats.objectIdFormats)
     with RelationshipCopyRecordRepository
     with StrictlyEnsureIndexes[RelationshipCopyRecord, BSONObjectID]
     with AtomicUpdate[RelationshipCopyRecord] {

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import java.time.LocalDate
+import org.joda.time.LocalDate
 import play.api.test.FakeRequest
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent

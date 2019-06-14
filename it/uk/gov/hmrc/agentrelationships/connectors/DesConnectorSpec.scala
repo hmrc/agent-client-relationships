@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentrelationships.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
 import com.kenshoo.play.metrics.Metrics
-import java.time.LocalDate
+import org.joda.time.LocalDate
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder

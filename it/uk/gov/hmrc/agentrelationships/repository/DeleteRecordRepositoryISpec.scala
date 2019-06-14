@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentrelationships.repository
 
-import java.time.{ZonedDateTime, ZoneOffset}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -37,7 +37,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000001",
         "101747696",
         "VRN",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -64,7 +64,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000001",
         "101747696",
         "VRN",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -75,7 +75,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000001",
         "101747697",
         "VRN",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -93,7 +93,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000001",
         "101747696",
         "VRN",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -104,7 +104,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000001",
         "101747696",
         "VRN",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(SyncStatus.Success),
         Some(SyncStatus.Success),
         numberOfAttempts = 5,
@@ -123,16 +123,16 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000001",
         "ABCDEF0000000001",
         "MTDITID",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(ZonedDateTime.now(ZoneOffset.UTC).minusMinutes(1))
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(1))
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         "ABCDEF0000000002",
         "MTDITID",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(Success),
         Some(Failed),
         lastRecoveryAttempt = None)
@@ -140,10 +140,10 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000003",
         "ABCDEF0000000001",
         "MTDITID",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(ZonedDateTime.now(ZoneOffset.UTC).minusMinutes(5))
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(5))
       )
 
       val createResult1 = await(repo.create(deleteRecord1))
@@ -162,28 +162,28 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerS
         "TARN0000001",
         "ABCDEF0000000001",
         "MTDITID",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(ZonedDateTime.now(ZoneOffset.UTC).minusMinutes(1))
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(1))
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         "ABCDEF0000000002",
         "MTDITID",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(ZonedDateTime.now(ZoneOffset.UTC).minusMinutes(13))
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(13))
       )
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
         "ABCDEF0000000001",
         "MTDITID",
-        ZonedDateTime.now(ZoneOffset.UTC),
+        DateTime.now(DateTimeZone.UTC),
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(ZonedDateTime.now(ZoneOffset.UTC).minusMinutes(5))
+        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(5))
       )
 
       val createResult1 = await(repo.create(deleteRecord1))

@@ -19,8 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import java.util.UUID
 
 import javax.inject.{Inject, Singleton}
-import java.time.ZonedDateTime
-
+import org.joda.time.DateTime
 import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
@@ -29,21 +28,21 @@ import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers
+import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
-import uk.gov.hmrc.agentclientrelationships.support.JsonReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-case class RecoveryRecord(uid: String, runAt: ZonedDateTime)
+case class RecoveryRecord(uid: String, runAt: DateTime)
 
-object RecoveryRecord extends JsonReactiveMongoFormats {
+object RecoveryRecord extends ReactiveMongoFormats {
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 
 trait RecoveryScheduleRepository {
   def read(implicit ec: ExecutionContext): Future[RecoveryRecord]
-  def write(nextUid: String, nextRunAt: ZonedDateTime)(implicit ec: ExecutionContext): Future[Unit]
+  def write(nextUid: String, nextRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit]
 }
 
 @Singleton
@@ -52,7 +51,7 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
       "recovery-schedule",
       mongoComponent.mongoConnector.db,
       RecoveryRecord.formats,
-      JsonReactiveMongoFormats.objectIdFormats)
+      ReactiveMongoFormats.objectIdFormats)
     with RecoveryScheduleRepository
     with StrictlyEnsureIndexes[RecoveryRecord, BSONObjectID]
     with AtomicUpdate[RecoveryRecord] {
@@ -66,7 +65,7 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
     findAll().flatMap(_.headOption match {
       case Some(record) => Future.successful(record)
       case None =>
-        val record = RecoveryRecord(UUID.randomUUID().toString, ZonedDateTime.now())
+        val record = RecoveryRecord(UUID.randomUUID().toString, DateTime.now())
         insert(record).map(_ => record).recoverWith {
           case NonFatal(error) =>
             Logger(getClass).warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
@@ -74,11 +73,11 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
         }
     })
 
-  def write(newUid: String, newRunAt: ZonedDateTime)(implicit ec: ExecutionContext): Future[Unit] =
+  def write(newUid: String, newRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit] =
     atomicUpsert(
       finder = BSONDocument(),
       modifierBson = BSONDocument(
-        "$set" -> BSONDocument("uid" -> newUid, "runAt" -> JsonReactiveMongoFormats.dateTimeWrite.writes(newRunAt)))
+        "$set" -> BSONDocument("uid" -> newUid, "runAt" -> ReactiveMongoFormats.dateTimeWrite.writes(newRunAt)))
     ).map(update =>
       update.writeResult.errmsg.foreach(error =>
         Logger(getClass).warn(s"Updating uid and runAt failed with error: $error")))
