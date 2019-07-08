@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipDeletePending, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.Upstream5xxResponse
@@ -62,6 +62,8 @@ class RelationshipsController @Inject()(
   def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
     des.getMtdIdFor(nino).flatMap(checkWithTaxIdentifier(arn, _)(request))
   }
+
+  def checkWithTrust(arn: Arn, utr: Utr): Action[AnyContent] = checkWithTaxIdentifier(arn, utr)
 
   //noinspection ScalaStyle
   private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = Action.async {
