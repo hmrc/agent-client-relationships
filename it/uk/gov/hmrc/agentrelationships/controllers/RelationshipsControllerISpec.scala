@@ -6,7 +6,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core.{AuthConnector, PlayAuthConnector}
@@ -82,6 +83,9 @@ trait RelationshipsControllerISpec
   val testAgentGroup = "testAgentGroup"
   val STRIDE_ROLE = "maintain agent relationships"
   val NEW_STRIDE_ROLE = "maintain_agent_relationships"
+
+  val utr = Utr("3087612352")
+  val saUtrType = "SAUTR"
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
 

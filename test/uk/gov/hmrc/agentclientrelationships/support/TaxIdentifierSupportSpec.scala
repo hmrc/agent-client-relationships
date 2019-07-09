@@ -41,7 +41,7 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
     "return IllegalArgumentException when tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy
-        await(enrolmentKeyPrefixFor(Utr("foo")))
+        await(enrolmentKeyPrefixFor(Eori("foo")))
     }
   }
 
@@ -64,7 +64,7 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
     "return IllegalArgumentException when tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy
-        await(identifierNickname(Utr("foo")))
+        await(identifierNickname(Eori("foo")))
     }
   }
 

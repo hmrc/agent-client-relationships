@@ -19,7 +19,7 @@ trait MongoApp extends MongoSpecSupport with ResetMongoBeforeTest {
 object MongoApp {
 
   import scala.concurrent.duration._
-  val failoverStrategyForTest = FailoverStrategy(50.millis, 5, _ * 1.618)
+  val failoverStrategyForTest = FailoverStrategy(5000.millis, 75, _ * 1.618)
 
 }
 
