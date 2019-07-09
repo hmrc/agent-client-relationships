@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
+import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr}
 
 //noinspection ScalaStyle
 class RelationshipsControllerTrustISpec extends RelationshipsControllerISpec {
@@ -292,4 +294,346 @@ class RelationshipsControllerTrustISpec extends RelationshipsControllerISpec {
     }
 
   }
+
+  "DELETE /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr" when {
+
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-TERS-ORG/client/SAUTR/${utr.value}"
+
+    def verifyClientRemovedAgentServiceAuthorisationAuditSent(
+                                                               arn: String,
+                                                               clientId: String,
+                                                               clientIdType: String,
+                                                               service: String,
+                                                               currentUserAffinityGroup: String,
+                                                               authProviderId: String,
+                                                               authProviderIdType: String): Unit =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
+        detail = Map(
+          "agentReferenceNumber"     -> arn,
+          "clientId"                 -> clientId,
+          "clientIdType"             -> clientIdType,
+          "service"                  -> service,
+          "currentUserAffinityGroup" -> currentUserAffinityGroup,
+          "authProviderId"           -> authProviderId,
+          "authProviderIdType"       -> authProviderIdType
+        ),
+        tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
+      )
+
+    def verifyHmrcRemovedAgentServiceAuthorisation(
+                                                    arn: String,
+                                                    clientId: String,
+                                                    service: String,
+                                                    authProviderId: String,
+                                                    authProviderIdType: String):Unit =
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
+        detail = Map(
+          "authProviderId"       -> authProviderId,
+          "authProviderIdType"   -> authProviderIdType,
+          "agentReferenceNumber" -> arn,
+          "clientId"             -> clientId,
+          "service"              -> service
+        ),
+        tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
+      )
+
+    "the relationship exists and the Utr matches that of current Agent user" should {
+
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
+        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenEnrolmentDeallocationSucceeds("foo", utr)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          utr.value,
+          "Utr",
+          "HMRC-TERS-ORG",
+          "Agent",
+          "ggUserId-agent",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship exists and the Utr matches that of current Client user" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(utr, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
+        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenEnrolmentDeallocationSucceeds("foo", utr)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          utr.value,
+          "Utr",
+          "HMRC-TERS-ORG",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship exists and the user is authenticated with Stride" should {
+      trait StubsForThisScenario {
+        givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
+        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenEnrolmentDeallocationSucceeds("foo", utr)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyHmrcRemovedAgentServiceAuthorisation(
+          arn.value,
+          utr.value,
+          "HMRC-TERS-ORG",
+          "strideId-1234456",
+          "PrivilegedApplication")
+      }
+    }
+
+    "the relationship exists in ETMP and not exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(utr, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(utr, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForTrust(utr)
+        givenAgentCanBeDeallocatedInDes(utr, arn)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          utr.value,
+          "Utr",
+          "HMRC-TERS-ORG",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship does not exist in either ETMP or in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(utr, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
+        givenDelegatedGroupIdsNotExistForTrust(utr)
+        givenAgentHasNoActiveRelationshipInDes(utr, arn)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          utr.value,
+          "Utr",
+          "HMRC-TERS-ORG",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    "the relationship does not exist in ETMP but does exist in ES" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedClient(utr, withThisGgUserId = "ggUserId-client")
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
+        givenAgentHasNoActiveRelationshipInDes(utr, arn)
+        givenEnrolmentDeallocationSucceeds("foo", utr)
+      }
+
+      "return 204" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 204
+      }
+
+      "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          arn.value,
+          utr.value,
+          "Utr",
+          "HMRC-TERS-ORG",
+          "Individual",
+          "ggUserId-client",
+          "GovernmentGateway")
+      }
+    }
+
+    /**
+      * Agent's Unhappy paths
+      */
+    "agent has a mismatched arn" should {
+      "return 403" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserIsSubscribedAgent(Arn("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "agent has no agent enrolments" should {
+      "return 403" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserHasNoAgentEnrolments(arn)
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "es is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenEsIsUnavailable()
+        givenAgentCanBeDeallocatedInDes(utr, arn)
+      }
+
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "DES is unavailable" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(utr, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
+        givenDesReturnsServiceUnavailable()
+      }
+
+      "return 502" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "DES responds with 404" should {
+      trait StubsForThisScenario {
+        givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(utr, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
+        givenAgentCanNotBeDeallocatedInDes(status = 404)
+      }
+
+      "return 404" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    /**
+      * Client's Unhappy paths
+      */
+    "client has a mismatched MtdItId" should {
+
+      "return 403" in {
+        givenUserIsSubscribedClient(MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserIsSubscribedClient(MtdItId("unmatched"))
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "client has no client enrolments" should {
+      "return 403" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 403
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        givenUserHasNoClientEnrolments
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+
+    "client has no groupId" should {
+      trait StubsForScenario {
+        givenUserIsSubscribedClient(utr)
+        givenPrincipalGroupIdNotExistsFor(utr)
+      }
+
+      "return 404" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 404
+      }
+
+      "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
+        await(doAgentDeleteRequest(requestPath))
+        verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+      }
+    }
+  }
+
 }

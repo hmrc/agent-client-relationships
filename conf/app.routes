@@ -11,8 +11,9 @@ GET           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk
 DELETE        /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteVatRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 
 # TRUST relationship
-PUT           /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr              @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForTrust(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
-GET           /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr              @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithTrust(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
+PUT           /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForTrust(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
+GET           /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithTrust(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
+DELETE        /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteTrustRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
 
 # Checks implemented for BTA
 GET           /agent/:arn/service/IR-SA/client/ni/:nino                      @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkLegacyWithNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
