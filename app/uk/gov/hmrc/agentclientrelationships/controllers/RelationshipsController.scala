@@ -133,6 +133,7 @@ class RelationshipsController @Inject()(
 
   def createForMtdIt(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
   def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
+  def createForTrust(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
 
   private def create(arn: Arn, identifier: TaxIdentifier) =
     AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRoles) { implicit request => _ =>

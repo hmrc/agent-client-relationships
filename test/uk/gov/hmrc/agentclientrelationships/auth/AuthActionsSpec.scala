@@ -22,7 +22,7 @@ import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionToPerformOperation
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Retrieval, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -39,6 +39,8 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   private val arn = "TARN0000001"
   private val mtdItId = "ABCDEFGH"
   private val vrn = "101747641"
+  val utr = "3087612352"
+
   private val oldRequiredStrideRole = "REQUIRED STRIDE ROLE"
   private val newRequiredStrideRole = "REQUIRED_STRIDE_ROLE"
 
@@ -55,6 +57,9 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   private val mtdVatIdEnrolment =
     Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)), state = "", delegatedAuthRule = None)
+
+  private val trustEnrolment =
+    Enrolment("HMRC-TERS-ORG", Seq(EnrolmentIdentifier("SAUTR", utr)), state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with BaseController {
     def testAuthActions(arn: Arn, identifier: TaxIdentifier, strideRoles: Seq[String]) =
@@ -189,6 +194,12 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
         val result: Future[Result] =
           testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
         await(result) shouldBe NoPermissionToPerformOperation
+      }
+
+      "return Ok if Client has matching Utr in their enrolments" in {
+        mockClientAuth(enrolment = Set(trustEnrolment))
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Utr(utr), strideRoles).apply(fakeRequest)
+        await(result) shouldBe Ok
       }
     }
 

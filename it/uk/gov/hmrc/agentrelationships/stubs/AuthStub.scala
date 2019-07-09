@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.SessionKeys
@@ -101,6 +101,7 @@ trait AuthStub {
       case Nino(v)    => ("HMRC-NI", "NINO", v)
       case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
       case Vrn(v)     => ("HMRC-MTD-VAT", "VRN", v)
+      case Utr(v)     => ("HMRC-TERS-ORG", "SAUTR", v)
     }
 
     stubFor(
