@@ -47,6 +47,7 @@ object TaxIdentifierSupport {
     case "NINO"                 => Nino(value)
     case "VRN"                  => Vrn(value)
     case "AgentReferenceNumber" => Arn(value)
+    case "SAUTR"                => Utr(value)
     case _                      => throw new Exception("Invalid tax identifier type " + `type`)
   }
 }

@@ -8,7 +8,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, ItsaRelationship}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
@@ -230,9 +230,31 @@ class DesConnectorSpec
       )
     }
 
+    "request body contains regime as TRS and idType as UTR when client Id is a UTR" in {
+      givenAgentCanBeAllocatedInDes(Utr("someUtr"), Arn("someArn"))
+      givenAuditConnector()
+
+      await(desConnector.createAgentRelationship(Utr("someUtr"), Arn("someArn")))
+
+      verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withRequestBody(equalToJson(
+            s"""{
+               |"regime": "TRS",
+               |"idType" : "UTR",
+               |"relationshipType" : "ZA01",
+               |"authProfile" : "ALL00001"
+               |}""".stripMargin,
+            true,
+            true
+          ))
+      )
+    }
+
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(
-        desConnector.createAgentRelationship(Utr("foo"), Arn("bar")))
+        desConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
     "fail when DES is throwing errors" in {
@@ -261,6 +283,12 @@ class DesConnectorSpec
       await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).processingDate should not be null
     }
 
+    "delete relationship between agent and client and return 200 for Utr service" in {
+      givenAgentCanBeDeallocatedInDes(Vrn("foo"), Arn("bar"))
+      givenAuditConnector()
+      await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar"))).processingDate should not be null
+    }
+
     "not delete relationship between agent and client and return 404 for ItSa service" in {
       givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
@@ -273,9 +301,15 @@ class DesConnectorSpec
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar")))
     }
 
+    "not delete relationship between agent and client and return 404 for Trust service" in {
+      givenAgentCanNotBeDeallocatedInDes(status = 404)
+      givenAuditConnector()
+      an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar")))
+    }
+
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(
-        desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar")))
+        desConnector.deleteAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
     "fail when DES is throwing errors" in {
