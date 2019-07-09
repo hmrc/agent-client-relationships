@@ -283,12 +283,6 @@ class DesConnectorSpec
       await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).processingDate should not be null
     }
 
-    "delete relationship between agent and client and return 200 for Utr service" in {
-      givenAgentCanBeDeallocatedInDes(Vrn("foo"), Arn("bar"))
-      givenAuditConnector()
-      await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar"))).processingDate should not be null
-    }
-
     "not delete relationship between agent and client and return 404 for ItSa service" in {
       givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
