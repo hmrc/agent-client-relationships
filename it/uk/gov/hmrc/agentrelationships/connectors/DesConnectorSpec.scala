@@ -283,6 +283,12 @@ class DesConnectorSpec
       await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).processingDate should not be null
     }
 
+    "delete relationship between agent and client and return 200 for Trust service" in {
+      givenAgentCanBeDeallocatedInDes(Utr("foo"), Arn("bar"))
+      givenAuditConnector()
+      await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar"))).processingDate should not be null
+    }
+
     "not delete relationship between agent and client and return 404 for ItSa service" in {
       givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
@@ -293,12 +299,6 @@ class DesConnectorSpec
       givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
       an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar")))
-    }
-
-    "not delete relationship between agent and client and return 404 for Trust service" in {
-      givenAgentCanNotBeDeallocatedInDes(status = 404)
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar")))
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {

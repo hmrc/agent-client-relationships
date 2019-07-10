@@ -157,6 +157,8 @@ class RelationshipsController @Inject()(
   def deleteItsaRelationshipByNino(arn: Arn, nino: Nino) = delete(arn, nino)
   def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
 
+  def deleteTrustRelationship(arn: Arn, utr: Utr) = delete(arn, utr)
+
   private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
     AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request => implicit currentUser =>
       (for {
