@@ -17,137 +17,23 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+import javax.inject.{Inject, Named, Singleton}
 import org.joda.time.{DateTimeZone, LocalDate}
-import play.api.libs.functional.syntax._
-import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
-import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
+import uk.gov.hmrc.http._
 
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-
-case class NinoBusinessDetails(nino: Nino)
-
-object NinoBusinessDetails {
-  implicit val reads = Json.reads[NinoBusinessDetails]
-}
-
-case class MtdItIdBusinessDetails(mtdbsa: MtdItId)
-
-object MtdItIdBusinessDetails {
-  implicit val reads = Json.reads[MtdItIdBusinessDetails]
-}
-
-trait Relationship {
-  val arn: Arn
-  val dateTo: Option[LocalDate]
-  val dateFrom: Option[LocalDate]
-}
-
-case class ItsaRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
-
-object ItsaRelationship {
-  implicit val relationshipWrites = Json.writes[ItsaRelationship]
-
-  implicit val reads: Reads[ItsaRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").readNullable[LocalDate] and
-    (JsPath \ "dateFrom").readNullable[LocalDate])(ItsaRelationship.apply _)
-}
-
-case class ItsaInactiveRelationship(
-  arn: Arn,
-  dateTo: Option[LocalDate],
-  dateFrom: Option[LocalDate],
-  referenceNumber: String)
-    extends Relationship
-
-object ItsaInactiveRelationship {
-  implicit val relationshipWrites = Json.writes[ItsaInactiveRelationship]
-
-  implicit val reads: Reads[ItsaInactiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").readNullable[LocalDate] and
-    (JsPath \ "dateFrom").readNullable[LocalDate] and
-    (JsPath \ "referenceNumber").read[String])(ItsaInactiveRelationship.apply _)
-}
-
-case class VatRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate]) extends Relationship
-
-object VatRelationship {
-  implicit val relationshipWrites = Json.writes[VatRelationship]
-
-  implicit val reads: Reads[VatRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").readNullable[LocalDate] and
-    (JsPath \ "dateFrom").readNullable[LocalDate])(VatRelationship.apply _)
-}
-
-case class VatInactiveRelationship(
-  arn: Arn,
-  dateTo: Option[LocalDate],
-  dateFrom: Option[LocalDate],
-  referenceNumber: String)
-    extends Relationship
-
-object VatInactiveRelationship {
-  implicit val relationshipWrites = Json.writes[VatInactiveRelationship]
-
-  implicit val reads: Reads[VatInactiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").readNullable[LocalDate] and
-    (JsPath \ "dateFrom").readNullable[LocalDate] and
-    (JsPath \ "referenceNumber").read[String])(VatInactiveRelationship.apply _)
-}
-
-case class ItsaRelationshipResponse(relationship: Seq[ItsaRelationship])
-
-case class ItsaInactiveRelationshipResponse(relationship: Seq[ItsaInactiveRelationship])
-
-case class VatRelationshipResponse(relationship: Seq[VatRelationship])
-
-case class VatInactiveRelationshipResponse(relationship: Seq[VatInactiveRelationship])
-
-object ItsaRelationshipResponse {
-  implicit val relationshipResponseFormat = Json.format[ItsaRelationshipResponse]
-}
-
-object ItsaInactiveRelationshipResponse {
-  implicit val relationshipResponseFormat = Json.format[ItsaInactiveRelationshipResponse]
-}
-
-object VatRelationshipResponse {
-  implicit val vatRelationshipResponseFormat = Json.format[VatRelationshipResponse]
-}
-
-object VatInactiveRelationshipResponse {
-  implicit val vatRelationshipResponseFormat = Json.format[VatInactiveRelationshipResponse]
-}
-
-case class ClientRelationship(agents: Seq[Agent])
-
-case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeasedDate: Option[String])
-
-object ClientRelationship {
-  implicit val agentReads = Json.reads[Agent]
-
-  implicit val readClientRelationship =
-    (JsPath \ "agents")
-      .readNullable[Seq[Agent]]
-      .map(optionalAgents => ClientRelationship(optionalAgents.getOrElse(Seq.empty)))
-}
-
-case class RegistrationRelationshipResponse(processingDate: String)
-
-object RegistrationRelationshipResponse {
-  implicit val reads = Json.reads[RegistrationRelationshipResponse]
-}
+import scala.concurrent.duration.Duration
 
 @Singleton
 class DesConnector @Inject()(
@@ -183,13 +69,20 @@ class DesConnector @Inject()(
         .flatMap(_.agentId))
   }
 
-  def getActiveClientItsaRelationships(
-    mtdItId: MtdItId)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] = {
-    val encodedClientId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
-    val url = new URL(
-      s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=ITSA")
+  def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
+    val url = taxIdentifier match {
+      case MtdItId(_) =>
+        new URL(
+          s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+      case Vrn(_) =>
+        new URL(
+          s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+    }
 
-    getWithDesHeaders[ItsaRelationshipResponse]("GetActiveClientItSaRelationships", url)
+    getWithDesHeaders[ActiveRelationshipResponse]("GetActiveClientItSaRelationships", url)
       .map(_.relationship.find(isActive))
       .recover {
         case _: BadRequestException => None
@@ -197,45 +90,17 @@ class DesConnector @Inject()(
       }
   }
 
-  def getActiveClientVatRelationships(
-    vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] = {
-    val encodedClientId = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
-    val url = new URL(
-      s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=VATC")
-
-    getWithDesHeaders[VatRelationshipResponse]("GetActiveClientVatRelationships", url)
-      .map(_.relationship.find(isActive))
-      .recover {
-        case _: BadRequestException => None
-        case _: NotFoundException   => None
-      }
-  }
-
-  def getInactiveAgentItsaRelationships(
-    arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Seq[ItsaInactiveRelationship]] = {
-    val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
-    val now: String = LocalDate.now().toString
-    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
-    val url = new URL(
-      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=ITSA&from=$from&to=$now")
-
-    getWithDesHeaders[ItsaInactiveRelationshipResponse]("GetAllAgentItsaRelationships", url)
-      .map(_.relationship.filter(isNotActive))
-      .recover {
-        case _: BadRequestException => Seq.empty
-        case _: NotFoundException   => Seq.empty
-      }
-  }
-
-  def getInactiveAgentVatRelationships(
-    arn: Arn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Seq[VatInactiveRelationship]] = {
-    val encodedClientId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
+  def getInactiveRelationships(arn: Arn, service: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+    val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
     val url = new URL(
-      s"$baseUrl/registration/relationship?arn=$encodedClientId&agent=true&active-only=false&regime=VATC&from=$from&to=$now")
+      s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
+        service)}&from=$from&to=$now")
 
-    getWithDesHeaders[VatInactiveRelationshipResponse]("GetAllAgentVatRelationships", url)
+    getWithDesHeaders[InactiveRelationshipResponse](s"GetAllAgent${getRegimeFor(service)}Relationships", url)
       .map(_.relationship.filter(isNotActive))
       .recover {
         case _: BadRequestException => Seq.empty
@@ -243,12 +108,12 @@ class DesConnector @Inject()(
       }
   }
 
-  def isActive(r: Relationship): Boolean = r.dateTo match {
+  def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
     case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
   }
 
-  def isNotActive(r: Relationship): Boolean = r.dateTo match {
+  def isNotActive(r: InactiveRelationship): Boolean = r.dateTo match {
     case None    => false
     case Some(d) => d.isBefore(LocalDate.now(DateTimeZone.UTC)) || d.equals(LocalDate.now(DateTimeZone.UTC))
   }
@@ -273,6 +138,14 @@ class DesConnector @Inject()(
       url,
       deleteAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId)))
   }
+
+  private def getRegimeFor(service: String): String =
+    service match {
+      case "HMRC-MTD-IT"   => "ITSA"
+      case "HMRC-MTD-VAT"  => "VATC"
+      case "HMRC-TERS-ORG" => "TRS"
+      case _               => throw new IllegalArgumentException(s"Service not supported $service")
+    }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {

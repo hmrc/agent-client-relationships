@@ -236,24 +236,6 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def getInactiveItsaRelationshipsAgent: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsAgent { arn =>
-      findService.getInactiveItsaRelationshipForAgent(arn).map { relationships =>
-        if (relationships.nonEmpty) Ok(Json.toJson(relationships))
-        else NotFound
-      }
-    }
-  }
-
-  def getInactiveVatRelationshipsAgent: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsAgent { arn =>
-      findService.getInactiveVatRelationshipForAgent(arn).map { relationships =>
-        if (relationships.nonEmpty) Ok(Json.toJson(relationships))
-        else NotFound
-      }
-    }
-  }
-
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
@@ -261,5 +243,15 @@ class RelationshipsController @Inject()(
       .recover {
         case ex: RelationshipNotFound => NotFound(ex.getMessage)
       }
+  }
+
+  //Generic
+  def getInactiveRelationshipsAgent(service: String): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent { arn =>
+      findService.getInactiveRelationships(arn, service).map { relationships =>
+        if (relationships.nonEmpty) Ok(Json.toJson(relationships))
+        else NotFound
+      }
+    }
   }
 }
