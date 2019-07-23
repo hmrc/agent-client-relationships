@@ -245,7 +245,6 @@ class RelationshipsController @Inject()(
       }
   }
 
-  //Generic
   def getInactiveRelationshipsAgent(service: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
       findService.getInactiveRelationships(arn, service).map { relationships =>
