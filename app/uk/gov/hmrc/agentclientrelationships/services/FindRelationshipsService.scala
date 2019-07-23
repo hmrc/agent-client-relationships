@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentService}
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.Nino
@@ -31,27 +31,24 @@ import scala.concurrent.{ExecutionContext, Future}
 class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics) extends Monitoring {
 
   def getItsaRelationshipForClient(
-    clientId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
-    des.getActiveClientItsaRelationships(clientId)
+    clientId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
+    des.getActiveClientRelationships(clientId)
 
   def getItsaRelationshipForClient(
-    nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ItsaRelationship]] =
+    nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     for {
       mtdItId       <- des.getMtdIdFor(nino)
-      relationships <- des.getActiveClientItsaRelationships(mtdItId)
+      relationships <- des.getActiveClientRelationships(mtdItId)
     } yield relationships
 
   def getVatRelationshipForClient(
-    clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatRelationship]] =
-    des.getActiveClientVatRelationships(clientId)
+    clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
+    des.getActiveClientRelationships(clientId)
 
-  def getInactiveItsaRelationshipForAgent(
-    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[ItsaInactiveRelationship]] =
-    des.getInactiveAgentItsaRelationships(arn)
-
-  def getInactiveVatRelationshipForAgent(
-    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[VatInactiveRelationship]] =
-    des.getInactiveAgentVatRelationships(arn)
+  def getInactiveRelationships(arn: Arn, service: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+    des.getInactiveRelationships(arn, service)
 
   def getActiveRelationshipsForClient(identifiers: Map[EnrolmentService, EnrolmentIdentifierValue])(
     implicit hc: HeaderCarrier,

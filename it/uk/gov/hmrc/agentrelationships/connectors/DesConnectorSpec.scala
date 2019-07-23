@@ -2,20 +2,21 @@ package uk.gov.hmrc.agentrelationships.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.LocalDate
+import org.joda.time.{DateTimeZone, LocalDate}
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, ItsaRelationship}
+import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
+import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
 class DesConnectorSpec
@@ -326,49 +327,49 @@ class DesConnectorSpec
     "return existing active relationships for specified clientId for ItSa service" in {
       givenClientHasActiveAgentRelationshipForITSA(encodedClientIdMtdItId, agentARN.value)
 
-      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Vat service" in {
       givenClientHasActiveAgentRelationshipForVAT(encodedClientIdVrn, agentARN.value)
 
-      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      val result = await(desConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
     }
 
     "return None if DES returns 404 for ItSa service" in {
       givenClientAgentRelationshipCheckForITSAFailsWith(encodedClientIdMtdItId, status = 404)
 
-      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if DES returns 404 for Vat service" in {
       givenClientAgentRelationshipCheckForVATFailsWith(encodedClientIdVrn, status = 404)
 
-      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      val result = await(desConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "return None if DES returns 400 for ItSa service" in {
       givenClientAgentRelationshipCheckForITSAFailsWith(encodedClientIdMtdItId, status = 400)
 
-      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if DES returns 400 for Vat service" in {
       givenClientAgentRelationshipCheckForVATFailsWith(encodedClientIdVrn, status = 400)
 
-      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      val result = await(desConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "record metrics for GetStatusAgentRelationship for ItSa service" in {
       givenClientHasActiveAgentRelationshipForITSA(encodedClientIdMtdItId, agentARN.value)
 
-      val result = await(desConnector.getActiveClientItsaRelationships(mtdItId))
+      val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
     }
@@ -376,7 +377,7 @@ class DesConnectorSpec
     "record metrics for GetStatusAgentRelationship for Vat service" in {
       givenClientHasActiveAgentRelationshipForVAT(encodedClientIdVrn, agentARN.value)
 
-      val result = await(desConnector.getActiveClientVatRelationships(vrn))
+      val result = await(desConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
     }
@@ -388,7 +389,7 @@ class DesConnectorSpec
     "return existing inactive relationships for specified clientId for ItSa service" in {
       getAgentInactiveRelationships(encodedArn, agentARN.value, "ITSA")
 
-      val result = await(desConnector.getInactiveAgentItsaRelationships(agentARN))
+      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
@@ -402,7 +403,7 @@ class DesConnectorSpec
     "return existing inactive relationships for specified clientId for Vat service" in {
       getAgentInactiveRelationships(encodedArn, agentARN.value, "VATC")
 
-      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
@@ -417,38 +418,38 @@ class DesConnectorSpec
     "return None if DES returns 404 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 404)
 
-      val result = await(desConnector.getInactiveAgentItsaRelationships(agentARN))
+      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
       result shouldBe Seq.empty
     }
 
     "return None if DES returns 404 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, "VATC", status = 404)
 
-      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
       result shouldBe Seq.empty
     }
 
     "return None if DES returns 400 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 400)
 
-      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
       result shouldBe Seq.empty
     }
 
     "return None if DES returns 400 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, "VATC", status = 400)
 
-      val result = await(desConnector.getInactiveAgentVatRelationships(agentARN))
+      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
       result shouldBe Seq.empty
     }
   }
 
   "isActive" should {
-    val noEndRelationship = ItsaRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")))
-    val beforeCurrentDateRelationship =
-      ItsaRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")))
+    val noEndRelationship = ActiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")))
     val afterCurrentDateRelationship =
-      ItsaRelationship(Arn("foo"), Some(LocalDate.parse("2222-11-11")), Some(LocalDate.parse("1111-11-11")))
+      ActiveRelationship(Arn("foo"), Some(LocalDate.parse("2222-11-11")), Some(LocalDate.parse("1111-11-11")))
+    val beforeCurrentDateRelationship =
+      ActiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")))
     "return true when the relationship has no end date" in {
       desConnector.isActive(noEndRelationship) shouldBe true
     }
@@ -457,6 +458,24 @@ class DesConnectorSpec
     }
     "return false when the end date is before the current date" in {
       desConnector.isActive(beforeCurrentDateRelationship) shouldBe false
+    }
+  }
+
+  "isInactive" should {
+    val noEndRelationship = InactiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")), "123456789")
+    val endsBeforeCurrentDate =
+      InactiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")), "123456789")
+    val endsAtCurrentDateRelationship =
+      InactiveRelationship(Arn("foo"), Some(LocalDate.now(DateTimeZone.UTC)), Some(LocalDate.parse("1111-11-11")), "123456789")
+
+    "return false when the relationship is active" in {
+      desConnector.isNotActive(noEndRelationship) shouldBe false
+    }
+    "return true when the end date is before the current date" in {
+      desConnector.isNotActive(endsBeforeCurrentDate) shouldBe true
+    }
+    "return true when the end date is equal to the current date" in {
+      desConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
     }
   }
 }

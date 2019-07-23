@@ -23,8 +23,8 @@ GET           /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn            @uk
 GET           /relationships/active                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationships
 GET           /relationships/service/HMRC-MTD-IT                             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationships
 GET           /relationships/service/HMRC-MTD-VAT                            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getVatRelationships
-GET           /relationships/inactive/service/HMRC-MTD-IT                    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveItsaRelationshipsAgent
-GET           /relationships/inactive/service/HMRC-MTD-VAT                   @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveVatRelationshipsAgent
+
+GET           /relationships/inactive/service/:service                       @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent(service: String)
 
 # DEPRECATED
 GET           /service/HMRC-MTD-IT/client/relationship                       @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationships
