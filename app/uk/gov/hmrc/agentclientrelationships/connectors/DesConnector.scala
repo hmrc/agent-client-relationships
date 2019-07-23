@@ -50,20 +50,24 @@ class DesConnector @Inject()(
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
     val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
 
-    getWithDesHeaders[NinoBusinessDetails]("GetRegistrationBusinessDetailsByMtdbsa", url).map(_.nino)
+    getWithDesHeaders[HttpResponse]("GetRegistrationBusinessDetailsByMtdbsa", url).map { result =>
+      (result.json \ "nino").as[Nino]
+    }
   }
 
   def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[MtdItId] = {
     val url = new URL(baseUrl, s"/registration/business-details/nino/${encodePathSegment(nino.value)}")
 
-    getWithDesHeaders[MtdItIdBusinessDetails]("GetRegistrationBusinessDetailsByNino", url).map(_.mtdbsa)
+    getWithDesHeaders[HttpResponse]("GetRegistrationBusinessDetailsByNino", url).map { result =>
+      (result.json \ "mtdbsa").as[MtdItId]
+    }
   }
 
   def getClientSaAgentSaReferences(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
     val url = new URL(baseUrl, s"/registration/relationship/nino/${encodePathSegment(nino.value)}")
 
-    getWithDesHeaders[ClientRelationship]("GetStatusAgentRelationship", url).map(
+    getWithDesHeaders[Agents]("GetStatusAgentRelationship", url).map(
       _.agents
         .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
         .flatMap(_.agentId))
