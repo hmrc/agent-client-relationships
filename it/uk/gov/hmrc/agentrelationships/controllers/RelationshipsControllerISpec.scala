@@ -1,105 +1,202 @@
 package uk.gov.hmrc.agentrelationships.controllers
-import org.scalatestplus.mockito.MockitoSugar
-import org.scalatestplus.play.OneServerPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.ws.WSClient
-import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs._
-import uk.gov.hmrc.agentrelationships.support._
-import uk.gov.hmrc.auth.core.{AuthConnector, PlayAuthConnector}
-import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.test.UnitSpec
+import org.joda.time.LocalDate
+import play.api.libs.json.JsValue
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.HttpResponse
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Random
+class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
-trait RelationshipsControllerISpec
-    extends UnitSpec
-    with MongoApp
-    with OneServerPerSuite
-    with WireMockSupport
-    with RelationshipStubs
-    with DesStubs
-    with DesStubsGet
-    with MappingStubs
-    with DataStreamStub
-    with AuthStub
-    with MockitoSugar
-    with JsonMatchers {
+  val relationshipCopiedSuccessfully = RelationshipCopyRecord(
+    arn.value,
+    mtdItId.value,
+    mtdItIdType,
+    syncToETMPStatus = Some(SyncStatus.Success),
+    syncToESStatus = Some(SyncStatus.Success))
 
-  override lazy val port: Int = Random.nextInt(1000) + 19000
+  case class TestClient(
+                         service: String,
+                         urlIdentifier: String,
+                         regime: String,
+                         clientId: TaxIdentifier)
 
-  lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  val itsaClient = TestClient(HMRCMTDIT, "MTDITID", "ITSA", mtdItId)
+  val irvClient = TestClient(HMRCPIR, "NI", null, nino)
+  val vatClient = TestClient(HMRCMTDVAT, "VRN", "VATC", vrn)
+  val trustClient = TestClient(HMRCTERSORG, "UTR", "TRS", utr)
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.copy-relationship.mtd-it"                -> true,
-        "features.copy-relationship.mtd-vat"               -> true,
-        "features.recovery-enable"                         -> false
-      )
-      .configure(mongoConfiguration)
 
-  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  val individualList = List(itsaClient, vatClient)
+  val businessList = List(vatClient, trustClient)
 
-  def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
-  def deleteRecordRepository: MongoDeleteRecordRepository = app.injector.instanceOf[MongoDeleteRecordRepository]
+  val desOnlyList = List(itsaClient, vatClient, trustClient)
 
-  override def beforeEach() {
-    super.beforeEach()
-    givenAuditConnector()
-    await(repo.ensureIndexes)
-    await(deleteRecordRepository.ensureIndexes)
+  class LoggedInUser(isLoggedInClientStride: Boolean, isLoggedInClientInd: Boolean, isLoggedInClientBusiness: Boolean) {
+    if(isLoggedInClientStride) {
+      givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE,"strideId-1234456")
+      givenUserIsAuthenticatedWithStride(STRIDE_ROLE,"strideId-1234456")
+    }
+    else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino)
+    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr)
+    else requestIsNotAuthenticated()
   }
 
-  val arn = Arn("AARN0000002")
-  val arn2 = Arn("AARN0000004")
-  val arn3 = Arn("AARN0000006")
-  val mtdItId = MtdItId("ABCDEF123456789")
-  val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
-  val vrn = Vrn("101747641")
-  val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
-  val nino = Nino("AB123456C")
-  val mtdItIdType = "MTDITID"
-  val mtdVatIdType = "VRN"
-  val oldAgentCode = "oldAgentCode"
-  val testAgentUser = "testAgentUser"
-  val testAgentGroup = "testAgentGroup"
-  val STRIDE_ROLE = "maintain agent relationships"
-  val NEW_STRIDE_ROLE = "maintain_agent_relationships"
-
-  val utr = Utr("3087612352")
-  val saUtrType = "SAUTR"
-
-  protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
-
-  protected def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
-
-  protected def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
-
-  protected def verifyDeleteRecordHasStatuses(
-    etmpStatus: Option[SyncStatus.Value],
-    esStatus: Option[SyncStatus.Value]) =
-    await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
-      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _)) =>
+  "GET /relationships/service/:service" should {
+    individualList.foreach { client =>
+      runActiveRelationshipsScenario(client, true, false)
     }
 
-  protected def verifyDeleteRecordNotExists =
-    await(deleteRecordRepository.findBy(arn, mtdItId)) shouldBe None
+    businessList.foreach { client =>
+      runActiveRelationshipsScenario(client, false, true)
+    }
+
+    individualList.foreach { client =>
+      runActiveRelationshipsErrorScenario(client, true, false)
+    }
+
+    businessList.foreach { client =>
+      runActiveRelationshipsErrorScenario(client, false, true)
+    }
+  }
+
+  def runActiveRelationshipsScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean) = {
+    val requestPath: String = s"/agent-client-relationships/relationships/service/${testClient.service}"
+
+    def doRequest = doAgentGetRequest(requestPath)
+
+    s"find relationship for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+      new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
+
+        getActiveRelationshipsViaClient(testClient.clientId, arn)
+
+        val result: HttpResponse = await(doRequest)
+        result.status shouldBe 200
+
+        val b: JsValue = result.json
+        (result.json \ "arn").get.as[String] shouldBe arn.value
+        (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    s"find multiple relationships for service ${testClient.service} " +
+      s"but filter out active and ended relationships for user ${if(isLoggedInClientInd) "Individual" else "Business"}"in
+      new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
+
+      getSomeActiveRelationshipsViaClient(testClient.clientId, arn.value, arn2.value, arn3.value)
+
+      val result: HttpResponse = await(doRequest)
+      result.status shouldBe 200
+      (result.json \ "arn").get.as[String] shouldBe arn3.value
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+  }
+
+  def runActiveRelationshipsErrorScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean) = {
+    val requestPath: String = s"/agent-client-relationships/relationships/service/${testClient.service}"
+
+    def doRequest = doAgentGetRequest(requestPath)
+
+    "find relationship but filter out if the end date has been changed from 9999-12-31 " +
+    s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+      new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
+
+      getInactiveRelationshipViaClient(testClient.clientId, arn.value)
+
+      val result: HttpResponse = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns 404 relationship not found " +
+      s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+      new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
+
+      getActiveRelationshipFailsWith(testClient.clientId, 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+
+    "return 404 when DES returns 400 (treated as relationship not found) " +
+      s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+      new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
+
+      getActiveRelationshipFailsWith(testClient.clientId, 400)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+  }
+
+  "GET /relationships/inactive/service/:service" should {
+    desOnlyList.foreach { client =>
+      runInactiveRelationshipsScenario(client)
+      runInactiveRelationshipsErrorScenario(client)
+    }
+  }
+
+  def runInactiveRelationshipsScenario(testClient: TestClient) = {
+    val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/${testClient.service}"
+    def doRequest = doAgentGetRequest(requestPath)
+
+    s"return 200 with list of inactive ${testClient.service} for an Agent" in {
+      givenUserIsSubscribedAgent(arn)
+
+      val otherId: TaxIdentifier = otherTaxIdentifier(testClient.clientId)
+
+      getInactiveRelationshipsViaAgent(arn, otherId, testClient.clientId, testClient.regime)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      (result.json \\ "arn").head.as[String] shouldBe arn.value
+      (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
+      (result.json \\ "referenceNumber").head.as[String] shouldBe otherId.value
+      (result.json \\ "arn")(1).as[String] shouldBe arn.value
+      (result.json \\ "dateTo")(1).as[LocalDate].toString() shouldBe LocalDate.now().toString
+      (result.json \\ "referenceNumber")(1).as[String] shouldBe testClient.clientId.value
+    }
+  }
+
+  def runInactiveRelationshipsErrorScenario(testClient: TestClient) = {
+    val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/${testClient.service}"
+    def doRequest = doAgentGetRequest(requestPath)
+
+    s"find relationship but filter out if the relationship is still active for ${testClient.service}" in {
+      givenUserIsSubscribedAgent(arn)
+
+      getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, testClient.clientId.value, testClient.regime)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    s"return 404 when DES returns not found for ${testClient.service}" in {
+      givenUserIsSubscribedAgent(arn)
+
+      getFailAgentInactiveRelationships(arnEncoded, testClient.regime, 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    s"find relationships and filter out relationships that have no dateTo ${testClient.service}"  in {
+      givenUserIsSubscribedAgent(arn)
+
+      getAgentInactiveRelationshipsNoDateTo(arn, testClient.clientId.value, testClient.service)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    s"return 404 when DES returns 400 for ${testClient.service}" in {
+      givenUserIsSubscribedAgent(arn)
+
+      getFailAgentInactiveRelationships(arnEncoded, testClient.regime, 400)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
 
 }

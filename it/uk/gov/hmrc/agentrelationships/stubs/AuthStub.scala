@@ -17,6 +17,106 @@ trait AuthStub {
     this
   }
 
+  //VIA Client
+
+  def givenLoginClientIndAll(mtdItId: MtdItId, vrn: Vrn, nino: Nino, withThisGgUserId: String = "12345-credId") = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"affinityGroup": "Individual",
+                         |"allEnrolments": [{
+                         |  "key": "HMRC-MTD-IT",
+                         |  "identifiers": [{
+                         |			"key": "MTDITID",
+                         |			"value": "${mtdItId.value}"
+                         |		}],
+                         |		"state": "Activated"
+                         |	}, {
+                         |		"key": "HMRC-MTD-VAT",
+                         |		"identifiers": [{
+                         |			"key": "VRN",
+                         |			"value": "${vrn.value}"
+                         |		}],
+                         |		"state": "Activated"
+                         |	}, {
+                         |		"key": "HMRC-NI",
+                         |		"identifiers": [{
+                         |			"key": "NINO",
+                         |			"value": "${nino.value}"
+                         |		}],
+                         |		"state": "Activated"
+                         |	}],
+                         |  "optionalCredentials": {
+                         |    "providerId": "$withThisGgUserId",
+                         |    "providerType": "GovernmentGateway"
+                         |  }
+                         |}
+       """.stripMargin)))
+    this
+  }
+
+  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr, withThisGgUserId: String = "12345-credId") = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"affinityGroup": "Organisation",
+                         |"allEnrolments": [{
+                         |  "key": "HMRC-TERS-ORG",
+                         |  "identifiers": [{
+                         |			"key": "SAUTR",
+                         |			"value": "${utr.value}"
+                         |		}],
+                         |		"state": "Activated"
+                         |	}, {
+                         |		"key": "HMRC-MTD-VAT",
+                         |		"identifiers": [{
+                         |			"key": "VRN",
+                         |			"value": "${vrn.value}"
+                         |		}],
+                         |		"state": "Activated"
+                         |	}],
+                         |  "optionalCredentials": {
+                         |    "providerId": "$withThisGgUserId",
+                         |    "providerType": "GovernmentGateway"
+                         |  }
+                         |}
+       """.stripMargin)))
+    this
+  }
+
+  //VIA Stride
+
+  def givenUserIsAuthenticatedWithStride(strideRole: String, strideUserId: String) = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"affinityGroup": "Individual",
+                         |"allEnrolments": [{
+                         |  "key": "$strideRole"
+                         |	}],
+                         |  "optionalCredentials": {
+                         |    "providerId": "$strideUserId",
+                         |    "providerType": "PrivilegedApplication"
+                         |  }
+                         |}
+       """.stripMargin)))
+    this
+  }
+
+  //VIA Agent
+
   def givenUserIsSubscribedAgent(withThisArn: Arn, withThisGgUserId: String = "12345-credId"): AuthStub = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
@@ -96,6 +196,7 @@ trait AuthStub {
   }
 
   //noinspection ScalaStyle
+  //TODO To be replaced with givenLoginClientIndAll OR givenLoginClientBusinessAll TBC
   def givenUserIsSubscribedClient(identifier: TaxIdentifier, withThisGgUserId: String = "12345-credId"): AuthStub = {
     val (service, key, value) = identifier match {
       case Nino(v)    => ("HMRC-NI", "NINO", v)
@@ -144,27 +245,6 @@ trait AuthStub {
                          |  "optionalCredentials": {
                          |    "providerId": "$withThisGgUserId",
                          |    "providerType": "GovernmentGateway"
-                         |  }
-                         |}
-       """.stripMargin)))
-    this
-  }
-
-  def givenUserIsAuthenticatedWithStride(strideRole: String, strideUserId: String): AuthStub = {
-    stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"affinityGroup": "Individual",
-                         |"allEnrolments": [{
-                         |  "key": "$strideRole"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "$strideUserId",
-                         |    "providerType": "PrivilegedApplication"
                          |  }
                          |}
        """.stripMargin)))

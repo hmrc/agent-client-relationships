@@ -204,20 +204,12 @@ class RelationshipsController @Inject()(
     }
   }
 
-  def getItsaRelationships: Action[AnyContent] = AuthorisedAsItSaClient(ec) { implicit request => clientId =>
-    findService
-      .getItsaRelationshipForClient(clientId)
-      .map {
+  def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = withAuthorisedAsClientRequest(service) {
+    implicit request => clientId =>
+      findService.getActiveRelationships(clientId).map {
         case Some(relationship) => Ok(Json.toJson(relationship))
         case None               => NotFound
       }
-  }
-
-  def getVatRelationships: Action[AnyContent] = AuthorisedAsVatClient(ec) { implicit request => clientId =>
-    findService.getVatRelationshipForClient(clientId).map {
-      case Some(relationship) => Ok(Json.toJson(relationship))
-      case None               => NotFound
-    }
   }
 
   def getItsaRelationshipsByNino(nino: Nino): Action[AnyContent] = AuthorisedWithStride(oldStrideRole, newStrideRole) {
