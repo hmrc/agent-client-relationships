@@ -12,7 +12,7 @@ import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveR
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -51,6 +51,12 @@ class DesConnectorSpec
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
   val agentARN = Arn("ABCDE123456")
+
+  val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
+    case MtdItId(_) => MtdItId("ABCDE1234567890")
+    case Vrn(_) => Vrn("101747641")
+    case Utr(_) => Utr("2134514321")
+  }
 
   "DesConnector GetRegistrationBusinessDetails" should {
 
@@ -320,54 +326,52 @@ class DesConnectorSpec
     }
   }
 
-  "DesConnector GetActiveClientItsaRelationships and GetActiveClientItsaRelationships" should {
-    val encodedClientIdMtdItId = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
-    val encodedClientIdVrn = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
+  "DesConnector GetActiveClientItsaRelationships and GetActiveClientVatRelationships" should {
 
     "return existing active relationships for specified clientId for ItSa service" in {
-      givenClientHasActiveAgentRelationshipForITSA(encodedClientIdMtdItId, agentARN.value)
+      getActiveRelationshipsViaClient(mtdItId, agentARN)
 
       val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Vat service" in {
-      givenClientHasActiveAgentRelationshipForVAT(encodedClientIdVrn, agentARN.value)
+      getActiveRelationshipsViaClient(vrn, agentARN)
 
       val result = await(desConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
     }
 
     "return None if DES returns 404 for ItSa service" in {
-      givenClientAgentRelationshipCheckForITSAFailsWith(encodedClientIdMtdItId, status = 404)
+      getActiveRelationshipFailsWith(mtdItId, status = 404)
 
       val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if DES returns 404 for Vat service" in {
-      givenClientAgentRelationshipCheckForVATFailsWith(encodedClientIdVrn, status = 404)
+      getActiveRelationshipFailsWith(vrn, status = 404)
 
       val result = await(desConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "return None if DES returns 400 for ItSa service" in {
-      givenClientAgentRelationshipCheckForITSAFailsWith(encodedClientIdMtdItId, status = 400)
+      getActiveRelationshipFailsWith(mtdItId, status = 400)
 
       val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if DES returns 400 for Vat service" in {
-      givenClientAgentRelationshipCheckForVATFailsWith(encodedClientIdVrn, status = 400)
+      getActiveRelationshipFailsWith(vrn, status = 400)
 
       val result = await(desConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "record metrics for GetStatusAgentRelationship for ItSa service" in {
-      givenClientHasActiveAgentRelationshipForITSA(encodedClientIdMtdItId, agentARN.value)
+      getActiveRelationshipsViaClient(mtdItId, agentARN)
 
       val result = await(desConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
@@ -375,7 +379,7 @@ class DesConnectorSpec
     }
 
     "record metrics for GetStatusAgentRelationship for Vat service" in {
-      givenClientHasActiveAgentRelationshipForVAT(encodedClientIdVrn, agentARN.value)
+      getActiveRelationshipsViaClient(vrn, agentARN)
 
       val result = await(desConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
@@ -387,31 +391,31 @@ class DesConnectorSpec
     val encodedArn = UriEncoding.encodePathSegment(agentARN.value, "UTF-8")
 
     "return existing inactive relationships for specified clientId for ItSa service" in {
-      getAgentInactiveRelationships(encodedArn, agentARN.value, "ITSA")
+      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId, "ITSA")
 
       val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result(0).referenceNumber shouldBe "ABCDE1234567890"
+      result(0).referenceNumber shouldBe otherTaxIdentifier(mtdItId).value
       result(1).arn shouldBe agentARN
       result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(1).dateTo shouldBe Some(LocalDate.now())
-      result(1).referenceNumber shouldBe "JKKL80894713304"
+      result(1).referenceNumber shouldBe mtdItId.value
     }
 
     "return existing inactive relationships for specified clientId for Vat service" in {
-      getAgentInactiveRelationships(encodedArn, agentARN.value, "VATC")
+      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn, "VATC")
 
       val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result(0).referenceNumber shouldBe "ABCDE1234567890"
+      result(0).referenceNumber shouldBe otherTaxIdentifier(vrn).value
       result(1).arn shouldBe agentARN
       result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(1).dateTo shouldBe Some(LocalDate.now())
-      result(1).referenceNumber shouldBe "JKKL80894713304"
+      result(1).referenceNumber shouldBe vrn.value
 
     }
 

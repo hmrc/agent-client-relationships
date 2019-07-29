@@ -20,7 +20,7 @@ import play.api.libs.json.JsObject
 import play.api.test.FakeRequest
 import uk.gov.hmrc.http.HttpResponse
 
-class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec {
+class RelationshipsControllerGetActiveISpec extends RelationshipsBaseControllerISpec {
 
   "GET /relationships/active" should {
 
@@ -35,8 +35,8 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with a map of active relationships when all exist for the same agent" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientHasActiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn.value)
-      givenClientHasActiveAgentRelationshipForVAT(vrnUriEncoded, arn.value)
+      getActiveRelationshipsViaClient(mtdItId, arn)
+      getActiveRelationshipsViaClient(vrn, arn)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -49,8 +49,9 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with a map of active relationships when all exist for different agents" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientHasActiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn2.value)
-      givenClientHasActiveAgentRelationshipForVAT(vrnUriEncoded, arn3.value)
+
+      getActiveRelationshipsViaClient(mtdItId, arn2)
+      getActiveRelationshipsViaClient(vrn, arn3)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -63,8 +64,8 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with a map of active relationships when only mtd-it is active" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientHasActiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn.value)
-      givenClientHasInactiveAgentRelationshipForVAT(vrnUriEncoded, arn3.value)
+      getActiveRelationshipsViaClient(mtdItId, arn)
+      getInactiveRelationshipViaClient(vrn, arn3.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -77,8 +78,8 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with a map of active relationships when only mtd-it exists" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientHasActiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn.value)
-      givenClientAgentRelationshipCheckForVATFailsWith(vrnUriEncoded, status = 404)
+      getActiveRelationshipsViaClient(mtdItId, arn)
+      getActiveRelationshipFailsWith(vrn, status = 404)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -91,8 +92,8 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with a map of active relationships when only vat is active" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientHasActiveAgentRelationshipForVAT(vrnUriEncoded, arn3.value)
-      givenClientHasInactiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn2.value)
+      getActiveRelationshipsViaClient(vrn, arn3)
+      getInactiveRelationshipViaClient(mtdItId, arn2.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -105,8 +106,8 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with a map of active relationships when only vat exists" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientHasActiveAgentRelationshipForVAT(vrnUriEncoded, arn.value)
-      givenClientAgentRelationshipCheckForITSAFailsWith(mtdItIdUriEncoded, status = 404)
+      getActiveRelationshipsViaClient(vrn, arn)
+      getActiveRelationshipFailsWith(mtdItId, status = 404)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -119,8 +120,8 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with an empty map of active relationships when all are inactive" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientHasInactiveAgentRelationshipForITSA(mtdItIdUriEncoded, arn2.value)
-      givenClientHasInactiveAgentRelationshipForVAT(vrnUriEncoded, arn3.value)
+      getInactiveRelationshipViaClient(mtdItId, arn2.value)
+      getInactiveRelationshipViaClient(vrn, arn3.value)
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -133,8 +134,8 @@ class RelationshipsControllerGetActiveISpec extends RelationshipsControllerISpec
     "return 200 with an empty map of active relationships when none exists" in {
       givenAuthorisedAsClient(req, mtdItId, vrn)
 
-      givenClientAgentRelationshipCheckForITSAFailsWith(mtdItIdUriEncoded, status = 404)
-      givenClientAgentRelationshipCheckForVATFailsWith(vrnUriEncoded, status = 404)
+      getActiveRelationshipFailsWith(mtdItId, status = 404)
+      getActiveRelationshipFailsWith(vrn, status = 404)
 
       val result = await(doRequest)
       result.status shouldBe 200

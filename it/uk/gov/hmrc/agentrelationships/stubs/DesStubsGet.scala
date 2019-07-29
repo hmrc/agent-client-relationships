@@ -2,16 +2,54 @@ package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.joda.time.LocalDate
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentrelationships.support.WireMockSupport
+import uk.gov.hmrc.domain.{TaxIdentifier}
 
 trait DesStubsGet {
 
-  def givenClientHasActiveAgentRelationshipForITSA(
-    encodedClientId: String,
-    agentArn: String,
-    service: String = "ITSA"): Unit =
+  me: WireMockSupport =>
+
+  // Via Client
+
+  val url: TaxIdentifier => String = {
+    case MtdItId(mtdItId) =>
+      s"/registration/relationship?ref-no=$mtdItId&agent=false&active-only=true&regime=ITSA"
+    case Vrn(vrn) =>
+      s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=true&regime=VATC"
+    case Utr(utr) =>
+      s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=true&regime=TRS"
+  }
+
+  def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn) = {
+    stubFor(get(urlEqualTo(url(taxIdentifier)))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(
+          s"""
+             |{
+             |"relationship" :[
+             |{
+             |  "referenceNumber" : "${taxIdentifier.value}",
+             |  "agentReferenceNumber" : "${arn.value}",
+             |  "organisation" : {
+             |    "organisationName": "someOrganisationName"
+             |  },
+             |  "dateFrom" : "2015-09-10",
+             |  "dateTo" : "9999-12-31",
+             |  "contractAccountCategory" : "01",
+             |  "activity" : "09"
+             |}
+             |]
+             |}""".stripMargin)))
+
+  }
+
+  def getInactiveRelationshipViaClient(taxIdentifier: TaxIdentifier,
+                                       agentArn: String): Unit =
     stubFor(
       get(
-        urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
+        urlEqualTo(url(taxIdentifier)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -19,26 +57,26 @@ trait DesStubsGet {
                          |{
                          |"relationship" :[
                          |{
-                         |  "referenceNumber" : "ABCDE1234567890",
+                         |  "referenceNumber" : "${taxIdentifier.value}",
                          |  "agentReferenceNumber" : "$agentArn",
                          |  "organisation" : {
                          |    "organisationName": "someOrganisationName"
                          |  },
                          |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "9999-12-31",
+                         |  "dateTo" : "2016-12-31",
                          |  "contractAccountCategory" : "01",
                          |  "activity" : "09"
                          |}
                          |]
                          |}""".stripMargin)))
 
-  def givenClientHasActiveAgentRelationshipForVAT(
-    encodedClientId: String,
-    agentArn: String,
-    service: String = "VATC"): Unit =
+  def getSomeActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier,
+                                          agentArn1: String,
+                                          agentArn2: String,
+                                          agentArn3: String): Unit =
     stubFor(
-      get(urlEqualTo(
-        s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
+      get(
+        urlEqualTo(url(taxIdentifier)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -46,41 +84,110 @@ trait DesStubsGet {
                          |{
                          |"relationship" :[
                          |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn",
+                         |  "referenceNumber" : "$taxIdentifier",
+                         |  "agentReferenceNumber" : "$agentArn1",
                          |  "organisation" : {
                          |    "organisationName": "someOrganisationName"
                          |  },
                          |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "9999-12-31",
+                         |  "dateTo" : "2015-12-31",
                          |  "contractAccountCategory" : "01",
+                         |  "activity" : "10"
+                         |},
+                         |{
+                         |  "referenceNumber" : "$taxIdentifier",
+                         |  "agentReferenceNumber" : "$agentArn2",
+                         |  "organisation" : {
+                         |    "organisationName": "sayOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "2016-12-31",
+                         |  "contractAccountCategory" : "02",
                          |  "activity" : "09"
+                         |},
+                         |{
+                         |  "referenceNumber" : "$taxIdentifier",
+                         |  "agentReferenceNumber" : "$agentArn3",
+                         |  "organisation" : {
+                         |    "organisationName": "noneOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2014-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "03",
+                         |  "activity" : "11"
                          |}
                          |]
                          |}""".stripMargin)))
 
-  def getAgentInactiveRelationships(encodedArn: String, agentArn: String, service: String = "ITSA"): Unit =
+  def getActiveRelationshipFailsWith(taxIdentifier: TaxIdentifier,
+                                     status: Int): Unit =
+    stubFor(
+      get(
+        urlEqualTo(url(taxIdentifier)))
+        .willReturn(aResponse()
+          .withStatus(status)))
+
+
+  //VIA Agent
+
+  val otherInactiveRelationship: TaxIdentifier => Arn => String = {
+    case MtdItId(clientId) => arn =>
+      s"""
+         |{
+         |  "referenceNumber" : "$clientId",
+         |  "agentReferenceNumber" : "${arn.value}",
+         |  "organisation" : {
+         |    "organisationName": "someOrganisationName"
+         |  },
+         |  "dateFrom" : "2015-09-10",
+         |  "dateTo" : "2015-09-21",
+         |  "contractAccountCategory" : "01",
+         |  "activity" : "09"
+         |}
+       """.stripMargin
+    case Vrn(clientId) => arn =>
+      s"""
+         |{
+         |  "referenceNumber" : "$clientId",
+         |  "agentReferenceNumber" : "${arn.value}",
+         |  "organisation" : {
+         |    "organisationName": "someOrganisationName"
+         |  },
+         |  "dateFrom" : "2015-09-10",
+         |  "dateTo" : "2015-09-21",
+         |  "contractAccountCategory" : "01",
+         |  "activity" : "09"
+         |}
+       """.stripMargin
+    case Utr(clientId) => arn =>
+      s"""
+         |{
+         |  "referenceNumber" : "$clientId",
+         |  "agentReferenceNumber" : "${arn.value}",
+         |  "organisation" : {
+         |    "organisationName": "someOrganisationName"
+         |  },
+         |  "dateFrom" : "2015-09-10",
+         |  "dateTo" : "2015-09-21",
+         |  "contractAccountCategory" : "01",
+         |  "activity" : "09"
+         |}
+       """.stripMargin
+  }
+
+  def getInactiveRelationshipsViaAgent(arn: Arn, otherTaxIdentifier: TaxIdentifier, taxIdentifier: TaxIdentifier,  regime: String): Unit = {
+
     stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"))
+      s"/registration/relationship?arn=${arn.value}&agent=true&active-only=false&regime=$regime&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""
                      |{
                      |"relationship" :[
+                     |${otherInactiveRelationship(otherTaxIdentifier)(arn)},
                      |{
-                     |  "referenceNumber" : "ABCDE1234567890",
-                     |  "agentReferenceNumber" : "$agentArn",
-                     |  "organisation" : {
-                     |    "organisationName": "someOrganisationName"
-                     |  },
-                     |  "dateFrom" : "2015-09-10",
-                     |  "dateTo" : "2015-09-21",
-                     |  "contractAccountCategory" : "01",
-                     |  "activity" : "09"
-                     |},
-                     |{
-                     |  "referenceNumber" : "JKKL80894713304",
-                     |  "agentReferenceNumber" : "$agentArn",
+                     |  "referenceNumber" : "${taxIdentifier.value}",
+                     |  "agentReferenceNumber" : "${arn.value}",
                      |  "organisation" : {
                      |    "organisationName": "someOrganisationName"
                      |  },
@@ -91,8 +198,9 @@ trait DesStubsGet {
                      |}
                      |]
                      |}""".stripMargin)))
+  }
 
-  def getAgentInactiveRelationshipsButActive(encodedArn: String, agentArn: String, service: String = "ITSA"): Unit =
+  def getAgentInactiveRelationshipsButActive(encodedArn: String, agentArn: String, clientId: String, service: String): Unit =
     stubFor(get(urlEqualTo(
       s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"))
       .willReturn(aResponse()
@@ -101,7 +209,7 @@ trait DesStubsGet {
                      |{
                      |"relationship" :[
                      |{
-                     |  "referenceNumber" : "ABCDE1234567890",
+                     |  "referenceNumber" : "$clientId",
                      |  "agentReferenceNumber" : "$agentArn",
                      |  "organisation" : {
                      |    "organisationName": "someOrganisationName"
@@ -114,17 +222,23 @@ trait DesStubsGet {
                      |]
                      |}""".stripMargin)))
 
-  def getAgentInactiveRelationshipsNoDateTo(encodedArn: String, agentArn: String, service: String = "ITSA"): Unit =
+  def getFailAgentInactiveRelationships(encodedArn: String, service: String, status: Int) =
     stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=1970-01-01&to=${LocalDate.now().toString}"))
+      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30)}&to=${LocalDate.now().toString}"))
+      .willReturn(aResponse()
+        .withStatus(status)))
+
+  def getAgentInactiveRelationshipsNoDateTo(arn: Arn, clientId: String, regime: String): Unit =
+    stubFor(get(urlEqualTo(
+      s"/registration/relationship?arn=${arn.value}&agent=true&active-only=false&regime=$regime&from=${LocalDate.now().minusDays(30)}&to=${LocalDate.now().toString}"))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""
                      |{
                      |"relationship" :[
                      |{
-                     |  "referenceNumber" : "ABCDE1234567890",
-                     |  "agentReferenceNumber" : "$agentArn",
+                     |  "referenceNumber" : "${clientId}",
+                     |  "agentReferenceNumber" : "${arn.value}",
                      |  "organisation" : {
                      |    "organisationName": "someOrganisationName"
                      |  },
@@ -134,186 +248,4 @@ trait DesStubsGet {
                      |}
                      |]
                      |}""".stripMargin)))
-
-  def givenClientHasInactiveAgentRelationshipForITSA(
-    encodedClientId: String,
-    agentArn: String,
-    service: String = "ITSA"): Unit =
-    stubFor(
-      get(
-        urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"relationship" :[
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn",
-                         |  "organisation" : {
-                         |    "organisationName": "someOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "2016-12-31",
-                         |  "contractAccountCategory" : "01",
-                         |  "activity" : "09"
-                         |}
-                         |]
-                         |}""".stripMargin)))
-
-  def givenClientHasInactiveAgentRelationshipForVAT(
-    encodedClientId: String,
-    agentArn: String,
-    service: String = "VATC"): Unit =
-    stubFor(
-      get(urlEqualTo(
-        s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"relationship" :[
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn",
-                         |  "organisation" : {
-                         |    "organisationName": "someOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "2016-12-31",
-                         |  "contractAccountCategory" : "01",
-                         |  "activity" : "09"
-                         |}
-                         |]
-                         |}""".stripMargin)))
-
-  def getClientActiveButSomeEndedAgentRelationshipsItSa(
-    encodedClientId: String,
-    agentArn1: String,
-    agentArn2: String,
-    agentArn3: String,
-    service: String = "ITSA"): Unit =
-    stubFor(
-      get(
-        urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"relationship" :[
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn1",
-                         |  "organisation" : {
-                         |    "organisationName": "someOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "2015-12-31",
-                         |  "contractAccountCategory" : "01",
-                         |  "activity" : "10"
-                         |},
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn2",
-                         |  "organisation" : {
-                         |    "organisationName": "sayOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "2016-12-31",
-                         |  "contractAccountCategory" : "02",
-                         |  "activity" : "09"
-                         |},
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn3",
-                         |  "organisation" : {
-                         |    "organisationName": "noneOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2014-09-10",
-                         |  "dateTo" : "9999-12-31",
-                         |  "contractAccountCategory" : "03",
-                         |  "activity" : "11"
-                         |}
-                         |]
-                         |}""".stripMargin)))
-
-  def getClientActiveButSomeEndedAgentRelationshipsVat(
-    encodedClientId: String,
-    agentArn1: String,
-    agentArn2: String,
-    agentArn3: String,
-    service: String = "VATC"): Unit =
-    stubFor(
-      get(urlEqualTo(
-        s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"relationship" :[
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn1",
-                         |  "organisation" : {
-                         |    "organisationName": "someOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "2015-12-31",
-                         |  "contractAccountCategory" : "01",
-                         |  "activity" : "10"
-                         |},
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn2",
-                         |  "organisation" : {
-                         |    "organisationName": "sayOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "2016-12-31",
-                         |  "contractAccountCategory" : "02",
-                         |  "activity" : "09"
-                         |},
-                         |{
-                         |  "referenceNumber" : "ABCDE1234567890",
-                         |  "agentReferenceNumber" : "$agentArn3",
-                         |  "organisation" : {
-                         |    "organisationName": "noneOrganisationName"
-                         |  },
-                         |  "dateFrom" : "2014-09-10",
-                         |  "dateTo" : "9999-12-31",
-                         |  "contractAccountCategory" : "03",
-                         |  "activity" : "11"
-                         |}
-                         |]
-                         |}""".stripMargin)))
-
-  def givenClientAgentRelationshipCheckForITSAFailsWith(
-    encodedClientId: String,
-    service: String = "ITSA",
-    status: Int): Unit =
-    stubFor(
-      get(
-        urlEqualTo(s"/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
-        .willReturn(aResponse()
-          .withStatus(status)))
-
-  def givenClientAgentRelationshipCheckForVATFailsWith(
-    encodedClientId: String,
-    service: String = "VATC",
-    status: Int): Unit =
-    stubFor(
-      get(urlEqualTo(
-        s"/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=$service"))
-        .willReturn(aResponse()
-          .withStatus(status)))
-
-  def getFailAgentInactiveRelationships(encodedArn: String, service: String, status: Int) =
-    stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn&agent=true&active-only=false&regime=$service&from=1970-01-01&to=${LocalDate.now().toString}"))
-      .willReturn(aResponse()
-        .withStatus(status)))
 }
