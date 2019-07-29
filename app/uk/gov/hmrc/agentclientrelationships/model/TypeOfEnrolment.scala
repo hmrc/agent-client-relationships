@@ -62,4 +62,5 @@ case class EnrolmentIdentifierValue(value: String) {
 
   def asMtdItId: MtdItId = MtdItId(value)
   def asVrn: Vrn = Vrn(value)
+  def asUtr: Utr = Utr(value)
 }

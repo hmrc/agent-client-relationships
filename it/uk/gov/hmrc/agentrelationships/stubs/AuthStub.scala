@@ -251,15 +251,9 @@ trait AuthStub {
     this
   }
 
-  def givenAuthorisedAsClientItSa[A](request: FakeRequest[A], mtdItId: String): FakeRequest[A] =
-    authenticated(request, Seq(Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId)), isAgent = false)
-
-  def givenAuthorisedAsClientVat[A](request: FakeRequest[A], vrn: String): FakeRequest[A] =
-    authenticated(request, Seq(Enrolment("HMRC-MTD-VAT", "VRN", vrn)), isAgent = false)
-
-  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn): FakeRequest[A] = {
+  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn, utr: Utr): FakeRequest[A] = {
     val enrolments =
-      Seq(Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value), Enrolment("HMRC-MTD-VAT", "VRN", vrn.value))
+      Seq(Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value), Enrolment("HMRC-MTD-VAT", "VRN", vrn.value), Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value))
 
     givenAuthorisedFor(
       s"""

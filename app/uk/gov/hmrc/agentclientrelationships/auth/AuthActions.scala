@@ -132,16 +132,17 @@ trait AuthActions extends AuthorisedFunctions {
     hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
-        val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = Seq(EnrolmentMtdIt, EnrolmentMtdVat)
-          .map(e => enrolments.getEnrolment(e.enrolmentKey))
-          .collect {
-            case Some(x) => x
-          }
-          .map(e => e.identifiers.headOption.map(i => (EnrolmentService(e.key), EnrolmentIdentifierValue(i.value))))
-          .collect({
-            case Some(x) => x
-          })
-          .toMap
+        val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =
+          Seq(EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentTrust)
+            .map(e => enrolments.getEnrolment(e.enrolmentKey))
+            .collect {
+              case Some(x) => x
+            }
+            .map(e => e.identifiers.headOption.map(i => (EnrolmentService(e.key), EnrolmentIdentifierValue(i.value))))
+            .collect({
+              case Some(x) => x
+            })
+            .toMap
 
         identifiers match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
