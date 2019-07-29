@@ -191,6 +191,8 @@ class RelationshipsController @Inject()(
   private def getTaxIdentifier(service: String, clientId: String) =
     if (service == "HMRC-MTD-IT" && MtdItId.isValid(clientId)) {
       MtdItId(clientId)
+    } else if (service == "HMRC-MTD-IT" && Nino.isValid(clientId)) {
+      Nino(clientId)
     } else if (service == "HMRC-MTD-VAT" && Vrn.isValid(clientId)) {
       Vrn(clientId)
     } else if (service == "HMRC-TERS-ORG" && clientId.matches(utrPattern.regex)) {
@@ -200,18 +202,12 @@ class RelationshipsController @Inject()(
 >>>>>>> PUT      /agent/:arn/service/:service/client/:clientIdType/:clientId
     }
 
-  def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)
-  def deleteItsaRelationshipByNino(arn: Arn, nino: Nino) = delete(arn, nino)
-  def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
-
-  def deleteTrustRelationship(arn: Arn, utr: Utr) = delete(arn, utr)
-
-  private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
-    AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request => implicit currentUser =>
+  def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    AuthorisedAgentOrClientOrStrideUser(arn, getTaxIdentifier(service, clientId), strideRoles) { implicit request => implicit currentUser =>
       (for {
-        id <- taxIdentifier match {
+        id <- getTaxIdentifier(service, clientId) match {
                case nino @ Nino(_) => des.getMtdIdFor(nino)
-               case _              => Future successful taxIdentifier
+               case _              => Future successful getTaxIdentifier(service, clientId)
              }
         _ <- deleteService.deleteRelationship(arn, id)
       } yield NoContent)
