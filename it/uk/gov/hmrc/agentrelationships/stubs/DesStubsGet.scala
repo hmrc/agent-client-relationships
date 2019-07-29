@@ -230,7 +230,7 @@ trait DesStubsGet {
 
   def getAgentInactiveRelationshipsNoDateTo(arn: Arn, clientId: String, regime: String): Unit =
     stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=${arn.value}&agent=true&active-only=false&regime=$regime&from=1970-01-01&to=${LocalDate.now().toString}"))
+      s"/registration/relationship?arn=${arn.value}&agent=true&active-only=false&regime=$regime&from=${LocalDate.now().minusDays(30)}&to=${LocalDate.now().toString}"))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""

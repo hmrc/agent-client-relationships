@@ -28,7 +28,7 @@ trait AuthStub {
             .withBody(s"""
                          |{
                          |"affinityGroup": "Individual",
-                         |"allEnrolments": [{
+                         |"authorisedEnrolments": [{
                          |  "key": "HMRC-MTD-IT",
                          |  "identifiers": [{
                          |			"key": "MTDITID",
@@ -68,7 +68,7 @@ trait AuthStub {
             .withBody(s"""
                          |{
                          |"affinityGroup": "Organisation",
-                         |"allEnrolments": [{
+                         |"authorisedEnrolments": [{
                          |  "key": "HMRC-TERS-ORG",
                          |  "identifiers": [{
                          |			"key": "SAUTR",
@@ -116,7 +116,7 @@ trait AuthStub {
   }
 
   //VIA Agent
-
+  //Applies to Endpoints that allow more than one different kind of user
   def givenUserIsSubscribedAgent(withThisArn: Arn, withThisGgUserId: String = "12345-credId"): AuthStub = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))

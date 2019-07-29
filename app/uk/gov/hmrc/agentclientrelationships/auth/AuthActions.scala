@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
-import play.api.Logger
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
@@ -81,63 +80,52 @@ trait AuthActions extends AuthorisedFunctions {
   def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean =
     strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
 
-  def determineService(enrolment: Enrolment): Either[Unit, TypeOfEnrolment] =
-    enrolment.key match {
-      case EnrolmentMtdIt.enrolmentKey  => Right(EnrolmentMtdIt)
-      case EnrolmentMtdVat.enrolmentKey => Right(EnrolmentMtdVat)
-      case EnrolmentTrust.enrolmentKey  => Right(EnrolmentTrust)
-      case EnrolmentNino.enrolmentKey   => Right(EnrolmentNino)
-      case e =>
-        Logger(getClass).warn(s"Unsupported service: $e")
-        Left()
-    }
-
-  def withAuthorisedAsClientRequest[A](service: String)(body: Request[AnyContent] => TaxIdentifier => Future[Result])(
-    implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc: HeaderCarrier =
-      HeaderCarrierConverter.fromHeadersAndSession(request.headers, Some(request.session))
-
-    authorised(Enrolment(service) and AuthProviders(GovernmentGateway)).retrieve(allEnrolments) { enrolments =>
-      enrolments.getEnrolment(service) match {
-        case Some(e) =>
-          determineService(e) match {
-            case Right(typeOfEnrolment) =>
-              val identifierString = e.getIdentifier(typeOfEnrolment.identifierKey)
-              identifierString.map(i => typeOfEnrolment.identifierForValue(i.value)) match {
-                case Some(id) => body(request)(id)
-                case _        => Future.successful(NoPermissionToPerformOperation)
-              }
-            case Left(_) => Future.successful(NoPermissionToPerformOperation)
-          }
-        case _ => Future.successful(NoPermissionToPerformOperation)
-      }
-    }
+  private val supportedIdentifierKeys: String => String = {
+    case EnrolmentMtdIt.enrolmentKey  => EnrolmentMtdIt.identifierKey
+    case EnrolmentMtdVat.enrolmentKey => EnrolmentMtdVat.identifierKey
+    case EnrolmentTrust.enrolmentKey  => EnrolmentTrust.identifierKey
   }
 
-  def AuthorisedAsItSaClient[A](implicit ec: ExecutionContext) = AuthorisedAsClient(EnrolmentMtdIt, MtdItId.apply) _
+  private def supportedEnrolments(enrolment: Enrolment): Option[Enrolment] =
+    enrolment.key match {
+      case EnrolmentMtdIt.enrolmentKey | EnrolmentMtdVat.enrolmentKey | EnrolmentTrust.enrolmentKey => Some(enrolment)
+      case _                                                                                        => None
+    }
 
-  def AuthorisedAsVatClient[A](implicit ec: ExecutionContext) = AuthorisedAsClient(EnrolmentMtdVat, Vrn.apply) _
+  private def extractIdentifier(enrolment: Enrolment, service: String) =
+    enrolment.getIdentifier(supportedIdentifierKeys(service)).map { i =>
+      i.key match {
+        case "MTDITID" => MtdItId(i.value)
+        case "VRN"     => Vrn(i.value)
+        case "SAUTR"   => Utr(i.value)
+      }
+    }
 
-  private def AuthorisedAsClient[A, T](enrolmentType: TypeOfEnrolment, wrap: String => T)(
-    body: Request[AnyContent] => T => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
+  def AuthorisedAsClient[A](service: String)(body: Request[AnyContent] => TaxIdentifier => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
 
-      authorised(Enrolment(enrolmentType.enrolmentKey) and AuthProviders(GovernmentGateway))
+      authorised(Enrolment(service) and AuthProviders(GovernmentGateway))
         .retrieve(authorisedEnrolments and affinityGroup) {
-          case enrolments ~ _ =>
-            val id = for {
-              enrolment  <- enrolments.getEnrolment(enrolmentType.enrolmentKey)
-              identifier <- enrolment.getIdentifier(enrolmentType.identifierKey)
-            } yield identifier.value
+          case enrolments ~ affinityG =>
+            affinityG match {
+              case Some(Individual) | Some(Organisation) =>
+                val id: Option[TaxIdentifier] = for {
+                  enrolment  <- enrolments.getEnrolment(service).flatMap(supportedEnrolments)
+                  identifier <- extractIdentifier(enrolment, service)
+                } yield identifier
 
-            id match {
-              case Some(x) => body(request)(wrap(x))
-              case _       => Future.successful(NoPermissionToPerformOperation)
+                id match {
+                  case Some(i) => body(request)(i)
+                  case _       => Future.successful(NoPermissionToPerformOperation)
+                }
+              case _ => Future.successful(NoPermissionToPerformOperation)
             }
         }
     }
 
+  //BTA Call
   def withAuthorisedAsClient[A, T](body: Map[EnrolmentService, EnrolmentIdentifierValue] => Future[Result])(
     implicit ec: ExecutionContext,
     request: Request[AnyContent],
@@ -190,7 +178,7 @@ trait AuthActions extends AuthorisedFunctions {
     authorised(
       Enrolment("HMRC-AS-AGENT")
         and AuthProviders(GovernmentGateway))
-      .retrieve(allEnrolments) { enrolments =>
+      .retrieve(authorisedEnrolments) { enrolments =>
         val id = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
         body(id)
       }

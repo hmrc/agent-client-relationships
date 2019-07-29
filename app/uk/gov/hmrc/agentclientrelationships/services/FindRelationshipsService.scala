@@ -52,7 +52,7 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
     taxIdentifier match {
       case MtdItId(_) | Vrn(_) | Utr(_) => des.getActiveClientRelationships(taxIdentifier)
       case e =>
-        Logger(getClass).warn(s"No Active Relationship found. Unsupported Identifier ${e.getClass.getSimpleName}")
+        Logger(getClass).warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
         Future.successful(None)
     }
 

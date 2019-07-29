@@ -1,6 +1,7 @@
 package uk.gov.hmrc.agentrelationships.controllers
 import org.joda.time.LocalDate
 import play.api.libs.json.JsValue
+import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
@@ -138,9 +139,10 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   def runInactiveRelationshipsScenario(testClient: TestClient) = {
     val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/${testClient.service}"
     def doRequest = doAgentGetRequest(requestPath)
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/relationships/inactive/service/${testClient.service}")
 
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
-      givenUserIsSubscribedAgent(arn)
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val otherId: TaxIdentifier = otherTaxIdentifier(testClient.clientId)
 
@@ -161,9 +163,10 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   def runInactiveRelationshipsErrorScenario(testClient: TestClient) = {
     val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/${testClient.service}"
     def doRequest = doAgentGetRequest(requestPath)
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/relationships/inactive/service/${testClient.service}")
 
     s"find relationship but filter out if the relationship is still active for ${testClient.service}" in {
-      givenUserIsSubscribedAgent(arn)
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, testClient.clientId.value, testClient.regime)
 
@@ -172,7 +175,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
 
     s"return 404 when DES returns not found for ${testClient.service}" in {
-      givenUserIsSubscribedAgent(arn)
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       getFailAgentInactiveRelationships(arnEncoded, testClient.regime, 404)
 
@@ -181,16 +184,16 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
 
     s"find relationships and filter out relationships that have no dateTo ${testClient.service}"  in {
-      givenUserIsSubscribedAgent(arn)
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      getAgentInactiveRelationshipsNoDateTo(arn, testClient.clientId.value, testClient.service)
+      getAgentInactiveRelationshipsNoDateTo(arn, testClient.clientId.value, testClient.regime)
 
       val result = await(doRequest)
       result.status shouldBe 404
     }
 
     s"return 404 when DES returns 400 for ${testClient.service}" in {
-      givenUserIsSubscribedAgent(arn)
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       getFailAgentInactiveRelationships(arnEncoded, testClient.regime, 400)
 
