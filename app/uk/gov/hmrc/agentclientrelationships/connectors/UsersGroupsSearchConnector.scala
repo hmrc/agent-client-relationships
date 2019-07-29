@@ -35,6 +35,12 @@ object GroupInfo {
   implicit val formats: Format[GroupInfo] = Json.format[GroupInfo]
 }
 
+case class CredentialRole(credentialRole: String)
+
+object CredentialRole {
+  implicit val formats: Format[CredentialRole] = Json.format
+}
+
 @Singleton
 class UsersGroupsSearchConnector @Inject()(
   @Named("users-groups-search-baseUrl") baseUrl: URL,
@@ -51,4 +57,18 @@ class UsersGroupsSearchConnector @Inject()(
       case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_AGENT_CODE")
     }
   }
+
+  def isAdmin(userId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
+    val url = new URL(baseUrl, s"users-groups-search/users/$userId")
+    monitor("ConsumedAPI-UGS-getUserInfo-GET") {
+      httpGet.GET[CredentialRole](url.toString).map(_.credentialRole == "Admin")
+    } recoverWith {
+      case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_USER_ID")
+    }
+  }
+
+  def getAdminUser(userIds: Seq[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] =
+    for {
+      admins <- Future.sequence(userIds.map(userId => isAdmin(userId).map(isAdminUser => (userId, isAdminUser))))
+    } yield admins.filter(_._2).map(_._1).head
 }

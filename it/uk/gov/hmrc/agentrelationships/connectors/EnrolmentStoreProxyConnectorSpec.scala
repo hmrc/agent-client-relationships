@@ -106,42 +106,42 @@ class EnrolmentStoreProxyConnectorSpec
     "return some clients userId for given MTDITID" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(MtdItId("foo"), "bar")
-      await(connector.getPrincipalUserIdFor(MtdItId("foo"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdsFor(MtdItId("foo"))) shouldBe "bar"
     }
 
     "return RelationshipNotFound Exception when MTDITID not found" in {
       givenAuditConnector()
       givenPrincipalUserIdNotExistFor(MtdItId("foo"))
       an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdFor(MtdItId("foo")))
+        await(connector.getPrincipalUserIdsFor(MtdItId("foo")))
       }
     }
 
     "return some clients userId for given NINO" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(Nino("AB123456C"), "bar")
-      await(connector.getPrincipalUserIdFor(Nino("AB123456C"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdsFor(Nino("AB123456C"))) shouldBe "bar"
     }
 
     "return RelationshipNotFound Exception when NINO not found" in {
       givenAuditConnector()
       givenPrincipalUserIdNotExistFor(Nino("AB123456C"))
       an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdFor(Nino("AB123456C")))
+        await(connector.getPrincipalUserIdsFor(Nino("AB123456C")))
       }
     }
 
     "return some clients userId for given VRN" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(Vrn("foo"), "bar")
-      await(connector.getPrincipalUserIdFor(Vrn("foo"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdsFor(Vrn("foo"))) shouldBe "bar"
     }
 
     "return RelationshipNotFound Exception when VRN not found" in {
       givenAuditConnector()
       givenPrincipalUserIdNotExistFor(Vrn("foo"))
       an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdFor(Vrn("foo")))
+        await(connector.getPrincipalUserIdsFor(Vrn("foo")))
       }
     }
 
