@@ -49,7 +49,8 @@ class RelationshipsController @Inject()(
   ecp: Provider[ExecutionContext],
   @Named("old.auth.stride.role") oldStrideRole: String,
   @Named("new.auth.stride.role") newStrideRole: String)
-    extends BaseController with AuthActions {
+    extends BaseController
+    with AuthActions {
 
   private val strideRoles = Seq(oldStrideRole, newStrideRole)
 
@@ -146,15 +147,16 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def createForMtdIt(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
-  def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
-  def createForTrust(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
+  def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    AuthorisedAgentOrClientOrStrideUser(arn, getTaxIdentifier(service, clientId), strideRoles) {
+      implicit request => _ =>
+        implicit val auditData: AuditData = new AuditData()
+        auditData.set("arn", arn)
 
-  private def create(arn: Arn, identifier: TaxIdentifier) =
-    AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRoles) { implicit request => _ =>
-      implicit val auditData: AuditData = new AuditData()
-      auditData.set("arn", arn)
+        println(s"clientId is $clientId")
+        Logger.error(s"clientId is $clientId")
 
+<<<<<<< HEAD
       (for {
         agentUser <- agentUserService.getAgentAdminUserFor(arn)
         _         <- createService.createRelationship(arn, identifier, Future.successful(agentUser), Set(), false, true)
@@ -166,6 +168,36 @@ class RelationshipsController @Inject()(
             Logger(getClass).warn("Could not create relationship", ex)
             NotFound(toJson(ex.getMessage))
         }
+=======
+        (for {
+          agentUser <- agentUserService.getAgentUserFor(arn)
+          _ <- createService.createRelationship(
+                arn,
+                getTaxIdentifier(service, clientId),
+                Future.successful(agentUser),
+                Set(),
+                false,
+                true)
+        } yield ())
+          .map(_ => Created)
+          .recover {
+            case upS: Upstream5xxResponse => throw upS
+            case NonFatal(ex) =>
+              Logger(getClass).warn("Could not create relationship", ex)
+              NotFound(toJson(ex.getMessage))
+          }
+    }
+
+  private def getTaxIdentifier(service: String, clientId: String) =
+    if (service == "HMRC-MTD-IT" && MtdItId.isValid(clientId)) {
+      MtdItId(clientId)
+    } else if (service == "HMRC-MTD-VAT" && Vrn.isValid(clientId)) {
+      Vrn(clientId)
+    } else if (service == "HMRC-TERS-ORG" && clientId.matches(utrPattern.regex)) {
+      Utr(clientId)
+    } else {
+      throw new RuntimeException("")
+>>>>>>> PUT      /agent/:arn/service/:service/client/:clientIdType/:clientId
     }
 
   def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)

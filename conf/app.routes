@@ -1,17 +1,15 @@
 
-GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String, taxIdentifier: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
+GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
+PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.create(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
 
 # MTD-IT relationship
-PUT           /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForMtdIt(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
 DELETE        /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteItsaRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
 DELETE        /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteItsaRelationshipByNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
 
 # MTD-VAT relationship
-PUT           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 DELETE        /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteVatRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
 
 # TRUST relationship
-PUT           /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForTrust(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
 DELETE        /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteTrustRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
 
 # List existing relationships of the current client
