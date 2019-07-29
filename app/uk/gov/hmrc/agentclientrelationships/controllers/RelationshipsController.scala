@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Named, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, Request}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
@@ -49,73 +49,84 @@ class RelationshipsController @Inject()(
   ecp: Provider[ExecutionContext],
   @Named("old.auth.stride.role") oldStrideRole: String,
   @Named("new.auth.stride.role") newStrideRole: String)
-    extends BaseController
-    with AuthActions {
+    extends BaseController with AuthActions {
 
   private val strideRoles = Seq(oldStrideRole, newStrideRole)
 
   implicit val ec: ExecutionContext = ecp.get
 
-  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
-  def checkWithMtdVat(arn: Arn, vrn: Vrn): Action[AnyContent] = checkWithTaxIdentifier(arn, vrn)
+  private val utrPattern = "^\\d{10}$".r
 
-  def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
-    des.getMtdIdFor(nino).flatMap(checkWithTaxIdentifier(arn, _)(request))
+  def checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      if (service == "HMRC-MTD-IT" && MtdItId.isValid(clientId)) {
+        checkWithTaxIdentifier(arn, MtdItId(clientId))
+      } else if (service == "HMCE-VATDEC-ORG" && Vrn.isValid(clientId)) {
+        checkWithVrn(arn, Vrn(clientId))
+      } else if (service == "HMRC-MTD-VAT" && Vrn.isValid(clientId)) {
+        checkWithTaxIdentifier(arn, Vrn(clientId))
+      } else if (service == "HMRC-MTD-IT" && Nino.isValid(clientId)) {
+        des.getMtdIdFor(Nino(clientId)).flatMap(checkWithTaxIdentifier(arn, _))
+      } else if (service == "IR-SA" && Nino.isValid(clientId)) {
+        checkLegacyWithNino(arn, Nino(clientId))
+      } else if (service == "HMRC-TERS-ORG" && clientId.matches(utrPattern.regex)) {
+        checkWithTaxIdentifier(arn, Utr(clientId))
+      } else {
+        Logger.warn(
+          s"bad service and clientId combination for checking relationship, service: $service, clientId: $clientId")
+        Future.successful(BadRequest)
+      }
+    }
+
+  private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier)(implicit request: Request[_]) = {
+    implicit val auditData: AuditData = new AuditData()
+    auditData.set("arn", arn)
+
+    val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
+
+    val result = for {
+      agentUser <- agentUserFuture
+      isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
+      result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
+               else raiseError(RelationshipDeletePending())
+    } yield result
+
+    result
+      .recoverWith {
+        case RelationshipNotFound(errorCode) =>
+          checkOldAndCopyService
+            .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
+            .map {
+              case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled =>
+                Left(errorCode)
+              case cesaResult =>
+                Right(cesaResult.grantAccess)
+            }
+            .recover {
+              case upS: Upstream5xxResponse =>
+                throw upS
+              case NonFatal(ex) =>
+                Logger(getClass).warn(
+                  s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
+                  ex)
+                Left(errorCode)
+            }
+        case e @ RelationshipDeletePending() =>
+          Logger(getClass).warn("Denied access because relationship removal is pending.")
+          Future.successful(Left(e.getMessage))
+
+        case e: AdminNotFound =>
+          Logger(getClass).warn("Denied access because no admin users are found")
+          Future.successful(Left(e.getMessage))
+      }
+      .map {
+        case Left(errorCode) => NotFound(toJson(errorCode))
+        case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+        case Right(true)     => Ok
+      }
   }
 
-  def checkWithTrust(arn: Arn, utr: Utr): Action[AnyContent] = checkWithTaxIdentifier(arn, utr)
-
-  //noinspection ScalaStyle
-  private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = Action.async {
-    implicit request =>
-      implicit val auditData: AuditData = new AuditData()
-      auditData.set("arn", arn)
-
-      val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
-
-      val result = for {
-        agentUser <- agentUserFuture
-        isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
-        result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
-                 else raiseError(RelationshipDeletePending())
-      } yield result
-
-      result
-        .recoverWith {
-          case RelationshipNotFound(errorCode) =>
-            checkOldAndCopyService
-              .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
-              .map {
-                case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled =>
-                  Left(errorCode)
-                case cesaResult =>
-                  Right(cesaResult.grantAccess)
-              }
-              .recover {
-                case upS: Upstream5xxResponse =>
-                  throw upS
-                case NonFatal(ex) =>
-                  Logger(getClass).warn(
-                    s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
-                    ex)
-                  Left(errorCode)
-              }
-          case e @ RelationshipDeletePending() =>
-            Logger(getClass).warn("Denied access because relationship removal is pending.")
-            Future.successful(Left(e.getMessage))
-
-          case e: AdminNotFound =>
-            Logger(getClass).warn("Denied access because no admin users are found")
-            Future.successful(Left(e.getMessage))
-        }
-        .map {
-          case Left(errorCode) => NotFound(toJson(errorCode))
-          case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-          case Right(true)     => Ok
-        }
-  }
-
-  def checkLegacyWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
+  private def checkLegacyWithNino(arn: Arn, nino: Nino)(implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
@@ -180,7 +191,7 @@ class RelationshipsController @Inject()(
         }
     }
 
-  def checkWithVrn(arn: Arn, vrn: Vrn): Action[AnyContent] = Action.async { implicit request =>
+  private def checkWithVrn(arn: Arn, vrn: Vrn)(implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
