@@ -1,13 +1,12 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, stubFor, urlEqualTo}
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, UsersGroupsSearchStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
@@ -20,7 +19,8 @@ class UsersGroupsSearchConnectorSpec
     with OneServerPerSuite
     with WireMockSupport
     with DataStreamStub
-    with MetricTestSupport {
+    with MetricTestSupport
+    with UsersGroupsSearchStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -42,60 +42,70 @@ class UsersGroupsSearchConnectorSpec
 
   "UsersGroupsSearchConnector" should {
 
-    "return some agentCode for a given agent's groupId" in {
-      givenAuditConnector()
-      givenAgentGroupExistsFor("foo")
-      await(connector.getGroupInfo("foo")) shouldBe GroupInfo("foo", Some("Agent"), Some(AgentCode("NQJUEJCWT14")))
+    "givenGroupInfo endpoint" should {
+
+      "return some agentCode for a given agent's groupId" in {
+        givenAuditConnector()
+        givenAgentGroupExistsFor("foo")
+        await(connector.getGroupInfo("foo")) shouldBe GroupInfo("foo", Some("Agent"), Some(AgentCode("NQJUEJCWT14")))
+      }
+
+      "return none agentCode for a given non-agent groupId" in {
+        givenAuditConnector()
+        givenNonAgentGroupExistsFor("foo")
+        await(connector.getGroupInfo("foo")) shouldBe GroupInfo("foo", Some("Organisation"), None)
+      }
+
+      "throw exception if group not exists" in {
+        givenAuditConnector()
+        givenGroupNotExistsFor("foo")
+        an[RelationshipNotFound] shouldBe thrownBy {
+          await(connector.getGroupInfo("foo"))
+        }
+      }
     }
 
-    "return none agentCode for a given non-agent groupId" in {
-      givenAuditConnector()
-      givenNonAgentGroupExistsFor("foo")
-      await(connector.getGroupInfo("foo")) shouldBe GroupInfo("foo", Some("Organisation"), None)
+    "isAdmin endpoint" should {
+      "return true if the user is an admin" in {
+        givenAuditConnector()
+        givenUserIdIsAdmin("userId")
+        await(connector.isAdmin("userId")) shouldBe true
+      }
+
+      "return false if the user is not an admin" in {
+        givenAuditConnector()
+        givenUserIdIsNotAdmin("userId")
+        await(connector.isAdmin("userId")) shouldBe false
+      }
+
+      "return false if the user does not exist" in {
+        givenAuditConnector()
+        givenUserIdNotExistsFor("userId")
+        await(connector.isAdmin("userId")) shouldBe false
+      }
     }
 
-    "throw exception if group not exists" in {
-      givenAuditConnector()
-      givenGroupNotExistsFor("foo")
-      an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getGroupInfo("foo"))
+    "getAdminUser" should {
+      "return the first user id that is an admin" in {
+        givenUserIdIsNotAdmin("userId-1")
+        givenUserIdIsAdmin("userId-2")
+        givenUserIdIsAdmin("userId-3")
+
+        await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
+      }
+
+      "throw a AdminNotFound if there is no admin user in the group of user ids" in {
+        givenUserIdIsNotAdmin("userId-1")
+        givenUserIdIsNotAdmin("userId-2")
+        givenUserIdIsNotAdmin("userId-3")
+
+        intercept[AdminNotFound] {
+          await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
+        }.getMessage shouldBe "NO_ADMIN_USER"
       }
     }
   }
 
-  def givenAgentGroupExistsFor(groupId: String): Unit =
-    stubFor(
-      get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
-        .willReturn(aResponse()
-          .withBody(s"""
-                       |{
-                       |  "_links": [
-                       |    { "rel": "users", "link": "/groups/$groupId/users" }
-                       |  ],
-                       |  "groupId": "foo",
-                       |  "affinityGroup": "Agent",
-                       |  "agentCode": "NQJUEJCWT14",
-                       |  "agentFriendlyName": "JoeBloggs"
-                       |}
-          """.stripMargin)))
 
-  def givenNonAgentGroupExistsFor(groupId: String): Unit =
-    stubFor(
-      get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
-        .willReturn(aResponse()
-          .withBody(s"""
-                       |{
-                       |  "_links": [
-                       |    { "rel": "users", "link": "/groups/$groupId/users" }
-                       |  ],
-                       |  "groupId": "foo",
-                       |  "affinityGroup": "Organisation"
-                       |}
-          """.stripMargin)))
-
-  def givenGroupNotExistsFor(groupId: String) =
-    stubFor(
-      get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
-        .willReturn(aResponse().withStatus(404)))
 
 }

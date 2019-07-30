@@ -49,6 +49,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
 
@@ -78,6 +79,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenDelegatedGroupIdsExistFor(mtdItId, Set("foo"))
       givenNinoIsUnknownFor(mtdItId)
       givenClientIsUnknownInCESAFor(nino)
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -88,6 +90,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+      givenUserIdIsAdmin("any")
 
       await(
         deleteRecordRepository.create(
@@ -106,6 +109,28 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       await(deleteRecordRepository.remove(arn, mtdItId))
     }
 
+    "return 404 when admin is not found" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenUserIdIsNotAdmin("any")
+
+      await(
+        deleteRecordRepository.create(
+          DeleteRecord(
+            arn.value,
+            mtdItId.value,
+            "MTDITID",
+            DateTime.now(DateTimeZone.UTC),
+            Some(SyncStatus.Success),
+            Some(SyncStatus.Failed))))
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "NO_ADMIN_USER"
+
+      await(deleteRecordRepository.remove(arn, mtdItId))
+    }
+
     //CESA CHECK UNHAPPY PATHS
 
     "return 404 when agent not allocated to client in es nor identifier not found in des" in {
@@ -114,6 +139,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenDelegatedGroupIdsNotExistFor(mtdItId)
       givenNinoIsUnknownFor(mtdItId)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -126,6 +152,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenDelegatedGroupIdsNotExistFor(mtdItId)
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -139,6 +166,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenArnIsUnknownFor(arn)
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -213,6 +241,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
@@ -335,6 +364,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
@@ -401,6 +431,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanNotBeAllocatedInDes(status = 404)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
@@ -431,6 +462,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
@@ -488,6 +520,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenUserIdIsAdmin("any")
 
       await(repo.insert(relationshipCopiedSuccessfully))
       val result = await(doRequest)
@@ -500,6 +533,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenUserIdIsAdmin("any")
 
       givenNinoIsKnownFor(mtdItId, nino)
       givenMtdItIdIsKnownFor(nino, mtdItId)
@@ -531,6 +565,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenServiceReturnsServiceUnavailable()
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 502
@@ -550,6 +585,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -560,6 +596,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -729,6 +766,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -798,6 +836,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -826,6 +865,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -852,6 +892,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -880,6 +921,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -908,6 +950,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1122,6 +1165,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1151,6 +1195,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1180,6 +1225,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1207,6 +1253,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1236,6 +1283,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1265,6 +1313,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1458,6 +1507,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       givenEnrolmentDeallocationSucceeds("bar", mtdItId)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+      givenUserIdIsAdmin("any")
     }
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in new StubsForThisScenario {
@@ -1508,6 +1558,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -1553,6 +1604,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         identifier = "MTDITID",
         value = mtdItId.value,
         agentCode = "bar")
+      givenUserIdIsAdmin("user1")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -1565,6 +1617,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenDesReturnsServiceUnavailable()
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -1577,6 +1630,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 404

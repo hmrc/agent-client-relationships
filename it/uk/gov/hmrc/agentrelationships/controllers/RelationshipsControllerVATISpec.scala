@@ -49,6 +49,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -77,6 +78,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenGroupInfoNotExists("foo")
       givenDelegatedGroupIdsExistFor(vrn, Set("foo"))
       givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -149,6 +151,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -263,6 +266,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -325,6 +329,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanNotBeAllocatedInDes(status = 404)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -352,6 +357,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -407,6 +413,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenUserIdIsAdmin("any")
 
       await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
       val result = await(doRequest)
@@ -421,7 +428,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
-
+      givenUserIdIsAdmin("any")
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
 
@@ -446,6 +453,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenServiceReturnsServiceUnavailable()
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 502
@@ -561,6 +569,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
         givenEnrolmentDeallocationSucceeds("foo", vrn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -588,6 +597,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
         givenEnrolmentDeallocationSucceeds("foo", vrn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -615,6 +625,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentCanBeDeallocatedInDes(vrn, arn)
         givenEnrolmentDeallocationSucceeds("foo", vrn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -640,6 +651,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenAgentCanBeDeallocatedInDes(vrn, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -667,6 +679,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenAgentHasNoActiveRelationshipInDes(vrn, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -694,6 +707,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
         givenAgentHasNoActiveRelationshipInDes(vrn, arn)
         givenEnrolmentDeallocationSucceeds("foo", vrn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -874,6 +888,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenEnrolmentDeallocationSucceeds("foo", vrn)
       givenEnrolmentDeallocationSucceeds("bar", vrn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -886,6 +901,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -902,6 +918,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenEnrolmentDeallocationSucceeds("foo", vrn)
       givenEnrolmentDeallocationSucceeds("bar", vrn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -914,6 +931,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -941,6 +959,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdRequestFailsWith(503)
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -952,6 +971,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenUserIdIsAdmin("user1")
 
       givenEnrolmentAllocationFailsWith(503)(
         groupId = "foo",
@@ -972,6 +992,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenDesReturnsServiceUnavailable()
+      givenUserIdIsAdmin("user1")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -984,6 +1005,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenUserIdIsAdmin("user1")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 404

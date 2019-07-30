@@ -109,6 +109,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
+      givenUserIdIsAdmin("any")
 
       def query =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
@@ -169,6 +170,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
+      givenUserIdIsAdmin("any")
 
       def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
 

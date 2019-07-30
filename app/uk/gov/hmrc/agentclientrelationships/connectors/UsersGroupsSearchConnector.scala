@@ -17,13 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http._
 
@@ -33,6 +33,12 @@ case class GroupInfo(groupId: String, affinityGroup: Option[String], agentCode: 
 
 object GroupInfo {
   implicit val formats: Format[GroupInfo] = Json.format[GroupInfo]
+}
+
+case class CredentialRole(credentialRole: String)
+
+object CredentialRole {
+  implicit val formats: Format[CredentialRole] = Json.format
 }
 
 @Singleton
@@ -51,4 +57,18 @@ class UsersGroupsSearchConnector @Inject()(
       case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_AGENT_CODE")
     }
   }
+
+  def isAdmin(userId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
+    val url = new URL(baseUrl, s"users-groups-search/users/$userId")
+    monitor("ConsumedAPI-UGS-getUserInfo-GET") {
+      httpGet.GET[CredentialRole](url.toString).map(_.credentialRole == "Admin")
+    } recoverWith {
+      case _: NotFoundException => Future successful false
+    }
+  }
+
+  def getAdminUserId(userIds: Seq[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] =
+    for {
+      admins <- Future.sequence(userIds.map(userId => isAdmin(userId).map(isAdminUser => (userId, isAdminUser))))
+    } yield admins.filter(_._2).map(_._1).headOption.getOrElse(throw AdminNotFound("NO_ADMIN_USER"))
 }

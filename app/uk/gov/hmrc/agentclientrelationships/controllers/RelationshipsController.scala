@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentclientrelationships.support.{RelationshipDeletePending, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -71,7 +71,7 @@ class RelationshipsController @Inject()(
       implicit val auditData: AuditData = new AuditData()
       auditData.set("arn", arn)
 
-      val agentUserFuture = agentUserService.getAgentUserFor(arn)
+      val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
 
       val result = for {
         agentUser <- agentUserFuture
@@ -102,6 +102,10 @@ class RelationshipsController @Inject()(
               }
           case e @ RelationshipDeletePending() =>
             Logger(getClass).warn("Denied access because relationship removal is pending.")
+            Future.successful(Left(e.getMessage))
+
+          case e: AdminNotFound =>
+            Logger(getClass).warn("Denied access because no admin users are found")
             Future.successful(Left(e.getMessage))
         }
         .map {
@@ -141,7 +145,7 @@ class RelationshipsController @Inject()(
       auditData.set("arn", arn)
 
       (for {
-        agentUser <- agentUserService.getAgentUserFor(arn)
+        agentUser <- agentUserService.getAgentAdminUserFor(arn)
         _         <- createService.createRelationship(arn, identifier, Future.successful(agentUser), Set(), false, true)
       } yield ())
         .map(_ => Created)

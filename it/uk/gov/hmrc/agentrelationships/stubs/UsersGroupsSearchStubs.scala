@@ -32,4 +32,71 @@ trait UsersGroupsSearchStubs extends TaxIdentifierSupport {
       get(urlContains(s"$ugsBaseUrl/groups/"))
         .willReturn(aResponse().withStatus(status)))
 
+  def givenAgentGroupExistsFor(groupId: String): Unit =
+    stubFor(
+      get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
+        .willReturn(aResponse()
+          .withBody(s"""
+                       |{
+                       |  "_links": [
+                       |    { "rel": "users", "link": "/groups/$groupId/users" }
+                       |  ],
+                       |  "groupId": "foo",
+                       |  "affinityGroup": "Agent",
+                       |  "agentCode": "NQJUEJCWT14",
+                       |  "agentFriendlyName": "JoeBloggs"
+                       |}
+          """.stripMargin)))
+
+  def givenNonAgentGroupExistsFor(groupId: String): Unit =
+    stubFor(
+      get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
+        .willReturn(aResponse()
+          .withBody(s"""
+                       |{
+                       |  "_links": [
+                       |    { "rel": "users", "link": "/groups/$groupId/users" }
+                       |  ],
+                       |  "groupId": "foo",
+                       |  "affinityGroup": "Organisation"
+                       |}
+          """.stripMargin)))
+
+  def givenGroupNotExistsFor(groupId: String) =
+    stubFor(
+      get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
+        .willReturn(aResponse().withStatus(404)))
+
+  def givenUserIdIsAdmin(userId: String) =
+    stubFor(
+      get(urlEqualTo(s"/users-groups-search/users/$userId"))
+        .willReturn(aResponse()
+        .withBody(
+          s"""{
+             |"userId": "$userId",
+             |"credentialRole": "Admin"
+             |}
+             |""".stripMargin))
+    )
+
+  def givenUserIdIsNotAdmin(userId: String) =
+    stubFor(
+      get(urlEqualTo(s"/users-groups-search/users/$userId"))
+        .willReturn(aResponse()
+          .withBody(
+            s"""{
+               |"userId": "$userId",
+               |"credentialRole": "Assistant"
+               |}
+               |""".stripMargin))
+    )
+
+  def givenUserIdNotExistsFor(userId: String) =
+    stubFor(
+      get(urlEqualTo(s"/users-groups-search/users/$userId"))
+        .willReturn(aResponse().withStatus(404))
+    )
+
+
+
 }
