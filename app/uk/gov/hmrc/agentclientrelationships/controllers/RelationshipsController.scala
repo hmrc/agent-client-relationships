@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound, UserNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -106,10 +106,6 @@ class RelationshipsController @Inject()(
 
           case e: AdminNotFound =>
             Logger(getClass).warn("Denied access because no admin users are found")
-            Future.successful(Left(e.getMessage))
-
-          case e: UserNotFound =>
-            Logger(getClass).warn("Denied access because no user found")
             Future.successful(Left(e.getMessage))
         }
         .map {

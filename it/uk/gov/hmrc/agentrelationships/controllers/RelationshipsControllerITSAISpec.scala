@@ -131,28 +131,6 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       await(deleteRecordRepository.remove(arn, mtdItId))
     }
 
-    "return 404 when the user id is unknown" in {
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenUserIdNotExistsFor("any")
-
-      await(
-        deleteRecordRepository.create(
-          DeleteRecord(
-            arn.value,
-            mtdItId.value,
-            "MTDITID",
-            DateTime.now(DateTimeZone.UTC),
-            Some(SyncStatus.Success),
-            Some(SyncStatus.Failed))))
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_USER_ID"
-
-      await(deleteRecordRepository.remove(arn, mtdItId))
-    }
-
     //CESA CHECK UNHAPPY PATHS
 
     "return 404 when agent not allocated to client in es nor identifier not found in des" in {

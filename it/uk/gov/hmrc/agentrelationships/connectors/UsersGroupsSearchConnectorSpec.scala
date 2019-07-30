@@ -5,7 +5,7 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound, UserNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, UsersGroupsSearchStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.AgentCode
@@ -78,12 +78,10 @@ class UsersGroupsSearchConnectorSpec
         await(connector.isAdmin("userId")) shouldBe false
       }
 
-      "throw an exception if the user does not exist" in {
+      "return false if the user does not exist" in {
         givenAuditConnector()
         givenUserIdNotExistsFor("userId")
-        intercept[UserNotFound] {
-          await(connector.isAdmin("userId"))
-        }
+        await(connector.isAdmin("userId")) shouldBe false
       }
     }
 
@@ -104,16 +102,6 @@ class UsersGroupsSearchConnectorSpec
         intercept[AdminNotFound] {
           await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
         }.getMessage shouldBe "NO_ADMIN_USER"
-      }
-
-      "throw a UserNotFound exception is there is no user found for the user id" in {
-        givenUserIdNotExistsFor("userId-1")
-        givenUserIdIsNotAdmin("userId-2")
-        givenUserIdIsNotAdmin("userId-3")
-
-        intercept[UserNotFound] {
-          await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
-        }.getMessage shouldBe "UNKNOWN_USER_ID"
       }
     }
   }
