@@ -222,7 +222,7 @@ class RelationshipsController @Inject()(
 
   def getVatRelationshipsByVrn(vrn: Vrn): Action[AnyContent] = AuthorisedWithStride(oldStrideRole, newStrideRole) {
     implicit request => _ =>
-      findService.getVatRelationshipForClient(vrn).map {
+      findService.getActiveRelationships(vrn).map {
         case Some(relationship) => Ok(Json.toJson(relationship))
         case None               => NotFound
       }

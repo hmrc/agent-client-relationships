@@ -32,19 +32,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics) extends Monitoring {
 
   def getItsaRelationshipForClient(
-    clientId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
-    des.getActiveClientRelationships(clientId)
-
-  def getItsaRelationshipForClient(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     for {
       mtdItId       <- des.getMtdIdFor(nino)
       relationships <- des.getActiveClientRelationships(mtdItId)
     } yield relationships
-
-  def getVatRelationshipForClient(
-    clientId: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
-    des.getActiveClientRelationships(clientId)
 
   def getActiveRelationships(taxIdentifier: TaxIdentifier)(
     implicit hc: HeaderCarrier,
@@ -69,12 +61,17 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
         Seq(
           identifiers.get(EnrolmentMtdIt.enrolmentService).map(_.asMtdItId) match {
             case Some(mtdItId) =>
-              getItsaRelationshipForClient(mtdItId).map(_.map(r => (EnrolmentMtdIt.enrolmentService, r.arn)))
+              getActiveRelationships(mtdItId).map(_.map(r => (EnrolmentMtdIt.enrolmentService, r.arn)))
             case None => Future.successful(None)
           },
           identifiers.get(EnrolmentMtdVat.enrolmentService).map(_.asVrn) match {
             case Some(vrn) =>
-              getVatRelationshipForClient(vrn).map(_.map(r => (EnrolmentMtdVat.enrolmentService, r.arn)))
+              getActiveRelationships(vrn).map(_.map(r => (EnrolmentMtdVat.enrolmentService, r.arn)))
+            case None => Future.successful(None)
+          },
+          identifiers.get(EnrolmentTrust.enrolmentService).map(_.asUtr) match {
+            case Some(utr) =>
+              getActiveRelationships(utr).map(_.map(r => (EnrolmentTrust.enrolmentService, r.arn)))
             case None => Future.successful(None)
           }
         ))

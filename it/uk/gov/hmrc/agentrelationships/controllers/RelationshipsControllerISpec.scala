@@ -2,7 +2,9 @@ package uk.gov.hmrc.agentrelationships.controllers
 import org.joda.time.LocalDate
 import play.api.libs.json.JsValue
 import play.api.test.FakeRequest
+import play.api.libs.json.{JsObject, JsValue}
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
+
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
 
@@ -22,10 +24,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
                          clientId: TaxIdentifier)
 
   val itsaClient = TestClient(HMRCMTDIT, "MTDITID", "ITSA", mtdItId)
-  val irvClient = TestClient(HMRCPIR, "NI", null, nino)
   val vatClient = TestClient(HMRCMTDVAT, "VRN", "VATC", vrn)
   val trustClient = TestClient(HMRCTERSORG, "UTR", "TRS", utr)
-
 
   val individualList = List(itsaClient, vatClient)
   val businessList = List(vatClient, trustClient)
@@ -202,4 +202,60 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
   }
 
+  "GET /relationships/active" should {
+
+    val requestPath: String = s"/agent-client-relationships/relationships/active"
+    def doRequest: HttpResponse = doAgentGetRequest(requestPath)
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/relationships/active")
+
+
+    "return 200 with a map of relationships and filter only on active ones" in {
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+
+      getActiveRelationshipsViaClient(mtdItId, arn)
+      getActiveRelationshipsViaClient(vrn, arn2)
+      getActiveRelationshipsViaClient(utr, arn)
+
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      val response = result.json.as[JsObject]
+
+      response should havePropertyArrayOf[String]("HMRC-MTD-IT", be(arn.value))
+      response should havePropertyArrayOf[String]("HMRC-MTD-VAT", be(arn2.value))
+      response should havePropertyArrayOf[String]("HMRC-TERS-ORG", be(arn.value))
+    }
+
+    "return 200 with empty map of active relationships when they are found inactive" in {
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+
+      desOnlyList.foreach { notActiveClient =>
+        getInactiveRelationshipViaClient(notActiveClient.clientId, arn.value)
+      }
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      val response = result.json.as[JsObject]
+
+      desOnlyList.foreach { notActiveClient =>
+        response should notHaveProperty(notActiveClient.service)
+      }
+    }
+
+    "return 200 with empty map of active relationships when not found" in {
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+
+      desOnlyList.foreach { notActiveClient =>
+        getActiveRelationshipFailsWith(notActiveClient.clientId, 404)
+      }
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      val response = result.json.as[JsObject]
+
+      desOnlyList.foreach { notActiveClient =>
+        response should notHaveProperty(notActiveClient.service)
+      }
+    }
+  }
 }
