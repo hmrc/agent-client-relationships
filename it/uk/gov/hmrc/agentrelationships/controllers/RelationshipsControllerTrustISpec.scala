@@ -67,6 +67,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenGroupInfoNotExists("foo")
       givenDelegatedGroupIdsExistFor(utr, Set("foo"))
       givenDelegatedGroupIdsNotExistForKey(s"HMRC-TERS-ORG~SAUTR~${utr.value}")
+      givenUserIdIsAdmin("any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -357,6 +358,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentCanBeDeallocatedInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -384,6 +386,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentCanBeDeallocatedInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -411,6 +414,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentCanBeDeallocatedInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -436,6 +440,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalGroupIdExistsFor(utr, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrust(utr)
         givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -463,6 +468,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrust(utr)
         givenAgentHasNoActiveRelationshipInDes(utr, arn)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -490,6 +496,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentHasNoActiveRelationshipInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
+        givenUserIdIsAdmin("any")
       }
 
       "return 204" in new StubsForThisScenario {

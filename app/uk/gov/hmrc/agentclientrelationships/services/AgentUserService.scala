@@ -33,7 +33,7 @@ class AgentUserService @Inject()(
   ugs: UsersGroupsSearchConnector
 ) {
 
-  def getAgentUserFor(
+  def getAgentAdminUserFor(
     arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     for {
       agentGroupId     <- es.getPrincipalGroupIdFor(arn)

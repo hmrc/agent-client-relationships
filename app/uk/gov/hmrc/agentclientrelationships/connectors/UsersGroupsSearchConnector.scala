@@ -23,7 +23,7 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UserNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound, UserNotFound}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http._
 
@@ -70,5 +70,5 @@ class UsersGroupsSearchConnector @Inject()(
   def getAdminUserId(userIds: Seq[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] =
     for {
       admins <- Future.sequence(userIds.map(userId => isAdmin(userId).map(isAdminUser => (userId, isAdminUser))))
-    } yield admins.filter(_._2).map(_._1).headOption.getOrElse(throw new NoSuchElementException("no admin user"))
+    } yield admins.filter(_._2).map(_._1).headOption.getOrElse(throw AdminNotFound("NO_ADMIN_USER"))
 }

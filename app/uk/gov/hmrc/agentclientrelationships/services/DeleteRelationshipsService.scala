@@ -183,7 +183,7 @@ class DeleteRelationshipsService @Inject()(
 
     (for {
       _         <- updateEsSyncStatus(InProgress)
-      agentUser <- agentUserService.getAgentUserFor(arn)
+      agentUser <- agentUserService.getAgentAdminUserFor(arn)
       _ <- checkService
             .checkForRelationship(taxIdentifier, agentUser)
             .flatMap(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier))

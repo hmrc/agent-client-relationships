@@ -5,7 +5,7 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UserNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound, UserNotFound}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, UsersGroupsSearchStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.AgentCode
@@ -96,14 +96,24 @@ class UsersGroupsSearchConnectorSpec
         await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
       }
 
-      "throw a NoSuchElementException if there is no admin user in the group of user ids" in {
+      "throw a AdminNotFound if there is no admin user in the group of user ids" in {
         givenUserIdIsNotAdmin("userId-1")
         givenUserIdIsNotAdmin("userId-2")
         givenUserIdIsNotAdmin("userId-3")
 
-        intercept[NoSuchElementException] {
+        intercept[AdminNotFound] {
           await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
-        }.getMessage shouldBe "no admin user"
+        }.getMessage shouldBe "NO_ADMIN_USER"
+      }
+
+      "throw a UserNotFound exception is there is no user found for the user id" in {
+        givenUserIdNotExistsFor("userId-1")
+        givenUserIdIsNotAdmin("userId-2")
+        givenUserIdIsNotAdmin("userId-3")
+
+        intercept[UserNotFound] {
+          await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
+        }.getMessage shouldBe "UNKNOWN_USER_ID"
       }
     }
   }
