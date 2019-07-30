@@ -1,6 +1,5 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, stubFor, urlEqualTo}
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
@@ -70,13 +69,13 @@ class UsersGroupsSearchConnectorSpec
       "return true if the user is an admin" in {
         givenAuditConnector()
         givenUserIdIsAdmin("userId")
-        await(connector.isAdmin("userId")) shouldBe Some(true)
+        await(connector.isAdmin("userId")) shouldBe true
       }
 
       "return false if the user is not an admin" in {
         givenAuditConnector()
         givenUserIdIsNotAdmin("userId")
-        await(connector.isAdmin("userId")) shouldBe Some(false)
+        await(connector.isAdmin("userId")) shouldBe false
       }
 
       "throw an exception if the user does not exist" in {
@@ -95,6 +94,16 @@ class UsersGroupsSearchConnectorSpec
         givenUserIdIsAdmin("userId-3")
 
         await(connector.getAdminUser(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
+      }
+
+      "throw a NoSuchElementException if there is no admin user in the group of user ids" in {
+        givenUserIdIsNotAdmin("userId-1")
+        givenUserIdIsNotAdmin("userId-2")
+        givenUserIdIsNotAdmin("userId-3")
+
+        intercept[NoSuchElementException] {
+          await(connector.getAdminUser(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
+        }.getMessage shouldBe "no admin user"
       }
     }
   }
