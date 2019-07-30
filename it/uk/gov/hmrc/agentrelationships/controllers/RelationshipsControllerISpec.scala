@@ -209,7 +209,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/relationships/active")
 
 
-    s"return 200 with a map of relationships and filter only on active ones" in {
+    "return 200 with a map of relationships and filter only on active ones" in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
 
       getActiveRelationshipsViaClient(mtdItId, arn)
@@ -226,7 +226,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       response should havePropertyArrayOf[String]("HMRC-TERS-ORG", be(arn.value))
     }
 
-    s"return 200 with empty map of active relationships when they are found inactive" in {
+    "return 200 with empty map of active relationships when they are found inactive" in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
 
       desOnlyList.foreach { notActiveClient =>
@@ -242,7 +242,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       }
     }
 
-    s"return 200 with empty map of active relationships when not found" in {
+    "return 200 with empty map of active relationships when not found" in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
 
       desOnlyList.foreach { notActiveClient =>
