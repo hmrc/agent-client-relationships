@@ -38,11 +38,11 @@ class AgentUserService @Inject()(
     for {
       agentGroupId <- es.getPrincipalGroupIdFor(arn)
       agentUserIds <- es.getPrincipalUserIdsFor(arn)
-      agentUserId  <- ugs.getAdminUser(agentUserIds)
-      _ = auditData.set("credId", agentUserId)
+      adminAgentUserId  <- ugs.getAdminUserId(agentUserIds)
+      _ = auditData.set("credId", adminAgentUserId)
       groupInfo <- ugs.getGroupInfo(agentGroupId)
       agentCode = groupInfo.agentCode.getOrElse(throw new Exception(s"Missing AgentCode for $arn"))
       _ = auditData.set("agentCode", agentCode)
-    } yield AgentUser(agentUserId, agentGroupId, agentCode, arn)
+    } yield AgentUser(adminAgentUserId, agentGroupId, agentCode, arn)
 
 }

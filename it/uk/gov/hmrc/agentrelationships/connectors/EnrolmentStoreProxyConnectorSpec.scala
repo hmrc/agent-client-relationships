@@ -103,10 +103,10 @@ class EnrolmentStoreProxyConnectorSpec
       await(connector.getDelegatedGroupIdsFor(Vrn("foo"))) should be(empty)
     }
 
-    "return some clients userId for given MTDITID" in {
+    "return some clients userIds for given MTDITID" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(MtdItId("foo"), "bar")
-      await(connector.getPrincipalUserIdsFor(MtdItId("foo"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdsFor(MtdItId("foo"))) shouldBe List("bar")
     }
 
     "return RelationshipNotFound Exception when MTDITID not found" in {
@@ -117,10 +117,10 @@ class EnrolmentStoreProxyConnectorSpec
       }
     }
 
-    "return some clients userId for given NINO" in {
+    "return some clients userIds for given NINO" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(Nino("AB123456C"), "bar")
-      await(connector.getPrincipalUserIdsFor(Nino("AB123456C"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdsFor(Nino("AB123456C"))) shouldBe List("bar")
     }
 
     "return RelationshipNotFound Exception when NINO not found" in {
@@ -131,10 +131,10 @@ class EnrolmentStoreProxyConnectorSpec
       }
     }
 
-    "return some clients userId for given VRN" in {
+    "return some clients userIds for given VRN" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(Vrn("foo"), "bar")
-      await(connector.getPrincipalUserIdsFor(Vrn("foo"))) shouldBe "bar"
+      await(connector.getPrincipalUserIdsFor(Vrn("foo"))) shouldBe List("bar")
     }
 
     "return RelationshipNotFound Exception when VRN not found" in {

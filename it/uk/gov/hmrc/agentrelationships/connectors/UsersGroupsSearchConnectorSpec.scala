@@ -93,7 +93,7 @@ class UsersGroupsSearchConnectorSpec
         givenUserIdIsAdmin("userId-2")
         givenUserIdIsAdmin("userId-3")
 
-        await(connector.getAdminUser(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
+        await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
       }
 
       "throw a NoSuchElementException if there is no admin user in the group of user ids" in {
@@ -102,7 +102,7 @@ class UsersGroupsSearchConnectorSpec
         givenUserIdIsNotAdmin("userId-3")
 
         intercept[NoSuchElementException] {
-          await(connector.getAdminUser(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
+          await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
         }.getMessage shouldBe "no admin user"
       }
     }

@@ -67,7 +67,7 @@ class UsersGroupsSearchConnector @Inject()(
     }
   }
 
-  def getAdminUser(userIds: Seq[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] =
+  def getAdminUserId(userIds: Seq[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] =
     for {
       admins <- Future.sequence(userIds.map(userId => isAdmin(userId).map(isAdminUser => (userId, isAdminUser))))
     } yield admins.filter(_._2).map(_._1).headOption.getOrElse(throw new NoSuchElementException("no admin user"))

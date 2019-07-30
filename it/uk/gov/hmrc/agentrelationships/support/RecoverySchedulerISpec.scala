@@ -190,6 +190,7 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenPrincipalUserIdExistFor(arn, "userId")
       givenPrincipalGroupIdExistsFor(arn, "foo")
+      givenUserIdIsAdmin("userId")
 
       await(recoveryRepo.removeAll())
 

@@ -38,6 +38,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
+      givenUserIdIsAdmin("any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> utr.value, "clientIdentifierType" -> saUtrType)
@@ -151,6 +152,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenEnrolmentDeallocationSucceeds("foo", utr)
       givenEnrolmentDeallocationSucceeds("bar", utr)
       givenTrustEnrolmentAllocationSucceeds(utr, "bar")
+      givenUserIdIsAdmin("any")
     }
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in new StubsForThisScenario {
@@ -201,6 +203,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenDelegatedGroupIdsNotExistFor(utr)
       givenAgentCanBeAllocatedInDes(utr, arn)
       givenTrustEnrolmentAllocationSucceeds(utr, "bar")
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -246,6 +249,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         identifier = "SAUTR",
         value = utr.value,
         agentCode = "bar")
+      givenUserIdIsAdmin("user1")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -258,6 +262,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForTrust(utr)
       givenDesReturnsServiceUnavailable()
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -270,6 +275,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForTrust(utr)
       givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenUserIdIsAdmin("any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 404
