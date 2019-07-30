@@ -67,7 +67,6 @@ class EnrolmentStoreProxyConnector @Inject()(
         else {
           if (userIds.lengthCompare(1) > 0)
             Logger(getClass).warn(s"Multiple userIds found for $enrolmentKeyPrefix")
-          //using .head here could get admin or assistant, only want admin
           userIds
         }
       })

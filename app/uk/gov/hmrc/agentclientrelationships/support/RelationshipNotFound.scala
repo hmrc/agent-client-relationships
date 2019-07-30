@@ -18,4 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.support
 
 case class RelationshipNotFound(errorCode: String) extends Exception(errorCode)
 
+case class UserNotFound(errorCode: String) extends Exception(errorCode)
+
 case class RelationshipDeletePending() extends Exception("RELATIONSHIP_DELETE_PENDING")

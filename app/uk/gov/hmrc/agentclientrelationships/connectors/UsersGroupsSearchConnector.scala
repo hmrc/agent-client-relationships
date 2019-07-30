@@ -17,13 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
 
+import javax.inject.{Inject, Named, Singleton}
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UserNotFound}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http._
 
@@ -63,7 +63,7 @@ class UsersGroupsSearchConnector @Inject()(
     monitor("ConsumedAPI-UGS-getUserInfo-GET") {
       httpGet.GET[CredentialRole](url.toString).map(_.credentialRole == "Admin")
     } recoverWith {
-      case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_USER_ID")
+      case _: NotFoundException => Future failed UserNotFound("UNKNOWN_USER_ID")
     }
   }
 
