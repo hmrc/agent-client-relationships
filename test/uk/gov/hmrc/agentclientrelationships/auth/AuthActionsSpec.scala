@@ -67,7 +67,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
         Future.successful(Ok)
       }
 
-    def testAuthorisedAsClient = AuthorisedAsItSaClient(ec) { implicit request => _ =>
+    def testAuthorisedAsClient(service: String) = AuthorisedAsClient(service) { implicit request => _ =>
       Future.successful(Ok)
     }
 
@@ -230,13 +230,13 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   "AuthorisedAsClient" should {
     "return Ok if client has HMRC-MTD-IT enrolment" in {
       mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdItIdEnrolment))
-      val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
+      val result = testAuthImpl.testAuthorisedAsClient("HMRC-MTD-IT").apply(fakeRequest)
       await(result) shouldBe Ok
     }
 
     "return Forbidden if client has other enrolment" in {
       mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdVatIdEnrolment))
-      val result = testAuthImpl.testAuthorisedAsClient.apply(fakeRequest)
+      val result = testAuthImpl.testAuthorisedAsClient("HMRC-AGENT-AGENT").apply(fakeRequest)
       await(result) shouldBe NoPermissionToPerformOperation
     }
   }

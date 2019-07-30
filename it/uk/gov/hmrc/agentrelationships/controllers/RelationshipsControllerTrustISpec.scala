@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.joda.time.LocalDate
-import play.api.test.FakeRequest
-import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, 
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr}
 
 //noinspection ScalaStyle
-class RelationshipsControllerTrustISpec extends RelationshipsControllerISpec {
+class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec {
 
   "GET  /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr" should {
 
@@ -636,56 +633,6 @@ class RelationshipsControllerTrustISpec extends RelationshipsControllerISpec {
         await(doAgentDeleteRequest(requestPath))
         verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
       }
-    }
-  }
-
-  "GET /relationships/inactive/service/HMRC-TERS-ORG" should {
-    val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
-    val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/HMRC-TERS-ORG"
-
-    def doRequest = doAgentGetRequest(requestPath)
-    val req = FakeRequest()
-    "return 200 with list of inactive HMRC-TERS-ORG for an Agent" in {
-      givenAuthorisedAsValidAgent(req, arn.value)
-
-      getAgentInactiveRelationships(arnEncoded, arn.value, "TRS")
-
-      val result = await(doRequest)
-      result.status shouldBe 200
-      val b = result.json
-      (result.json \\ "arn").head.as[String] shouldBe arn.value
-      (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
-      (result.json \\ "referenceNumber").head.as[String] shouldBe "ABCDE1234567890"
-      (result.json \\ "arn")(1).as[String] shouldBe arn.value
-      (result.json \\ "dateTo")(1).as[LocalDate].toString() shouldBe LocalDate.now().toString
-      (result.json \\ "referenceNumber")(1).as[String] shouldBe "JKKL80894713304"
-    }
-
-    "find relationship but filter out if the relationship is still active" in {
-      givenAuthorisedAsValidAgent(req, arn.value)
-
-      getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, "TRS")
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-    }
-
-    "return 404 when DES returns not found" in {
-      givenAuthorisedAsValidAgent(req, arn.value)
-
-      getFailAgentInactiveRelationships(arnEncoded, "TRS", 404)
-
-      val result = await(doRequest)
-      result.status shouldBe 404
-    }
-
-    "return 404 when DES returns 400" in {
-      givenAuthorisedAsValidAgent(req, arn.value)
-
-      getFailAgentInactiveRelationships(arnEncoded, "TRS", 400)
-
-      val result = await(doRequest)
-      result.status shouldBe 404
     }
   }
 
