@@ -5,7 +5,7 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UserNotFound}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, UsersGroupsSearchStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.AgentCode
@@ -81,7 +81,7 @@ class UsersGroupsSearchConnectorSpec
       "throw an exception if the user does not exist" in {
         givenAuditConnector()
         givenUserIdNotExistsFor("userId")
-        intercept[RelationshipNotFound] {
+        intercept[UserNotFound] {
           await(connector.isAdmin("userId"))
         }
       }

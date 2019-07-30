@@ -36,9 +36,9 @@ class AgentUserService @Inject()(
   def getAgentUserFor(
     arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     for {
-      agentGroupId <- es.getPrincipalGroupIdFor(arn)
-      agentUserIds <- es.getPrincipalUserIdsFor(arn)
-      adminAgentUserId  <- ugs.getAdminUserId(agentUserIds)
+      agentGroupId     <- es.getPrincipalGroupIdFor(arn)
+      agentUserIds     <- es.getPrincipalUserIdsFor(arn)
+      adminAgentUserId <- ugs.getAdminUserId(agentUserIds)
       _ = auditData.set("credId", adminAgentUserId)
       groupInfo <- ugs.getGroupInfo(agentGroupId)
       agentCode = groupInfo.agentCode.getOrElse(throw new Exception(s"Missing AgentCode for $arn"))
