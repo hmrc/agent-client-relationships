@@ -166,6 +166,8 @@ class RelationshipsController @Inject()(
                 NotFound(toJson(ex.getMessage))
             }
         }
+
+      case Left(error) => Action.async(Future.successful(BadRequest(error)))
     }
 
   private def validateParams(
