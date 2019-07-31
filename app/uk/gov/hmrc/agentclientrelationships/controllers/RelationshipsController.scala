@@ -150,22 +150,21 @@ class RelationshipsController @Inject()(
   def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
     validateParams(service, clientIdType, clientId) match {
       case Right((a, taxIdentifier)) =>
-        AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request =>
-          _ =>
-            implicit val auditData: AuditData = new AuditData()
-            auditData.set("arn", arn)
+        AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request => _ =>
+          implicit val auditData: AuditData = new AuditData()
+          auditData.set("arn", arn)
 
-            (for {
-              agentUser <- agentUserService.getAgentAdminUserFor(arn)
-              _ <- createService.createRelationship(arn, taxIdentifier, Future.successful(agentUser), Set(), false, true)
-            } yield ())
-              .map(_ => Created)
-              .recover {
-                case upS: Upstream5xxResponse => throw upS
-                case NonFatal(ex) =>
-                  Logger(getClass).warn("Could not create relationship", ex)
-                  NotFound(toJson(ex.getMessage))
-              }
+          (for {
+            agentUser <- agentUserService.getAgentAdminUserFor(arn)
+            _         <- createService.createRelationship(arn, taxIdentifier, Future.successful(agentUser), Set(), false, true)
+          } yield ())
+            .map(_ => Created)
+            .recover {
+              case upS: Upstream5xxResponse => throw upS
+              case NonFatal(ex) =>
+                Logger(getClass).warn("Could not create relationship", ex)
+                NotFound(toJson(ex.getMessage))
+            }
         }
     }
 
