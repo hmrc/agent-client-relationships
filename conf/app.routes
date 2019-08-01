@@ -1,23 +1,7 @@
-# MTD-IT relationship
-GET           /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithMtdItId(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
-GET           /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
-PUT           /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForMtdIt(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
-DELETE        /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId        @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteItsaRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, mtdItId: uk.gov.hmrc.agentmtdidentifiers.model.MtdItId)
-DELETE        /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteItsaRelationshipByNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
 
-# MTD-VAT relationship
-PUT           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
-GET           /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithMtdVat(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
-DELETE        /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn               @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteVatRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
-
-# TRUST relationship
-PUT           /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.createForTrust(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
-GET           /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithTrust(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
-DELETE        /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.deleteTrustRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
-
-# Checks implemented for BTA
-GET           /agent/:arn/service/IR-SA/client/ni/:nino                      @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkLegacyWithNino(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
-GET           /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkWithVrn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
+GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
+PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.create(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
+DELETE        /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
 
 # List existing relationships of the current client
 GET           /relationships/active                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationships
@@ -25,10 +9,6 @@ GET           /relationships/active                                          @uk
 GET           /relationships/service/:service                                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
 
 GET           /relationships/inactive/service/:service                       @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent(service: String)
-
-# DEPRECATED
-GET           /service/:service/client/relationship                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
-
 
 # List existing relationships (authorized by the stride-auth)
 GET           /relationships/service/HMRC-MTD-IT/client/NI/:nino             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationshipsByNino(nino: uk.gov.hmrc.domain.Nino)

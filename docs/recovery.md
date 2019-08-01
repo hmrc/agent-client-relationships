@@ -1,13 +1,13 @@
-# Recovery of Failures whilst Creating HMRC-MTD-IT Relationships in ETMP and Government Gateway
+# Recovery of Failures whilst Creating Relationships in ETMP and Government Gateway
 
 ## Scope
 
-Recovery from agent-client-relationships crashes whilst an HMRC-MTD-IT relationship is being created in ETMP and GG based on a relationship in CESA (informally, "copying a relationship from CESA to ETMP and GG").  
+Recovery from agent-client-relationships crashes whilst a relationship is being created in ETMP and GG based on a relationship in CESA (informally, "copying a relationship from CESA to ETMP and GG").  
 
 ## Out of Scope (for now - we want to address these later)
 
 * Recovery from ETMP or GG failures whilst creating a relationship.
-* Recovery from agent-client-relationships crashes whilst an HMRC-MTD-IT relationship is being created based on a PUT to the relationship endpoint.
+* Recovery from agent-client-relationships crashes whilst a relationship is being created based on a PUT to the relationship endpoint.
 
 ## Success Criteria
 

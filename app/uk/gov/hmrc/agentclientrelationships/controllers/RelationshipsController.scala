@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import javax.inject.{Inject, Named, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, Request}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
@@ -56,66 +56,78 @@ class RelationshipsController @Inject()(
 
   implicit val ec: ExecutionContext = ecp.get
 
-  def checkWithMtdItId(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = checkWithTaxIdentifier(arn, mtdItId)
-  def checkWithMtdVat(arn: Arn, vrn: Vrn): Action[AnyContent] = checkWithTaxIdentifier(arn, vrn)
+  private val utrPattern = "^\\d{10}$".r
 
-  def checkWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
-    des.getMtdIdFor(nino).flatMap(checkWithTaxIdentifier(arn, _)(request))
+  def checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      if (service == "HMRC-MTD-IT" && clientIdType == "MTDITID" && MtdItId.isValid(clientId)) {
+        checkWithTaxIdentifier(arn, MtdItId(clientId))
+      } else if (service == "HMCE-VATDEC-ORG" && clientIdType == "vrn" && Vrn.isValid(clientId)) {
+        checkWithVrn(arn, Vrn(clientId))
+      } else if (service == "HMRC-MTD-VAT" && Vrn.isValid(clientId)) {
+        checkWithTaxIdentifier(arn, Vrn(clientId))
+      } else if (service == "HMRC-MTD-IT" && clientIdType == "NI" && Nino.isValid(clientId)) {
+        des.getMtdIdFor(Nino(clientId)).flatMap(checkWithTaxIdentifier(arn, _))
+      } else if (service == "IR-SA" && Nino.isValid(clientId)) {
+        checkLegacyWithNino(arn, Nino(clientId))
+      } else if (service == "HMRC-TERS-ORG" && clientId.matches(utrPattern.regex)) {
+        checkWithTaxIdentifier(arn, Utr(clientId))
+      } else {
+        Logger.warn(
+          s"bad service and clientId combination for checking relationship, service: $service, clientId: $clientId")
+        Future.successful(BadRequest)
+      }
+    }
+
+  private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier)(implicit request: Request[_]) = {
+    implicit val auditData: AuditData = new AuditData()
+    auditData.set("arn", arn)
+
+    val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
+
+    val result = for {
+      agentUser <- agentUserFuture
+      isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
+      result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
+               else raiseError(RelationshipDeletePending())
+    } yield result
+
+    result
+      .recoverWith {
+        case RelationshipNotFound(errorCode) =>
+          checkOldAndCopyService
+            .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
+            .map {
+              case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled =>
+                Left(errorCode)
+              case cesaResult =>
+                Right(cesaResult.grantAccess)
+            }
+            .recover {
+              case upS: Upstream5xxResponse =>
+                throw upS
+              case NonFatal(ex) =>
+                Logger(getClass).warn(
+                  s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
+                  ex)
+                Left(errorCode)
+            }
+        case e @ RelationshipDeletePending() =>
+          Logger(getClass).warn("Denied access because relationship removal is pending.")
+          Future.successful(Left(e.getMessage))
+
+        case e: AdminNotFound =>
+          Logger(getClass).warn("Denied access because no admin users are found")
+          Future.successful(Left(e.getMessage))
+      }
+      .map {
+        case Left(errorCode) => NotFound(toJson(errorCode))
+        case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+        case Right(true)     => Ok
+      }
   }
 
-  def checkWithTrust(arn: Arn, utr: Utr): Action[AnyContent] = checkWithTaxIdentifier(arn, utr)
-
-  //noinspection ScalaStyle
-  private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] = Action.async {
-    implicit request =>
-      implicit val auditData: AuditData = new AuditData()
-      auditData.set("arn", arn)
-
-      val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
-
-      val result = for {
-        agentUser <- agentUserFuture
-        isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
-        result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
-                 else raiseError(RelationshipDeletePending())
-      } yield result
-
-      result
-        .recoverWith {
-          case RelationshipNotFound(errorCode) =>
-            checkOldAndCopyService
-              .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
-              .map {
-                case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled =>
-                  Left(errorCode)
-                case cesaResult =>
-                  Right(cesaResult.grantAccess)
-              }
-              .recover {
-                case upS: Upstream5xxResponse =>
-                  throw upS
-                case NonFatal(ex) =>
-                  Logger(getClass).warn(
-                    s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
-                    ex)
-                  Left(errorCode)
-              }
-          case e @ RelationshipDeletePending() =>
-            Logger(getClass).warn("Denied access because relationship removal is pending.")
-            Future.successful(Left(e.getMessage))
-
-          case e: AdminNotFound =>
-            Logger(getClass).warn("Denied access because no admin users are found")
-            Future.successful(Left(e.getMessage))
-        }
-        .map {
-          case Left(errorCode) => NotFound(toJson(errorCode))
-          case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-          case Right(true)     => Ok
-        }
-  }
-
-  def checkLegacyWithNino(arn: Arn, nino: Nino): Action[AnyContent] = Action.async { implicit request =>
+  private def checkLegacyWithNino(arn: Arn, nino: Nino)(implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
@@ -135,52 +147,66 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def createForMtdIt(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
-  def createForMtdVat(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
-  def createForTrust(arn: Arn, identifier: TaxIdentifier) = create(arn, identifier)
+  def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    validateParams(service, clientIdType, clientId) match {
+      case Right((a, taxIdentifier)) =>
+        AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request => _ =>
+          implicit val auditData: AuditData = new AuditData()
+          auditData.set("arn", arn)
 
-  private def create(arn: Arn, identifier: TaxIdentifier) =
-    AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRoles) { implicit request => _ =>
-      implicit val auditData: AuditData = new AuditData()
-      auditData.set("arn", arn)
-
-      (for {
-        agentUser <- agentUserService.getAgentAdminUserFor(arn)
-        _         <- createService.createRelationship(arn, identifier, Future.successful(agentUser), Set(), false, true)
-      } yield ())
-        .map(_ => Created)
-        .recover {
-          case upS: Upstream5xxResponse => throw upS
-          case NonFatal(ex) =>
-            Logger(getClass).warn("Could not create relationship", ex)
-            NotFound(toJson(ex.getMessage))
+          (for {
+            agentUser <- agentUserService.getAgentAdminUserFor(arn)
+            _         <- createService.createRelationship(arn, taxIdentifier, Future.successful(agentUser), Set(), false, true)
+          } yield ())
+            .map(_ => Created)
+            .recover {
+              case upS: Upstream5xxResponse => throw upS
+              case NonFatal(ex) =>
+                Logger(getClass).warn("Could not create relationship", ex)
+                NotFound(toJson(ex.getMessage))
+            }
         }
+
+      case Left(error) => Action.async(Future.successful(BadRequest(error)))
     }
 
-  def deleteItsaRelationship(arn: Arn, mtdItId: MtdItId) = delete(arn, mtdItId)
-  def deleteItsaRelationshipByNino(arn: Arn, nino: Nino) = delete(arn, nino)
-  def deleteVatRelationship(arn: Arn, vrn: Vrn) = delete(arn, vrn)
-
-  def deleteTrustRelationship(arn: Arn, utr: Utr) = delete(arn, utr)
-
-  private def delete(arn: Arn, taxIdentifier: TaxIdentifier): Action[AnyContent] =
-    AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request => implicit currentUser =>
-      (for {
-        id <- taxIdentifier match {
-               case nino @ Nino(_) => des.getMtdIdFor(nino)
-               case _              => Future successful taxIdentifier
-             }
-        _ <- deleteService.deleteRelationship(arn, id)
-      } yield NoContent)
-        .recover {
-          case upS: Upstream5xxResponse => throw upS
-          case NonFatal(ex) =>
-            Logger(getClass).warn("Could not delete relationship", ex)
-            NotFound(toJson(ex.getMessage))
-        }
+  private def validateParams(
+    service: String,
+    clientType: String,
+    clientId: String): Either[String, (String, TaxIdentifier)] =
+    (service, clientType) match {
+      case ("HMRC-MTD-IT", "MTDITID") if MtdItId.isValid(clientId)          => Right(("HMRC-MTD-IT", MtdItId(clientId)))
+      case ("HMRC-MTD-IT", "NI") if Nino.isValid(clientId)                  => Right(("HMRC-MTD-IT", Nino(clientId)))
+      case ("HMRC-MTD-VAT", "VRN") if Vrn.isValid(clientId)                 => Right(("HMRC-MTD-VAT", Vrn(clientId)))
+      case ("IR-SA", "ni") if Nino.isValid(clientId)                        => Right(("IR-SA", Nino(clientId)))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)              => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
+      case ("HMRC-TERS-ORG", "SAUTR") if clientId.matches(utrPattern.regex) => Right(("HMRC-TERS-ORG", Utr(clientId)))
+      case (a, b)                                                           => Left(s"invalid combination ($a, $b, $clientId)")
     }
 
-  def checkWithVrn(arn: Arn, vrn: Vrn): Action[AnyContent] = Action.async { implicit request =>
+  def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    validateParams(service, clientIdType, clientId) match {
+      case Right((_, taxIdentifier)) =>
+        AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) {
+          implicit request => implicit currentUser =>
+            (for {
+              id <- taxIdentifier match {
+                     case nino @ Nino(_) => des.getMtdIdFor(nino)
+                     case _              => Future successful taxIdentifier
+                   }
+              _ <- deleteService.deleteRelationship(arn, id)
+            } yield NoContent)
+              .recover {
+                case upS: Upstream5xxResponse => throw upS
+                case NonFatal(ex) =>
+                  Logger(getClass).warn("Could not delete relationship", ex)
+                  NotFound(toJson(ex.getMessage))
+              }
+        }
+      case Left(error) => Action.async(Future.successful(BadRequest(error)))
+    }
+
+  private def checkWithVrn(arn: Arn, vrn: Vrn)(implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
