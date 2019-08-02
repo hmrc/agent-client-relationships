@@ -249,9 +249,7 @@ class DesConnectorSpec
           .withRequestBody(equalToJson(
             s"""{
                |"regime": "TRS",
-               |"idType" : "UTR",
-               |"relationshipType" : "ZA01",
-               |"authProfile" : "ALL00001"
+               |"idType" : "UTR"
                |}""".stripMargin,
             true,
             true
