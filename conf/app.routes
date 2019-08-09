@@ -10,6 +10,5 @@ GET           /relationships/service/:service                                @uk
 
 GET           /relationships/inactive/service/:service                       @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent(service: String)
 
-# List existing relationships (authorized by the stride-auth)
-GET           /relationships/service/HMRC-MTD-IT/client/NI/:nino             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getItsaRelationshipsByNino(nino: uk.gov.hmrc.domain.Nino)
-GET           /relationships/service/HMRC-MTD-VAT/client/VRN/:vrn            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getVatRelationshipsByVrn(vrn: uk.gov.hmrc.agentmtdidentifiers.model.Vrn)
+# stride endpoints
+GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
