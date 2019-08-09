@@ -242,21 +242,22 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def getItsaRelationshipsByNino(nino: Nino): Action[AnyContent] = AuthorisedWithStride(oldStrideRole, newStrideRole) {
-    implicit request => _ =>
-      findService.getItsaRelationshipForClient(nino).map {
-        case Some(relationship) => Ok(Json.toJson(relationship))
-        case None               => NotFound
-      }
-  }
-
-  def getVatRelationshipsByVrn(vrn: Vrn): Action[AnyContent] = AuthorisedWithStride(oldStrideRole, newStrideRole) {
-    implicit request => _ =>
-      findService.getActiveRelationships(vrn).map {
-        case Some(relationship) => Ok(Json.toJson(relationship))
-        case None               => NotFound
-      }
-  }
+  def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    validateParams(service, clientIdType, clientId) match {
+      case Right((service, taxIdentifier)) =>
+        AuthorisedWithStride(oldStrideRole, newStrideRole) { implicit request => _ =>
+          val relationships = if (service == "HMRC-MTD-IT") {
+            findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
+          } else {
+            findService.getActiveRelationships(taxIdentifier)
+          }
+          relationships.map {
+            case Some(relationship) => Ok(Json.toJson(relationship))
+            case None               => NotFound
+          }
+        }
+      case Left(error) => Action.async(Future.successful(BadRequest(error)))
+    }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
     checkOldAndCopyService

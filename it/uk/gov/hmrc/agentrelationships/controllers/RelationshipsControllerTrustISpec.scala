@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
+import org.joda.time.LocalDate
+import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -649,4 +651,62 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
     }
   }
 
+  "GET /relationships/service/HMRC-TERS-ORG/client/SAUTR/:utr" should {
+
+    val requestPath: String = s"/agent-client-relationships/relationships/service/HMRC-TERS-ORG/client/SAUTR/${utr.value}"
+
+    def doRequest = doAgentGetRequest(requestPath)
+    val req = FakeRequest()
+
+    "find relationship and send back Json" in {
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      getActiveRelationshipsViaClient(utr, arn)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      val b = result.json
+      (result.json \ "arn").get.as[String] shouldBe arn.value
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "find relationship but filter out if the end date has been changed from 9999-12-31" in {
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      getInactiveRelationshipViaClient(utr, arn.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "find multiple relationships but filter out active and ended relationships" in {
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      getSomeActiveRelationshipsViaClient(utr, arn.value, arn2.value, arn3.value)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      (result.json \ "arn").get.as[String] shouldBe arn3.value
+      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
+    }
+
+    "return 404 when DES returns 404 relationship not found" in {
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      getActiveRelationshipFailsWith(utr, status = 404)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+
+    "return 404 when DES returns 400 (treated as relationship not found)" in {
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      getActiveRelationshipFailsWith(utr, status = 400)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
 }
