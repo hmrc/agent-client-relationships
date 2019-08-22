@@ -106,42 +106,42 @@ class EnrolmentStoreProxyConnectorSpec
     "return some clients userIds for given MTDITID" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(MtdItId("foo"), "bar")
-      await(connector.getPrincipalUserIdsFor(MtdItId("foo"))) shouldBe List("bar")
+      await(connector.getPrincipalUserIdFor(MtdItId("foo"))) shouldBe "bar"
     }
 
     "return RelationshipNotFound Exception when MTDITID not found" in {
       givenAuditConnector()
       givenPrincipalUserIdNotExistFor(MtdItId("foo"))
       an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdsFor(MtdItId("foo")))
+        await(connector.getPrincipalUserIdFor(MtdItId("foo")))
       }
     }
 
     "return some clients userIds for given NINO" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(Nino("AB123456C"), "bar")
-      await(connector.getPrincipalUserIdsFor(Nino("AB123456C"))) shouldBe List("bar")
+      await(connector.getPrincipalUserIdFor(Nino("AB123456C"))) shouldBe "bar"
     }
 
     "return RelationshipNotFound Exception when NINO not found" in {
       givenAuditConnector()
       givenPrincipalUserIdNotExistFor(Nino("AB123456C"))
       an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdsFor(Nino("AB123456C")))
+        await(connector.getPrincipalUserIdFor(Nino("AB123456C")))
       }
     }
 
     "return some clients userIds for given VRN" in {
       givenAuditConnector()
       givenPrincipalUserIdExistFor(Vrn("foo"), "bar")
-      await(connector.getPrincipalUserIdsFor(Vrn("foo"))) shouldBe List("bar")
+      await(connector.getPrincipalUserIdFor(Vrn("foo"))) shouldBe "bar"
     }
 
     "return RelationshipNotFound Exception when VRN not found" in {
       givenAuditConnector()
       givenPrincipalUserIdNotExistFor(Vrn("foo"))
       an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdsFor(Vrn("foo")))
+        await(connector.getPrincipalUserIdFor(Vrn("foo")))
       }
     }
 
