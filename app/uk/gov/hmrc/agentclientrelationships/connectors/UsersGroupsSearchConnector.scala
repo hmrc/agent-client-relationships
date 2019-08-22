@@ -57,18 +57,4 @@ class UsersGroupsSearchConnector @Inject()(
       case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_AGENT_CODE")
     }
   }
-
-  def isAdmin(userId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
-    val url = new URL(baseUrl, s"users-groups-search/users/$userId")
-    monitor("ConsumedAPI-UGS-getUserInfo-GET") {
-      httpGet.GET[CredentialRole](url.toString).map(_.credentialRole == "Admin")
-    } recoverWith {
-      case _: NotFoundException => Future successful false
-    }
-  }
-
-  def getAdminUserId(userIds: Seq[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] =
-    for {
-      admins <- Future.sequence(userIds.map(userId => isAdmin(userId).map(isAdminUser => (userId, isAdminUser))))
-    } yield admins.filter(_._2).map(_._1).headOption.getOrElse(throw AdminNotFound("NO_ADMIN_USER"))
 }

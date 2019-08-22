@@ -48,8 +48,7 @@ class EnrolmentStoreProxyConnector @Inject()(
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   // ES0 - principal
-  def getPrincipalUserIdsFor(
-    taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[String]] = {
+  def getPrincipalUserIdFor(taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext) = {
     val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url =
@@ -67,7 +66,7 @@ class EnrolmentStoreProxyConnector @Inject()(
         else {
           if (userIds.lengthCompare(1) > 0)
             Logger(getClass).warn(s"Multiple userIds found for $enrolmentKeyPrefix")
-          userIds
+          userIds.head
         }
       })
   }

@@ -83,7 +83,7 @@ class RelationshipsController @Inject()(
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
-    val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
+    val agentUserFuture = agentUserService.getAgentUserFor(arn)
 
     val result = for {
       agentUser <- agentUserFuture
@@ -155,7 +155,7 @@ class RelationshipsController @Inject()(
           auditData.set("arn", arn)
 
           (for {
-            agentUser <- agentUserService.getAgentAdminUserFor(arn)
+            agentUser <- agentUserService.getAgentUserFor(arn)
             _         <- createService.createRelationship(arn, taxIdentifier, Future.successful(agentUser), Set(), false, true)
           } yield ())
             .map(_ => Created)
