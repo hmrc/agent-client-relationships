@@ -79,6 +79,7 @@ trait UsersGroupsSearchStubs extends TaxIdentifierSupport {
              |""".stripMargin))
     )
 
+  // TODO remove - no longer used, instead find by group to get a list of users
   def givenUserIdIsNotAdmin(userId: String) =
     stubFor(
       get(urlEqualTo(s"/users-groups-search/users/$userId"))

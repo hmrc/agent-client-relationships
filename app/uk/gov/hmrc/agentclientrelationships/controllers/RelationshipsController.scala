@@ -83,7 +83,7 @@ class RelationshipsController @Inject()(
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
-    val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
+    val agentUserFuture: Future[AgentUser] = agentUserService.getAgentAdminUserFor(arn)
 
     val result = for {
       agentUser <- agentUserFuture
