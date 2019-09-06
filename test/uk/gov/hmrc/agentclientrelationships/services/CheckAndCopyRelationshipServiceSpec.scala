@@ -21,6 +21,7 @@ import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
+import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
 import play.api.mvc.Request
 import play.api.test.FakeRequest
@@ -1146,41 +1147,42 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       }
   }
 
-  private def cesaRelationshipDoesNotExist(): Unit = {
+  private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
   }
 
-  private def oldESRelationshipDoesNotExist(): Unit = {
+  private def oldESRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[AgentCode]]] = {
     when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set.empty[String])
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Seq.empty))
   }
 
-  private def mappingServiceUnavailable(): Unit = {
+  private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any()))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
       .thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
 
-  private def mappingServiceUnavailableForMtdVat(): Unit = {
+  private def mappingServiceUnavailableForMtdVat(): OngoingStubbing[Future[Seq[AgentCode]]] = {
     when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set(agentGroupId))
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent)))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any()))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
       .thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
 
-  private def cesaRelationshipExists(): Unit = {
+  private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any())).thenReturn(Future successful Seq(saAgentRef))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
+      .thenReturn(Future successful Seq(saAgentRef))
   }
 
-  private def oldESRelationshipExists(): Unit = {
+  private def oldESRelationshipExists(): OngoingStubbing[Future[Seq[AgentCode]]] = {
     when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set("test2", "foo", agentGroupId, "ABC-123"))
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
@@ -1191,21 +1193,25 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future successful GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123"))))
     when(ugs.getGroupInfo(eqs("test2"))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful GroupInfo("test2", Some("Agent"), None))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any())).thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
+      .thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
 
-  private def arnExistsForGroupId(): Unit = {
+  private def arnExistsForGroupId(): OngoingStubbing[Future[Option[Arn]]] = {
     when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("fooArn"))))
     when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("barArn"))))
   }
 
-  private def previousRelationshipWillBeRemoved(identifier: TaxIdentifier): Unit = {
-    when(es.getDelegatedGroupIdsFor(eqs(identifier))(any(), any())).thenReturn(Future.successful(Set("foo", "bar")))
-    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(identifier))(any(), any())).thenReturn(Future.successful(()))
-    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(identifier))(any(), any())).thenReturn(Future.successful(()))
+  private def previousRelationshipWillBeRemoved(identifier: TaxIdentifier): OngoingStubbing[Future[Unit]] = {
+    when(es.getDelegatedGroupIdsFor(eqs(identifier))(any[HeaderCarrier](), any[ExecutionContext]()))
+      .thenReturn(Future.successful(Set("foo", "bar")))
+    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(identifier))(any[HeaderCarrier](), any[ExecutionContext]()))
+      .thenReturn(Future.successful(()))
+    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(identifier))(any[HeaderCarrier](), any[ExecutionContext]()))
+      .thenReturn(Future.successful(()))
   }
 
-  private def relationshipWillBeCreated(identifier: TaxIdentifier): Unit = {
+  private def relationshipWillBeCreated(identifier: TaxIdentifier): OngoingStubbing[Future[Unit]] = {
     when(des.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
     when(
@@ -1215,39 +1221,39 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future.successful(()))
   }
 
-  private def metricsStub(): Unit =
+  private def metricsStub(): OngoingStubbing[MetricRegistry] =
     when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
 
-  def verifyEtmpRecordCreated(): Unit =
+  def verifyEtmpRecordCreated(): Future[RegistrationRelationshipResponse] =
     verify(des).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
 
-  def verifyEtmpRecordNotCreated(): Unit =
+  def verifyEtmpRecordNotCreated(): Future[RegistrationRelationshipResponse] =
     verify(des, never()).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
 
-  def verifyEtmpRecordCreatedForMtdVat(): Unit =
+  def verifyEtmpRecordCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
     verify(des).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
 
-  def verifyEtmpRecordNotCreatedForMtdVat(): Unit =
+  def verifyEtmpRecordNotCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
     verify(des, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
 
-  def verifyEsRecordCreated(): Unit =
+  def verifyEsRecordCreated(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(mtdItId), eqs(agentCodeForAsAgent))(
       eqs(hc),
       eqs(ec))
 
-  def verifyEsRecordNotCreated(): Unit =
+  def verifyEsRecordNotCreated(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),
       eqs(mtdItId),
       eqs(agentCodeForAsAgent))(eqs(hc), eqs(ec))
 
-  def verifyEsRecordCreatedForMtdVat(): Unit =
+  def verifyEsRecordCreatedForMtdVat(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(vrn), eqs(agentCodeForAsAgent))(
       eqs(hc),
       eqs(ec))
 
-  def verifyEsRecordNotCreatedMtdVat(): Unit =
+  def verifyEsRecordNotCreatedMtdVat(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),
@@ -1257,7 +1263,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
     verify(auditService)
-      .sendCheckCESAAuditEvent(any[HeaderCarrier], any[Request[Any]], auditDataCaptor.capture(), any())
+      .sendCheckCESAAuditEvent(
+        any[HeaderCarrier],
+        any[Request[Any]],
+        auditDataCaptor.capture(),
+        any[ExecutionContext]())
     val auditData: AuditData = auditDataCaptor.getValue
     val auditDetails = auditData.getDetails
     auditDetails("saAgentRef") shouldBe saAgentRef.value
@@ -1268,7 +1278,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   def verifyESAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
-    verify(auditService).sendCheckESAuditEvent(any[HeaderCarrier], any[Request[Any]], auditDataCaptor.capture(), any())
+    verify(auditService)
+      .sendCheckESAuditEvent(any[HeaderCarrier], any[Request[Any]], auditDataCaptor.capture(), any[ExecutionContext]())
     val auditData: AuditData = auditDataCaptor.getValue
     val auditDetails = auditData.getDetails
     auditDetails("vrn") shouldBe vrn

@@ -2,6 +2,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.domain.AgentCode
@@ -32,7 +33,7 @@ trait UsersGroupsSearchStubs extends TaxIdentifierSupport {
       get(urlContains(s"$ugsBaseUrl/groups/"))
         .willReturn(aResponse().withStatus(status)))
 
-  def givenAgentGroupExistsFor(groupId: String): Unit =
+  def givenAgentGroupExistsFor(groupId: String): StubMapping =
     stubFor(
       get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
         .willReturn(aResponse()
@@ -48,7 +49,7 @@ trait UsersGroupsSearchStubs extends TaxIdentifierSupport {
                        |}
           """.stripMargin)))
 
-  def givenNonAgentGroupExistsFor(groupId: String): Unit =
+  def givenNonAgentGroupExistsFor(groupId: String): StubMapping =
     stubFor(
       get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
         .willReturn(aResponse()

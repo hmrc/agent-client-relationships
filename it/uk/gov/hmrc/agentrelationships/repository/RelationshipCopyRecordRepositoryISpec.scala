@@ -28,6 +28,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
   override def beforeEach() {
     super.beforeEach()
     await(repo.ensureIndexes)
+    ()
   }
 
   "RelationshipCopyRecordRepository" should {

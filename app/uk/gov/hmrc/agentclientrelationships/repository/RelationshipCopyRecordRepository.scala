@@ -48,9 +48,9 @@ case class RelationshipCopyRecord(
   syncToESStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
 
-  def needToCreateEtmpRecord = !syncToETMPStatus.contains(Success)
+  def needToCreateEtmpRecord: Boolean = !syncToETMPStatus.contains(Success)
 
-  def needToCreateEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
+  def needToCreateEsRecord: Boolean = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
 object RelationshipCopyRecord extends ReactiveMongoFormats {
@@ -77,15 +77,14 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       formats,
       ReactiveMongoFormats.objectIdFormats)
     with RelationshipCopyRecordRepository
-    with StrictlyEnsureIndexes[RelationshipCopyRecord, BSONObjectID]
-    with AtomicUpdate[RelationshipCopyRecord] {
+    with StrictlyEnsureIndexes[RelationshipCopyRecord, BSONObjectID] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
   import ImplicitBSONHandlers._
   import play.api.libs.json.Json.JsValueWrapper
 
-  override def indexes =
+  override def indexes: Seq[Index] =
     Seq(
       Index(
         Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending),
@@ -120,29 +119,23 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
 
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
     implicit ec: ExecutionContext): Future[Unit] =
-    atomicUpdate(
-      finder = BSONDocument(
-        "arn"                            -> arn.value,
-        "clientIdentifier"               -> identifier.value,
-        "clientIdentifierType"           -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
-    ).map(_.foreach { update =>
-      update.writeResult.errmsg.foreach(error =>
-        Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error"))
-    })
+    findAndUpdate(
+      query = Json.obj(
+        "arn"                  -> arn.value,
+        "clientIdentifier"     -> identifier.value,
+        "clientIdentifierType" -> clientIdentifierType(identifier)),
+      update = Json.obj("$set" -> Json.obj("syncToETMPStatus" -> status.toString))
+    ).map(_.lastError.foreach(error => Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error")))
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
     implicit ec: ExecutionContext): Future[Unit] =
-    atomicUpdate(
-      finder = BSONDocument(
-        "arn"                            -> arn.value,
-        "clientIdentifier"               -> identifier.value,
-        "clientIdentifierType"           -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
-    ).map(_.foreach { update =>
-      update.writeResult.errmsg.foreach(error =>
-        Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error"))
-    })
+    findAndUpdate(
+      query = Json.obj(
+        "arn"                  -> arn.value,
+        "clientIdentifier"     -> identifier.value,
+        "clientIdentifierType" -> clientIdentifierType(identifier)),
+      update = Json.obj("$set" -> Json.obj("syncToESStatus" -> status.toString))
+    ).map(_.lastError.foreach(error => Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error")))
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] =
     remove(
@@ -151,5 +144,4 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       "clientIdentifierType" -> clientIdentifierType(identifier))
       .map(_.n)
 
-  override def isInsertion(newRecordId: BSONObjectID, oldRecord: RelationshipCopyRecord): Boolean = false
 }

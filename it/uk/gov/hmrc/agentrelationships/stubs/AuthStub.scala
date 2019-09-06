@@ -1,6 +1,7 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
@@ -301,7 +302,7 @@ trait AuthStub {
     request.withSession(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenUnauthorisedWith(mdtpDetail: String): Unit =
+  def givenUnauthorisedWith(mdtpDetail: String): StubMapping =
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
@@ -355,8 +356,8 @@ trait AuthStub {
     request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenAuthorisedFor(payload: String, responseBody: String): Unit = {
-    stubFor(
+  def givenAuthorisedFor(payload: String, responseBody: String): Seq[StubMapping] = {
+    List(stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
         .withRequestBody(equalToJson(payload, true, true))
@@ -364,14 +365,14 @@ trait AuthStub {
           aResponse()
             .withStatus(200)
             .withHeader("Content-Type", "application/json")
-            .withBody(responseBody)))
-
+            .withBody(responseBody))),
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(2)
         .willReturn(aResponse()
           .withStatus(401)
           .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
+    )
   }
 
   case class Enrolment(serviceName: String, identifierName: String, identifierValue: String)

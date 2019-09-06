@@ -69,8 +69,10 @@ class RelationshipsControllerWithoutMongoISpec
       )
       .configure(mongoConfiguration)
       .overrides(new AbstractModule {
-        override def configure(): Unit =
+        override def configure(): Unit = {
           bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
+          ()
+        }
       })
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
@@ -81,6 +83,7 @@ class RelationshipsControllerWithoutMongoISpec
   override def beforeEach() {
     super.beforeEach()
     await(repo.ensureIndexes)
+    ()
   }
 
   val arn = Arn("AARN0000002")

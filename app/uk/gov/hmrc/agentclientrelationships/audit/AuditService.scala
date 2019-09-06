@@ -18,11 +18,12 @@ package uk.gov.hmrc.agentclientrelationships.audit
 
 import java.util.concurrent.ConcurrentHashMap
 
-import javax.inject.{Inject, Provider}
 import com.google.inject.Singleton
+import javax.inject.Inject
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
@@ -30,7 +31,6 @@ import uk.gov.hmrc.play.audit.model.DataEvent
 import scala.collection.JavaConversions
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
-import uk.gov.hmrc.http.HeaderCarrier
 
 object AgentClientRelationshipEvent extends Enumeration {
   val CreateRelationship, CheckCESA, CheckES, ClientTerminatedAgentServiceAuthorisation,
@@ -42,8 +42,10 @@ class AuditData {
 
   private val details = new ConcurrentHashMap[String, Any]
 
-  def set(key: String, value: Any): Unit =
+  def set(key: String, value: Any): Unit = {
     details.put(key, value)
+    ()
+  }
 
   def getDetails: Map[String, Any] =
     JavaConversions.mapAsScalaMap(details).toMap
@@ -57,7 +59,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     (f, data.getOrElse(f, ""))
   }
 
-  val createRelationshipDetailsFields = Seq(
+  val createRelationshipDetailsFields: Seq[String] = Seq(
     "agentCode",
     "credId",
     "arn",
@@ -73,7 +75,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "Journey"
   )
 
-  val createRelationshipDetailsFieldsForMtdVat = Seq(
+  val createRelationshipDetailsFieldsForMtdVat: Seq[String] = Seq(
     "agentCode",
     "credId",
     "arn",
@@ -86,11 +88,11 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "AgentDBRecord",
     "Journey")
 
-  val CheckCESADetailsFields = Seq("agentCode", "credId", "arn", "saAgentRef", "CESARelationship", "nino")
+  val CheckCESADetailsFields: Seq[String] = Seq("agentCode", "credId", "arn", "saAgentRef", "CESARelationship", "nino")
 
-  val CheckESDetailsFields = Seq("agentCode", "credId", "oldAgentCodes", "vrn", "arn", "ESRelationship")
+  val CheckESDetailsFields: Seq[String] = Seq("agentCode", "credId", "oldAgentCodes", "vrn", "arn", "ESRelationship")
 
-  val deleteRelationshipDetailsFields =
+  val deleteRelationshipDetailsFields: Seq[String] =
     Seq(
       "agentReferenceNumber",
       "clientId",
@@ -101,7 +103,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "authProviderIdType",
       "deleteStatus")
 
-  val hmrcDeleteRelationshipDetailsFields =
+  val hmrcDeleteRelationshipDetailsFields: Seq[String] =
     Seq(
       "authProviderId",
       "authProviderIdType",
@@ -111,7 +113,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "deleteStatus"
     )
 
-  val recoveryOfDeleteRelationshipDetailsFields = Seq(
+  val recoveryOfDeleteRelationshipDetailsFields: Seq[String] = Seq(
     "agentReferenceNumber",
     "clientId",
     "clientIdType",
@@ -128,7 +130,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     implicit hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreateRelationship,
       "create-relationship",
@@ -138,7 +140,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     implicit hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreateRelationship,
       "create-relationship",
@@ -148,7 +150,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     implicit hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CheckCESA,
       "check-cesa",
@@ -158,7 +160,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     implicit hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CheckES,
       "check-es",
@@ -168,7 +170,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     implicit hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
       "client terminated agent:service authorisation",
@@ -179,7 +181,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     implicit hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
       "recovery-of-delete-relationship-abandoned",
@@ -190,7 +192,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     implicit headerCarrier: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
       "hmrc remove agent:service authorisation",

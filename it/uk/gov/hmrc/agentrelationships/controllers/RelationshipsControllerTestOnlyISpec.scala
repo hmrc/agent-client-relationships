@@ -64,6 +64,7 @@ class RelationshipsControllerTestOnlyISpec
   override def beforeEach() {
     super.beforeEach()
     await(repo.ensureIndexes)
+    ()
   }
 
   val arn = "AARN0000002"

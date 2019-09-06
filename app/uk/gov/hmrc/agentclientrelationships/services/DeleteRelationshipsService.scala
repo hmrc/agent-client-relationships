@@ -333,7 +333,7 @@ class DeleteRelationshipsService @Inject()(
     implicit headerCarrier: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext) =
     if (currentUser.credentials.providerType == "GovernmentGateway")
       auditService.sendDeleteRelationshipAuditEvent
     else if (currentUser.credentials.providerType == "PrivilegedApplication")
