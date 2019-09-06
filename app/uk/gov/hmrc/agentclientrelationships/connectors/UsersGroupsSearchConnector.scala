@@ -41,6 +41,20 @@ object CredentialRole {
   implicit val formats: Format[CredentialRole] = Json.format
 }
 
+/**
+  * Cut down version of UserDetails from users-groups-search, with only the data we
+  * are interested in
+  * */
+case class UserDetails(
+  userId: Option[String] = None,
+  agentCode: Option[String] = None,
+  agentId: Option[String] = None,
+  credentialRole: Option[String] = None)
+
+object UserDetails {
+  implicit val formats: Format[UserDetails] = Json.format
+}
+
 @Singleton
 class UsersGroupsSearchConnector @Inject()(
   @Named("users-groups-search-baseUrl") baseUrl: URL,
@@ -48,6 +62,17 @@ class UsersGroupsSearchConnector @Inject()(
   metrics: Metrics)
     extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+
+  def getFirstGroupAdminUser(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[UserDetails] = {
+    val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId/users")
+    monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
+      httpGet
+        .GET[Seq[UserDetails]](url.toString)
+        .map(_.find(_.credentialRole.exists(_ == "Admin")).getOrElse(throw AdminNotFound("NO_ADMIN_USER")))
+    } recoverWith {
+      case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_GROUP")
+    }
+  }
 
   def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[GroupInfo] = {
     val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId")
@@ -58,17 +83,4 @@ class UsersGroupsSearchConnector @Inject()(
     }
   }
 
-  def isAdmin(userId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
-    val url = new URL(baseUrl, s"users-groups-search/users/$userId")
-    monitor("ConsumedAPI-UGS-getUserInfo-GET") {
-      httpGet.GET[CredentialRole](url.toString).map(_.credentialRole == "Admin")
-    } recoverWith {
-      case _: NotFoundException => Future successful false
-    }
-  }
-
-  def getAdminUserId(userIds: Seq[String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] =
-    for {
-      admins <- Future.sequence(userIds.map(userId => isAdmin(userId).map(isAdminUser => (userId, isAdminUser))))
-    } yield admins.filter(_._2).map(_._1).headOption.getOrElse(throw AdminNotFound("NO_ADMIN_USER"))
 }

@@ -78,7 +78,7 @@ class RelationshipsControllerWithoutMongoISpec
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
+  def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
   override def beforeEach() {
     super.beforeEach()
@@ -112,7 +112,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       def query =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
@@ -173,7 +173,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
 

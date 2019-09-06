@@ -3,7 +3,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
+import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.domain.AgentCode
 
@@ -68,30 +68,19 @@ trait UsersGroupsSearchStubs extends TaxIdentifierSupport {
       get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
         .willReturn(aResponse().withStatus(404)))
 
-  def givenUserIdIsAdmin(userId: String) =
-    stubFor(
-      get(urlEqualTo(s"/users-groups-search/users/$userId"))
-        .willReturn(aResponse()
-        .withBody(
-          s"""{
-             |"userId": "$userId",
-             |"credentialRole": "Admin"
-             |}
-             |""".stripMargin))
-    )
+  def givenAdminUser(groupId: String, userId: String) = {
+    givenAgentGroupWithUsers(groupId, List(UserDetails(userId = Some(userId), credentialRole = Some("Admin") )))
+  }
 
-  // TODO remove - no longer used, instead find by group to get a list of users
-  def givenUserIdIsNotAdmin(userId: String) =
+  def givenAgentGroupWithUsers(groupId: String, users: Seq[UserDetails]): StubMapping =
     stubFor(
-      get(urlEqualTo(s"/users-groups-search/users/$userId"))
+      get(urlEqualTo(s"/users-groups-search/groups/$groupId/users"))
         .willReturn(aResponse()
-          .withBody(
-            s"""{
-               |"userId": "$userId",
-               |"credentialRole": "Assistant"
-               |}
-               |""".stripMargin))
-    )
+          .withBody(s"""
+                       |[
+                       |    ${users.map(UserDetails.formats.writes).mkString(",")}
+                       |]
+          """.stripMargin)))
 
   def givenUserIdNotExistsFor(userId: String) =
     stubFor(

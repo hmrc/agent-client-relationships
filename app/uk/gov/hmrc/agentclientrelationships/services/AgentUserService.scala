@@ -36,13 +36,13 @@ class AgentUserService @Inject()(
   def getAgentAdminUserFor(
     arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     for {
-      agentGroupId     <- es.getPrincipalGroupIdFor(arn)
-      agentUserIds     <- es.getPrincipalUserIdsFor(arn)
-      adminAgentUserId <- ugs.getAdminUserId(agentUserIds) // this makes too many calls to SCP
-      _ = auditData.set("credId", adminAgentUserId)
+      agentGroupId   <- es.getPrincipalGroupIdFor(arn)
+      firstAdminUser <- ugs.getFirstGroupAdminUser(agentGroupId)
+      adminUserId = firstAdminUser.userId.getOrElse(throw new Exception("Admin user had no userId"))
+      _ = auditData.set("credId", adminUserId)
       groupInfo <- ugs.getGroupInfo(agentGroupId)
       agentCode = groupInfo.agentCode.getOrElse(throw new Exception(s"Missing AgentCode for $arn"))
       _ = auditData.set("agentCode", agentCode)
-    } yield AgentUser(adminAgentUserId, agentGroupId, agentCode, arn)
+    } yield AgentUser(adminUserId, agentGroupId, agentCode, arn)
 
 }

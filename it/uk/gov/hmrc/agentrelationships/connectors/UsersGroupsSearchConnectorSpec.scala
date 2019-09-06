@@ -25,7 +25,7 @@ class UsersGroupsSearchConnectorSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpGet = app.injector.instanceOf[HttpGet]
+  val httpGet: HttpGet = app.injector.instanceOf[HttpGet]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -65,45 +65,6 @@ class UsersGroupsSearchConnectorSpec
       }
     }
 
-    "isAdmin endpoint" should {
-      "return true if the user is an admin" in {
-        givenAuditConnector()
-        givenUserIdIsAdmin("userId")
-        await(connector.isAdmin("userId")) shouldBe true
-      }
-
-      "return false if the user is not an admin" in {
-        givenAuditConnector()
-        givenUserIdIsNotAdmin("userId")
-        await(connector.isAdmin("userId")) shouldBe false
-      }
-
-      "return false if the user does not exist" in {
-        givenAuditConnector()
-        givenUserIdNotExistsFor("userId")
-        await(connector.isAdmin("userId")) shouldBe false
-      }
-    }
-
-    "getAdminUser" should {
-      "return the first user id that is an admin" in {
-        givenUserIdIsNotAdmin("userId-1")
-        givenUserIdIsAdmin("userId-2")
-        givenUserIdIsAdmin("userId-3")
-
-        await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
-      }
-
-      "throw a AdminNotFound if there is no admin user in the group of user ids" in {
-        givenUserIdIsNotAdmin("userId-1")
-        givenUserIdIsNotAdmin("userId-2")
-        givenUserIdIsNotAdmin("userId-3")
-
-        intercept[AdminNotFound] {
-          await(connector.getAdminUserId(Seq("userId-1", "userId-2", "userId-3"))) shouldBe "userId-2"
-        }.getMessage shouldBe "NO_ADMIN_USER"
-      }
-    }
   }
 
 

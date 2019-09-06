@@ -36,6 +36,11 @@ def testDeps(scope: String) = Seq(
   "com.github.tomakehurst" % "wiremock" % "2.23.2" % scope
 )
 
+def tmpMacWorkaround(): Seq[ModuleID] =
+  if (sys.props.get("os.name").fold(false)(_.toLowerCase.contains("mac")))
+    Seq("org.reactivemongo" % "reactivemongo-shaded-native" % "0.16.1-osx-x86-64" % "runtime,test,it")
+  else Seq()
+
 lazy val root = (project in file("."))
   .settings(
     name := "agent-client-relationships",
@@ -58,7 +63,7 @@ lazy val root = (project in file("."))
       Resolver.typesafeRepo("releases"),
       Resolver.jcenterRepo
     ),
-    libraryDependencies ++= compileDeps ++ testDeps("test") ++ testDeps("it"),
+    libraryDependencies ++= tmpMacWorkaround() ++ compileDeps ++ testDeps("test") ++ testDeps("it"),
     publishingSettings,
     scoverageSettings,
     unmanagedResourceDirectories in Compile += baseDirectory.value / "resources",

@@ -5,7 +5,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UserDetails, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentclientrelationships.services.{AgentUser, AgentUserService}
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -55,7 +55,7 @@ class AgentUserServiceISpec
 
     "Throw exception when no principal users found for ARN" in {
       givenPrincipalGroupIdExistsFor(arnNoAdmin, "bar")
-      givenPrincipalUserIdExistFor(arnNoAdmin, "baz")
+      givenAgentGroupWithUsers("bar", List.empty)
       an[AdminNotFound] shouldBe thrownBy {
         await(agentUserService.getAgentAdminUserFor(arnNoAdmin))
       }
@@ -63,10 +63,12 @@ class AgentUserServiceISpec
 
     "Throw exception when no admin user among principal users found for ARN" in {
       givenPrincipalGroupIdExistsFor(arnNoAdmin, "bar")
-      givenPrincipalUserIdExistFor(arnNoAdmin, "baz")
-      givenPrincipalUserIdsExistFor(arnNoAdmin, List("baz1", "baz2"))
-      givenUserIdIsNotAdmin("baz1")
-      givenUserIdIsNotAdmin("baz2")
+      givenAgentGroupWithUsers("bar",
+        List(
+          UserDetails(userId = Some("baz1"), credentialRole = Some("Assistant")),
+          UserDetails(userId = Some("baz2"), credentialRole = Some("Assistant"))
+        )
+      )
       an[AdminNotFound] shouldBe thrownBy {
         await(agentUserService.getAgentAdminUserFor(arnNoAdmin))
       }
@@ -75,10 +77,13 @@ class AgentUserServiceISpec
     "Find first admin user for ARN" in {
       givenPrincipalGroupIdExistsFor(arnWithAdmin, "bar")
       givenAgentGroupExistsFor("bar")
-      givenPrincipalUserIdsExistFor(arnWithAdmin, List("assistant1", "administrator", "assistant3"))
-      givenUserIdIsNotAdmin("assistant1")
-      givenUserIdIsAdmin("administrator")
-      givenUserIdIsNotAdmin("assistant3")
+      givenAgentGroupWithUsers("bar",
+        List(
+          UserDetails(userId = Some("assistant1"), credentialRole = Some("Assistant")),
+          UserDetails(userId = Some("administrator"), credentialRole = Some("Admin")),
+          UserDetails(userId = Some("assistant3"), credentialRole = Some("Assistant"))
+        )
+      )
       await(agentUserService.getAgentAdminUserFor(arnWithAdmin)) shouldBe
         AgentUser("administrator", "bar", AgentCode("NQJUEJCWT14"), arnWithAdmin)
     }

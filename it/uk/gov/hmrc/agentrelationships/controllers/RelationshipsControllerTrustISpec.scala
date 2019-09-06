@@ -40,7 +40,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> utr.value, "clientIdentifierType" -> saUtrType)
@@ -69,7 +69,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenGroupInfoNotExists("foo")
       givenDelegatedGroupIdsExistFor(utr, Set("foo"))
       givenDelegatedGroupIdsNotExistForKey(s"HMRC-TERS-ORG~SAUTR~${utr.value}")
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -155,7 +155,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenEnrolmentDeallocationSucceeds("foo", utr)
       givenEnrolmentDeallocationSucceeds("bar", utr)
       givenTrustEnrolmentAllocationSucceeds(utr, "bar")
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
     }
 
     "return 201 when the relationship exists and the Arn matches that of current Agent user" in new StubsForThisScenario {
@@ -206,7 +206,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenDelegatedGroupIdsNotExistFor(utr)
       givenAgentCanBeAllocatedInDes(utr, arn)
       givenTrustEnrolmentAllocationSucceeds(utr, "bar")
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -252,7 +252,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         identifier = "SAUTR",
         value = utr.value,
         agentCode = "bar")
-      givenUserIdIsAdmin("user1")
+      givenAdminUser("foo", "user1")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -265,7 +265,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForTrust(utr)
       givenDesReturnsServiceUnavailable()
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -278,7 +278,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForTrust(utr)
       givenAgentCanNotBeAllocatedInDes(status = 404)
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 404
@@ -360,7 +360,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentCanBeDeallocatedInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
-        givenUserIdIsAdmin("any")
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -388,7 +388,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentCanBeDeallocatedInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
-        givenUserIdIsAdmin("any")
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -416,7 +416,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentCanBeDeallocatedInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
-        givenUserIdIsAdmin("any")
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -442,7 +442,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalGroupIdExistsFor(utr, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrust(utr)
         givenAgentCanBeDeallocatedInDes(utr, arn)
-        givenUserIdIsAdmin("any")
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -470,7 +470,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrust(utr)
         givenAgentHasNoActiveRelationshipInDes(utr, arn)
-        givenUserIdIsAdmin("any")
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -498,7 +498,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
         givenAgentHasNoActiveRelationshipInDes(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
-        givenUserIdIsAdmin("any")
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
