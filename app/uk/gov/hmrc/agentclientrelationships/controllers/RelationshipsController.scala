@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, Relationship
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.Upstream5xxResponse
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -83,49 +83,66 @@ class RelationshipsController @Inject()(
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
-    val agentUserFuture: Future[AgentUser] = agentUserService.getAgentAdminUserFor(arn)
+    val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
 
     val result = for {
       agentUser <- agentUserFuture
       isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
-      result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
-               else raiseError(RelationshipDeletePending())
+      result <- agentUser
+                 .fold(
+                   error => Future.failed(AdminNotFound(error)),
+                   user =>
+                     if (isClear) {
+                       checkService.checkForRelationship(taxIdentifier, user)
+                     } else {
+                       raiseError(RelationshipDeletePending())
+                   }
+                 )
     } yield result
 
     result
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          checkOldAndCopyService
-            .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
-            .map {
-              case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled =>
-                Left(errorCode)
-              case cesaResult =>
-                Right(cesaResult.grantAccess)
-            }
-            .recover {
-              case upS: Upstream5xxResponse =>
-                throw upS
-              case NonFatal(ex) =>
-                Logger(getClass).warn(
-                  s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
-                  ex)
-                Left(errorCode)
-            }
+          checkOldRelationship(arn, taxIdentifier, agentUserFuture, errorCode)
+        case AdminNotFound(errorCode) =>
+          checkOldRelationship(arn, taxIdentifier, agentUserFuture, errorCode)
         case e @ RelationshipDeletePending() =>
           Logger(getClass).warn("Denied access because relationship removal is pending.")
           Future.successful(Left(e.getMessage))
-
-        case e: AdminNotFound =>
-          Logger(getClass).warn("Denied access because no admin users are found")
-          Future.successful(Left(e.getMessage))
       }
       .map {
-        case Left(errorCode) => NotFound(toJson(errorCode))
-        case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-        case Right(true)     => Ok
+        case Left(errorCode) => NotFound(toJson(errorCode)) // no access (due to error)
+        case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND")) // do not grant access
+        case Right(true)     => Ok // grant access
       }
   }
+
+  private def checkOldRelationship(
+    arn: Arn,
+    taxIdentifier: TaxIdentifier,
+    agentUserFuture: Future[Either[String, AgentUser]],
+    errorCode: String)(
+    implicit ec: ExecutionContext,
+    hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData): Future[Either[String, Boolean]] =
+    checkOldAndCopyService
+      .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
+      .map {
+        case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
+          Left(errorCode)
+        case cesaResult =>
+          Right(cesaResult.grantAccess)
+      }
+      .recover {
+        case upS: Upstream5xxResponse =>
+          throw upS
+        case NonFatal(ex) =>
+          Logger(getClass).warn(
+            s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
+            ex)
+          Left(errorCode)
+      }
 
   private def checkLegacyWithNino(arn: Arn, nino: Nino)(implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
@@ -155,8 +172,14 @@ class RelationshipsController @Inject()(
           auditData.set("arn", arn)
 
           (for {
-            agentUser <- agentUserService.getAgentAdminUserFor(arn)
-            _         <- createService.createRelationship(arn, taxIdentifier, Future.successful(agentUser), Set(), false, true)
+            maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
+            _ <- createService.createRelationship(
+                  arn,
+                  taxIdentifier,
+                  Future.successful(maybeAgentUser),
+                  Set(),
+                  false,
+                  true)
           } yield ())
             .map(_ => Created)
             .recover {

@@ -51,7 +51,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val agentGroupId = "testGroupId"
   val agentCodeForVatDecAgent = AgentCode("oldAgentCode")
   val agentCodeForAsAgent = AgentCode("ABC1234")
-  val eventualAgentUserForAsAgent = Future successful AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn)
+  val eventualAgentUserForAsAgent = Future successful Right(
+    AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn))
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,
@@ -1170,7 +1171,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set(agentGroupId))
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
-      .thenReturn(Future successful GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent)))
+      .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
       .thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
   }
@@ -1186,13 +1187,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Set("test2", "foo", agentGroupId, "ABC-123"))
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
-      .thenReturn(Future successful GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent)))
+      .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
     when(ugs.getGroupInfo(eqs("foo"))(eqs(hc), eqs(ec)))
-      .thenReturn(Future successful GroupInfo("foo", Some("Agent"), Some(AgentCode("foo"))))
+      .thenReturn(Future successful Some(GroupInfo("foo", Some("Agent"), Some(AgentCode("foo")))))
     when(ugs.getGroupInfo(eqs("ABC-123"))(eqs(hc), eqs(ec)))
-      .thenReturn(Future successful GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123"))))
+      .thenReturn(Future successful Some(GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123")))))
     when(ugs.getGroupInfo(eqs("test2"))(eqs(hc), eqs(ec)))
-      .thenReturn(Future successful GroupInfo("test2", Some("Agent"), None))
+      .thenReturn(Future successful Some(GroupInfo("test2", Some("Agent"), None)))
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
       .thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }

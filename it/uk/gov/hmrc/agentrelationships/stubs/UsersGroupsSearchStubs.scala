@@ -19,6 +19,14 @@ trait UsersGroupsSearchStubs extends TaxIdentifierSupport {
           .withBody(GroupInfo.formats.writes(groupInfo).toString())))
   }
 
+  def givenGroupInfoNoAgentCode(groupId: String) = {
+    val groupInfo = GroupInfo(groupId, Some("Agent"), None)
+    stubFor(
+      get(urlEqualTo(s"$ugsBaseUrl/groups/$groupId"))
+        .willReturn(aResponse()
+          .withBody(GroupInfo.formats.writes(groupInfo).toString())))
+  }
+
   def givenGroupInfoNotExists(groupId: String) =
     stubFor(
       get(urlEqualTo(s"$ugsBaseUrl/groups/$groupId"))

@@ -61,19 +61,19 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
 
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
-    "return 404 when agent code is not found in ugs" in {
+    "return 404 when agent code is not found in ugs (and no relationship in old world)" in {
       givenPrincipalUser(arn, "foo")
-      givenGroupInfoNotExists("foo")
+      givenGroupInfoNoAgentCode("foo")
       givenDelegatedGroupIdsExistFor(utr, Set("foo"))
       givenDelegatedGroupIdsNotExistForKey(s"HMRC-TERS-ORG~SAUTR~${utr.value}")
       givenAdminUser("foo", "any")
 
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+      (result.json \ "code").as[String] shouldBe "NO_AGENT_CODE"
     }
 
     //FAILURE CASES

@@ -84,7 +84,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = await(doRequest)
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_AGENT_CODE"
+      (result.json \ "code").as[String] shouldBe "MISSING_GROUP"
     }
 
     "return 404 when delete is pending" in {
@@ -364,7 +364,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenNinoIsKnownFor(mtdItId, nino)
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
-      givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+      givenClientHasRelationshipWithAgentInCESA(nino, "foo")  // Old world
       givenAgentCanBeAllocatedInDes(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
       givenAdminUser("foo", "any")

@@ -7,7 +7,6 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UserDetails, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentclientrelationships.services.{AgentUser, AgentUserService}
-import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.stubs.{EnrolmentStoreProxyStubs, UsersGroupsSearchStubs}
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
@@ -53,15 +52,26 @@ class AgentUserServiceISpec
 
   "AgentUserService" should {
 
-    "Throw exception when no principal users found for ARN" in {
+    "Return Error when no principal users found for ARN" in {
       givenPrincipalGroupIdExistsFor(arnNoAdmin, "bar")
       givenAgentGroupWithUsers("bar", List.empty)
-      an[AdminNotFound] shouldBe thrownBy {
-        await(agentUserService.getAgentAdminUserFor(arnNoAdmin))
-      }
+      await(agentUserService.getAgentAdminUserFor(arnNoAdmin)) shouldBe Left("NO_ADMIN_USER")
     }
 
-    "Throw exception when no admin user among principal users found for ARN" in {
+    "Return Error when no group found for ARN" in {
+      givenPrincipalGroupIdExistsFor(arnNoAdmin, "bar")
+      givenAgentGroupWithUsers("bar",
+        List(
+          UserDetails(userId = Some("assistant1"), credentialRole = Some("Assistant")),
+          UserDetails(userId = Some("administrator"), credentialRole = Some("Admin")),
+          UserDetails(userId = Some("assistant3"), credentialRole = Some("Assistant"))
+        )
+      )
+      givenGroupNotExistsFor("bar")
+      await(agentUserService.getAgentAdminUserFor(arnNoAdmin)) shouldBe Left("MISSING_GROUP")
+    }
+
+    "Return Error when no admin user among principal users found for ARN" in {
       givenPrincipalGroupIdExistsFor(arnNoAdmin, "bar")
       givenAgentGroupWithUsers("bar",
         List(
@@ -69,9 +79,7 @@ class AgentUserServiceISpec
           UserDetails(userId = Some("baz2"), credentialRole = Some("Assistant"))
         )
       )
-      an[AdminNotFound] shouldBe thrownBy {
-        await(agentUserService.getAgentAdminUserFor(arnNoAdmin))
-      }
+      await(agentUserService.getAgentAdminUserFor(arnNoAdmin)) shouldBe Left("NO_ADMIN_USER")
     }
 
     "Find first admin user for ARN" in {
@@ -85,7 +93,7 @@ class AgentUserServiceISpec
         )
       )
       await(agentUserService.getAgentAdminUserFor(arnWithAdmin)) shouldBe
-        AgentUser("administrator", "bar", AgentCode("NQJUEJCWT14"), arnWithAdmin)
+        Right(AgentUser("administrator", "bar", AgentCode("NQJUEJCWT14"), arnWithAdmin))
     }
 
   }

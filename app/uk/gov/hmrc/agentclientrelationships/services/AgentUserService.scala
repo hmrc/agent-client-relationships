@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import javax.inject.{Inject, Singleton}
+import play.api.Logger
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -33,16 +34,30 @@ class AgentUserService @Inject()(
   ugs: UsersGroupsSearchConnector
 ) {
 
-  def getAgentAdminUserFor(
-    arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
+  def getAgentAdminUserFor(arn: Arn)(
+    implicit ec: ExecutionContext,
+    hc: HeaderCarrier,
+    auditData: AuditData): Future[Either[String, AgentUser]] =
     for {
       agentGroupId   <- es.getPrincipalGroupIdFor(arn)
       firstAdminUser <- ugs.getFirstGroupAdminUser(agentGroupId)
-      adminUserId = firstAdminUser.userId.getOrElse(throw new Exception("Admin user had no userId"))
-      _ = auditData.set("credId", adminUserId)
+      adminUserId = firstAdminUser.flatMap(_.userId)
+      _ = adminUserId.foreach(auditData.set("credId", _))
       groupInfo <- ugs.getGroupInfo(agentGroupId)
-      agentCode = groupInfo.agentCode.getOrElse(throw new Exception(s"Missing AgentCode for $arn"))
-      _ = auditData.set("agentCode", agentCode)
-    } yield AgentUser(adminUserId, agentGroupId, agentCode, arn)
+      agentCode = groupInfo.flatMap(_.agentCode)
+      _ = agentCode.foreach(auditData.set("agentCode", _))
+    } yield
+      (adminUserId, groupInfo, agentCode) match {
+        case (Some(userId), Some(_), Some(code)) => Right(AgentUser(userId, agentGroupId, code, arn))
+        case (None, _, _) =>
+          Logger.warn(s"Admin user had no userId for Arn: $arn")
+          Left("NO_ADMIN_USER")
+        case (Some(userId), None, _) =>
+          Logger.warn(s"Missing Group for Arn: $arn and admin user: $userId")
+          Left("MISSING_GROUP")
+        case (_, Some(groupInfo), None) =>
+          Logger.warn(s"Missing AgentCode for Arn: $arn and group: ${groupInfo.groupId}")
+          Left("NO_AGENT_CODE")
+      }
 
 }

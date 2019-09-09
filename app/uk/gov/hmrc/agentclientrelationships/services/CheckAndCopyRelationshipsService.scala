@@ -37,6 +37,10 @@ sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
 }
 
+case object CheckAndCopyNotImplemented extends CheckAndCopyResult {
+  override val grantAccess = false
+}
+
 case object AlreadyCopiedDidNotCheck extends CheckAndCopyResult {
   override val grantAccess = false
 }
@@ -71,14 +75,21 @@ class CheckAndCopyRelationshipsService @Inject()(
   @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean)
     extends Monitoring {
 
-  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier, eventualAgentUser: Future[AgentUser])(
+  def checkForOldRelationshipAndCopy(
+    arn: Arn,
+    identifier: TaxIdentifier,
+    eventualAgentUser: Future[Either[String, AgentUser]])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData): Future[CheckAndCopyResult] = {
 
     def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
-      if (copyRelationshipFlag) body else returnValue(CopyRelationshipNotEnabled)
+      if (copyRelationshipFlag) {
+        body
+      } else {
+        returnValue(CopyRelationshipNotEnabled)
+      }
 
     identifier match {
       case mtdItId @ MtdItId(_) =>
@@ -87,14 +98,14 @@ class CheckAndCopyRelationshipsService @Inject()(
       case vrn @ Vrn(_) =>
         ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
 
-      case _ => Future.successful(NotFound)
+      case _ => Future.successful(CheckAndCopyNotImplemented)
     }
   }
 
   private def checkCesaForOldRelationshipAndCopyForMtdIt(
     arn: Arn,
     mtdItId: MtdItId,
-    eventualAgentUser: Future[AgentUser])(
+    eventualAgentUser: Future[Either[String, AgentUser]])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -119,8 +130,15 @@ class CheckAndCopyRelationshipsService @Inject()(
                        .map(relationshipCopyRecord =>
                          createRelationshipsService
                            .resumeRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
-                       .getOrElse(createRelationshipsService
-                         .createRelationship(arn, mtdItId, eventualAgentUser, references.map(SaRef.apply), true, false))
+                       .getOrElse(
+                         createRelationshipsService
+                           .createRelationship(
+                             arn,
+                             mtdItId,
+                             eventualAgentUser,
+                             references.map(SaRef.apply),
+                             failIfCreateRecordFails = true,
+                             failIfAllocateAgentInESFails = false))
                        .map { _ =>
                          auditService.sendCreateRelationshipAuditEvent
                          mark("Count-CopyRelationship-ITSA-FoundAndCopied")
@@ -139,7 +157,10 @@ class CheckAndCopyRelationshipsService @Inject()(
     }
   }
 
-  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn, eventualAgentUser: Future[AgentUser])(
+  private def checkESForOldRelationshipAndCopyForMtdVat(
+    arn: Arn,
+    vrn: Vrn,
+    eventualAgentUser: Future[Either[String, AgentUser]])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -211,10 +232,17 @@ class CheckAndCopyRelationshipsService @Inject()(
 
     for {
       agentGroupIds <- es.getDelegatedGroupIdsForHMCEVATDECORG(clientVrn)
+      groupInfos = agentGroupIds.map(ugs.getGroupInfo)
       agentCodes <- Future
-                     .sequence(agentGroupIds.map(ugs.getGroupInfo).toSeq)
-                     .map(_.map(_.agentCode).collect { case Some(ac) => ac })
-      matching <- intersection[AgentCode](agentCodes) {
+                     .sequence(groupInfos)
+                     .map { setOptions: Set[Option[GroupInfo]] =>
+                       setOptions
+                         .flatMap { maybeGroup =>
+                           maybeGroup.map(_.agentCode)
+                         }
+                         .collect { case Some(ac) => ac }
+                     }
+      matching <- intersection[AgentCode](agentCodes.toSeq) {
                    mapping.getAgentCodesFor(arn)
                  }
       _ = auditData.set("oldAgentCodes", matching.map(_.value).mkString(","))
