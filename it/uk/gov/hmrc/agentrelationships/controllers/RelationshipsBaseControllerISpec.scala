@@ -65,6 +65,7 @@ trait RelationshipsBaseControllerISpec
     givenAuditConnector()
     await(repo.ensureIndexes)
     await(deleteRecordRepository.ensureIndexes)
+    ()
   }
 
   val HMRCMTDIT = "HMRC-MTD-IT"

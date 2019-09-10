@@ -17,7 +17,9 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+
+import scala.language.postfixOps
 
 class DesConnectorSpec
     extends UnitSpec
@@ -42,8 +44,8 @@ class DesConnectorSpec
         "auditing.consumer.baseUri.port" -> wireMockPort
       )
 
-  private implicit val hc = HeaderCarrier()
-  private implicit val ec = ExecutionContext.global
+  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val desConnector =
     new DesConnector(wireMockBaseUrl, "token", "stub", 30 days, httpGet, httpPost, app.injector.instanceOf[Metrics])

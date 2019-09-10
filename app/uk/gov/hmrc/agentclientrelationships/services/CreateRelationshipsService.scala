@@ -46,7 +46,7 @@ class CreateRelationshipsService @Inject()(
   def createRelationship(
     arn: Arn,
     identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser],
+    eventualAgentUser: Future[Either[String, AgentUser]],
     oldReferences: Set[RelationshipReference],
     failIfCreateRecordFails: Boolean,
     failIfAllocateAgentInESFails: Boolean)(
@@ -111,7 +111,7 @@ class CreateRelationshipsService @Inject()(
   private def createEsRecord(
     arn: Arn,
     identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser],
+    eventualAgentUser: Future[Either[String, AgentUser]],
     failIfAllocateAgentInESFails: Boolean)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -205,10 +205,11 @@ class CreateRelationshipsService @Inject()(
       } yield ()
 
     (for {
-      _         <- updateEsSyncStatus(InProgress)
-      agentUser <- eventualAgentUser
-      _         <- deallocatePreviousRelationshipIfAny
-      _         <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
+      _              <- updateEsSyncStatus(InProgress)
+      maybeAgentUser <- eventualAgentUser
+      agentUser = maybeAgentUser.right.getOrElse(throw RelationshipNotFound("No admin agent user found"))
+      _ <- deallocatePreviousRelationshipIfAny
+      _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
       _ <- updateEsSyncStatus(Success)
     } yield ())
@@ -222,7 +223,7 @@ class CreateRelationshipsService @Inject()(
     relationshipCopyRecord: RelationshipCopyRecord,
     arn: Arn,
     identifier: TaxIdentifier,
-    eventualAgentUser: Future[AgentUser])(
+    eventualAgentUser: Future[Either[String, AgentUser]])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Unit] =

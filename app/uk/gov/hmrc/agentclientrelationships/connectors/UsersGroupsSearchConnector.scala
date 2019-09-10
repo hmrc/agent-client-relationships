@@ -21,9 +21,9 @@ import java.net.URL
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Named, Singleton}
+import play.api.Logger
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipNotFound}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http._
 
@@ -41,6 +41,16 @@ object CredentialRole {
   implicit val formats: Format[CredentialRole] = Json.format
 }
 
+/**
+  * Cut down version of UserDetails from users-groups-search, with only the data we
+  * are interested in
+  * */
+case class UserDetails(userId: Option[String] = None, credentialRole: Option[String] = None)
+
+object UserDetails {
+  implicit val formats: Format[UserDetails] = Json.format
+}
+
 @Singleton
 class UsersGroupsSearchConnector @Inject()(
   @Named("users-groups-search-baseUrl") baseUrl: URL,
@@ -49,12 +59,29 @@ class UsersGroupsSearchConnector @Inject()(
     extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[GroupInfo] = {
-    val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId")
-    monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
-      httpGet.GET[GroupInfo](url.toString)
+  def getFirstGroupAdminUser(
+    groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UserDetails]] = {
+    val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId/users")
+    monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
+      httpGet
+        .GET[Seq[UserDetails]](url.toString)
+        .map(_.find(_.credentialRole.exists(_ == "Admin")))
     } recoverWith {
-      case _: NotFoundException => Future failed RelationshipNotFound("UNKNOWN_AGENT_CODE")
+      case _: NotFoundException =>
+        Logger.warn(s"Group $groupId not found in SCP")
+        Future.successful(None)
     }
   }
+
+  def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[GroupInfo]] = {
+    val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId")
+    monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
+      httpGet.GET[GroupInfo](url.toString).map(Some(_))
+    } recoverWith {
+      case _: NotFoundException =>
+        Logger.warn(s"Group $groupId not found in SCP")
+        Future.successful(None)
+    }
+  }
+
 }

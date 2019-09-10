@@ -2,6 +2,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
@@ -15,6 +16,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store"
   private val teBaseUrl = s"/tax-enrolments"
 
+  // ES1
   def givenPrincipalGroupIdExistsFor(taxIdentifier: TaxIdentifier, groupId: String) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(
@@ -80,6 +82,10 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
         .willReturn(aResponse().withStatus(status)))
 
   def givenPrincipalUserIdExistFor(taxIdentifier: TaxIdentifier, userId: String) = {
+    givenPrincipalUserIdsExistFor(taxIdentifier, List(userId))
+  }
+
+  def givenPrincipalUserIdsExistFor(taxIdentifier: TaxIdentifier, userIds: Seq[String]) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/users?type=principal"))
@@ -87,7 +93,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
           .withBody(s"""
                        |{
                        |    "principalUserIds":[
-                       |        "$userId"
+                       |        ${userIds.map('"' + _ + '"').mkString(", ")}
                        |    ]
                        |}
           """.stripMargin)))
@@ -199,7 +205,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
         .willReturn(aResponse().withStatus(503)))
   }
 
-  def givenEnrolmentExistsForGroupId(groupId: String, taxIdentifier: TaxIdentifier): Unit = {
+  def givenEnrolmentExistsForGroupId(groupId: String, taxIdentifier: TaxIdentifier): StubMapping = {
     val enrolmentKey = TypeOfEnrolment(taxIdentifier)
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
@@ -230,7 +236,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
              """.stripMargin)))
   }
 
-  def givenEnrolmentNotExistsForGroupId(groupId: String): Unit =
+  def givenEnrolmentNotExistsForGroupId(groupId: String): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
         .willReturn(aResponse()

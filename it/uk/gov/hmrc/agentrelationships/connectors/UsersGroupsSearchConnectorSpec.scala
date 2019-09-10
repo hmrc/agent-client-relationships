@@ -25,7 +25,7 @@ class UsersGroupsSearchConnectorSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpGet = app.injector.instanceOf[HttpGet]
+  val httpGet: HttpGet = app.injector.instanceOf[HttpGet]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -47,22 +47,24 @@ class UsersGroupsSearchConnectorSpec
       "return some agentCode for a given agent's groupId" in {
         givenAuditConnector()
         givenAgentGroupExistsFor("foo")
-        await(connector.getGroupInfo("foo")) shouldBe GroupInfo("foo", Some("Agent"), Some(AgentCode("NQJUEJCWT14")))
+        await(connector.getGroupInfo("foo")) shouldBe Some(GroupInfo("foo", Some("Agent"), Some(AgentCode("NQJUEJCWT14"))))
       }
 
       "return none agentCode for a given non-agent groupId" in {
         givenAuditConnector()
         givenNonAgentGroupExistsFor("foo")
-        await(connector.getGroupInfo("foo")) shouldBe GroupInfo("foo", Some("Organisation"), None)
+        await(connector.getGroupInfo("foo")) shouldBe Some(GroupInfo("foo", Some("Organisation"), None))
       }
 
-      "throw exception if group not exists" in {
+      "return onone if group not exists" in {
         givenAuditConnector()
         givenGroupNotExistsFor("foo")
-        an[RelationshipNotFound] shouldBe thrownBy {
-          await(connector.getGroupInfo("foo"))
-        }
+        await(connector.getGroupInfo("foo")) shouldBe None
       }
     }
+
   }
+
+
+
 }

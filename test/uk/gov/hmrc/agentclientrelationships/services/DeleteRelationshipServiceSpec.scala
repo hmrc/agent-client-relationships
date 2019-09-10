@@ -440,8 +440,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     def givenAgentExists =
       when(
-        agentUserService.getAgentUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
-        .thenReturn(Future.successful(agentUser))
+        agentUserService.getAgentAdminUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+        .thenReturn(Future.successful(Right(agentUser)))
 
     def givenRelationshipBetweenAgentAndClientExists =
       when(checkService

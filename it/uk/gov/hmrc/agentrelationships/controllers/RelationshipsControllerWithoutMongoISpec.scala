@@ -69,18 +69,21 @@ class RelationshipsControllerWithoutMongoISpec
       )
       .configure(mongoConfiguration)
       .overrides(new AbstractModule {
-        override def configure(): Unit =
+        override def configure(): Unit = {
           bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
+          ()
+        }
       })
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
+  def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
   override def beforeEach() {
     super.beforeEach()
     await(repo.ensureIndexes)
+    ()
   }
 
   val arn = Arn("AARN0000002")
@@ -109,7 +112,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenAgentCanBeAllocatedInDes(mtditid, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       def query =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
@@ -170,7 +173,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
-      givenUserIdIsAdmin("any")
+      givenAdminUser("foo", "any")
 
       def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
 

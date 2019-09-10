@@ -53,8 +53,7 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
       RecoveryRecord.formats,
       ReactiveMongoFormats.objectIdFormats)
     with RecoveryScheduleRepository
-    with StrictlyEnsureIndexes[RecoveryRecord, BSONObjectID]
-    with AtomicUpdate[RecoveryRecord] {
+    with StrictlyEnsureIndexes[RecoveryRecord, BSONObjectID] {
 
   import ImplicitBSONHandlers._
 
@@ -74,13 +73,11 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoCom
     })
 
   def write(newUid: String, newRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit] =
-    atomicUpsert(
-      finder = BSONDocument(),
-      modifierBson = BSONDocument(
-        "$set" -> BSONDocument("uid" -> newUid, "runAt" -> ReactiveMongoFormats.dateTimeWrite.writes(newRunAt)))
-    ).map(update =>
-      update.writeResult.errmsg.foreach(error =>
-        Logger(getClass).warn(s"Updating uid and runAt failed with error: $error")))
+    findAndUpdate(
+      query = Json.obj(),
+      update =
+        Json.obj("$set" -> Json.obj("uid" -> newUid, "runAt" -> ReactiveMongoFormats.dateTimeWrite.writes(newRunAt))),
+      upsert = true
+    ).map(_.lastError.foreach(error => Logger(getClass).warn(s"Updating uid and runAt failed with error: $error")))
 
-  override def isInsertion(newRecordId: BSONObjectID, oldRecord: RecoveryRecord): Boolean = false
 }

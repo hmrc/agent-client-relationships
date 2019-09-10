@@ -28,10 +28,11 @@ class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with OneApp
   override def beforeEach() {
     super.beforeEach()
     await(repo.ensureIndexes)
+    ()
   }
 
-  val uid = UUID.randomUUID()
-  val newDate = DateTime.now()
+  val uid: UUID = UUID.randomUUID()
+  val newDate: DateTime = DateTime.now()
 
   "RecoveryRepository" should {
     "read and write" in {

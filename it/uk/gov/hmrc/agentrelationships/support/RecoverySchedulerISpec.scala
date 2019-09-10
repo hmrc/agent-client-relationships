@@ -51,7 +51,7 @@ class RecoverySchedulerISpec
   private lazy val recoveryRepo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
 
-  override implicit val patienceConfig = PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
 
   val arn = Arn("AARN0000002")
   val mtdItId = MtdItId("ABCDEF123456789")
@@ -78,7 +78,7 @@ class RecoverySchedulerISpec
         syncToETMPStatus = Some(SyncStatus.Success)
       )
 
-      await(deleteRepo.create(deleteRecord))
+      await(deleteRepo.create(deleteRecord)) shouldBe 1
 
       await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
 
@@ -190,7 +190,7 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenPrincipalUserIdExistFor(arn, "userId")
       givenPrincipalGroupIdExistsFor(arn, "foo")
-      givenUserIdIsAdmin("userId")
+      givenAdminUser("foo", "any")
 
       await(recoveryRepo.removeAll())
 

@@ -65,9 +65,9 @@ class TaskActor(
 
   implicit val ec: ExecutionContext = executionContextProvider.get()
 
-  def receive = {
+  def receive: PartialFunction[Any, Unit] = {
     case uid: String =>
-      mongoRecoveryScheduleRepository.read.flatMap {
+      mongoRecoveryScheduleRepository.read.foreach {
         case RecoveryRecord(recordUid, runAt) =>
           val now = DateTime.now()
           if (uid == recordUid) {

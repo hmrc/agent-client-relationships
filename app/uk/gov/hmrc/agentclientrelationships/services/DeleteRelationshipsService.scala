@@ -182,8 +182,9 @@ class DeleteRelationshipsService @Inject()(
     }
 
     (for {
-      _         <- updateEsSyncStatus(InProgress)
-      agentUser <- agentUserService.getAgentUserFor(arn)
+      _              <- updateEsSyncStatus(InProgress)
+      maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
+      agentUser = maybeAgentUser.fold(error => throw RelationshipNotFound(error), identity)
       _ <- checkService
             .checkForRelationship(taxIdentifier, agentUser)
             .flatMap(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier))
@@ -333,7 +334,7 @@ class DeleteRelationshipsService @Inject()(
     implicit headerCarrier: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Unit =
+    ec: ExecutionContext) =
     if (currentUser.credentials.providerType == "GovernmentGateway")
       auditService.sendDeleteRelationshipAuditEvent
     else if (currentUser.credentials.providerType == "PrivilegedApplication")

@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import java.util.concurrent.RejectedExecutionHandler
-
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime.now
 import org.joda.time.DateTimeZone.UTC
@@ -26,19 +24,19 @@ import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.{CursorProducer, ReadPreference}
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONInteger, BSONObjectID}
+import reactivemongo.api.{CursorProducer, ReadPreference}
+import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.logging.{Authorization, SessionId}
 import uk.gov.hmrc.http.{HeaderCarrier, Token}
-import uk.gov.hmrc.http.logging.{Authorization, RequestChain, SessionId}
+import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -54,13 +52,17 @@ case class DeleteRecord(
   headerCarrier: Option[HeaderCarrier] = None) {
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
-  def needToDeleteEtmpRecord = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))
+  def needToDeleteEtmpRecord: Boolean = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))
 
-  def needToDeleteEsRecord = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
+  def needToDeleteEsRecord: Boolean = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
 object DeleteRecord {
-  implicit val hcWrites = new OWrites[HeaderCarrier] {
+
+  implicit val dateReads: Reads[DateTime] = uk.gov.hmrc.mongo.json.ReactiveMongoFormats.dateTimeRead
+  implicit val dateWrites: Writes[DateTime] = uk.gov.hmrc.mongo.json.ReactiveMongoFormats.dateTimeWrite
+
+  implicit val hcWrites: OWrites[HeaderCarrier] = new OWrites[HeaderCarrier] {
     override def writes(hc: HeaderCarrier): JsObject =
       JsObject(
         Seq(
@@ -81,8 +83,6 @@ object DeleteRecord {
       (JsPath \ "token").readNullable[String].map(_.map(Token.apply)) and
       (JsPath \ "gaToken").readNullable[String]
   )((a, s, t, g) => HeaderCarrier(authorization = a, sessionId = s, token = t, gaToken = g))
-
-  import ReactiveMongoFormats._
 
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }
@@ -107,14 +107,11 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       formats,
       ReactiveMongoFormats.objectIdFormats)
     with DeleteRecordRepository
-    with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID]
-    with AtomicUpdate[DeleteRecord] {
-
-  import play.api.libs.json.Json.JsValueWrapper
+    with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
-  override def indexes =
+  override def indexes: Seq[Index] =
     Seq(
       Index(
         Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending),
@@ -136,43 +133,44 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
 
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
     implicit ec: ExecutionContext): Future[Unit] =
-    atomicUpdate(
-      finder = BSONDocument(
-        "arn"                            -> arn.value,
-        "clientIdentifier"               -> identifier.value,
-        "clientIdentifierType"           -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToETMPStatus" -> status.toString))
-    ).map(_.foreach { update =>
-      update.writeResult.errmsg.foreach(error =>
-        Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error"))
-    })
-
-  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] =
-    atomicUpdate(
-      finder = BSONDocument(
-        "arn"                            -> arn.value,
-        "clientIdentifier"               -> identifier.value,
-        "clientIdentifierType"           -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument("$set" -> BSONDocument("syncToESStatus" -> status.toString))
-    ).map(_.foreach { update =>
-      update.writeResult.errmsg.foreach(error =>
-        Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error"))
-    })
-
-  def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Unit] =
-    atomicUpdate(
-      finder = BSONDocument(
+    findAndUpdate(
+      query = Json.obj(
         "arn"                  -> arn.value,
         "clientIdentifier"     -> identifier.value,
         "clientIdentifierType" -> clientIdentifierType(identifier)),
-      modifierBson = BSONDocument(
-        "$set" -> BSONDocument("lastRecoveryAttempt" -> BSONDateTime(DateTime.now(DateTimeZone.UTC).getMillis)),
-        "$inc" -> BSONDocument("numberOfAttempts"    -> BSONInteger(1))
+      update = Json.obj("$set" -> Json.obj("syncToETMPStatus" -> status.toString)),
+      upsert = false
+    ).map(
+      _.lastError.foreach(error => Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error"))
+    )
+
+  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
+    implicit ec: ExecutionContext): Future[Unit] =
+    findAndUpdate(
+      query = Json.obj(
+        "arn"                  -> arn.value,
+        "clientIdentifier"     -> identifier.value,
+        "clientIdentifierType" -> clientIdentifierType(identifier)),
+      update = Json.obj("$set" -> Json.obj("syncToESStatus" -> status.toString)),
+      upsert = false
+    ).map(
+      _.lastError.foreach(error => Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error"))
+    )
+
+  def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Unit] =
+    findAndUpdate(
+      query = Json.obj(
+        "arn"                  -> arn.value,
+        "clientIdentifier"     -> identifier.value,
+        "clientIdentifierType" -> clientIdentifierType(identifier)),
+      update = Json.obj(
+        "$set" -> Json.obj(
+          "lastRecoveryAttempt" -> ReactiveMongoFormats.dateTimeWrite.writes(DateTime.now(DateTimeZone.UTC))),
+        "$inc" -> Json.obj("numberOfAttempts" -> JsNumber(1))
       )
-    ).map(_.foreach { update =>
-      update.writeResult.errmsg.foreach(error => Logger(getClass).warn(s"Marking recovery attempt failed: $error"))
-    })
+    ).map(
+      _.lastError.foreach(error => Logger(getClass).warn(s"Marking recovery attempt failed: $error"))
+    )
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] =
     remove(
@@ -192,5 +190,4 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       .headOption
   }
 
-  override def isInsertion(newRecordId: BSONObjectID, oldRecord: DeleteRecord): Boolean = false
 }

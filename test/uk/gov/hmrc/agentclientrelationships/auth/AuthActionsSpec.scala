@@ -18,14 +18,17 @@ package uk.gov.hmrc.agentclientrelationships.auth
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
+import org.mockito.stubbing.OngoingStubbing
 import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionToPerformOperation
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Retrieval, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -77,27 +80,40 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   def mockAgentAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     enrolment: Set[Enrolment],
-    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
+    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")): OngoingStubbing[Future[Enrolments ~
+    Option[AffinityGroup] ~
+    Option[Credentials]]] =
     when(
       mockAuthConnector
-        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(any(), any()))
+        .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
+          any[HeaderCarrier](),
+          any[ExecutionContext]()))
       .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockClientAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment],
-    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")) =
+    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")): OngoingStubbing[Future[Enrolments ~
+    Option[AffinityGroup] ~
+    Option[Credentials]]] =
     when(
       mockAuthConnector
-        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(any(), any()))
+        .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
+          any[HeaderCarrier](),
+          any[ExecutionContext]()))
       .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockStrideAuth(
     strideRole: String,
-    credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication")) =
+    credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication"))
+    : OngoingStubbing[Future[Enrolments ~
+      Option[AffinityGroup] ~
+      Option[Credentials]]] =
     when(
       mockAuthConnector
-        .authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(any(), any()))
+        .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
+          any[HeaderCarrier](),
+          any[ExecutionContext]()))
       .thenReturn(
         Future successful new ~(
           new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
@@ -105,8 +121,11 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   def mockClientAuthWithoutCredRetrieval(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
-    enrolment: Set[Enrolment]) =
-    when(mockAuthConnector.authorise(any(), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(any(), any()))
+    enrolment: Set[Enrolment]): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup]]] =
+    when(
+      mockAuthConnector.authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(
+        any[HeaderCarrier](),
+        any[ExecutionContext]()))
       .thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")
