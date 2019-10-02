@@ -219,6 +219,11 @@ class DesConnector @Inject()(
       case Some("TRS") =>
         request +
           (("idType", JsString("UTR")))
+      case Some("CGT") =>
+        request +
+          (("relationshipType", JsString("ZA01"))) +
+          (("authProfile", JsString("ALL00001"))) +
+          (("idType", JsString("ZCGT")))
       case _ =>
         request
     }
