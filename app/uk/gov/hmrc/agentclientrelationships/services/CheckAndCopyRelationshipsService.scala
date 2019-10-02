@@ -75,10 +75,7 @@ class CheckAndCopyRelationshipsService @Inject()(
   @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean)
     extends Monitoring {
 
-  def checkForOldRelationshipAndCopy(
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[Either[String, AgentUser]])(
+  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -93,19 +90,15 @@ class CheckAndCopyRelationshipsService @Inject()(
 
     identifier match {
       case mtdItId @ MtdItId(_) =>
-        ifEnabled(copyMtdItRelationshipFlag)(
-          checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId, eventualAgentUser))
+        ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId))
       case vrn @ Vrn(_) =>
-        ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn, eventualAgentUser))
+        ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
 
       case _ => Future.successful(CheckAndCopyNotImplemented)
     }
   }
 
-  private def checkCesaForOldRelationshipAndCopyForMtdIt(
-    arn: Arn,
-    mtdItId: MtdItId,
-    eventualAgentUser: Future[Either[String, AgentUser]])(
+  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -129,13 +122,12 @@ class CheckAndCopyRelationshipsService @Inject()(
                      maybeRelationshipCopyRecord
                        .map(relationshipCopyRecord =>
                          createRelationshipsService
-                           .resumeRelationshipCreation(relationshipCopyRecord, arn, mtdItId, eventualAgentUser))
+                           .resumeRelationshipCreation(relationshipCopyRecord, arn, mtdItId))
                        .getOrElse(
                          createRelationshipsService
                            .createRelationship(
                              arn,
                              mtdItId,
-                             eventualAgentUser,
                              references.map(SaRef.apply),
                              failIfCreateRecordFails = true,
                              failIfAllocateAgentInESFails = false))
@@ -157,10 +149,7 @@ class CheckAndCopyRelationshipsService @Inject()(
     }
   }
 
-  private def checkESForOldRelationshipAndCopyForMtdVat(
-    arn: Arn,
-    vrn: Vrn,
-    eventualAgentUser: Future[Either[String, AgentUser]])(
+  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -182,9 +171,9 @@ class CheckAndCopyRelationshipsService @Inject()(
                      maybeRelationshipCopyRecord
                        .map(relationshipCopyRecord =>
                          createRelationshipsService
-                           .resumeRelationshipCreation(relationshipCopyRecord, arn, vrn, eventualAgentUser))
+                           .resumeRelationshipCreation(relationshipCopyRecord, arn, vrn))
                        .getOrElse(createRelationshipsService
-                         .createRelationship(arn, vrn, eventualAgentUser, references.map(VatRef.apply), true, false))
+                         .createRelationship(arn, vrn, references.map(VatRef.apply), true, false))
                        .map { _ =>
                          auditService.sendCreateRelationshipAuditEventForMtdVat
                          mark("Count-CopyRelationship-VAT-FoundAndCopied")

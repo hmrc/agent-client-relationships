@@ -73,7 +73,7 @@ lazy val root = (project in file("."))
   )
   .configs(IntegrationTest)
   .settings(
-    Keys.fork in IntegrationTest := true,
+    Keys.fork in IntegrationTest := false,
     Defaults.itSettings,
     unmanagedSourceDirectories in IntegrationTest += baseDirectory(_ / "it").value,
     parallelExecution in IntegrationTest := false,

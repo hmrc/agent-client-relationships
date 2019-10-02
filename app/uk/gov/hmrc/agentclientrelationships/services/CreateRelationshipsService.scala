@@ -39,6 +39,7 @@ class CreateRelationshipsService @Inject()(
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: RecoveryLockService,
   deleteRecordRepository: DeleteRecordRepository,
+  agentUserService: AgentUserService,
   val metrics: Metrics)
     extends Monitoring {
 
@@ -46,7 +47,6 @@ class CreateRelationshipsService @Inject()(
   def createRelationship(
     arn: Arn,
     identifier: TaxIdentifier,
-    eventualAgentUser: Future[Either[String, AgentUser]],
     oldReferences: Set[RelationshipReference],
     failIfCreateRecordFails: Boolean,
     failIfAllocateAgentInESFails: Boolean)(
@@ -77,7 +77,7 @@ class CreateRelationshipsService @Inject()(
     for {
       _ <- createRelationshipRecord
       _ <- createEtmpRecord(arn, identifier)
-      _ <- createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails)
+      _ <- createEsRecord(arn, identifier, failIfAllocateAgentInESFails)
     } yield ()
   }
 
@@ -108,11 +108,7 @@ class CreateRelationshipsService @Inject()(
   }
 
   //noinspection ScalaStyle
-  private def createEsRecord(
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[Either[String, AgentUser]],
-    failIfAllocateAgentInESFails: Boolean)(
+  private def createEsRecord(arn: Arn, identifier: TaxIdentifier, failIfAllocateAgentInESFails: Boolean)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Unit] = {
@@ -206,7 +202,7 @@ class CreateRelationshipsService @Inject()(
 
     (for {
       _              <- updateEsSyncStatus(InProgress)
-      maybeAgentUser <- eventualAgentUser
+      maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
       agentUser = maybeAgentUser.right.getOrElse(throw RelationshipNotFound("No admin agent user found"))
       _ <- deallocatePreviousRelationshipIfAny
       _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
@@ -219,11 +215,7 @@ class CreateRelationshipsService @Inject()(
           .orElse(recoverNonFatal))
   }
 
-  def resumeRelationshipCreation(
-    relationshipCopyRecord: RelationshipCopyRecord,
-    arn: Arn,
-    identifier: TaxIdentifier,
-    eventualAgentUser: Future[Either[String, AgentUser]])(
+  def resumeRelationshipCreation(relationshipCopyRecord: RelationshipCopyRecord, arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Unit] =
@@ -231,7 +223,7 @@ class CreateRelationshipsService @Inject()(
       .tryLock(arn, identifier) {
         def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
 
-        def recoverEsRecord() = createEsRecord(arn, identifier, eventualAgentUser, failIfAllocateAgentInESFails = false)
+        def recoverEsRecord() = createEsRecord(arn, identifier, failIfAllocateAgentInESFails = false)
 
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
           case (true, true) =>

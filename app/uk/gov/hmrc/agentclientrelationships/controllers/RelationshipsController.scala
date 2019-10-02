@@ -83,10 +83,8 @@ class RelationshipsController @Inject()(
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
-    val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
-
     val result = for {
-      agentUser <- agentUserFuture
+      agentUser <- agentUserService.getAgentAdminUserFor(arn)
       isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
       result <- agentUser
                  .fold(
@@ -103,9 +101,9 @@ class RelationshipsController @Inject()(
     result
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, agentUserFuture, errorCode)
+          checkOldRelationship(arn, taxIdentifier, errorCode)
         case AdminNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, agentUserFuture, errorCode)
+          checkOldRelationship(arn, taxIdentifier, errorCode)
         case e @ RelationshipDeletePending() =>
           Logger(getClass).warn("Denied access because relationship removal is pending.")
           Future.successful(Left(e.getMessage))
@@ -117,17 +115,13 @@ class RelationshipsController @Inject()(
       }
   }
 
-  private def checkOldRelationship(
-    arn: Arn,
-    taxIdentifier: TaxIdentifier,
-    agentUserFuture: Future[Either[String, AgentUser]],
-    errorCode: String)(
+  private def checkOldRelationship(arn: Arn, taxIdentifier: TaxIdentifier, errorCode: String)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData): Future[Either[String, Boolean]] =
     checkOldAndCopyService
-      .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
+      .checkForOldRelationshipAndCopy(arn, taxIdentifier)
       .map {
         case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
           Left(errorCode)
@@ -173,13 +167,7 @@ class RelationshipsController @Inject()(
 
           (for {
             maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
-            _ <- createService.createRelationship(
-                  arn,
-                  taxIdentifier,
-                  Future.successful(maybeAgentUser),
-                  Set(),
-                  false,
-                  true)
+            _              <- createService.createRelationship(arn, taxIdentifier, Set(), false, true)
           } yield ())
             .map(_ => Created)
             .recover {

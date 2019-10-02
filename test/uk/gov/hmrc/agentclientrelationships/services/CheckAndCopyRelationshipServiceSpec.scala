@@ -51,8 +51,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val agentGroupId = "testGroupId"
   val agentCodeForVatDecAgent = AgentCode("oldAgentCode")
   val agentCodeForAsAgent = AgentCode("ABC1234")
-  val eventualAgentUserForAsAgent = Future successful Right(
-    AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn))
+  val agentUserForAsAgent = Right(AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn))
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,
@@ -77,6 +76,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val metrics = resettingMock[Metrics]
   val monitoring = resettingMock[Monitoring]
   val deleteRecordRepository = resettingMock[DeleteRecordRepository]
+  val agentUserService = resettingMock[AgentUserService]
 
   val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
 
@@ -102,6 +102,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -117,7 +118,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -146,6 +147,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -162,7 +164,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItId) {
           relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -193,6 +195,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -206,7 +209,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipDoesNotExist()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEtmpRecordNotCreated()
@@ -222,6 +225,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         when(deleteRecordRepository.create(any[DeleteRecord])(any[ExecutionContext])).thenReturn(Future.successful(1))
         when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier])(any[ExecutionContext]))
           .thenReturn(Future.successful(1))
+        when(agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+          .thenReturn(Future.successful(agentUserForAsAgent))
+        when(agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+          .thenReturn(Future.successful(agentUserForAsAgent))
+
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
           des,
@@ -234,6 +242,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -251,7 +260,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -281,6 +290,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -297,7 +307,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         val maybeCheck = await(lockService.tryLock(arn, mtdItId) {
           relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -329,6 +339,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -342,7 +353,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipDoesNotExist()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEsRecordNotCreated()
@@ -370,6 +381,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -385,7 +397,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -419,6 +431,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -432,7 +445,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipDoesNotExist()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEsRecordNotCreated()
@@ -455,6 +468,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -466,7 +480,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
       mappingServiceUnavailable()
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -490,6 +504,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -504,7 +519,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       relationshipWillBeCreated(mtdItId)
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -534,6 +549,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -548,7 +564,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       relationshipWillBeCreated(mtdItId)
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItId, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -578,6 +594,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -593,7 +610,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -622,6 +639,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -638,7 +656,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vrn) {
           relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -669,6 +687,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -682,7 +701,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         oldESRelationshipDoesNotExist()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEtmpRecordNotCreatedForMtdVat()
@@ -698,6 +717,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         when(deleteRecordRepository.create(any[DeleteRecord])(any[ExecutionContext])).thenReturn(Future.successful(1))
         when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier])(any[ExecutionContext]))
           .thenReturn(Future.successful(1))
+        when(agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+          .thenReturn(Future.successful(agentUserForAsAgent))
+
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
           des,
@@ -710,6 +732,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -727,7 +750,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -757,6 +780,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -773,7 +797,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         val maybeCheck = await(lockService.tryLock(arn, vrn) {
           relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         })
 
         maybeCheck.value shouldBe FoundAndCopied
@@ -805,6 +829,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -818,7 +843,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         oldESRelationshipDoesNotExist()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEsRecordNotCreated()
@@ -846,6 +871,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -861,7 +887,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipWillBeCreated(vrn)
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -895,6 +921,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
+            agentUserService,
             metrics),
           auditService,
           metrics,
@@ -908,7 +935,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         oldESRelationshipDoesNotExist()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         await(check) shouldBe NotFound
 
         verifyEsRecordNotCreated()
@@ -931,6 +958,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -941,7 +969,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val request = FakeRequest()
       mappingServiceUnavailableForMtdVat()
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
 
       an[Upstream5xxResponse] should be thrownBy await(check)
 
@@ -966,6 +994,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -980,7 +1009,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       relationshipWillBeCreated(vrn)
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -1010,6 +1039,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -1024,7 +1054,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       relationshipWillBeCreated(vrn)
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vrn, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -1051,6 +1081,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -1085,6 +1116,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
+          agentUserService,
           metrics),
         auditService,
         metrics,
@@ -1129,6 +1161,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
+              agentUserService,
               metrics),
             auditService,
             metrics,
@@ -1140,7 +1173,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, identifier, eventualAgentUserForAsAgent)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, identifier)(ec, hc, request, auditData)
 
         await(check) shouldBe CopyRelationshipNotEnabled
 
