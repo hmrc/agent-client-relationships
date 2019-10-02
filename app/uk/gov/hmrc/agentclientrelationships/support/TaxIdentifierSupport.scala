@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait TaxIdentifierSupport {
@@ -27,6 +27,7 @@ trait TaxIdentifierSupport {
     case _: Vrn     => "HMRC-MTD-VAT~VRN"
     case _: Nino    => "HMRC-MTD-IT~NINO"
     case _: Utr     => "HMRC-TERS-ORG~SAUTR"
+    case _: CgtRef  => "HMRC-CGT-PD~CGTPDRef"
     case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
@@ -36,6 +37,7 @@ trait TaxIdentifierSupport {
     case _: Vrn     => "VRN"
     case _: Nino    => "NINO"
     case _: Utr     => "SAUTR"
+    case _: CgtRef  => "CGTRef"
     case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
@@ -48,6 +50,7 @@ object TaxIdentifierSupport {
     case "VRN"                  => Vrn(value)
     case "AgentReferenceNumber" => Arn(value)
     case "SAUTR"                => Utr(value)
+    case "CGTPDRef"             => CgtRef(value)
     case _                      => throw new Exception("Invalid tax identifier type " + `type`)
   }
 }
