@@ -37,7 +37,7 @@ trait TaxIdentifierSupport {
     case _: Vrn     => "VRN"
     case _: Nino    => "NINO"
     case _: Utr     => "SAUTR"
-    case _: CgtRef  => "CGTRef"
+    case _: CgtRef  => "CGTPDRef"
     case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 

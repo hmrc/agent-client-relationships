@@ -39,6 +39,10 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
       enrolmentKeyPrefixFor(Nino("AB123456A")) shouldBe "HMRC-MTD-IT~NINO"
     }
 
+    "return HMRC-CGT-PD~CGTPDRef when tax identifier is of CgtRef type" in {
+      enrolmentKeyPrefixFor(CgtRef("XMCGTP123456789")) shouldBe "HMRC-CGT-PD~CGTPDRef"
+    }
+
     "return IllegalArgumentException when tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy
         await(enrolmentKeyPrefixFor(Eori("foo")))
@@ -60,6 +64,10 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
     "return NINO when tax identifier is of Nino type" in {
       identifierNickname(Nino("AB123456A")) shouldBe "NINO"
+    }
+
+    "return CGTPDRef when tax identifier is of CgtRef type" in {
+      identifierNickname(CgtRef("XMCGTP123456789")) shouldBe "CGTPDRef"
     }
 
     "return IllegalArgumentException when tax identifier is not supported" in {
