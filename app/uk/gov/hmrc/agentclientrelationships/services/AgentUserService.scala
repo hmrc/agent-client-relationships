@@ -31,19 +31,23 @@ case class AgentUser(userId: String, groupId: String, agentCode: AgentCode, arn:
 @Singleton
 class AgentUserService @Inject()(
   es: EnrolmentStoreProxyConnector,
-  ugs: UsersGroupsSearchConnector
-) {
+  ugs: UsersGroupsSearchConnector,
+  agentCacheProvider: AgentCacheProvider) {
+
+  val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
+  val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache
+  val groupInfoCache = agentCacheProvider.ugsGroupInfoCache
 
   def getAgentAdminUserFor(arn: Arn)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Either[String, AgentUser]] =
     for {
-      agentGroupId   <- es.getPrincipalGroupIdFor(arn)
-      firstAdminUser <- ugs.getFirstGroupAdminUser(agentGroupId)
+      agentGroupId   <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
+      firstAdminUser <- firstGroupAdminCache(agentGroupId)(ugs.getFirstGroupAdminUser(agentGroupId))
       adminUserId = firstAdminUser.flatMap(_.userId)
       _ = adminUserId.foreach(auditData.set("credId", _))
-      groupInfo <- ugs.getGroupInfo(agentGroupId)
+      groupInfo <- groupInfoCache(agentGroupId)(ugs.getGroupInfo(agentGroupId))
       agentCode = groupInfo.flatMap(_.agentCode)
       _ = agentCode.foreach(auditData.set("agentCode", _))
     } yield
@@ -59,5 +63,4 @@ class AgentUserService @Inject()(
           Logger.warn(s"Missing AgentCode for Arn: $arn and group: ${groupInfo.groupId}")
           Left("NO_AGENT_CODE")
       }
-
 }

@@ -21,12 +21,11 @@ import com.google.inject.AbstractModule
 import com.google.inject.name.{Named, Names}
 import com.typesafe.config.Config
 import javax.inject.{Inject, Provider, Singleton}
-
 import org.slf4j.MDC
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.agentclientrelationships.connectors.MicroserviceAuthConnector
 import uk.gov.hmrc.agentclientrelationships.repository._
-import uk.gov.hmrc.agentclientrelationships.services.{MongoRecoveryLockService, RecoveryLockService}
+import uk.gov.hmrc.agentclientrelationships.services.{AgentCacheProvider, MongoRecoveryLockService, RecoveryLockService}
 import uk.gov.hmrc.agentclientrelationships.support.RecoveryScheduler
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http._
@@ -64,6 +63,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bind(classOf[LockRepository]).to(classOf[MongoLockRepository])
     bind(classOf[RecoveryLockService]).to(classOf[MongoRecoveryLockService])
     bind(classOf[RecoveryScheduleRepository]).to(classOf[MongoRecoveryScheduleRepository])
+    bind(classOf[AgentCacheProvider])
 
     bindBaseUrl("enrolment-store-proxy")
     bindBaseUrl("tax-enrolments")

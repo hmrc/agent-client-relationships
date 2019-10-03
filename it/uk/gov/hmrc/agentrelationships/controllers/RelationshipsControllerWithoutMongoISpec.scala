@@ -65,7 +65,10 @@ class RelationshipsControllerWithoutMongoISpec
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.recovery-enable"                         -> false
+        "features.recovery-enable"                         -> false,
+        "agent.cache.size"                                 -> 1,
+        "agent.cache.expires"                              -> "1 millis",
+        "agent.cache.enabled"                              -> true
       )
       .configure(mongoConfiguration)
       .overrides(new AbstractModule {

@@ -6,7 +6,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.agentrelationships.support._
 import uk.gov.hmrc.auth.core.{AuthConnector, PlayAuthConnector}
@@ -50,7 +50,10 @@ trait RelationshipsBaseControllerISpec
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
         "features.copy-relationship.mtd-it"                -> true,
         "features.copy-relationship.mtd-vat"               -> true,
-        "features.recovery-enable"                         -> false
+        "features.recovery-enable"                         -> false,
+        "agent.cache.size"                                 -> 1,
+        "agent.cache.expires"                              -> "1 millis",
+        "agent.cache.enabled"                              -> true
       )
       .configure(mongoConfiguration)
 
