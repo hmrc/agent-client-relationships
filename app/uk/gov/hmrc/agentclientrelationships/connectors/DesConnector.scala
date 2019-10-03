@@ -27,7 +27,7 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.logging.Authorization
 import uk.gov.hmrc.http._
@@ -151,6 +151,7 @@ class DesConnector @Inject()(
       case "HMRC-MTD-IT"   => "ITSA"
       case "HMRC-MTD-VAT"  => "VATC"
       case "HMRC-TERS-ORG" => "TRS"
+      case "HMRC-CGT-PD"   => "CGT"
       case _               => throw new IllegalArgumentException(s"Service not supported $service")
     }
 
@@ -159,6 +160,7 @@ class DesConnector @Inject()(
       case MtdItId(_) => "ITSA"
       case Vrn(_)     => "VATC"
       case Utr(_)     => "TRS"
+      case CgtRef(_)  => "CGT"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
@@ -217,6 +219,11 @@ class DesConnector @Inject()(
       case Some("TRS") =>
         request +
           (("idType", JsString("UTR")))
+      case Some("CGT") =>
+        request +
+          (("relationshipType", JsString("ZA01"))) +
+          (("authProfile", JsString("ALL00001"))) +
+          (("idType", JsString("ZCGT")))
       case _ =>
         request
     }

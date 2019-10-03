@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
@@ -83,10 +83,8 @@ class RelationshipsController @Inject()(
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 
-    val agentUserFuture = agentUserService.getAgentAdminUserFor(arn)
-
     val result = for {
-      agentUser <- agentUserFuture
+      agentUser <- agentUserService.getAgentAdminUserFor(arn)
       isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
       result <- agentUser
                  .fold(
@@ -103,9 +101,9 @@ class RelationshipsController @Inject()(
     result
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, agentUserFuture, errorCode)
+          checkOldRelationship(arn, taxIdentifier, errorCode)
         case AdminNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, agentUserFuture, errorCode)
+          checkOldRelationship(arn, taxIdentifier, errorCode)
         case e @ RelationshipDeletePending() =>
           Logger(getClass).warn("Denied access because relationship removal is pending.")
           Future.successful(Left(e.getMessage))
@@ -117,17 +115,13 @@ class RelationshipsController @Inject()(
       }
   }
 
-  private def checkOldRelationship(
-    arn: Arn,
-    taxIdentifier: TaxIdentifier,
-    agentUserFuture: Future[Either[String, AgentUser]],
-    errorCode: String)(
+  private def checkOldRelationship(arn: Arn, taxIdentifier: TaxIdentifier, errorCode: String)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData): Future[Either[String, Boolean]] =
     checkOldAndCopyService
-      .checkForOldRelationshipAndCopy(arn, taxIdentifier, agentUserFuture)
+      .checkForOldRelationshipAndCopy(arn, taxIdentifier)
       .map {
         case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
           Left(errorCode)
@@ -173,19 +167,13 @@ class RelationshipsController @Inject()(
 
           (for {
             maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
-            _ <- createService.createRelationship(
-                  arn,
-                  taxIdentifier,
-                  Future.successful(maybeAgentUser),
-                  Set(),
-                  false,
-                  true)
+            _              <- createService.createRelationship(arn, taxIdentifier, Set(), false, true)
           } yield ())
             .map(_ => Created)
             .recover {
               case upS: Upstream5xxResponse => throw upS
               case NonFatal(ex) =>
-                Logger(getClass).warn("Could not create relationship", ex)
+                Logger(getClass).warn("Could not create relationship due to ", ex)
                 NotFound(toJson(ex.getMessage))
             }
         }
@@ -204,7 +192,8 @@ class RelationshipsController @Inject()(
       case ("IR-SA", "ni") if Nino.isValid(clientId)                        => Right(("IR-SA", Nino(clientId)))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)              => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
       case ("HMRC-TERS-ORG", "SAUTR") if clientId.matches(utrPattern.regex) => Right(("HMRC-TERS-ORG", Utr(clientId)))
-      case (a, b)                                                           => Left(s"invalid combination ($a, $b, $clientId)")
+      case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId)          => Right(("HMRC-CGT-PD", CgtRef(clientId)))
+      case (a, b)                                                           => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }
 
   def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
