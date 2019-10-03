@@ -444,8 +444,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         .thenReturn(Future.successful(Right(agentUser)))
 
     def givenRelationshipBetweenAgentAndClientExists =
-      when(checkService
-        .checkForRelationship(eqs(mtdItId), eqs(agentUser))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+      when(
+        checkService
+          .checkForRelationship(eqs(mtdItId), eqs(agentUser))(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(Right(true))
 
     def givenETMPDeAuthSucceeds =

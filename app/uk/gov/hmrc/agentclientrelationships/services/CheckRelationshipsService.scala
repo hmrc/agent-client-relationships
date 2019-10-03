@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
@@ -37,8 +36,7 @@ class CheckRelationshipsService @Inject()(
 
   def checkForRelationship(taxIdentifier: TaxIdentifier, agentUser: AgentUser)(
     implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Either[String, Boolean]] =
+    hc: HeaderCarrier): Future[Either[String, Boolean]] =
     for {
       allocatedGroupIds <- es.getDelegatedGroupIdsFor(taxIdentifier)
       result <- if (allocatedGroupIds.contains(agentUser.groupId)) returnValue(Right(true))
