@@ -87,6 +87,9 @@ class DesConnector @Inject()(
       case Utr(_) =>
         new URL(
           s"$baseUrl/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+      case CgtRef(_) =>
+        new URL(
+          s"$baseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
     }
 
     getWithDesHeaders[ActiveRelationshipResponse]("GetActiveClientItSaRelationships", url)

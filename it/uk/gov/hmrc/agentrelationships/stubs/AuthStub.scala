@@ -20,7 +20,7 @@ trait AuthStub {
 
   //VIA Client
 
-  def givenLoginClientIndAll(mtdItId: MtdItId, vrn: Vrn, nino: Nino, withThisGgUserId: String = "12345-credId") = {
+  def givenLoginClientIndAll(mtdItId: MtdItId, vrn: Vrn, nino: Nino, cgtRef: CgtRef, withThisGgUserId: String = "12345-credId") = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
@@ -44,6 +44,13 @@ trait AuthStub {
                          |		}],
                          |		"state": "Activated"
                          |	}, {
+                         |		"key": "HMRC-CGT-PD",
+                         |		"identifiers": [{
+                         |			"key": "CGTPDRef",
+                         |			"value": "${cgtRef.value}"
+                         |		}],
+                         |		"state": "Activated"
+                         |	}, {
                          |		"key": "HMRC-NI",
                          |		"identifiers": [{
                          |			"key": "NINO",
@@ -60,7 +67,7 @@ trait AuthStub {
     this
   }
 
-  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr, withThisGgUserId: String = "12345-credId") = {
+  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  cgtRef: CgtRef, withThisGgUserId: String = "12345-credId") = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
@@ -81,6 +88,13 @@ trait AuthStub {
                          |		"identifiers": [{
                          |			"key": "VRN",
                          |			"value": "${vrn.value}"
+                         |		}],
+                         |		"state": "Activated"
+                         |	}, {
+                         |		"key": "HMRC-CGT-PD",
+                         |		"identifiers": [{
+                         |			"key": "CGTPDRef",
+                         |			"value": "${cgtRef.value}"
                          |		}],
                          |		"state": "Activated"
                          |	}],

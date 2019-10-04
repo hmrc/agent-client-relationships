@@ -3,7 +3,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.joda.time.LocalDate
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -20,6 +20,8 @@ trait DesStubsGet {
       s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=true&regime=VATC"
     case Utr(utr) =>
       s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=true&regime=TRS"
+    case CgtRef(ref) =>
+      s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=true&regime=CGT"
   }
 
   def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn) = {
