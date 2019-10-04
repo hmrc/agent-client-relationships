@@ -2,8 +2,116 @@ package uk.gov.hmrc.agentrelationships.controllers
 
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
+
+  "GET  /agent/:arn/service/HMRC-CGT-PD/client/CGTPDRef/:cgtRef" should {
+
+    val requestPath: String =
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-CGT-PD/client/CGTPDRef/${cgtRef.value}"
+
+    def doRequest = doAgentGetRequest(requestPath)
+
+    //HAPPY PATH :-)
+
+    "return 200 when relationship exists in es" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+      givenAdminUser("foo", "any")
+
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> cgtRef.value, "clientIdentifierType" -> "CGTPDRef")
+
+      await(query()) shouldBe empty
+      val result = await(doRequest)
+      result.status shouldBe 200
+      await(query()) shouldBe empty
+    }
+
+    //UNHAPPY PATHS
+
+    "return 404 when credentials are not found in es" in {
+      givenPrincipalGroupIdNotExistsFor(arn)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+      givenDelegatedGroupIdsNotExistForKey(s"HMRC-CGT-PD~CGTPDRef~${cgtRef.value}")
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
+    }
+
+    "return 404 when agent code is not found in ugs (and no relationship in old world)" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoNoAgentCode("foo")
+      givenDelegatedGroupIdsExistFor(cgtRef, Set("foo"))
+      givenDelegatedGroupIdsNotExistForKey(s"HMRC-CGT-PD~CGTPDRef~${cgtRef.value}")
+      givenAdminUser("foo", "any")
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+      (result.json \ "code").as[String] shouldBe "NO_AGENT_CODE"
+    }
+
+    //FAILURE CASES
+
+    "return 502 when ES1/principal returns 5xx" in {
+      givenPrincipalGroupIdRequestFailsWith(500)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when UGS returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(500)
+      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 502 when ES1/delegated returns 5xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+
+      givenDelegatedGroupIdRequestFailsWith(500)
+      val result = await(doRequest)
+      result.status shouldBe 502
+    }
+
+    "return 400 when ES1/principal returns 4xx" in {
+      givenPrincipalGroupIdRequestFailsWith(400)
+      givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when UGS returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfoFailsWith(400)
+      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
+    "return 400 when ES1/delegated returns 4xx" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdRequestFailsWith(400)
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+  }
+
 
   "PUT /agent/:arn/service/HMRC-CGT-PD/client/CGTPDRef/:cgtRef" should {
 
