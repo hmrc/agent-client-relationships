@@ -56,8 +56,6 @@ class RelationshipsController @Inject()(
 
   implicit val ec: ExecutionContext = ecp.get
 
-  private val utrPattern = "^\\d{10}$".r
-
   def checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
     Action.async { implicit request =>
       if (service == "HMRC-MTD-IT" && clientIdType == "MTDITID" && MtdItId.isValid(clientId)) {
@@ -70,11 +68,12 @@ class RelationshipsController @Inject()(
         des.getMtdIdFor(Nino(clientId)).flatMap(checkWithTaxIdentifier(arn, _))
       } else if (service == "IR-SA" && Nino.isValid(clientId)) {
         checkLegacyWithNino(arn, Nino(clientId))
-      } else if (service == "HMRC-TERS-ORG" && clientId.matches(utrPattern.regex)) {
+      } else if (service == "HMRC-TERS-ORG" && Utr.isValid(clientId)) {
         checkWithTaxIdentifier(arn, Utr(clientId))
+      } else if (service == "HMRC-CGT-PD" && clientIdType == "CGTPDRef" && CgtRef.isValid(clientId)) {
+        checkWithTaxIdentifier(arn, CgtRef(clientId))
       } else {
-        Logger.warn(
-          s"bad service and clientId combination for checking relationship, service: $service, clientId: $clientId")
+        Logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
         Future.successful(BadRequest)
       }
     }
@@ -186,14 +185,14 @@ class RelationshipsController @Inject()(
     clientType: String,
     clientId: String): Either[String, (String, TaxIdentifier)] =
     (service, clientType) match {
-      case ("HMRC-MTD-IT", "MTDITID") if MtdItId.isValid(clientId)          => Right(("HMRC-MTD-IT", MtdItId(clientId)))
-      case ("HMRC-MTD-IT", "NI") if Nino.isValid(clientId)                  => Right(("HMRC-MTD-IT", Nino(clientId)))
-      case ("HMRC-MTD-VAT", "VRN") if Vrn.isValid(clientId)                 => Right(("HMRC-MTD-VAT", Vrn(clientId)))
-      case ("IR-SA", "ni") if Nino.isValid(clientId)                        => Right(("IR-SA", Nino(clientId)))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)              => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
-      case ("HMRC-TERS-ORG", "SAUTR") if clientId.matches(utrPattern.regex) => Right(("HMRC-TERS-ORG", Utr(clientId)))
-      case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId)          => Right(("HMRC-CGT-PD", CgtRef(clientId)))
-      case (a, b)                                                           => Left(s"invalid combination ($a, $b) or clientId is invalid")
+      case ("HMRC-MTD-IT", "MTDITID") if MtdItId.isValid(clientId) => Right(("HMRC-MTD-IT", MtdItId(clientId)))
+      case ("HMRC-MTD-IT", "NI") if Nino.isValid(clientId)         => Right(("HMRC-MTD-IT", Nino(clientId)))
+      case ("HMRC-MTD-VAT", "VRN") if Vrn.isValid(clientId)        => Right(("HMRC-MTD-VAT", Vrn(clientId)))
+      case ("IR-SA", "ni") if Nino.isValid(clientId)               => Right(("IR-SA", Nino(clientId)))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)     => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
+      case ("HMRC-TERS-ORG", "SAUTR") if Utr.isValid(clientId)     => Right(("HMRC-TERS-ORG", Utr(clientId)))
+      case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId) => Right(("HMRC-CGT-PD", CgtRef(clientId)))
+      case (a, b)                                                  => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }
 
   def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
