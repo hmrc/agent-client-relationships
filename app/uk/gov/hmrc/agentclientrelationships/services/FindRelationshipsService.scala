@@ -22,7 +22,7 @@ import play.api.Logger
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -42,7 +42,7 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     taxIdentifier match {
-      case MtdItId(_) | Vrn(_) | Utr(_) => des.getActiveClientRelationships(taxIdentifier)
+      case MtdItId(_) | Vrn(_) | Utr(_) | CgtRef(_) => des.getActiveClientRelationships(taxIdentifier)
       case e =>
         Logger(getClass).warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
         Future.successful(None)

@@ -19,16 +19,16 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
   case class TestClient(
                          service: String,
-                         urlIdentifier: String,
                          regime: String,
                          clientId: TaxIdentifier)
 
-  val itsaClient = TestClient(HMRCMTDIT, "MTDITID", "ITSA", mtdItId)
-  val vatClient = TestClient(HMRCMTDVAT, "VRN", "VATC", vrn)
-  val trustClient = TestClient(HMRCTERSORG, "UTR", "TRS", utr)
+  val itsaClient = TestClient(HMRCMTDIT, "ITSA", mtdItId)
+  val vatClient = TestClient(HMRCMTDVAT, "VATC", vrn)
+  val trustClient = TestClient(HMRCTERSORG, "TRS", utr)
+  val cgtClient = TestClient(HMRCCGTPD, "CGT", cgtRef)
 
-  val individualList = List(itsaClient, vatClient)
-  val businessList = List(vatClient, trustClient)
+  val individualList = List(itsaClient, vatClient, cgtClient)
+  val businessList = List(vatClient, trustClient, cgtClient)
 
   val desOnlyList = List(itsaClient, vatClient, trustClient)
 
@@ -37,8 +37,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE,"strideId-1234456")
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE,"strideId-1234456")
     }
-    else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino)
-    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr)
+    else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef)
+    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, cgtRef)
     else requestIsNotAuthenticated()
   }
 

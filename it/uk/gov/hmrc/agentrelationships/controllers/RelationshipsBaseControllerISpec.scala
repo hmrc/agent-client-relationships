@@ -79,6 +79,8 @@ trait RelationshipsBaseControllerISpec
 
   val HMRCTERSORG = "HMRC-TERS-ORG"
 
+  val HMRCCGTPD = "HMRC-CGT-PD"
+
   val arn = Arn("AARN0000002")
   val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
   val arn2 = Arn("AARN0000004")

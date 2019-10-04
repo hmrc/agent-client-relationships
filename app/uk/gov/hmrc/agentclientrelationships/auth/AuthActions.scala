@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.auth
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
@@ -84,20 +84,24 @@ trait AuthActions extends AuthorisedFunctions {
     case EnrolmentMtdIt.enrolmentKey  => EnrolmentMtdIt.identifierKey
     case EnrolmentMtdVat.enrolmentKey => EnrolmentMtdVat.identifierKey
     case EnrolmentTrust.enrolmentKey  => EnrolmentTrust.identifierKey
+    case EnrolmentCgt.enrolmentKey    => EnrolmentCgt.identifierKey
   }
 
   private def supportedEnrolments(enrolment: Enrolment): Option[Enrolment] =
     enrolment.key match {
-      case EnrolmentMtdIt.enrolmentKey | EnrolmentMtdVat.enrolmentKey | EnrolmentTrust.enrolmentKey => Some(enrolment)
-      case _                                                                                        => None
+      case EnrolmentMtdIt.enrolmentKey | EnrolmentMtdVat.enrolmentKey | EnrolmentTrust.enrolmentKey |
+          EnrolmentCgt.enrolmentKey =>
+        Some(enrolment)
+      case _ => None
     }
 
   private def extractIdentifier(enrolment: Enrolment, service: String) =
     enrolment.getIdentifier(supportedIdentifierKeys(service)).map { i =>
       i.key match {
-        case "MTDITID" => MtdItId(i.value)
-        case "VRN"     => Vrn(i.value)
-        case "SAUTR"   => Utr(i.value)
+        case "MTDITID"  => MtdItId(i.value)
+        case "VRN"      => Vrn(i.value)
+        case "SAUTR"    => Utr(i.value)
+        case "CGTPDRef" => CgtRef(i.value)
       }
     }
 
@@ -133,7 +137,7 @@ trait AuthActions extends AuthorisedFunctions {
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
         val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = (for {
-          supportedEnrolments <- Seq(EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentTrust)
+          supportedEnrolments <- Seq(EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentTrust, EnrolmentCgt)
           enrolment           <- enrolments.getEnrolment(supportedEnrolments.enrolmentKey)
           clientId            <- enrolment.identifiers.headOption
         } yield (EnrolmentService(enrolment.key), EnrolmentIdentifierValue(clientId.value))).toMap
