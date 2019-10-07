@@ -6,7 +6,7 @@ PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk
 DELETE        /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
 
 # List existing relationships of the current client
-GET           /relationships/active                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationships
+GET           /relationships/active                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
 
 GET           /relationships/service/:service                                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
 

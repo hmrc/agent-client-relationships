@@ -108,6 +108,7 @@ trait RelationshipsBaseControllerISpec
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_) => Vrn("101747641")
     case Utr(_) => Utr("2134514321")
+    case CgtRef(_) => cgtRef
   }
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()

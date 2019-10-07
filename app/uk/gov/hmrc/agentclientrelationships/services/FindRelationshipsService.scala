@@ -73,6 +73,11 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
             case Some(utr) =>
               getActiveRelationships(utr).map(_.map(r => (EnrolmentTrust.enrolmentService, r.arn)))
             case None => Future.successful(None)
+          },
+          identifiers.get(EnrolmentCgt.enrolmentService).map(_.asCgtRef) match {
+            case Some(cgtRef) =>
+              getActiveRelationships(cgtRef).map(_.map(r => (EnrolmentCgt.enrolmentService, r.arn)))
+            case None => Future.successful(None)
           }
         ))
       .map(_.collect { case Some(x) => x }.groupBy(_._1).mapValues(_.map(_._2)))
