@@ -30,7 +30,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val individualList = List(itsaClient, vatClient, cgtClient)
   val businessList = List(vatClient, trustClient, cgtClient)
 
-  val desOnlyList = List(itsaClient, vatClient, trustClient)
+  val desOnlyList = List(itsaClient, vatClient, trustClient, cgtClient)
 
   class LoggedInUser(isLoggedInClientStride: Boolean, isLoggedInClientInd: Boolean, isLoggedInClientBusiness: Boolean) {
     if(isLoggedInClientStride) {
