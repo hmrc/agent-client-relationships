@@ -176,6 +176,20 @@ trait DesStubsGet {
          |  "activity" : "09"
          |}
        """.stripMargin
+    case CgtRef(clientId) => arn =>
+      s"""
+         |{
+         |  "referenceNumber" : "$clientId",
+         |  "agentReferenceNumber" : "${arn.value}",
+         |  "organisation" : {
+         |    "organisationName": "someOrganisationName"
+         |  },
+         |  "dateFrom" : "2015-09-10",
+         |  "dateTo" : "2015-09-21",
+         |  "contractAccountCategory" : "01",
+         |  "activity" : "09"
+         |}
+       """.stripMargin
   }
 
   def getInactiveRelationshipsViaAgent(arn: Arn, otherTaxIdentifier: TaxIdentifier, taxIdentifier: TaxIdentifier,  regime: String): StubMapping = {
