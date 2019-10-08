@@ -237,7 +237,7 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def getActiveRelationships: Action[AnyContent] = Action.async { implicit request =>
+  def getActiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsClient { identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =>
       findService
         .getActiveRelationshipsForClient(identifiers)
@@ -247,7 +247,7 @@ class RelationshipsController @Inject()(
 
   def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = AuthorisedAsClient(service) {
     implicit request => clientId =>
-      findService.getActiveRelationships(clientId).map {
+      findService.getActiveRelationshipsForClient(clientId).map {
         case Some(relationship) => Ok(Json.toJson(relationship))
         case None               => NotFound
       }
@@ -260,7 +260,7 @@ class RelationshipsController @Inject()(
           val relationships = if (service == "HMRC-MTD-IT") {
             findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
           } else {
-            findService.getActiveRelationships(taxIdentifier)
+            findService.getActiveRelationshipsForClient(taxIdentifier)
           }
           relationships.map {
             case Some(relationship) => Ok(Json.toJson(relationship))
@@ -281,7 +281,7 @@ class RelationshipsController @Inject()(
 
   def getInactiveRelationshipsAgent(service: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
-      findService.getInactiveRelationships(arn, service).map { relationships =>
+      findService.getInactiveRelationshipsForAgent(arn, service).map { relationships =>
         if (relationships.nonEmpty) Ok(Json.toJson(relationships))
         else NotFound
       }
