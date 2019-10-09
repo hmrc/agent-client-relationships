@@ -19,10 +19,9 @@ package uk.gov.hmrc.agentrelationships.controllers
 import org.joda.time.LocalDate
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr}
 
 //noinspection ScalaStyle
 class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec {
@@ -133,13 +132,6 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
     }
   }
 
-  val relationshipCopiedSuccessfully = RelationshipCopyRecord(
-    arn.value,
-    utr.value,
-    saUtrType,
-    syncToETMPStatus = Some(SyncStatus.Success),
-    syncToESStatus = Some(SyncStatus.Success))
-
   "PUT /agent/:arn/service/HMRC-TERS-ORG/client/SAUTR/:utr" should {
 
     val requestPath: String =
@@ -158,15 +150,8 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenAdminUser("foo", "any")
     }
 
-    "return 201 when the relationship exists and the Arn matches that of current Agent user" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 201
-    }
-
     "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(utr)
       givenDelegatedGroupIdsExistForTrust(utr, "zoo")
       givenEnrolmentExistsForGroupId("zoo", Arn("zooArn"))
       givenEnrolmentDeallocationFailsWith(502, "zoo", utr)
@@ -189,18 +174,8 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       result.status shouldBe 201
     }
 
-    "return 201 when the relationship exists and previous relationships too but ARNs not found" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
-      givenDelegatedGroupIdsExistForTrust(utr, "zoo")
-      givenEnrolmentNotExistsForGroupId("zoo")
-      givenEnrolmentDeallocationSucceeds("zoo", utr)
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 201
-    }
-
     "return 201 when there are no previous relationships to deallocate" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(utr)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(utr)
@@ -212,27 +187,15 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       result.status shouldBe 201
     }
 
-    /**
-      * Agent's Unhappy paths
-      */
-    "return 403 for an agent with a mismatched arn" in {
-      givenUserIsSubscribedAgent(Arn("unmatched"))
+    "return 403 when an agent tries to create a relationship" in {
+      givenUserIsSubscribedAgent(Arn("arn"))
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 403
     }
 
-    "return 403 for an agent with no agent enrolments" in {
-      givenUserHasNoAgentEnrolments(arn)
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 403
-    }
-
-    "return 502 when ES1 is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
-      givenPrincipalUser(arn, "foo", userId = "user1")
-      givenGroupInfo(groupId = "foo", agentCode = "bar")
+    "return 502 when ES1 is unavailable" in new StubsForThisScenario {
+      givenUserIsSubscribedClient(utr)
       givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = await(doAgentPutRequest(requestPath))
@@ -240,7 +203,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
     }
 
     "return 502 when ES8 is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(utr)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForTrust(utr)
@@ -260,12 +223,9 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
     }
 
     "return 502 when DES is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
+      givenUserIsSubscribedClient(utr)
       givenDelegatedGroupIdsNotExistForTrust(utr)
       givenDesReturnsServiceUnavailable()
-      givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -273,21 +233,15 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
     }
 
     "return 404 if DES returns 404" in {
-      givenUserIsSubscribedAgent(arn)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
+      givenUserIsSubscribedClient(utr)
       givenDelegatedGroupIdsNotExistForTrust(utr)
       givenAgentCanNotBeAllocatedInDes(status = 404)
-      givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 404
       (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 
-    /**
-      * Client's Unhappy paths
-      */
     "return 403 for a client with a mismatched MtdItId" in {
       givenUserIsSubscribedClient(Utr("unmatched"))
 

@@ -1513,15 +1513,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "any")
     }
 
-    "return 201 when the relationship exists and the Arn matches that of current Agent user" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 201
-    }
-
     "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(mtdItId)
       givenDelegatedGroupIdsExistForMtdItId(mtdItId, "zoo")
       givenEnrolmentExistsForGroupId("zoo", Arn("zooArn"))
       givenEnrolmentDeallocationFailsWith(502, "zoo", mtdItId)
@@ -1545,7 +1538,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 201 when the relationship exists and previous relationships too but ARNs not found" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(mtdItId)
       givenDelegatedGroupIdsExistForMtdItId(mtdItId, "zoo")
       givenEnrolmentNotExistsForGroupId("zoo")
       givenEnrolmentDeallocationSucceeds("zoo", mtdItId)
@@ -1555,7 +1548,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 201 when there are no previous relationships to deallocate" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1567,25 +1560,15 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       result.status shouldBe 201
     }
 
-    /**
-      * Agent's Unhappy paths
-      */
-    "return 403 for an agent with a mismatched arn" in {
-      givenUserIsSubscribedAgent(Arn("unmatched"))
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 403
-    }
-
-    "return 403 for an agent with no agent enrolments" in {
-      givenUserHasNoAgentEnrolments(arn)
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 403
-    }
-
-    "return 502 when ES1 is unavailable" in {
+    "return 403 for an agent tries to create a relationship" in {
       givenUserIsSubscribedAgent(arn)
+
+      val result = await(doAgentPutRequest(requestPath))
+      result.status shouldBe 403
+    }
+
+    "return 502 when ES1 is unavailable" in new StubsForThisScenario {
+      givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdRequestFailsWith(503)
@@ -1595,7 +1578,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 502 when ES8 is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1615,7 +1598,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 502 when DES is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1628,7 +1611,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 404 if DES returns 404" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -1640,9 +1623,6 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 
-    /**
-      * Client's Unhappy paths
-      */
     "return 403 for a client with a mismatched MtdItId" in {
       givenUserIsSubscribedClient(MtdItId("unmatched"))
 

@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.auth
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
@@ -40,8 +40,8 @@ trait AuthActions extends AuthorisedFunctions {
 
   protected type RequestAndCurrentUser = Request[AnyContent] => CurrentUser => Future[Result]
 
-  def AuthorisedAgentOrClientOrStrideUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(
-    body: RequestAndCurrentUser)(implicit ec: ExecutionContext): Action[AnyContent] =
+  def authorisedUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(body: RequestAndCurrentUser)(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       authorised().retrieve(allEnrolments and affinityGroup and credentials) {
@@ -49,7 +49,28 @@ trait AuthActions extends AuthorisedFunctions {
           optCreds
             .collect {
               case creds @ Credentials(_, "GovernmentGateway")
-                  if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, arn, clientId) =>
+                  if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, Some(arn), clientId) =>
+                creds
+              case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+                creds
+            }
+            .map { creds =>
+              body(request)(CurrentUser(creds, affinity))
+            }
+            .getOrElse(Future successful NoPermissionToPerformOperation)
+      }
+    }
+
+  def authorisedClientOrStrideUser(clientId: TaxIdentifier, strideRoles: Seq[String])(body: RequestAndCurrentUser)(
+    implicit ec: ExecutionContext): Action[AnyContent] =
+    Action.async { implicit request =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+      authorised().retrieve(allEnrolments and affinityGroup and credentials) {
+        case enrolments ~ affinity ~ optCreds =>
+          optCreds
+            .collect {
+              case creds @ Credentials(_, "GovernmentGateway")
+                  if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
                 creds
               case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
                 creds
@@ -64,12 +85,12 @@ trait AuthActions extends AuthorisedFunctions {
   def hasRequiredEnrolmentMatchingIdentifier(
     enrolments: Enrolments,
     affinity: Option[AffinityGroup],
-    arn: Arn,
+    arn: Option[Arn] = None,
     clientId: TaxIdentifier): Boolean =
     affinity
-      .map {
+      .flatMap {
         case AffinityGroup.Agent => arn
-        case _                   => clientId
+        case _                   => Some(clientId)
       }
       .exists(
         requiredIdentifier =>

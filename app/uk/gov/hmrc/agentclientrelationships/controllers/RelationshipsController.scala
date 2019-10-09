@@ -160,14 +160,12 @@ class RelationshipsController @Inject()(
   def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
     validateParams(service, clientIdType, clientId) match {
       case Right((a, taxIdentifier)) =>
-        AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) { implicit request => _ =>
+        authorisedClientOrStrideUser(taxIdentifier, strideRoles) { implicit request => _ =>
           implicit val auditData: AuditData = new AuditData()
           auditData.set("arn", arn)
 
-          (for {
-            maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
-            _              <- createService.createRelationship(arn, taxIdentifier, Set(), false, true)
-          } yield ())
+          createService
+            .createRelationship(arn, taxIdentifier, Set(), false, true)
             .map(_ => Created)
             .recover {
               case upS: Upstream5xxResponse => throw upS
@@ -198,21 +196,20 @@ class RelationshipsController @Inject()(
   def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
     validateParams(service, clientIdType, clientId) match {
       case Right((_, taxIdentifier)) =>
-        AuthorisedAgentOrClientOrStrideUser(arn, taxIdentifier, strideRoles) {
-          implicit request => implicit currentUser =>
-            (for {
-              id <- taxIdentifier match {
-                     case nino @ Nino(_) => des.getMtdIdFor(nino)
-                     case _              => Future successful taxIdentifier
-                   }
-              _ <- deleteService.deleteRelationship(arn, id)
-            } yield NoContent)
-              .recover {
-                case upS: Upstream5xxResponse => throw upS
-                case NonFatal(ex) =>
-                  Logger(getClass).warn("Could not delete relationship", ex)
-                  NotFound(toJson(ex.getMessage))
-              }
+        authorisedUser(arn, taxIdentifier, strideRoles) { implicit request => implicit currentUser =>
+          (for {
+            id <- taxIdentifier match {
+                   case nino @ Nino(_) => des.getMtdIdFor(nino)
+                   case _              => Future successful taxIdentifier
+                 }
+            _ <- deleteService.deleteRelationship(arn, id)
+          } yield NoContent)
+            .recover {
+              case upS: Upstream5xxResponse => throw upS
+              case NonFatal(ex) =>
+                Logger(getClass).warn("Could not delete relationship", ex)
+                NotFound(toJson(ex.getMessage))
+            }
         }
       case Left(error) => Action.async(Future.successful(BadRequest(error)))
     }
