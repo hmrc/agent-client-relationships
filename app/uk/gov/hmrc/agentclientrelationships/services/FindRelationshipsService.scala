@@ -38,7 +38,7 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
       relationships <- des.getActiveClientRelationships(mtdItId)
     } yield relationships
 
-  def getActiveRelationships(taxIdentifier: TaxIdentifier)(
+  def getActiveRelationshipsForClient(taxIdentifier: TaxIdentifier)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     taxIdentifier match {
@@ -48,7 +48,7 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
         Future.successful(None)
     }
 
-  def getInactiveRelationships(arn: Arn, service: String)(
+  def getInactiveRelationshipsForAgent(arn: Arn, service: String)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     des.getInactiveRelationships(arn, service)
@@ -61,17 +61,17 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
         Seq(
           identifiers.get(EnrolmentMtdIt.enrolmentService).map(_.asMtdItId) match {
             case Some(mtdItId) =>
-              getActiveRelationships(mtdItId).map(_.map(r => (EnrolmentMtdIt.enrolmentService, r.arn)))
+              getActiveRelationshipsForClient(mtdItId).map(_.map(r => (EnrolmentMtdIt.enrolmentService, r.arn)))
             case None => Future.successful(None)
           },
           identifiers.get(EnrolmentMtdVat.enrolmentService).map(_.asVrn) match {
             case Some(vrn) =>
-              getActiveRelationships(vrn).map(_.map(r => (EnrolmentMtdVat.enrolmentService, r.arn)))
+              getActiveRelationshipsForClient(vrn).map(_.map(r => (EnrolmentMtdVat.enrolmentService, r.arn)))
             case None => Future.successful(None)
           },
           identifiers.get(EnrolmentTrust.enrolmentService).map(_.asUtr) match {
             case Some(utr) =>
-              getActiveRelationships(utr).map(_.map(r => (EnrolmentTrust.enrolmentService, r.arn)))
+              getActiveRelationshipsForClient(utr).map(_.map(r => (EnrolmentTrust.enrolmentService, r.arn)))
             case None => Future.successful(None)
           }
         ))

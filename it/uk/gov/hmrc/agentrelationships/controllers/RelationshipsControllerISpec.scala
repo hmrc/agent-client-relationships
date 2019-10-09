@@ -42,7 +42,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     else requestIsNotAuthenticated()
   }
 
-  "GET /relationships/service/:service" should {
+  "GET /client/relationships/service/:service" should {
     individualList.foreach { client =>
       runActiveRelationshipsScenario(client, true, false)
     }
@@ -61,7 +61,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   }
 
   def runActiveRelationshipsScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean) = {
-    val requestPath: String = s"/agent-client-relationships/relationships/service/${testClient.service}"
+    val requestPath: String = s"/agent-client-relationships/client/relationships/service/${testClient.service}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
@@ -129,7 +129,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
   }
 
-  "GET /relationships/inactive/service/:service" should {
+  "GET /agent/relationships/inactive/service/:service" should {
     desOnlyList.foreach { client =>
       runInactiveRelationshipsScenario(client)
       runInactiveRelationshipsErrorScenario(client)
@@ -137,9 +137,9 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   }
 
   def runInactiveRelationshipsScenario(testClient: TestClient) = {
-    val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/${testClient.service}"
+    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}"
     def doRequest = doAgentGetRequest(requestPath)
-    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/relationships/inactive/service/${testClient.service}")
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}")
 
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
@@ -161,9 +161,9 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   }
 
   def runInactiveRelationshipsErrorScenario(testClient: TestClient) = {
-    val requestPath: String = s"/agent-client-relationships/relationships/inactive/service/${testClient.service}"
+    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}"
     def doRequest = doAgentGetRequest(requestPath)
-    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/relationships/inactive/service/${testClient.service}")
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}")
 
     s"find relationship but filter out if the relationship is still active for ${testClient.service}" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
@@ -202,11 +202,11 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
   }
 
-  "GET /relationships/active" should {
+  "GET /client/relationships/active" should {
 
-    val requestPath: String = s"/agent-client-relationships/relationships/active"
+    val requestPath: String = s"/agent-client-relationships/client/relationships/active"
     def doRequest: HttpResponse = doAgentGetRequest(requestPath)
-    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/relationships/active")
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/client/relationships/active")
 
 
     "return 200 with a map of relationships and filter only on active ones" in {
