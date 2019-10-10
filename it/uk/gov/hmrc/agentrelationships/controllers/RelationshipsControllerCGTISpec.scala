@@ -131,15 +131,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "any")
     }
 
-    "return 201 when the relationship exists and the Arn matches that of current Agent user" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 201
-    }
-
     "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(cgtRef)
       givenDelegatedGroupIdsExistForCgt(cgtRef, "zoo")
       givenEnrolmentExistsForGroupId("zoo", Arn("zooArn"))
       givenEnrolmentDeallocationFailsWith(502, "zoo", cgtRef)
@@ -163,7 +156,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 201 when the relationship exists and previous relationships too but ARNs not found" in new StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(cgtRef)
       givenEnrolmentNotExistsForGroupId("zoo")
       givenEnrolmentDeallocationSucceeds("zoo", cgtRef)
 
@@ -172,7 +165,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 201 when there are no previous relationships to deallocate" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(cgtRef)
@@ -184,25 +177,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 201
     }
 
-    /**
-      * Agent's Unhappy paths
-      */
-    "return 403 for an agent with a mismatched arn" in {
-      givenUserIsSubscribedAgent(Arn("unmatched"))
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 403
-    }
-
-    "return 403 for an agent with no agent enrolments" in {
-      givenUserHasNoAgentEnrolments(arn)
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 403
-    }
-
-    "return 502 when ES1 is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+    "return 502 when ES1 is unavailable" in new StubsForThisScenario {
+      givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdRequestFailsWith(503)
@@ -212,7 +188,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 502 when ES8 is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForCgt(cgtRef)
@@ -232,7 +208,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 502 when DES is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForCgt(cgtRef)
@@ -245,7 +221,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 404 if DES returns 404" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForCgt(cgtRef)
@@ -257,9 +233,6 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 
-    /**
-      * Client's Unhappy paths
-      */
     "return 403 for a client with a mismatched CgtRef" in {
       givenUserIsSubscribedClient(CgtRef("unmatched"))
 

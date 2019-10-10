@@ -877,23 +877,6 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
     val requestPath: String =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
-    "return 201 when the relationship exists and the Arn matches that of current Agent user" in {
-      givenUserIsSubscribedAgent(arn)
-      givenPrincipalUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsExistForMtdVatId(vrn)
-      givenAgentCanBeAllocatedInDes(vrn, arn)
-      givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
-      givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
-      givenEnrolmentDeallocationSucceeds("foo", vrn)
-      givenEnrolmentDeallocationSucceeds("bar", vrn)
-      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAdminUser("foo", "any")
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 201
-    }
-
     "return 201 when the relationship exists and the Vrn matches that of current Client user" in {
       givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo")
@@ -908,7 +891,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 201 when the relationship exists and previous relationships too but ARNs not found" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsExistForMtdVatId(vrn)
@@ -925,7 +908,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 201 when there are no previous relationships to deallocate" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -937,29 +920,26 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 201
     }
 
-    /**
-      * Agent's Unhappy paths
-      */
-    "return 403 for an agent with a mismatched arn" in {
-      givenUserIsSubscribedAgent(Arn("unmatched"))
-
-      val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 403
-    }
-
-    "return 403 for an agent with no agent enrolments" in {
-      givenUserHasNoAgentEnrolments(arn)
+    "return 403 for an agent tries to create a relationship" in {
+      givenUserIsSubscribedAgent(arn)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 403
     }
 
     "return 502 when ES1 is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo")
+      givenDelegatedGroupIdsExistForMtdVatId(vrn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenEnrolmentNotExistsForGroupId("bar")
+      givenEnrolmentNotExistsForGroupId("foo")
+      givenEnrolmentDeallocationSucceeds("foo", vrn)
+      givenEnrolmentDeallocationSucceeds("bar", vrn)
+      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
+      givenAdminUser("foo", "any")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdRequestFailsWith(503)
-      givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 502
@@ -987,7 +967,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 502 when DES is unavailable" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -1000,7 +980,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 404 if DES returns 404" in {
-      givenUserIsSubscribedAgent(arn)
+      givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -1012,9 +992,6 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 
-    /**
-      * Client's Unhappy paths
-      */
     "return 403 for a client with a mismatched Vrn" in {
       givenUserIsSubscribedClient(Vrn("unmatched"))
 

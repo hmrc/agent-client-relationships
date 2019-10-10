@@ -66,7 +66,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   class TestAuth() extends AuthActions with BaseController {
     def testAuthActions(arn: Arn, identifier: TaxIdentifier, strideRoles: Seq[String]) =
-      AuthorisedAgentOrClientOrStrideUser(arn, identifier, strideRoles) { implicit request => _ =>
+      authorisedClientOrStrideUser(identifier, strideRoles) { implicit request => _ =>
         Future.successful(Ok)
       }
 
@@ -132,54 +132,9 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   val testAuthImpl = new TestAuth
 
-  "AuthorisedAgentOrClientOrStrideUser" when {
-    "auth provider is GovernmentGateway and affinity group is Agent" should {
-      "return Ok if Agent has matching Arn in its enrolments" in {
-        mockAgentAuth(enrolment = Set(agentEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
-        await(result) shouldBe Ok
-      }
+  "AuthorisedClientOrStrideUser" when {
 
-      "return NoPermissionToPerformOperation if Agent doesn't have the correct enrolment" in {
-        mockAgentAuth(enrolment = Set(agentEnrolment.copy(key = "NOT_CORRECT_ENROLMENT")))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
-        await(result) shouldBe NoPermissionToPerformOperation
-      }
-
-      "return NoPermissionToPerformOperation if Agent has a different Arn and different client identifier" in {
-        mockAgentAuth(enrolment = Set(agentEnrolment))
-        val result: Future[Result] =
-          testAuthImpl
-            .testAuthActions(Arn("NON_MATCHING"), MtdItId("NON_MATCHING"), strideRoles)
-            .apply(fakeRequest)
-        await(result) shouldBe NoPermissionToPerformOperation
-      }
-
-      "return NoPermissionToPerformOperation if Agent has a different Arn but a matching client identifier" in {
-        mockAgentAuth(enrolment = Set(agentEnrolment, mtdItIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn("NON_MATCHING"), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
-        await(result) shouldBe NoPermissionToPerformOperation
-      }
-
-      "return NoPermissionToPerformOperation if Agent has only a matching client identifier" in {
-        mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdItIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
-        await(result) shouldBe NoPermissionToPerformOperation
-      }
-
-      "return NoPermissionToPerformOperation if Agent has only an enrolment with a different identifier type" in {
-        mockAgentAuth(AffinityGroup.Agent, enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
-        await(result) shouldBe NoPermissionToPerformOperation
-      }
-    }
-
-    "auth provider is GovernmentGateway and affinity group is not Agent" should {
+    "auth provider is GovernmentGateway and if the user is a client (not stride)" should {
       "return Ok if Client has matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
         val result: Future[Result] =
