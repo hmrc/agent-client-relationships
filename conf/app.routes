@@ -9,3 +9,9 @@ GET           /client/relationships/service/:service                        @uk.
 
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
+
+
+### Temporarily adding these urls for backward compatibility as requested by QA, delete these three endpoints after 01/11/2019 after confirming with QA :)
+GET           /relationships/active                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
+GET           /relationships/service/:service                                @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
+GET           /relationships/inactive/service/:service                       @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent(service: String)
