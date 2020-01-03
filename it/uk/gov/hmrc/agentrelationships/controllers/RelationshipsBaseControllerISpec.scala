@@ -53,7 +53,8 @@ trait RelationshipsBaseControllerISpec
         "features.recovery-enable"                         -> false,
         "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> true
+        "agent.cache.enabled"                              -> true,
+        "mongo.migration.enabled"                          -> false
       )
       .configure(mongoConfiguration)
 

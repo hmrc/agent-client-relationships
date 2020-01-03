@@ -83,6 +83,10 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bindIntegerProperty("recovery-interval")
     bindIntegerProperty("recovery-timeout")
 
+    bindProperty1Param("mongo.input.collection.uri")
+    bindProperty1Param("mongo.output.collection.uri")
+    bindBooleanProperty("mongo.migration.enabled")
+
     if (configuration.getBoolean("features.recovery-enable").getOrElse(false)) {
       bind(classOf[RecoveryScheduler]).asEagerSingleton()
     }
