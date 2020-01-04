@@ -76,6 +76,7 @@ class MigrationActor(inputCollectionUri: String, outputCollectionUri: String, lo
             .appName("MongoCollectionMigration")
             .config("spark.mongodb.input.uri", inputCollectionUri)
             .config("spark.mongodb.output.uri", outputCollectionUri)
+            .config("spark.driver.memory", "1g")
             .getOrCreate()
 
           val df = MongoSpark.load(sparkSession)
