@@ -69,6 +69,8 @@ class MigrationActor(inputCollectionUri: String, outputCollectionUri: String, lo
       val _ = lockKeeper.tryLock {
         Logger(getClass).warn("starting mongo migration scheduler")
         Try {
+          Logger(getClass).warn(s"inputCollectionUri = $inputCollectionUri")
+          Logger(getClass).warn(s"outputCollectionUri = $outputCollectionUri")
           val sparkSession = SparkSession
             .builder()
             .master("local")
