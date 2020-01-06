@@ -21,6 +21,7 @@ import java.time.{Duration, LocalDateTime}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.google.inject.AbstractModule
 import com.mongodb.spark.MongoSpark
+import com.mongodb.spark.config.ReadConfig
 import javax.inject.{Inject, Named}
 import org.apache.spark.sql.SparkSession
 import org.joda.time
@@ -81,7 +82,9 @@ class MigrationActor(inputCollectionUri: String, outputCollectionUri: String, lo
             .config("spark.mongodb.output.collection", "afi-relationships")
             .getOrCreate()
 
-          val df = MongoSpark.load(sparkSession)
+          val readConfig = ReadConfig(Map("batchSize" -> "1000"))
+
+          val df = MongoSpark.load(sparkSession, readConfig)
           df.printSchema()
           MongoSpark.save(df.write.mode("overwrite"))
         } match {
