@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.modules
 
 import java.time.{Duration, LocalDateTime}
-import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.google.inject.AbstractModule
@@ -60,7 +59,7 @@ class MigrationActor(inputCollectionUri: String, outputCollectionUri: String, lo
   val lockKeeper = new LockKeeper {
     override def repo: LockRepository = lockRepository
 
-    override def lockId: String = UUID.randomUUID().toString
+    override def lockId: String = MongoMigrationScheduler.lock
 
     override val forceLockReleaseAfter: time.Duration = time.Duration.standardHours(1)
   }
@@ -106,4 +105,8 @@ class MongoMigrationSchedulerModule extends AbstractModule {
 
   override def configure(): Unit = bind(classOf[MongoMigrationScheduler]).asEagerSingleton()
 
+}
+
+object MongoMigrationScheduler {
+  val lock = "MONGO-MIGRATION-LOCK"
 }
