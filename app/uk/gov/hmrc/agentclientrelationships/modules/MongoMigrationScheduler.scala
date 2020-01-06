@@ -82,7 +82,7 @@ class MigrationActor(inputCollectionUri: String, outputCollectionUri: String, lo
             .config("spark.mongodb.output.collection", "afi-relationships")
             .getOrCreate()
 
-          val readConfig = ReadConfig(Map("batchSize" -> "1000"))
+          val readConfig = ReadConfig(Map("spark.mongodb.input.uri" -> inputCollectionUri, "spark.mongodb.input.collection" -> "fi-relationship", "batchSize" -> "1000"))
 
           val df = MongoSpark.load(sparkSession, readConfig)
           df.printSchema()
