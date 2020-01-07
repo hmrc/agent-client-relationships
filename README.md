@@ -66,7 +66,6 @@ Possible responses:
 
 The provided error code is to help diagnose potential issues in production and will usually be "RELATIONSHIP_NOT_FOUND". 
 
-
 #### The valid combinations for service and clientIdTypes for GET/PUT/DELETE endpoints are as follows: 
 
  | Service         | ClientIdType |
