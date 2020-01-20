@@ -17,11 +17,11 @@ trait DesStubsGet {
     case MtdItId(mtdItId) =>
       s"/registration/relationship?ref-no=$mtdItId&agent=false&active-only=true&regime=ITSA"
     case Vrn(vrn) =>
-      s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=true&regime=VATC"
+      s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=true&regime=VATC&relationshipType=ZA01&authProfile=ALL00001"
     case Utr(utr) =>
       s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=true&regime=TRS"
     case CgtRef(ref) =>
-      s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=true&regime=CGT"
+      s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=true&regime=CGT&relationshipType=ZA01&authProfile=ALL00001"
   }
 
   def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn) = {
@@ -199,12 +199,19 @@ trait DesStubsGet {
        """.stripMargin
   }
 
+  def inactiveUrl(arn: Arn, regime: String) = {
+    val inactiveBaseUrl = s"/registration/relationship?arn=${arn.value}" +
+      s"&agent=true&active-only=false&regime=$regime&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"
+
+    regime match {
+      case "VATC" | "CGT" => s"$inactiveBaseUrl&relationshipType=ZA01&authProfile=ALL00001"
+      case _ => inactiveBaseUrl
+    }
+  }
+
   def getInactiveRelationshipsViaAgent(arn: Arn, otherTaxIdentifier: TaxIdentifier, taxIdentifier: TaxIdentifier,  regime: String): StubMapping = {
 
-    stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=${arn.value}" +
-      s"&agent=true&active-only=false&regime=$regime&from=${LocalDate.now().minusDays(30).toString}" +
-      s"&to=${LocalDate.now().toString}"))
+    stubFor(get(urlEqualTo(inactiveUrl(arn, regime)))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -227,10 +234,7 @@ trait DesStubsGet {
   }
 
   def getAgentInactiveRelationshipsButActive(encodedArn: String, agentArn: String, clientId: String, service: String): StubMapping =
-    stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn" +
-      s"&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30).toString}" +
-      s"&to=${LocalDate.now().toString}"))
+    stubFor(get(urlEqualTo(inactiveUrl(Arn(agentArn), service)))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -251,26 +255,17 @@ trait DesStubsGet {
                      |}""".stripMargin)))
 
   def getFailAgentInactiveRelationships(encodedArn: String, service: String, status: Int) =
-    stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn" +
-      s"&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30)}" +
-      s"&to=${LocalDate.now().toString}"))
+    stubFor(get(urlEqualTo(inactiveUrl(Arn(encodedArn), service)))
       .willReturn(aResponse()
         .withStatus(status)))
 
   def getFailWithSuspendedAgentInactiveRelationships(encodedArn: String, service: String) =
-    stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=$encodedArn" +
-        s"&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30)}" +
-        s"&to=${LocalDate.now().toString}"))
+    stubFor(get(urlEqualTo(inactiveUrl(Arn(encodedArn), service)))
       .willReturn(aResponse()
         .withStatus(403).withBody("AGENT_SUSPENDED")))
 
   def getAgentInactiveRelationshipsNoDateTo(arn: Arn, clientId: String, regime: String): StubMapping =
-    stubFor(get(urlEqualTo(
-      s"/registration/relationship?arn=${arn.value}" +
-      s"&agent=true&active-only=false&regime=$regime&from=${LocalDate.now().minusDays(30)}" +
-      s"&to=${LocalDate.now().toString}"))
+    stubFor(get(urlEqualTo(inactiveUrl(arn, regime)))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""
