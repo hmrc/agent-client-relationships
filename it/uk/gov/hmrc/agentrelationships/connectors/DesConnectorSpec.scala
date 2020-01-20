@@ -370,6 +370,13 @@ class DesConnectorSpec
       result shouldBe None
     }
 
+    "return None if DES returns 403 AGENT_SUSPENDED" in {
+      getActiveRelationshipFailsWithSuspended(vrn)
+
+      val result = await(desConnector.getActiveClientRelationships(vrn))
+      result shouldBe None
+    }
+
     "record metrics for GetStatusAgentRelationship for ItSa service" in {
       getActiveRelationshipsViaClient(mtdItId, agentARN)
 
@@ -419,32 +426,39 @@ class DesConnectorSpec
 
     }
 
-    "return None if DES returns 404 for ItSa service" in {
+    "return empty sequence if DES returns 404 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 404)
 
       val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
       result shouldBe Seq.empty
     }
 
-    "return None if DES returns 404 for Vat service" in {
+    "return empty sequence if DES returns 404 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, "VATC", status = 404)
 
       val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
       result shouldBe Seq.empty
     }
 
-    "return None if DES returns 400 for ItSa service" in {
+    "return empty sequence if DES returns 400 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 400)
 
       val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
       result shouldBe Seq.empty
     }
 
-    "return None if DES returns 400 for Vat service" in {
-      getFailAgentInactiveRelationships(encodedArn, "VATC", status = 400)
+    "return empty sequence if DES returns 400 for Vat service" in {
+      getFailWithSuspendedAgentInactiveRelationships(encodedArn, "VATC")
 
       val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
       result shouldBe Seq.empty
+    }
+
+    "return None if DES returns 403 AGENT_SUSPENDED" in {
+      getActiveRelationshipFailsWithSuspended(vrn)
+
+      val result = await(desConnector.getActiveClientRelationships(vrn))
+      result shouldBe None
     }
   }
 

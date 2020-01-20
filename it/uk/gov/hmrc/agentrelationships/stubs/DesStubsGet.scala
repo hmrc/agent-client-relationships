@@ -130,6 +130,13 @@ trait DesStubsGet {
         .willReturn(aResponse()
           .withStatus(status)))
 
+  def getActiveRelationshipFailsWithSuspended(taxIdentifier: TaxIdentifier): StubMapping =
+    stubFor(
+      get(
+        urlEqualTo(url(taxIdentifier)))
+        .willReturn(aResponse()
+          .withStatus(403).withBody("AGENT_SUSPENDED")))
+
 
   //VIA Agent
 
@@ -250,6 +257,14 @@ trait DesStubsGet {
       s"&to=${LocalDate.now().toString}"))
       .willReturn(aResponse()
         .withStatus(status)))
+
+  def getFailWithSuspendedAgentInactiveRelationships(encodedArn: String, service: String) =
+    stubFor(get(urlEqualTo(
+      s"/registration/relationship?arn=$encodedArn" +
+        s"&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30)}" +
+        s"&to=${LocalDate.now().toString}"))
+      .willReturn(aResponse()
+        .withStatus(403).withBody("AGENT_SUSPENDED")))
 
   def getAgentInactiveRelationshipsNoDateTo(arn: Arn, clientId: String, regime: String): StubMapping =
     stubFor(get(urlEqualTo(
