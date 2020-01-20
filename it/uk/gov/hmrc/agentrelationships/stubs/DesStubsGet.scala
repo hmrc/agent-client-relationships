@@ -264,6 +264,12 @@ trait DesStubsGet {
       .willReturn(aResponse()
         .withStatus(403).withBody("AGENT_SUSPENDED")))
 
+  def getFailWithInvalidAgentInactiveRelationships(encodedArn: String, service: String) =
+    stubFor(get(urlEqualTo(s"/registration/relationship?arn=$encodedArn" +
+      s"&agent=true&active-only=false&regime=$service&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"))
+      .willReturn(aResponse()
+        .withStatus(503)))
+
   def getAgentInactiveRelationshipsNoDateTo(arn: Arn, clientId: String, regime: String): StubMapping =
     stubFor(get(urlEqualTo(inactiveUrl(arn, regime)))
       .willReturn(aResponse()
