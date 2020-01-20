@@ -95,8 +95,9 @@ class DesConnector @Inject()(
     getWithDesHeaders[ActiveRelationshipResponse]("GetActiveClientItSaRelationships", url)
       .map(_.relationship.find(isActive))
       .recover {
-        case _: BadRequestException => None
-        case _: NotFoundException   => None
+        case _: BadRequestException                          => None
+        case _: NotFoundException                            => None
+        case ex if ex.getMessage.contains("AGENT_SUSPENDED") => None
       }
   }
 
@@ -113,8 +114,9 @@ class DesConnector @Inject()(
     getWithDesHeaders[InactiveRelationshipResponse](s"GetAllAgent${getRegimeFor(service)}Relationships", url)
       .map(_.relationship.filter(isNotActive))
       .recover {
-        case _: BadRequestException => Seq.empty
-        case _: NotFoundException   => Seq.empty
+        case _: BadRequestException                          => Seq.empty
+        case _: NotFoundException                            => Seq.empty
+        case ex if ex.getMessage.contains("AGENT_SUSPENDED") => Seq.empty
       }
   }
 
