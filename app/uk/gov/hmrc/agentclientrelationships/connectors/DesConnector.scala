@@ -83,13 +83,13 @@ class DesConnector @Inject()(
           s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001")
+          s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case Utr(_) =>
         new URL(
           s"$baseUrl/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001")
+          s"$baseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
     }
 
     getWithDesHeaders[ActiveRelationshipResponse]("GetActiveClientItSaRelationships", url)
@@ -111,7 +111,7 @@ class DesConnector @Inject()(
       case "HMRC-MTD-VAT" | "HMRC-CGT-PD" =>
         new URL(
           s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
-            service)}&from=$from&to=$now&relationshipType=ZA01&authProfile=ALL00001")
+            service)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
       case _ =>
         new URL(
           s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
