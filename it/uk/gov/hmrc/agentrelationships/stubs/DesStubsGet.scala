@@ -17,11 +17,11 @@ trait DesStubsGet {
     case MtdItId(mtdItId) =>
       s"/registration/relationship?ref-no=$mtdItId&agent=false&active-only=true&regime=ITSA"
     case Vrn(vrn) =>
-      s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=true&regime=VATC&relationshipType=ZA01&authProfile=ALL00001"
+      s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=true&regime=VATC&relationship=ZA01&auth-profile=ALL00001"
     case Utr(utr) =>
       s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=true&regime=TRS"
     case CgtRef(ref) =>
-      s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=true&regime=CGT&relationshipType=ZA01&authProfile=ALL00001"
+      s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01&auth-profile=ALL00001"
   }
 
   def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn) = {
@@ -204,7 +204,7 @@ trait DesStubsGet {
       s"&agent=true&active-only=false&regime=$regime&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"
 
     regime match {
-      case "VATC" | "CGT" => s"$inactiveBaseUrl&relationshipType=ZA01&authProfile=ALL00001"
+      case "VATC" | "CGT" => s"$inactiveBaseUrl&relationship=ZA01&auth-profile=ALL00001"
       case _ => inactiveBaseUrl
     }
   }

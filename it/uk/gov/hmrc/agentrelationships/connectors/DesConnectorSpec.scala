@@ -230,8 +230,8 @@ class DesConnectorSpec
             s"""{
                |"regime": "VATC",
                |"idType" : "VRN",
-               |"relationshipType" : "ZA01",
-               |"authProfile" : "ALL00001"
+               |"relationship" : "ZA01",
+               |"auth-profile" : "ALL00001"
                |}""".stripMargin,
             true,
             true
