@@ -1,6 +1,5 @@
 package uk.gov.hmrc.agentrelationships.controllers
 import org.joda.time.LocalDate
-import play.api.libs.json.JsValue
 import play.api.test.FakeRequest
 import play.api.libs.json.{JsObject, JsValue}
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
@@ -31,6 +30,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val businessList = List(vatClient, trustClient, cgtClient)
 
   val desOnlyList = List(itsaClient, vatClient, trustClient, cgtClient)
+
+  val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
 
   class LoggedInUser(isLoggedInClientStride: Boolean, isLoggedInClientInd: Boolean, isLoggedInClientBusiness: Boolean) {
     if(isLoggedInClientStride) {
@@ -134,6 +135,10 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       runInactiveRelationshipsScenario(client)
       runInactiveRelationshipsErrorScenario(client)
     }
+
+    desOnlyWithRelationshipTypeAndAuthProfile.foreach { client =>
+      runInvalidCallForVatAndCgt(client)
+    }
   }
 
   def runInactiveRelationshipsScenario(testClient: TestClient) = {
@@ -196,6 +201,19 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       getFailAgentInactiveRelationships(arnEncoded, testClient.regime, 400)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
+
+  def runInvalidCallForVatAndCgt(testClient: TestClient) = {
+
+    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}"
+    def doRequest = doAgentGetRequest(requestPath)
+
+    s"return 404 for invalid parameters given for ${testClient.regime}" in {
+      getFailWithInvalidAgentInactiveRelationships(arn.value, testClient.regime)
 
       val result = await(doRequest)
       result.status shouldBe 404

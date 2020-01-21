@@ -83,13 +83,13 @@ class DesConnector @Inject()(
           s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001")
       case Utr(_) =>
         new URL(
           s"$baseUrl/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$baseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001")
     }
 
     getWithDesHeaders[ActiveRelationshipResponse]("GetActiveClientItSaRelationships", url)
@@ -107,9 +107,16 @@ class DesConnector @Inject()(
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
-    val url = new URL(
-      s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
-        service)}&from=$from&to=$now")
+    val url = service match {
+      case "HMRC-MTD-VAT" | "HMRC-CGT-PD" =>
+        new URL(
+          s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
+            service)}&from=$from&to=$now&relationshipType=ZA01&authProfile=ALL00001")
+      case _ =>
+        new URL(
+          s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
+            service)}&from=$from&to=$now")
+    }
 
     getWithDesHeaders[InactiveRelationshipResponse](s"GetAllAgent${getRegimeFor(service)}Relationships", url)
       .map(_.relationship.filter(isNotActive))
