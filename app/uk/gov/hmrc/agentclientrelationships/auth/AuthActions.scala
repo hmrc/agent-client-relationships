@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
+import play.api.Logger
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -168,6 +169,22 @@ trait AuthActions extends AuthorisedFunctions {
           case _              => body(identifiers)
         }
       }
+
+  def withTerminationAuth(strideRole: String)(
+    action: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+    authorised(AuthProviders(PrivilegedApplication) and Enrolment(strideRole)) {
+      action
+    }.recover {
+      case _: NoActiveSession =>
+        Logger(getClass).warn(s"user not logged in")
+        Unauthorized
+      case _: InsufficientEnrolments =>
+        Logger(getClass).warn(s"stride user doesn't have permission to terminate an agent")
+        Forbidden
+      case _: UnsupportedAuthProvider =>
+        Logger(getClass).warn(s"user logged in with unsupported auth provider")
+        Forbidden
+    }
 
   protected def AuthorisedWithStride(oldStrideRole: String, newStrideRole: String)(
     body: Request[AnyContent] => String => Future[Result])(implicit ec: ExecutionContext) =

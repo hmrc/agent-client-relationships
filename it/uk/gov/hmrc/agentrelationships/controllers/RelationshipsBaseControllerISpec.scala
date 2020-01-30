@@ -97,6 +97,7 @@ trait RelationshipsBaseControllerISpec
   val testAgentGroup = "testAgentGroup"
   val STRIDE_ROLE = "maintain agent relationships"
   val NEW_STRIDE_ROLE = "maintain_agent_relationships"
+  val TERMINATION_STRIDE_ROLE = "caat"
 
   val utr = Utr("3087612352")
   val utrUriEncoded: String = UriEncoding.encodePathSegment(utr.value, "UTF-8")

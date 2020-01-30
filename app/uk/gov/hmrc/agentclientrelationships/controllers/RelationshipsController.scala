@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import cats.implicits._
 import javax.inject.{Inject, Named, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
@@ -27,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
@@ -45,10 +46,12 @@ class RelationshipsController @Inject()(
   deleteService: DeleteRelationshipsService,
   findService: FindRelationshipsService,
   agentUserService: AgentUserService,
+  agentTerminationService: AgentTerminationService,
   des: DesConnector,
   ecp: Provider[ExecutionContext],
   @Named("old.auth.stride.role") oldStrideRole: String,
-  @Named("new.auth.stride.role") newStrideRole: String)
+  @Named("new.auth.stride.role") newStrideRole: String,
+  @Named("termination.stride.role") terminationStrideRole: String)
     extends BaseController
     with AuthActions {
 
@@ -282,6 +285,21 @@ class RelationshipsController @Inject()(
         if (relationships.nonEmpty) Ok(Json.toJson(relationships))
         else NotFound
       }
+    }
+  }
+
+  def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withTerminationAuth(terminationStrideRole) {
+      agentTerminationService
+        .terminateAgent(arn)
+        .fold(
+          error => {
+            Logger(getClass).warn(s"unexpected error during agent termination: $arn, error = $error")
+            InternalServerError
+          }, { result =>
+            Ok(Json.toJson(result))
+          }
+        )
     }
   }
 }

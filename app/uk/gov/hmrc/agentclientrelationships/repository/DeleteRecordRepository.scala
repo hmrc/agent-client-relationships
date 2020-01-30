@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime.now
 import org.joda.time.DateTimeZone.UTC
@@ -87,6 +88,7 @@ object DeleteRecord {
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }
 
+@ImplementedBy(classOf[MongoDeleteRecordRepository])
 trait DeleteRecordRepository {
   def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int]
   def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[DeleteRecord]]
@@ -97,6 +99,8 @@ trait DeleteRecordRepository {
   def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Unit]
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
   def selectNextToRecover(implicit executionContext: ExecutionContext): Future[Option[DeleteRecord]]
+
+  def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]]
 }
 
 @Singleton
@@ -190,4 +194,14 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       .headOption
   }
 
+  override def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]] = {
+    import reactivemongo.play.json.ImplicitBSONHandlers.JsObjectDocumentWriter
+    collection
+      .delete()
+      .one(Json.obj("arn" -> arn.value))
+      .map(wr => Right(wr.n))
+      .recover {
+        case e => Left(e.getMessage)
+      }
+  }
 }

@@ -91,4 +91,11 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
   def reset() =
     data.clear()
 
+  override def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]] =
+    Future.successful(
+      data
+        .remove(arn.value)
+        .fold(
+          Right(0)
+        )(_ => Right(1)))
 }
