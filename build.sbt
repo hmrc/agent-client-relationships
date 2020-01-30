@@ -23,7 +23,7 @@ lazy val compileDeps = Seq(
   "uk.gov.hmrc" %% "mongo-lock" % "6.12.0-play-25",
   "de.threedimensions" %% "metrics-play" % "2.5.13",
   "com.github.blemale" %% "scaffeine" % "2.6.0",
-  "org.typelevel" %% "cats" % "0.9.0"
+  "org.typelevel" %% "cats-core" % "2.0.0"
 )
 
 def testDeps(scope: String) = Seq(
@@ -32,7 +32,8 @@ def testDeps(scope: String) = Seq(
   "org.scalatest" %% "scalatest" % "3.0.7" % scope,
   "org.mockito" % "mockito-core" % "2.24.0" % scope,
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % scope,
-  "com.github.tomakehurst" % "wiremock" % "2.23.2" % scope
+  "com.github.tomakehurst" % "wiremock" % "2.23.2" % scope,
+  "org.scalamock" %% "scalamock" % "4.4.0" % scope
 )
 
 def tmpMacWorkaround(): Seq[ModuleID] =

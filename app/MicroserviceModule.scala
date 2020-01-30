@@ -83,6 +83,8 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bindIntegerProperty("recovery-interval")
     bindIntegerProperty("recovery-timeout")
 
+    bindProperty1Param("termination.stride.role")
+
     if (configuration.getBoolean("features.recovery-enable").getOrElse(false)) {
       bind(classOf[RecoveryScheduler]).asEagerSingleton()
     }

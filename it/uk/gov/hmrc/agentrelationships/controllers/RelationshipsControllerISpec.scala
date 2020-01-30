@@ -1,11 +1,14 @@
 package uk.gov.hmrc.agentrelationships.controllers
-import org.joda.time.LocalDate
+
+import org.joda.time.{DateTime, LocalDate}
 import play.api.test.FakeRequest
 import play.api.libs.json.{JsObject, JsValue}
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
-
+import uk.gov.hmrc.agentclientrelationships.model.AgentTerminationResponse
+import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
@@ -274,6 +277,41 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       desOnlyList.foreach { notActiveClient =>
         response should notHaveProperty(notActiveClient.service)
       }
+    }
+  }
+
+  "DELETE /agent/:arn/terminate" should {
+
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/terminate"
+    def doRequest: HttpResponse = doAgentDeleteRequest(requestPath)
+
+    "return 200 after successful termination" in {
+      givenUserIsAuthenticatedWithStride(TERMINATION_STRIDE_ROLE,"strideId-1234456")
+
+      //insert records first to have some state initially
+      //insert delete-record document
+      await(
+        deleteRecordRepository.create(
+          DeleteRecord(
+            arn.value,
+            mtdItId.value,
+            mtdItIdType,
+            DateTime.now.minusMinutes(1),
+            Some(SyncStatus.Success),
+            Some(SyncStatus.Failed))))
+
+      //insert copy-relationship document
+       await(repo.insert(relationshipCopiedSuccessfully))
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+      val response = result.json.as[AgentTerminationResponse]
+
+      response shouldBe AgentTerminationResponse(1, 1)
+
+      //verify termination has deleted all record for that agent
+      await(deleteRecordRepository.find("arn" -> arn.value)) shouldBe empty
+      await(repo.find("arn" -> arn.value)) shouldBe empty
     }
   }
 }

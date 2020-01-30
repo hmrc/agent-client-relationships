@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import org.joda.time.DateTime.now
@@ -26,15 +27,15 @@ import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -57,6 +58,7 @@ object RelationshipCopyRecord extends ReactiveMongoFormats {
   implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 
+@ImplementedBy(classOf[MongoRelationshipCopyRecordRepository])
 trait RelationshipCopyRecordRepository {
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int]
   def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
@@ -67,6 +69,8 @@ trait RelationshipCopyRecordRepository {
     implicit ec: ExecutionContext): Future[Unit]
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
+
+  def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]]
 }
 
 @Singleton
@@ -82,7 +86,6 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
   import ImplicitBSONHandlers._
-  import play.api.libs.json.Json.JsValueWrapper
 
   override def indexes: Seq[Index] =
     Seq(
@@ -144,4 +147,12 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       "clientIdentifierType" -> clientIdentifierType(identifier))
       .map(_.n)
 
+  override def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]] =
+    collection
+      .delete()
+      .one(Json.obj("arn" -> arn.value))
+      .map(wr => Right(wr.n))
+      .recover {
+        case e => Left(e.getMessage)
+      }
 }
