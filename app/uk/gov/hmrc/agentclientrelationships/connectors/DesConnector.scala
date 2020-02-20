@@ -27,13 +27,13 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.logging.Authorization
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.{BadRequestException, _}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DesConnector @Inject()(
@@ -101,24 +101,16 @@ class DesConnector @Inject()(
       }
   }
 
-  def getInactiveRelationships(arn: Arn, service: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+  def getInactiveRelationships(
+    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
-    val url = service match {
-      case "HMRC-MTD-VAT" | "HMRC-CGT-PD" =>
-        new URL(
-          s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
-            service)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
-      case _ =>
-        new URL(
-          s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=${getRegimeFor(
-            service)}&from=$from&to=$now")
-    }
+    val regime = "AGSV"
+    val url = new URL(
+      s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=$regime&from=$from&to=$now")
 
-    getWithDesHeaders[InactiveRelationshipResponse](s"GetAllAgent${getRegimeFor(service)}Relationships", url)
+    getWithDesHeaders[InactiveRelationshipResponse](s"GetInactiveRelationships", url)
       .map(_.relationship.filter(isNotActive))
       .recover {
         case _: BadRequestException                          => Seq.empty
@@ -157,15 +149,6 @@ class DesConnector @Inject()(
       url,
       deleteAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId)))
   }
-
-  private def getRegimeFor(service: String): String =
-    service match {
-      case "HMRC-MTD-IT"   => "ITSA"
-      case "HMRC-MTD-VAT"  => "VATC"
-      case "HMRC-TERS-ORG" => "TRS"
-      case "HMRC-CGT-PD"   => "CGT"
-      case _               => throw new IllegalArgumentException(s"Service not supported $service")
-    }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {

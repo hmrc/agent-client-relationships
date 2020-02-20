@@ -18,7 +18,6 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-
 import scala.language.postfixOps
 
 class DesConnectorSpec
@@ -35,20 +34,24 @@ class DesConnectorSpec
 
   val httpGet = app.injector.instanceOf[HttpGet]
   val httpPost = app.injector.instanceOf[HttpPost]
+  val metrics = app.injector.instanceOf[Metrics]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.des.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort
+        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "agent.cache.size"                                 -> 1,
+        "agent.cache.expires"                              -> "1 millis",
+        "agent.cache.enabled"                              -> false
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val desConnector =
-    new DesConnector(wireMockBaseUrl, "token", "stub", 30 days, httpGet, httpPost, app.injector.instanceOf[Metrics])
+    new DesConnector(wireMockBaseUrl, "token", "stub", 30 days, httpGet, httpPost, metrics)
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
@@ -394,63 +397,63 @@ class DesConnectorSpec
     }
   }
 
-  "GetInactiveAgentItsaRelationships and GetInactiveAgentVatRelationships" should {
+  "GetInactiveAgentRelationships" should {
     val encodedArn = UriEncoding.encodePathSegment(agentARN.value, "UTF-8")
 
     "return existing inactive relationships for specified clientId for ItSa service" in {
-      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId, "ITSA")
+      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
+      val result = await(desConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result(0).referenceNumber shouldBe otherTaxIdentifier(mtdItId).value
+      result(0).clientId shouldBe otherTaxIdentifier(mtdItId).value
       result(1).arn shouldBe agentARN
       result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(1).dateTo shouldBe Some(LocalDate.now())
-      result(1).referenceNumber shouldBe mtdItId.value
+      result(1).clientId shouldBe mtdItId.value
     }
 
     "return existing inactive relationships for specified clientId for Vat service" in {
-      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn, "VATC")
+      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
+      val result = await(desConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result(0).referenceNumber shouldBe otherTaxIdentifier(vrn).value
+      result(0).clientId shouldBe otherTaxIdentifier(vrn).value
       result(1).arn shouldBe agentARN
       result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(1).dateTo shouldBe Some(LocalDate.now())
-      result(1).referenceNumber shouldBe vrn.value
+      result(1).clientId shouldBe vrn.value
 
     }
 
     "return empty sequence if DES returns 404 for ItSa service" in {
-      getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 404)
+      getFailAgentInactiveRelationships(encodedArn, status = 404)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
+      val result = await(desConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if DES returns 404 for Vat service" in {
-      getFailAgentInactiveRelationships(encodedArn, "VATC", status = 404)
+      getFailAgentInactiveRelationships(encodedArn, status = 404)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
+      val result = await(desConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if DES returns 400 for ItSa service" in {
-      getFailAgentInactiveRelationships(encodedArn, "ITSA", status = 400)
+      getFailAgentInactiveRelationships(encodedArn, status = 400)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-IT"))
+      val result = await(desConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if DES returns 400 for Vat service" in {
-      getFailWithSuspendedAgentInactiveRelationships(encodedArn, "VATC")
+      getFailWithSuspendedAgentInactiveRelationships(encodedArn)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN, "HMRC-MTD-VAT"))
+      val result = await(desConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
@@ -480,11 +483,11 @@ class DesConnectorSpec
   }
 
   "isInactive" should {
-    val noEndRelationship = InactiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")), "123456789")
+    val noEndRelationship = InactiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
     val endsBeforeCurrentDate =
-      InactiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")), "123456789")
+      InactiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
     val endsAtCurrentDateRelationship =
-      InactiveRelationship(Arn("foo"), Some(LocalDate.now(DateTimeZone.UTC)), Some(LocalDate.parse("1111-11-11")), "123456789")
+      InactiveRelationship(Arn("foo"), Some(LocalDate.now(DateTimeZone.UTC)), Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
 
     "return false when the relationship is active" in {
       desConnector.isNotActive(noEndRelationship) shouldBe false

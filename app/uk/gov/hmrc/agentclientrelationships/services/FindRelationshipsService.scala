@@ -48,10 +48,9 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
         Future.successful(None)
     }
 
-  def getInactiveRelationshipsForAgent(arn: Arn, service: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
-    des.getInactiveRelationships(arn, service)
+  def getInactiveRelationshipsForAgent(
+    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+    des.getInactiveRelationships(arn)
 
   def getActiveRelationshipsForClient(identifiers: Map[EnrolmentService, EnrolmentIdentifierValue])(
     implicit hc: HeaderCarrier,
