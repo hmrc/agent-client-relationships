@@ -15,24 +15,40 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.model
+
 import org.joda.time.LocalDate
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import play.api.libs.functional.syntax._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
 
 case class InactiveRelationship(
   arn: Arn,
   dateTo: Option[LocalDate],
   dateFrom: Option[LocalDate],
-  referenceNumber: String)
+  clientId: String,
+  clientType: String,
+  service: String)
 
 object InactiveRelationship {
   implicit val inActiveRelationshipWrites: OWrites[InactiveRelationship] = Json.writes[InactiveRelationship]
 
-  implicit val reads: Reads[InactiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
-    (JsPath \ "dateTo").readNullable[LocalDate] and
-    (JsPath \ "dateFrom").readNullable[LocalDate] and
-    (JsPath \ "referenceNumber").read[String])(InactiveRelationship.apply _)
+  implicit val reads: Reads[InactiveRelationship] = new Reads[InactiveRelationship] {
+    override def reads(json: JsValue): JsResult[InactiveRelationship] = {
+      val arn = (json \ "agentReferenceNumber").as[Arn]
+      val dateTo = (json \ "dateTo").asOpt[LocalDate]
+      val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
+      val clientId = (json \ "referenceNumber").as[String]
+      val clientType =
+        if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
+      val service = clientId match {
+        case _ if clientId.matches(CgtRef.cgtRegex) => "HMRC-CGT-PD"
+        case _ if Vrn.isValid(clientId)             => "HMRC-MTD-VAT"
+        case _ if Utr.isValid(clientId)             => "HMRC-TERS-ORG"
+        case _ if MtdItId.isValid(clientId)         => "HMRC-MTD-IT"
+      }
+      JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
+    }
+  }
+
 }
 
 case class InactiveRelationshipResponse(relationship: Seq[InactiveRelationship])

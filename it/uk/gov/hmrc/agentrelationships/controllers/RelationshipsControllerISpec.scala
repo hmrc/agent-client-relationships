@@ -145,38 +145,43 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   }
 
   def runInactiveRelationshipsScenario(testClient: TestClient) = {
-    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}"
+    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive"
     def doRequest = doAgentGetRequest(requestPath)
-    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}")
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive")
 
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val otherId: TaxIdentifier = otherTaxIdentifier(testClient.clientId)
 
-      getInactiveRelationshipsViaAgent(arn, otherId, testClient.clientId, testClient.regime)
+      getInactiveRelationshipsViaAgent(arn, otherId, testClient.clientId)
 
       val result = await(doRequest)
       result.status shouldBe 200
 
       (result.json \\ "arn").head.as[String] shouldBe arn.value
       (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
-      (result.json \\ "referenceNumber").head.as[String] shouldBe otherId.value
+      (result.json \\ "clientId").head.as[String] shouldBe otherId.value
+      (result.json \\ "clientType").head.as[String] shouldBe "business"
+      (result.json \\ "service").head.as[String] shouldBe testClient.service
+
       (result.json \\ "arn")(1).as[String] shouldBe arn.value
       (result.json \\ "dateTo")(1).as[LocalDate].toString() shouldBe LocalDate.now().toString
-      (result.json \\ "referenceNumber")(1).as[String] shouldBe testClient.clientId.value
+      (result.json \\ "clientId")(1).as[String] shouldBe testClient.clientId.value
+      (result.json \\ "clientType")(1).as[String] shouldBe "business"
+      (result.json \\ "service")(1).as[String] shouldBe testClient.service
     }
   }
 
   def runInactiveRelationshipsErrorScenario(testClient: TestClient) = {
-    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}"
+    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive"
     def doRequest = doAgentGetRequest(requestPath)
-    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}")
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive")
 
     s"find relationship but filter out if the relationship is still active for ${testClient.service}" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, testClient.clientId.value, testClient.regime)
+      getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, testClient.clientId.value)
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -185,7 +190,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     s"return 404 when DES returns not found for ${testClient.service}" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      getFailAgentInactiveRelationships(arnEncoded, testClient.regime, 404)
+      getFailAgentInactiveRelationships(arnEncoded, 404)
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -194,7 +199,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     s"find relationships and filter out relationships that have no dateTo ${testClient.service}"  in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      getAgentInactiveRelationshipsNoDateTo(arn, testClient.clientId.value, testClient.regime)
+      getAgentInactiveRelationshipsNoDateTo(arn, testClient.clientId.value)
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -203,7 +208,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     s"return 404 when DES returns 400 for ${testClient.service}" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      getFailAgentInactiveRelationships(arnEncoded, testClient.regime, 400)
+      getFailAgentInactiveRelationships(arnEncoded, 400)
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -212,11 +217,11 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
   def runInvalidCallForVatAndCgt(testClient: TestClient) = {
 
-    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive/service/${testClient.service}"
+    val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive"
     def doRequest = doAgentGetRequest(requestPath)
 
     s"return 404 for invalid parameters given for ${testClient.regime}" in {
-      getFailWithInvalidAgentInactiveRelationships(arn.value, testClient.regime)
+      getFailWithInvalidAgentInactiveRelationships(arn.value)
 
       val result = await(doRequest)
       result.status shouldBe 404
