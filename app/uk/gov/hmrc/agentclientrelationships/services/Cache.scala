@@ -22,6 +22,7 @@ import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
+import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.duration._
@@ -83,17 +84,32 @@ class AgentCacheProvider @Inject()(val environment: Environment, configuration: 
   override val runModeConfiguration: Configuration = configuration
   override def mode = environment.mode
 
-  val cacheSize = configuration.underlying.getInt("agent.cache.size")
-  val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))
-  val cacheEnabled = configuration.underlying.getBoolean("agent.cache.enabled")
+  private val cacheSize = configuration.underlying.getInt("agent.cache.size")
+  private val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))
+  private val cacheEnabled = configuration.underlying.getBoolean("agent.cache.enabled")
 
-  val esPrincipalGroupIdCache =
+  private val agentTrackCacheSize = configuration.underlying.getInt("agent.trackPage.cache.size")
+  private val agentTrackCacheExpires =
+    Duration.create(configuration.underlying.getString("agent.trackPage.cache.expires"))
+  private val agentTrackCacheEnabled = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
+
+  val esPrincipalGroupIdCache: Cache[String] =
     if (cacheEnabled) new LocalCaffeineCache[String]("es-principalGroupId-cache", cacheSize, cacheExpires)
     else new DoNotCache[String]
-  val ugsFirstGroupAdminCache =
+
+  val ugsFirstGroupAdminCache: Cache[Option[UserDetails]] =
     if (cacheEnabled) new LocalCaffeineCache[Option[UserDetails]]("ugs-firstGroupAdmin-cache", cacheSize, cacheExpires)
     else new DoNotCache[Option[UserDetails]]
-  val ugsGroupInfoCache =
+
+  val ugsGroupInfoCache: Cache[Option[GroupInfo]] =
     if (cacheEnabled) new LocalCaffeineCache[Option[GroupInfo]]("ugs-groupInfo-cache", cacheSize, cacheExpires)
     else new DoNotCache[Option[GroupInfo]]
+
+  val agentTrackPageCache: Cache[Seq[InactiveRelationship]] =
+    if (agentTrackCacheEnabled)
+      new LocalCaffeineCache[Seq[InactiveRelationship]](
+        "agent-trackPage-cache",
+        agentTrackCacheSize,
+        agentTrackCacheExpires)
+    else new DoNotCache[Seq[InactiveRelationship]]
 }
