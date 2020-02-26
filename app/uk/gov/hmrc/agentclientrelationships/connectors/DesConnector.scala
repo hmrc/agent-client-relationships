@@ -27,6 +27,7 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.logging.Authorization
@@ -43,7 +44,8 @@ class DesConnector @Inject()(
   @Named("inactive-relationships.show-last-days") showInactiveRelationshipsDuration: Duration,
   httpGet: HttpGet,
   httpPost: HttpPost,
-  metrics: Metrics)
+  metrics: Metrics,
+  agentCacheProvider: AgentCacheProvider)
     extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -110,13 +112,16 @@ class DesConnector @Inject()(
     val url = new URL(
       s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=$regime&from=$from&to=$now")
 
-    getWithDesHeaders[InactiveRelationshipResponse](s"GetInactiveRelationships", url)
-      .map(_.relationship.filter(isNotActive))
-      .recover {
-        case _: BadRequestException                          => Seq.empty
-        case _: NotFoundException                            => Seq.empty
-        case ex if ex.getMessage.contains("AGENT_SUSPENDED") => Seq.empty
-      }
+    val cacheKey = s"${arn.value}-$now"
+    agentCacheProvider.agentTrackPageCache(cacheKey) {
+      getWithDesHeaders[InactiveRelationshipResponse](s"GetInactiveRelationships", url)
+        .map(_.relationship.filter(isNotActive))
+        .recover {
+          case _: BadRequestException                          => Seq.empty
+          case _: NotFoundException                            => Seq.empty
+          case ex if ex.getMessage.contains("AGENT_SUSPENDED") => Seq.empty
+        }
+    }
   }
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {

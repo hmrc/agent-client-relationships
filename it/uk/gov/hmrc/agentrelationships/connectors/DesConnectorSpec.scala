@@ -9,6 +9,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
+import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
@@ -35,6 +36,7 @@ class DesConnectorSpec
   val httpGet = app.injector.instanceOf[HttpGet]
   val httpPost = app.injector.instanceOf[HttpPost]
   val metrics = app.injector.instanceOf[Metrics]
+  val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -43,15 +45,18 @@ class DesConnectorSpec
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort,
         "agent.cache.size"                                 -> 1,
-        "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> false
+        "agent.cache.expires"                            -> "1 millis",
+        "agent.cache.enabled"                            -> false,
+        "agent.trackPage.cache.size"                 -> 1,
+        "agent.trackPage.cache.expires"            -> "1 millis",
+        "agent.trackPage.cache.enabled"            -> false
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val desConnector =
-    new DesConnector(wireMockBaseUrl, "token", "stub", 30 days, httpGet, httpPost, metrics)
+    new DesConnector(wireMockBaseUrl, "token", "stub", 30 days, httpGet, httpPost, metrics, agentCacheProvider)
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
