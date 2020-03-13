@@ -171,20 +171,25 @@ trait AuthActions extends AuthorisedFunctions {
       }
 
   def withTerminationAuth(strideRole: String)(
-    action: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
-    authorised(AuthProviders(PrivilegedApplication) and Enrolment(strideRole)) {
-      action
-    }.recover {
-      case _: NoActiveSession =>
-        Logger(getClass).warn(s"user not logged in")
-        Unauthorized
-      case _: InsufficientEnrolments =>
-        Logger(getClass).warn(s"stride user doesn't have permission to terminate an agent")
-        Forbidden
-      case _: UnsupportedAuthProvider =>
-        Logger(getClass).warn(s"user logged in with unsupported auth provider")
-        Forbidden
-    }
+    action: => Credentials => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+    authorised(AuthProviders(PrivilegedApplication) and Enrolment(strideRole))
+      .retrieve(credentials) {
+        case Some(creds) => action(creds)
+        case _ =>
+          Logger(getClass).warn("No credentials found")
+          Future successful Unauthorized
+      }
+      .recover {
+        case _: NoActiveSession =>
+          Logger(getClass).warn(s"user not logged in")
+          Unauthorized
+        case _: InsufficientEnrolments =>
+          Logger(getClass).warn(s"stride user doesn't have permission to terminate an agent")
+          Forbidden
+        case _: UnsupportedAuthProvider =>
+          Logger(getClass).warn(s"user logged in with unsupported auth provider")
+          Forbidden
+      }
 
   protected def AuthorisedWithStride(oldStrideRole: String, newStrideRole: String)(
     body: Request[AnyContent] => String => Future[Result])(implicit ec: ExecutionContext) =
