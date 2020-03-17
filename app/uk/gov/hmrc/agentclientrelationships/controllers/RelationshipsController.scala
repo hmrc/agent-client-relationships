@@ -21,7 +21,7 @@ import javax.inject.{Inject, Named, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Request}
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
@@ -40,6 +40,7 @@ import scala.util.control.NonFatal
 @Singleton
 class RelationshipsController @Inject()(
   override val authConnector: AuthConnector,
+  auditService: AuditService,
   checkService: CheckRelationshipsService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,
@@ -289,14 +290,16 @@ class RelationshipsController @Inject()(
   }
 
   def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withTerminationAuth(terminationStrideRole) {
+    withTerminationAuth(terminationStrideRole) { creds =>
       agentTerminationService
         .terminateAgent(arn)
         .fold(
           error => {
+            auditService.sendTerminateMtdAgentRelationships(arn, "Failed", creds.providerId, Some(error))
             Logger(getClass).warn(s"unexpected error during agent termination: $arn, error = $error")
             InternalServerError
           }, { result =>
+            auditService.sendTerminateMtdAgentRelationships(arn, "Success", creds.providerId)
             Ok(Json.toJson(result))
           }
         )
