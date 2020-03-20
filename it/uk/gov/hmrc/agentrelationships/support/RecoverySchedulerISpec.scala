@@ -14,6 +14,8 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 class RecoverySchedulerISpec
     extends UnitSpec
@@ -47,6 +49,7 @@ class RecoverySchedulerISpec
       .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
+  override implicit val defaultTimeout: FiniteDuration = 10.seconds
 
   private lazy val recoveryRepo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]

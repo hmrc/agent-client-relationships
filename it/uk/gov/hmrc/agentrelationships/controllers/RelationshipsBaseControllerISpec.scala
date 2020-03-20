@@ -15,6 +15,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import scala.util.Random
 
 trait RelationshipsBaseControllerISpec
@@ -32,6 +34,7 @@ trait RelationshipsBaseControllerISpec
     with JsonMatchers {
 
   override lazy val port: Int = Random.nextInt(1000) + 19000
+  override implicit val defaultTimeout: FiniteDuration = 10.seconds
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
