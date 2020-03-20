@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data._
 import cats.implicits._
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.agentclientrelationships.model.AgentTerminationResponse
+import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecordRepository, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
@@ -30,15 +30,19 @@ class AgentTerminationService @Inject()(
   deleteRecordRepository: DeleteRecordRepository,
   relationshipCopyRecordRepository: RelationshipCopyRecordRepository)(implicit ec: ExecutionContext) {
 
-  def terminateAgent(arn: Arn): EitherT[Future, String, AgentTerminationResponse] = {
+  def terminateAgent(arn: Arn): EitherT[Future, String, TerminationResponse] = {
     val drr = deleteRecordRepository.terminateAgent(arn)
     val rcrr = relationshipCopyRecordRepository.terminateAgent(arn)
     for {
       drrResult  <- EitherT(drr)
       rcrrResult <- EitherT(rcrr)
-      result     <- EitherT.fromEither[Future](Right(AgentTerminationResponse(drrResult, rcrrResult)))
+      result <- EitherT.fromEither[Future](
+                 Right(
+                   TerminationResponse(Seq(
+                     DeletionCount("agent-client-relationships", "delete-record", drrResult),
+                     DeletionCount("agent-client-relationships", "relationship-copy-record", rcrrResult)
+                   ))))
     } yield result
-
   }
 
 }

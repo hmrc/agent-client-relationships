@@ -1,9 +1,9 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import org.joda.time.{DateTime, LocalDate}
-import play.api.test.FakeRequest
 import play.api.libs.json.{JsObject, JsValue}
-import uk.gov.hmrc.agentclientrelationships.model.AgentTerminationResponse
+import play.api.test.FakeRequest
+import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
@@ -310,9 +310,12 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       val result = await(doRequest)
       result.status shouldBe 200
-      val response = result.json.as[AgentTerminationResponse]
+      val response = result.json.as[TerminationResponse]
 
-      response shouldBe AgentTerminationResponse(1, 1)
+      response shouldBe TerminationResponse(
+        Seq(
+          DeletionCount("agent-client-relationships", "delete-record", 1),
+          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)))
 
       //verify termination has deleted all record for that agent
       await(deleteRecordRepository.find("arn" -> arn.value)) shouldBe empty
