@@ -22,7 +22,6 @@ import com.google.inject.Singleton
 import javax.inject.Inject
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
@@ -35,8 +34,7 @@ import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
   val CreateRelationship, CheckCESA, CheckES, ClientTerminatedAgentServiceAuthorisation,
-  RecoveryOfDeleteRelationshipHasBeenAbandoned, HmrcRemovedAgentServiceAuthorisation, TerminateMtdAgentRelationships =
-    Value
+  RecoveryOfDeleteRelationshipHasBeenAbandoned, HmrcRemovedAgentServiceAuthorisation = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -200,39 +198,6 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "hmrc remove agent:service authorisation",
       collectDetails(auditData.getDetails, hmrcDeleteRelationshipDetailsFields)
     )
-
-  def sendTerminateMtdAgentRelationships(
-    arn: Arn,
-    status: String,
-    credId: String,
-    failureReason: Option[String] = None)(
-    implicit hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext): Future[Unit] = {
-    val details = failureReason match {
-      case Some(fr) =>
-        Seq(
-          "agentReferenceNumber" -> arn.value,
-          "status"               -> status,
-          "credId"               -> credId,
-          "authProvider"         -> "PrivilegedApplication",
-          "failureReason"        -> fr
-        )
-      case None =>
-        Seq(
-          "agentReferenceNumber" -> arn.value,
-          "status"               -> status,
-          "credId"               -> credId,
-          "authProvider"         -> "PrivilegedApplication"
-        )
-    }
-
-    auditEvent(
-      AgentClientRelationshipEvent.TerminateMtdAgentRelationships,
-      "terminate-mtd-agent-relationships",
-      details
-    )
-  }
 
   private[audit] def auditEvent(
     event: AgentClientRelationshipEvent,

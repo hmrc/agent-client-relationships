@@ -290,16 +290,14 @@ class RelationshipsController @Inject()(
   }
 
   def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withTerminationAuth(terminationStrideRole) { creds =>
+    withTerminationAuth(terminationStrideRole) {
       agentTerminationService
         .terminateAgent(arn)
         .fold(
           error => {
-            auditService.sendTerminateMtdAgentRelationships(arn, "Failed", creds.providerId, Some(error))
             Logger(getClass).warn(s"unexpected error during agent termination: $arn, error = $error")
             InternalServerError
           }, { result =>
-            auditService.sendTerminateMtdAgentRelationships(arn, "Success", creds.providerId)
             Ok(Json.toJson(result))
           }
         )
