@@ -23,6 +23,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Request}
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
@@ -40,6 +41,7 @@ import scala.util.control.NonFatal
 @Singleton
 class RelationshipsController @Inject()(
   override val authConnector: AuthConnector,
+  appConfig: AppConfig,
   auditService: AuditService,
   checkService: CheckRelationshipsService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
@@ -290,7 +292,7 @@ class RelationshipsController @Inject()(
   }
 
   def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withTerminationAuth(terminationStrideRole) {
+    withBasicAuth(appConfig.expectedAuth) {
       agentTerminationService
         .terminateAgent(arn)
         .fold(

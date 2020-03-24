@@ -1,12 +1,16 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
+
 import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentrelationships.support.Http
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -288,10 +292,11 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   "DELETE /agent/:arn/terminate" should {
 
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/terminate"
-    def doRequest: HttpResponse = doAgentDeleteRequest(requestPath)
+    def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
+    def doRequest = ws.url(s"http://localhost:$port$requestPath")
+      .withHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}").delete()
 
     "return 200 after successful termination" in {
-      givenUserIsAuthenticatedWithStride(TERMINATION_STRIDE_ROLE,"strideId-1234456")
 
       //insert records first to have some state initially
       //insert delete-record document
