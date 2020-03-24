@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
+
 import play.api.Logger
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
@@ -27,10 +30,11 @@ import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.HeaderCarrierConverter
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.matching.Regex
 
 case class CurrentUser(credentials: Credentials, affinityGroup: Option[AffinityGroup])
 
@@ -195,6 +199,26 @@ trait AuthActions extends AuthorisedFunctions {
           case Some(Credentials(strideId, _)) => body(request)(strideId)
           case _                              => Future.successful(NoPermissionToPerformOperation)
         }
+    }
+
+  val basicAuthHeader: Regex = "Basic (.+)".r
+  val decodedAuth: Regex = "(.+):(.+)".r
+
+  private def decodeFromBase64(encodedString: String): String =
+    try {
+      new String(Base64.getDecoder.decode(encodedString), UTF_8)
+    } catch { case _: Throwable => "" }
+
+  def withBasicAuth(expectedAuth: BasicAuthentication)(body: => Future[Result])(
+    implicit request: Request[_]): Future[Result] =
+    request.headers.get(HeaderNames.authorisation) match {
+      case Some(basicAuthHeader(encodedAuthHeader)) =>
+        decodeFromBase64(encodedAuthHeader) match {
+          case decodedAuth(username, password) if (BasicAuthentication(username, password) == expectedAuth) =>
+            body
+          case _ => Future successful Unauthorized
+        }
+      case _ => Future successful Unauthorized
     }
 
   protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(
