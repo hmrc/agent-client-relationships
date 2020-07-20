@@ -90,7 +90,3 @@ lazy val root = (project in file("."))
 
 inConfig(IntegrationTest)(scalafmtCoreSettings)
 
-dependencyOverrides += "com.typesafe.akka" %% "akka-actor" % "2.5.23"
-dependencyOverrides += "com.typesafe.akka" %% "akka-stream" % "2.5.23"
-dependencyOverrides += "com.typesafe.akka" %% "akka-protobuf" % "2.5.23"
-dependencyOverrides += "com.typesafe.akka" %% "akka-slf4j" % "2.5.23"
