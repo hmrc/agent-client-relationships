@@ -12,7 +12,7 @@ addSbtPlugin("uk.gov.hmrc" % "sbt-git-versioning" % "2.1.0")
 
 addSbtPlugin("uk.gov.hmrc" % "sbt-artifactory" % "1.3.0")
 
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.0")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
 
 addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.16")
 
