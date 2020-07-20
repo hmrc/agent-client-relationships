@@ -1,10 +1,9 @@
 package uk.gov.hmrc.agentrelationships.repository
 
 import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.{JsObject, JsString, Json}
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.agentrelationships.support.MongoApp
@@ -12,7 +11,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with OneAppPerSuite {
+class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -45,13 +44,14 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
       createResult shouldBe 1
       val findResult = await(repo.findBy(Arn("TARN0000001"), Vrn("101747696")))
       findResult shouldBe Some(relationshipCopyRecord)
-      val updatedEtmpResult: Unit =
-        await(repo.updateEtmpSyncStatus(Arn("TARN0000001"), Vrn("101747696"), SyncStatus.Success))
+
+      await(repo.updateEtmpSyncStatus(Arn("TARN0000001"), Vrn("101747696"), SyncStatus.Success))
       val findResult2 = await(repo.findBy(Arn("TARN0000001"), Vrn("101747696")))
       findResult2 shouldBe Some(relationshipCopyRecord.copy(syncToETMPStatus = Some(SyncStatus.Success)))
-      val updatedEsResult: Unit =
-        await(repo.updateEsSyncStatus(Arn("TARN0000001"), Vrn("101747696"), SyncStatus.Success))
+
+      await(repo.updateEsSyncStatus(Arn("TARN0000001"), Vrn("101747696"), SyncStatus.Success))
       val findResult3 = await(repo.findBy(Arn("TARN0000001"), Vrn("101747696")))
+
       findResult3 shouldBe Some(
         relationshipCopyRecord
           .copy(syncToETMPStatus = Some(SyncStatus.Success), syncToESStatus = Some(SyncStatus.Success)))

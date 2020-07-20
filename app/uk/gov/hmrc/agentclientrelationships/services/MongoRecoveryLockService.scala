@@ -16,17 +16,25 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
-
 import org.joda.time
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentclientrelationships.repository.MongoLockRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.lock.{LockKeeper, LockRepository}
+import uk.gov.hmrc.lock.LockKeeper
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@ImplementedBy(classOf[MongoRecoveryLockService])
+trait RecoveryLockService {
+
+  def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(
+    implicit ec: ExecutionContext): Future[Option[T]]
+}
+
 @Singleton
-class MongoRecoveryLockService @Inject()(lockRepository: LockRepository) extends RecoveryLockService {
+class MongoRecoveryLockService @Inject()(lockRepository: MongoLockRepository) extends RecoveryLockService {
   override def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(
     implicit ec: ExecutionContext): Future[Option[T]] =
     new LockKeeper {

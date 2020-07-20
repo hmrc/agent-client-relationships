@@ -1,22 +1,24 @@
 package uk.gov.hmrc.agentrelationships.connectors
 
 import com.kenshoo.play.metrics.Metrics
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class MappingConnectorSpec
     extends UnitSpec
-    with OneAppPerSuite
+    with GuiceOneServerPerSuite
     with WireMockSupport
     with MappingStubs
     with DataStreamStub
@@ -25,22 +27,35 @@ class MappingConnectorSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpGet = app.injector.instanceOf[HttpGet]
+  val httpClient = app.injector.instanceOf[HttpClient]
+  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host"           -> wireMockHost,
-        "auditing.consumer.baseUri.port"           -> wireMockPort,
-        "features.recovery-enable"                 -> "false"
+        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+        "microservice.services.tax-enrolments.port"        -> wireMockPort,
+        "microservice.services.users-groups-search.port"   -> wireMockPort,
+        "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.auth.port"                  -> wireMockPort,
+        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "auditing.consumer.baseUri.host"                   -> wireMockHost,
+        "auditing.consumer.baseUri.port"                   -> wireMockPort,
+        "features.copy-relationship.mtd-it"                -> true,
+        "features.copy-relationship.mtd-vat"               -> true,
+        "features.recovery-enable"                         -> false,
+        "agent.cache.size"                                 -> 1,
+        "agent.cache.expires"                              -> "1 millis",
+        "agent.cache.enabled"                              -> true,
+        "agent.trackPage.cache.size"                                 -> 1,
+        "agent.trackPage.cache.expires"                              -> "1 millis",
+        "agent.trackPage.cache.enabled"                              -> true
       )
 
   private implicit val hc = HeaderCarrier()
 
   val mappingConnector = new MappingConnector(
-    wireMockBaseUrl,
-    httpGet,
+    httpClient,
     app.injector.instanceOf[Metrics]
   )
 
@@ -70,7 +85,7 @@ class MappingConnectorSpec
     "fail when mapping service is unavailable" in {
       givenServiceReturnsServiceUnavailable()
       givenAuditConnector()
-      an[Upstream5xxResponse] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
+      an[UpstreamErrorResponse] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
     }
 
     "fail when mapping service is throwing errors" in {

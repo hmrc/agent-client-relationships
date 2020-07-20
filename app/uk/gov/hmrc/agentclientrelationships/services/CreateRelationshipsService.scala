@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -100,8 +100,10 @@ class CreateRelationshipsService @Inject()(
       _ <- updateEtmpSyncStatus(Success)
     } yield ())
       .recoverWith {
-        case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
-          recoverWithException(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_DES", upstreamCode, reportAs))
+        case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
+          recoverWithException(
+            e,
+            Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_DES", upstreamCode, reportAs, headers))
         case NonFatal(ex) =>
           recoverWithException(ex, new Exception("RELATIONSHIP_CREATE_FAILED_DES"))
       }
@@ -134,8 +136,8 @@ class CreateRelationshipsService @Inject()(
     }
 
     val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
-      case e @ Upstream5xxResponse(_, upstreamCode, reportAs) =>
-        logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs))
+      case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
+        logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs, headers))
     }
 
     val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
@@ -155,9 +157,7 @@ class CreateRelationshipsService @Inject()(
             ()
         }
 
-    def removeDeleteRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
-      implicit ec: ExecutionContext,
-      hc: HeaderCarrier): Future[Boolean] =
+    def removeDeleteRecord(arn: Arn, taxIdentifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Boolean] =
       deleteRecordRepository
         .remove(arn, taxIdentifier)
         .map(_ > 0)

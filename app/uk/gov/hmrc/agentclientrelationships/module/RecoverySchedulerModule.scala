@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.services
+package uk.gov.hmrc.agentclientrelationships.module
 
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.TaxIdentifier
+import com.google.inject.AbstractModule
+import play.api.{Configuration, Environment}
+import uk.gov.hmrc.agentclientrelationships.support.RecoveryScheduler
 
-import scala.concurrent.{ExecutionContext, Future}
-
-trait RecoveryLockService {
-
-  def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(
-    implicit ec: ExecutionContext): Future[Option[T]]
-
+class RecoverySchedulerModule(val environment: Environment, val configuration: Configuration) extends AbstractModule {
+  override def configure(): Unit =
+    if (configuration.getBoolean("features.recovery-enable").getOrElse(false)) {
+      bind(classOf[RecoveryScheduler]).asEagerSingleton()
+    }
 }

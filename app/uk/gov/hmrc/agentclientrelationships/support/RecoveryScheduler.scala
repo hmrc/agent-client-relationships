@@ -19,14 +19,14 @@ package uk.gov.hmrc.agentclientrelationships.support
 import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject, Singleton}
 import org.joda.time.{DateTime, Interval, PeriodType}
 import play.api.Logger
 import play.api.libs.concurrent.ExecutionContextProvider
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoDeleteRecordRepository, MongoRecoveryScheduleRepository, RecoveryRecord}
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord}
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
-import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,14 +35,14 @@ import scala.util.Random
 @Singleton
 class RecoveryScheduler @Inject()(
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
-  mongoDeleteRecordRepository: MongoDeleteRecordRepository,
   deleteRelationshipsService: DeleteRelationshipsService,
   actorSystem: ActorSystem,
-  @Named("recovery-interval") recoveryInterval: Int,
-  @Named("features.recovery-enable") recoveryEnable: Boolean,
-  executionContextProvider: ExecutionContextProvider) {
+  executionContextProvider: ExecutionContextProvider)(implicit val appConfig: AppConfig) {
 
   implicit val ec: ExecutionContext = executionContextProvider.get()
+
+  val recoveryInterval = appConfig.recoveryInterval
+  val recoveryEnable = appConfig.recoveryEnabled
 
   if (recoveryEnable) {
     val taskActor: ActorRef = actorSystem.actorOf(Props {

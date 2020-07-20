@@ -31,7 +31,6 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
-import uk.gov.hmrc.play.HeaderCarrierConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
@@ -43,48 +42,42 @@ trait AuthActions extends AuthorisedFunctions {
 
   override def authConnector: AuthConnector
 
-  protected type RequestAndCurrentUser = Request[AnyContent] => CurrentUser => Future[Result]
+  protected type RequestAndCurrentUser = CurrentUser => Future[Result]
 
-  def authorisedUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(body: RequestAndCurrentUser)(
-    implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
-      authorised().retrieve(allEnrolments and affinityGroup and credentials) {
-        case enrolments ~ affinity ~ optCreds =>
-          optCreds
-            .collect {
-              case creds @ Credentials(_, "GovernmentGateway")
-                  if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, Some(arn), clientId) =>
-                creds
-              case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-                creds
-            }
-            .map { creds =>
-              body(request)(CurrentUser(creds, affinity))
-            }
-            .getOrElse(Future successful NoPermissionToPerformOperation)
-      }
+  def authorisedUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(
+    body: RequestAndCurrentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised().retrieve(allEnrolments and affinityGroup and credentials) {
+      case enrolments ~ affinity ~ optCreds =>
+        optCreds
+          .collect {
+            case creds @ Credentials(_, "GovernmentGateway")
+                if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, Some(arn), clientId) =>
+              creds
+            case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+              creds
+          }
+          .map { creds =>
+            body(CurrentUser(creds, affinity))
+          }
+          .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
-  def authorisedClientOrStrideUser(clientId: TaxIdentifier, strideRoles: Seq[String])(body: RequestAndCurrentUser)(
-    implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
-      authorised().retrieve(allEnrolments and affinityGroup and credentials) {
-        case enrolments ~ affinity ~ optCreds =>
-          optCreds
-            .collect {
-              case creds @ Credentials(_, "GovernmentGateway")
-                  if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
-                creds
-              case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-                creds
-            }
-            .map { creds =>
-              body(request)(CurrentUser(creds, affinity))
-            }
-            .getOrElse(Future successful NoPermissionToPerformOperation)
-      }
+  def authorisedClientOrStrideUser(clientId: TaxIdentifier, strideRoles: Seq[String])(
+    body: RequestAndCurrentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised().retrieve(allEnrolments and affinityGroup and credentials) {
+      case enrolments ~ affinity ~ optCreds =>
+        optCreds
+          .collect {
+            case creds @ Credentials(_, "GovernmentGateway")
+                if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
+              creds
+            case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+              creds
+          }
+          .map { creds =>
+            body(CurrentUser(creds, affinity))
+          }
+          .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
   def hasRequiredEnrolmentMatchingIdentifier(
@@ -131,34 +124,29 @@ trait AuthActions extends AuthorisedFunctions {
       }
     }
 
-  def AuthorisedAsClient[A](service: String)(body: Request[AnyContent] => TaxIdentifier => Future[Result])(
-    implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+  def authorisedAsClient[A](service: String)(
+    body: TaxIdentifier => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised(Enrolment(service) and AuthProviders(GovernmentGateway))
+      .retrieve(authorisedEnrolments and affinityGroup) {
+        case enrolments ~ affinityG =>
+          affinityG match {
+            case Some(Individual) | Some(Organisation) =>
+              val id: Option[TaxIdentifier] = for {
+                enrolment  <- enrolments.getEnrolment(service).flatMap(supportedEnrolments)
+                identifier <- extractIdentifier(enrolment, service)
+              } yield identifier
 
-      authorised(Enrolment(service) and AuthProviders(GovernmentGateway))
-        .retrieve(authorisedEnrolments and affinityGroup) {
-          case enrolments ~ affinityG =>
-            affinityG match {
-              case Some(Individual) | Some(Organisation) =>
-                val id: Option[TaxIdentifier] = for {
-                  enrolment  <- enrolments.getEnrolment(service).flatMap(supportedEnrolments)
-                  identifier <- extractIdentifier(enrolment, service)
-                } yield identifier
-
-                id match {
-                  case Some(i) => body(request)(i)
-                  case _       => Future.successful(NoPermissionToPerformOperation)
-                }
-              case _ => Future.successful(NoPermissionToPerformOperation)
-            }
-        }
-    }
+              id match {
+                case Some(i) => body(i)
+                case _       => Future.successful(NoPermissionToPerformOperation)
+              }
+            case _ => Future.successful(NoPermissionToPerformOperation)
+          }
+      }
 
   //BTA Call
   def withAuthorisedAsClient[A, T](body: Map[EnrolmentService, EnrolmentIdentifierValue] => Future[Result])(
     implicit ec: ExecutionContext,
-    request: Request[AnyContent],
     hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
@@ -190,16 +178,13 @@ trait AuthActions extends AuthorisedFunctions {
         Forbidden
     }
 
-  protected def AuthorisedWithStride(oldStrideRole: String, newStrideRole: String)(
-    body: Request[AnyContent] => String => Future[Result])(implicit ec: ExecutionContext) =
-    Action.async { implicit request =>
-      implicit val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
-      authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
-        .retrieve(credentials) {
-          case Some(Credentials(strideId, _)) => body(request)(strideId)
-          case _                              => Future.successful(NoPermissionToPerformOperation)
-        }
-    }
+  protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
+    body: String => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
+      .retrieve(credentials) {
+        case Some(Credentials(strideId, _)) => body(strideId)
+        case _                              => Future.successful(NoPermissionToPerformOperation)
+      }
 
   val basicAuthHeader: Regex = "Basic (.+)".r
   val decodedAuth: Regex = "(.+):(.+)".r
@@ -210,33 +195,26 @@ trait AuthActions extends AuthorisedFunctions {
     } catch { case _: Throwable => "" }
 
   def withBasicAuth(expectedAuth: BasicAuthentication)(body: => Future[Result])(
-    implicit request: Request[_]): Future[Result] = {
+    implicit request: Request[_]): Future[Result] =
     request.headers.get(HeaderNames.authorisation) match {
       case Some(basicAuthHeader(encodedAuthHeader)) =>
         decodeFromBase64(encodedAuthHeader) match {
           case decodedAuth(username, password) =>
-            if (BasicAuthentication(username, password) == expectedAuth) body
-            else {
-              Logger.warn(
-                "Authorization header found in the request but invalid username or password")
+            if (BasicAuthentication(username, password) == expectedAuth) { body } else {
+              Logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
             }
           case _ =>
-            Logger.warn(
-              "Authorization header found in the request but its not in the expected format")
+            Logger.warn("Authorization header found in the request but its not in the expected format")
             Future successful Unauthorized
         }
       case _ =>
-        Logger.warn(
-          "No Authorization header found in the request for agent termination")
+        Logger.warn("No Authorization header found in the request for agent termination")
         Future successful Unauthorized
     }
-  }
 
-  protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(
-    implicit request: Request[A],
-    hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Result] =
+  protected def withAuthorisedAsAgent[A](
+    body: Arn => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
       case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
@@ -244,10 +222,8 @@ trait AuthActions extends AuthorisedFunctions {
       case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments())
     }
 
-  protected def withEnrolledAsAgent[A](body: Option[String] => Future[Result])(
-    implicit request: Request[A],
-    hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Result] =
+  protected def withEnrolledAsAgent[A](
+    body: Option[String] => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     authorised(
       Enrolment("HMRC-AS-AGENT")
         and AuthProviders(GovernmentGateway))

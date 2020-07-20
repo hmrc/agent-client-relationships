@@ -2,9 +2,10 @@ package uk.gov.hmrc.agentrelationships.connectors
 
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
@@ -12,13 +13,14 @@ import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, EnrolmentStoreProxy
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.play.bootstrap.http
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class EnrolmentStoreProxyConnectorSpec
     extends UnitSpec
-    with OneServerPerSuite
+    with GuiceOneServerPerSuite
     with WireMockSupport
     with EnrolmentStoreProxyStubs
     with DataStreamStub
@@ -32,18 +34,31 @@ class EnrolmentStoreProxyConnectorSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.recovery-enable"                         -> "false"
+        "microservice.services.tax-enrolments.port" -> wireMockPort,
+        "microservice.services.users-groups-search.port" -> wireMockPort,
+        "microservice.services.des.port" -> wireMockPort,
+        "microservice.services.auth.port" -> wireMockPort,
+        "microservice.services.agent-mapping.port" -> wireMockPort,
+        "auditing.consumer.baseUri.host" -> wireMockHost,
+        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "features.copy-relationship.mtd-it" -> true,
+        "features.copy-relationship.mtd-vat" -> true,
+        "features.recovery-enable" -> false,
+        "agent.cache.size" -> 1,
+        "agent.cache.expires" -> "1 millis",
+        "agent.cache.enabled" -> true,
+        "agent.trackPage.cache.size" -> 1,
+        "agent.trackPage.cache.expires" -> "1 millis",
+        "agent.trackPage.cache.enabled" -> true
       )
 
   implicit val hc = HeaderCarrier()
 
-  val httpGet = app.injector.instanceOf[HttpGet with HttpPost with HttpDelete]
+  val httpClient = app.injector.instanceOf[http.HttpClient]
+  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   val connector =
-    new EnrolmentStoreProxyConnector(wireMockBaseUrl, wireMockBaseUrl, httpGet, app.injector.instanceOf[Metrics])
+    new EnrolmentStoreProxyConnector(httpClient, app.injector.instanceOf[Metrics])
 
   "EnrolmentStoreProxy" should {
 
@@ -188,7 +203,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if allocation failed because of unauthorized" in {
       givenAuditConnector()
       givenEnrolmentAllocationFailsWith(401)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      an[Upstream4xxResponse] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
       verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
@@ -204,7 +219,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if service not available when allocating enrolment" in {
       givenAuditConnector()
       givenEnrolmentAllocationFailsWith(503)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      an[Upstream5xxResponse] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
       verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
@@ -238,7 +253,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if de-allocation failed because of unauthorized" in {
       givenAuditConnector()
       givenEnrolmentDeallocationFailsWith(401)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
-      an[Upstream4xxResponse] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
       verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
@@ -247,7 +262,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if service not available when de-allocating enrolment" in {
       givenAuditConnector()
       givenEnrolmentDeallocationFailsWith(503)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
-      an[Upstream5xxResponse] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
       verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")

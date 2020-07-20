@@ -1,13 +1,14 @@
 package uk.gov.hmrc.agentrelationships.support
 
 import org.joda.time.{DateTime, DateTimeZone}
-import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.time.{Seconds, Span}
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository._
+import uk.gov.hmrc.agentclientrelationships.support.RecoveryScheduler
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentrelationships.stubs._
 import uk.gov.hmrc.domain.Nino
@@ -18,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class RecoverySchedulerISpec
     extends UnitSpec
     with MongoApp
-    with OneServerPerSuite
+    with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
     with DesStubs

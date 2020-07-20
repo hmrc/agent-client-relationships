@@ -17,10 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
@@ -70,10 +71,11 @@ class CheckAndCopyRelationshipsService @Inject()(
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
   val auditService: AuditService,
-  val metrics: Metrics,
-  @Named("features.copy-relationship.mtd-it") copyMtdItRelationshipFlag: Boolean,
-  @Named("features.copy-relationship.mtd-vat") copyMtdVatRelationshipFlag: Boolean)
+  val metrics: Metrics)(implicit val appConfig: AppConfig)
     extends Monitoring {
+
+  val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
+  val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
 
   def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
@@ -242,8 +244,8 @@ class CheckAndCopyRelationshipsService @Inject()(
     }
   }
 
-  private def intersection[A](referenceIds: Seq[A])(
-    mappingServiceCall: => Future[Seq[A]])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Set[A]] = {
+  private def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(
+    implicit ec: ExecutionContext): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {

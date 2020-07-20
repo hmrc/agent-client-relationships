@@ -29,7 +29,6 @@ import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Retrieval, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -49,12 +48,6 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   private val strideRoles = Seq(oldRequiredStrideRole, newRequiredStrideRole)
 
-  private val agentEnrolment = Enrolment(
-    "HMRC-AS-AGENT",
-    Seq(EnrolmentIdentifier("AgentReferenceNumber", arn)),
-    state = "",
-    delegatedAuthRule = None)
-
   private val mtdItIdEnrolment =
     Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)), state = "", delegatedAuthRule = None)
 
@@ -64,13 +57,14 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   private val trustEnrolment =
     Enrolment("HMRC-TERS-ORG", Seq(EnrolmentIdentifier("SAUTR", utr)), state = "", delegatedAuthRule = None)
 
-  class TestAuth() extends AuthActions with BaseController {
+  class TestAuth() extends AuthActions with Results {
+    implicit val hc: HeaderCarrier = HeaderCarrier()
     def testAuthActions(arn: Arn, identifier: TaxIdentifier, strideRoles: Seq[String]) =
-      authorisedClientOrStrideUser(identifier, strideRoles) { implicit request => _ =>
+      authorisedClientOrStrideUser(identifier, strideRoles) { _ =>
         Future.successful(Ok)
       }
 
-    def testAuthorisedAsClient(service: String) = AuthorisedAsClient(service) { implicit request => _ =>
+    def testAuthorisedAsClient(service: String) = authorisedAsClient(service) { _ =>
       Future.successful(Ok)
     }
 
@@ -138,41 +132,41 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
       "return Ok if Client has matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return Ok if Client has matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return NoPermissionToPerformOperation if Client has a non-matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING"), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING"), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
 
       "return NoPermissionToPerformOperation if Client has a non-matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING"), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING"), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
 
       "return NoPermissionToPerformOperation if Client has only an enrolment with a different identifier type" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
 
       "return Ok if Client has matching Utr in their enrolments" in {
         mockClientAuth(enrolment = Set(trustEnrolment))
-        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Utr(utr), strideRoles).apply(fakeRequest)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Utr(utr), strideRoles)
         await(result) shouldBe Ok
       }
     }
@@ -181,21 +175,21 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
       "return Ok if Stride user has required role" in {
         mockStrideAuth(oldRequiredStrideRole)
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return Ok if Stride user has new required role" in {
         mockStrideAuth(newRequiredStrideRole)
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return NoPermissionToPerformOperation if Stride user has unsupported role" in {
         mockStrideAuth("foo")
         val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles).apply(fakeRequest)
+          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
     }
@@ -204,13 +198,13 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   "AuthorisedAsClient" should {
     "return Ok if client has HMRC-MTD-IT enrolment" in {
       mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdItIdEnrolment))
-      val result = testAuthImpl.testAuthorisedAsClient("HMRC-MTD-IT").apply(fakeRequest)
+      val result = testAuthImpl.testAuthorisedAsClient("HMRC-MTD-IT")
       await(result) shouldBe Ok
     }
 
     "return Forbidden if client has other enrolment" in {
       mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdVatIdEnrolment))
-      val result = testAuthImpl.testAuthorisedAsClient("HMRC-AGENT-AGENT").apply(fakeRequest)
+      val result = testAuthImpl.testAuthorisedAsClient("HMRC-AGENT-AGENT")
       await(result) shouldBe NoPermissionToPerformOperation
     }
   }

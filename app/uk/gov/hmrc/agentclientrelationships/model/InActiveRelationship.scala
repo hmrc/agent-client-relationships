@@ -19,6 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model
 import org.joda.time.LocalDate
 import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import play.api.libs.json.JodaWrites._
+import play.api.libs.json.JodaReads._
 
 case class InactiveRelationship(
   arn: Arn,

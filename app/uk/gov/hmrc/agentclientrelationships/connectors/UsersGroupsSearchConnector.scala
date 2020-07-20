@@ -20,12 +20,14 @@ import java.net.URL
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -52,16 +54,13 @@ object UserDetails {
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject()(
-  @Named("users-groups-search-baseUrl") baseUrl: URL,
-  httpGet: HttpGet,
-  metrics: Metrics)
+class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getFirstGroupAdminUser(
     groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UserDetails]] = {
-    val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId/users")
+    val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
       httpGet
         .GET[Seq[UserDetails]](url.toString)
@@ -74,7 +73,7 @@ class UsersGroupsSearchConnector @Inject()(
   }
 
   def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[GroupInfo]] = {
-    val url = new URL(baseUrl, s"/users-groups-search/groups/$groupId")
+    val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
     monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
       httpGet.GET[GroupInfo](url.toString).map(Some(_))
     } recoverWith {

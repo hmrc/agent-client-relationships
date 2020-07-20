@@ -3,7 +3,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.joda.time.LocalDate
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 

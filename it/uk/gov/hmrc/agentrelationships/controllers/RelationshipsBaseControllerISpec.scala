@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentrelationships.controllers
 import org.scalatestplus.mockito.MockitoSugar
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
@@ -20,7 +20,7 @@ import scala.util.Random
 trait RelationshipsBaseControllerISpec
     extends UnitSpec
     with MongoApp
-    with OneServerPerSuite
+    with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
