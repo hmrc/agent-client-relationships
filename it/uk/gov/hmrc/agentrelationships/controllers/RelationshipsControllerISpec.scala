@@ -4,11 +4,11 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
 
 import org.joda.time.{DateTime, LocalDate}
-import play.api.libs.json.{JsObject, JsValue}
+import play.api.libs.json.JodaReads._
+import play.api.libs.json.JsObject
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentrelationships.support.Http
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
 
@@ -81,7 +81,6 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
         val result: HttpResponse = await(doRequest)
         result.status shouldBe 200
 
-        val b: JsValue = result.json
         (result.json \ "arn").get.as[String] shouldBe arn.value
         (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
@@ -294,7 +293,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/terminate"
     def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
     def doRequest = ws.url(s"http://localhost:$port$requestPath")
-      .withHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}").delete()
+      .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}").delete()
 
     "return 200 after successful termination" in {
 

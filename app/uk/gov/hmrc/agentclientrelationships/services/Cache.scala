@@ -23,7 +23,6 @@ import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
-import uk.gov.hmrc.play.config.ServicesConfig
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -57,7 +56,7 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
   private val underlying: com.github.blemale.scaffeine.Cache[String, T] =
     Scaffeine()
       .recordStats()
-      .expireAfterWrite(expires)
+      .expireAfterWrite(FiniteDuration(expires.toMillis, MILLISECONDS))
       .maximumSize(size)
       .build[String, T]()
 
@@ -78,11 +77,7 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
 
 @Singleton
 class AgentCacheProvider @Inject()(val environment: Environment, configuration: Configuration)(
-  implicit metrics: Metrics)
-    extends ServicesConfig {
-
-  override val runModeConfiguration: Configuration = configuration
-  override def mode = environment.mode
+  implicit metrics: Metrics) {
 
   private val cacheSize = configuration.underlying.getInt("agent.cache.size")
   private val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))

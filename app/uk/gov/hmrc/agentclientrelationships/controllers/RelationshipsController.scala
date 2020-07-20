@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.implicits._
-import javax.inject.{Inject, Named, Provider, Singleton}
+import javax.inject.{Inject, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -33,7 +33,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -52,13 +52,11 @@ class RelationshipsController @Inject()(
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
   ecp: Provider[ExecutionContext],
-  @Named("old.auth.stride.role") oldStrideRole: String,
-  @Named("new.auth.stride.role") newStrideRole: String,
-  @Named("termination.stride.role") terminationStrideRole: String)
-    extends BaseController
+  override val controllerComponents: ControllerComponents)
+    extends BackendController(controllerComponents)
     with AuthActions {
 
-  private val strideRoles = Seq(oldStrideRole, newStrideRole)
+  private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   implicit val ec: ExecutionContext = ecp.get
 
@@ -163,26 +161,28 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
-    validateParams(service, clientIdType, clientId) match {
-      case Right((a, taxIdentifier)) =>
-        authorisedClientOrStrideUser(taxIdentifier, strideRoles) { implicit request => _ =>
-          implicit val auditData: AuditData = new AuditData()
-          auditData.set("arn", arn)
+  def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      validateParams(service, clientIdType, clientId) match {
+        case Right((a, taxIdentifier)) =>
+          authorisedClientOrStrideUser(taxIdentifier, strideRoles) { _ =>
+            implicit val auditData: AuditData = new AuditData()
+            auditData.set("arn", arn)
 
-          createService
-            .createRelationship(arn, taxIdentifier, Set(), false, true)
-            .map(_ => Created)
-            .recover {
-              case upS: Upstream5xxResponse => throw upS
-              case NonFatal(ex) =>
-                Logger(getClass).warn("Could not create relationship due to ", ex)
-                NotFound(toJson(ex.getMessage))
-            }
-        }
+            createService
+              .createRelationship(arn, taxIdentifier, Set(), false, true)
+              .map(_ => Created)
+              .recover {
+                case upS: Upstream5xxResponse => throw upS
+                case NonFatal(ex) =>
+                  Logger(getClass).warn("Could not create relationship due to ", ex)
+                  NotFound(toJson(ex.getMessage))
+              }
+          }
 
-      case Left(error) => Action.async(Future.successful(BadRequest(error)))
-    }
+        case Left(error) => Future.successful(BadRequest(error))
+      }
+  }
 
   private def validateParams(
     service: String,
@@ -199,26 +199,28 @@ class RelationshipsController @Inject()(
       case (a, b)                                                  => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }
 
-  def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
-    validateParams(service, clientIdType, clientId) match {
-      case Right((_, taxIdentifier)) =>
-        authorisedUser(arn, taxIdentifier, strideRoles) { implicit request => implicit currentUser =>
-          (for {
-            id <- taxIdentifier match {
-                   case nino @ Nino(_) => des.getMtdIdFor(nino)
-                   case _              => Future successful taxIdentifier
-                 }
-            _ <- deleteService.deleteRelationship(arn, id)
-          } yield NoContent)
-            .recover {
-              case upS: Upstream5xxResponse => throw upS
-              case NonFatal(ex) =>
-                Logger(getClass).warn("Could not delete relationship", ex)
-                NotFound(toJson(ex.getMessage))
-            }
-        }
-      case Left(error) => Action.async(Future.successful(BadRequest(error)))
-    }
+  def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      validateParams(service, clientIdType, clientId) match {
+        case Right((_, taxIdentifier)) =>
+          authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
+            (for {
+              id <- taxIdentifier match {
+                     case nino @ Nino(_) => des.getMtdIdFor(nino)
+                     case _              => Future successful taxIdentifier
+                   }
+              _ <- deleteService.deleteRelationship(arn, id)
+            } yield NoContent)
+              .recover {
+                case upS: Upstream5xxResponse => throw upS
+                case NonFatal(ex) =>
+                  Logger(getClass).warn("Could not delete relationship", ex)
+                  NotFound(toJson(ex.getMessage))
+              }
+          }
+        case Left(error) => Future.successful(BadRequest(error))
+      }
+  }
 
   private def checkWithVrn(arn: Arn, vrn: Vrn)(implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
@@ -248,32 +250,35 @@ class RelationshipsController @Inject()(
     }
   }
 
-  def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = AuthorisedAsClient(service) {
-    implicit request => clientId =>
+  def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = Action.async { implicit request =>
+    authorisedAsClient(service) { implicit clientId =>
       findService.getActiveRelationshipsForClient(clientId).map {
         case Some(relationship) => Ok(Json.toJson(relationship))
         case None               => NotFound
       }
+    }
   }
 
-  def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] =
-    validateParams(service, clientIdType, clientId) match {
-      case Right((service, taxIdentifier)) =>
-        AuthorisedWithStride(oldStrideRole, newStrideRole) { implicit request => _ =>
-          val relationships = if (service == "HMRC-MTD-IT") {
-            findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
-          } else {
-            findService.getActiveRelationshipsForClient(taxIdentifier)
+  def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      validateParams(service, clientIdType, clientId) match {
+        case Right((service, taxIdentifier)) =>
+          authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
+            val relationships = if (service == "HMRC-MTD-IT") {
+              findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
+            } else {
+              findService.getActiveRelationshipsForClient(taxIdentifier)
+            }
+            relationships.map {
+              case Some(relationship) => Ok(Json.toJson(relationship))
+              case None               => NotFound
+            }
           }
-          relationships.map {
-            case Some(relationship) => Ok(Json.toJson(relationship))
-            case None               => NotFound
-          }
-        }
-      case Left(error) => Action.async(Future.successful(BadRequest(error)))
-    }
+        case Left(error) => Future.successful(BadRequest(error))
+      }
+  }
 
-  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { implicit request =>
+  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { _ =>
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)

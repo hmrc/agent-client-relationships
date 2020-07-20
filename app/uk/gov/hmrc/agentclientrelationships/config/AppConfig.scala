@@ -16,21 +16,67 @@
 
 package uk.gov.hmrc.agentclientrelationships.config
 
+import java.net.URLDecoder
+
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+
+import scala.concurrent.duration.Duration
+
+case class ConfigNotFoundException(message: String) extends RuntimeException(message)
 
 @Singleton
-class AppConfig @Inject()(config: Configuration) {
+class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig) {
+
+  val appName = "agent-client-relationships"
+
+  private def getConfigString(key: String) =
+    servicesConfig.getConfString(key, throw ConfigNotFoundException(s"Could not find config key: '$key'"))
 
   def expectedAuth: BasicAuthentication = {
     val username = config
-      .getString("agent-termination.username")
+      .get[Option[String]]("agent-termination.username")
       .getOrElse(throw new RuntimeException(s"Could not find config key 'agent-termination.username'"))
     val password = config
-      .getString("agent-termination.password")
-      .getOrElse(throw new RuntimeException(s"Could not find config key 'agent-termination.password'"))
+      .get[Option[String]]("agent-termination.password")
+      .getOrElse(throw ConfigNotFoundException(s"Could not find config key 'agent-termination.password'"))
 
     BasicAuthentication(username, password)
   }
+
+  val enrolmentStoreProxyUrl = servicesConfig.baseUrl("enrolment-store-proxy")
+
+  val taxEnrolmentsUrl = servicesConfig.baseUrl("tax-enrolments")
+
+  val userGroupsSearchUrl = servicesConfig.baseUrl("users-groups-search")
+
+  val desUrl = servicesConfig.baseUrl("des")
+  val desEnv = getConfigString("des.environment")
+  val desToken = getConfigString("des.authorization-token")
+
+  val agentMappingUrl = servicesConfig.baseUrl("agent-mapping")
+
+  val authUrl = servicesConfig.baseUrl("auth")
+
+  lazy val inactiveRelationshipShowLastDays =
+    Duration.apply(getConfigString("inactive-relationships.show-last-days"))
+
+  lazy val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "utf-8")
+
+  val newAuthStrideRole = servicesConfig.getString("new.auth.stride.role")
+
+  val copyMtdItRelationshipFlag = servicesConfig.getBoolean("features.copy-relationship.mtd-it")
+
+  val copyMtdVatRelationshipFlag = servicesConfig.getBoolean("features.copy-relationship.mtd-vat")
+
+  val recoveryEnabled = servicesConfig.getBoolean("features.recovery-enable")
+
+  val recoveryInterval = servicesConfig.getInt("recovery-interval")
+
+  val recoveryTimeout = servicesConfig.getInt("recovery-timeout")
+
+  val terminationStrideRole = servicesConfig.getString("termination.stride.role")
+
 }

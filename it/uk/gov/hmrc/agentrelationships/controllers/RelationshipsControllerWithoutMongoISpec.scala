@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import javax.inject.Inject
 import com.google.inject.AbstractModule
-import org.scalatestplus.play.OneServerPerSuite
+import javax.inject.Inject
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
@@ -44,7 +44,7 @@ class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: ReactiveMo
 class RelationshipsControllerWithoutMongoISpec
     extends UnitSpec
     with MongoApp
-    with OneServerPerSuite
+    with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
     with DesStubs

@@ -28,7 +28,7 @@ import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 
-import scala.collection.JavaConversions
+import scala.collection.JavaConverters
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
@@ -48,7 +48,7 @@ class AuditData {
   }
 
   def getDetails: Map[String, Any] =
-    JavaConversions.mapAsScalaMap(details).toMap
+    JavaConverters.mapAsScalaMapConverter(details).asScala.toMap
 
 }
 
@@ -210,8 +210,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
 
   private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, details: (String, Any)*)(
     implicit hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext): DataEvent = {
+    request: Request[Any]): DataEvent = {
 
     def toString(x: Any): String = x match {
       case t: TaxIdentifier => t.value

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentrelationships.controllers
 
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
@@ -31,7 +31,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class RelationshipsControllerTestOnlyISpec
     extends UnitSpec
     with MongoApp
-    with OneServerPerSuite
+    with GuiceOneServerPerSuite
     with WireMockSupport
     with DesStubs
     with MappingStubs

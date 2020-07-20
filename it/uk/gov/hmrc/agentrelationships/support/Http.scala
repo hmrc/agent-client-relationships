@@ -17,8 +17,7 @@
 package uk.gov.hmrc.agentrelationships.support
 
 import play.api.http.{HeaderNames, MimeTypes}
-import play.api.libs.ws.{WS, WSClient, WSRequest, WSResponse}
-import play.api.mvc.Results
+import play.api.libs.ws.{EmptyBody, WSClient, WSRequest, WSResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
@@ -26,7 +25,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
-
 object Http {
 
   def get(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
@@ -37,17 +35,15 @@ object Http {
     implicit hc: HeaderCarrier,
     ws: WSClient): HttpResponse =
     perform(url) { request =>
-      request.withHeaders(headers: _*).post(body)
+      request.addHttpHeaders(headers: _*).post(body)
     }
 
   def postEmpty(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
-    import play.api.http.Writeable._
-    request.post(Results.EmptyContent())
+    request.post(EmptyBody)
   }
 
   def putEmpty(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
-    import play.api.http.Writeable._
-    request.put(Results.EmptyContent())
+    request.put(EmptyBody)
   }
 
   def delete(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
@@ -55,9 +51,9 @@ object Http {
   }
 
   private def perform(url: String)(
-    fun: WSRequest => Future[WSResponse])(implicit hc: HeaderCarrier, ws: WSClient): WSHttpResponse =
+    fun: WSRequest => Future[WSResponse])(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse =
     await(
-      fun(ws.url(url).withHeaders(hc.headers: _*).withRequestTimeout(20000 milliseconds)).map(new WSHttpResponse(_)))
+      fun(ws.url(url).addHttpHeaders(hc.headers: _*).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
 
   private def await[A](future: Future[A]) = Await.result(future, Duration(10, SECONDS))
 

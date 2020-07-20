@@ -1,3 +1,4 @@
+import play.core.PlayVersion
 import uk.gov.hmrc.SbtAutoBuildPlugin
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
@@ -15,24 +16,25 @@ lazy val scoverageSettings = {
 
 lazy val compileDeps = Seq(
   ws,
-  "uk.gov.hmrc" %% "bootstrap-play-25" % "4.11.0",
-  "uk.gov.hmrc" %% "auth-client" % "2.21.0-play-25",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.17.0-play-25",
-  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "3.8.0",
-  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.22.0-play-25",
-  "uk.gov.hmrc" %% "mongo-lock" % "6.12.0-play-25",
-  "de.threedimensions" %% "metrics-play" % "2.5.13",
-  "com.github.blemale" %% "scaffeine" % "2.6.0",
-  "org.typelevel" %% "cats-core" % "2.0.0"
+  "uk.gov.hmrc" %% "bootstrap-play-26" % "1.14.0",
+  "uk.gov.hmrc" %% "auth-client" % "3.0.0-play-26",
+  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.17.0-play-26",
+  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.4.0",
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.30.0-play-26",
+  "uk.gov.hmrc" %% "mongo-lock" % "6.23.0-play-26",
+  "com.kenshoo" %% "metrics-play" % "2.6.6_0.6.2",
+  "com.github.blemale" %% "scaffeine" % "4.0.1",
+  "org.typelevel" %% "cats-core" % "2.0.0",
+  "com.typesafe.play" %% "play-json-joda" % "2.6.10"
 )
 
 def testDeps(scope: String) = Seq(
-  "uk.gov.hmrc" %% "hmrctest" % "3.8.0-play-25" % scope,
-  "uk.gov.hmrc" %% "reactivemongo-test" % "4.13.0-play-25" % scope,
-  "org.scalatest" %% "scalatest" % "3.0.7" % scope,
+  "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-26" % scope,
+  "uk.gov.hmrc" %% "reactivemongo-test" % "4.21.0-play-26" % scope,
+  "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "org.mockito" % "mockito-core" % "2.24.0" % scope,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % scope,
-  "com.github.tomakehurst" % "wiremock" % "2.23.2" % scope,
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.3" % scope,
+  "com.github.tomakehurst" % "wiremock-jre8" % "2.26.1" % scope,
   "org.scalamock" %% "scalamock" % "4.4.0" % scope
 )
 
@@ -47,8 +49,8 @@ lazy val root = (project in file("."))
     organization := "uk.gov.hmrc",
     PlayKeys.playDefaultPort := 9434,
     majorVersion := 0,
+    scalaVersion := "2.12.10",
     scalacOptions ++= Seq(
-      "-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
       "-Yno-adapted-args",
       "-Ywarn-value-discard",
@@ -56,7 +58,8 @@ lazy val root = (project in file("."))
       "-deprecation",
       "-feature",
       "-unchecked",
-      "-language:implicitConversions"),
+      "-language:implicitConversions",
+      "-P:silencer:pathFilters=views;routes"),
     resolvers := Seq(
       Resolver.bintrayRepo("hmrc", "releases"),
       Resolver.bintrayRepo("hmrc", "release-candidates"),
@@ -64,6 +67,10 @@ lazy val root = (project in file("."))
       Resolver.jcenterRepo
     ),
     libraryDependencies ++= tmpMacWorkaround() ++ compileDeps ++ testDeps("test") ++ testDeps("it"),
+    libraryDependencies ++= Seq(
+      compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.4.4" cross CrossVersion.full),
+      "com.github.ghik" % "silencer-lib" % "1.4.4" % Provided cross CrossVersion.full
+    ),
     publishingSettings,
     scoverageSettings,
     unmanagedResourceDirectories in Compile += baseDirectory.value / "resources",
@@ -82,3 +89,4 @@ lazy val root = (project in file("."))
   .enablePlugins(PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory)
 
 inConfig(IntegrationTest)(scalafmtCoreSettings)
+

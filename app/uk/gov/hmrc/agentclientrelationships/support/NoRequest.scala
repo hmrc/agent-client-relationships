@@ -15,21 +15,29 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.support
-import java.security.cert.X509Certificate
+import java.net.URI
 
+import play.api.libs.typedmap.TypedMap
+import play.api.mvc.request.{RemoteConnection, RequestTarget}
 import play.api.mvc.{Headers, Request}
 
 object NoRequest extends Request[Any] {
   override def body: Any = ""
-  override def id: Long = 0L
-  override def tags: Map[String, String] = Map()
-  override def uri: String = ""
-  override def path: String = ""
   override def method: String = ""
   override def version: String = ""
-  override def queryString: Map[String, Seq[String]] = Map()
-  override def headers: Headers = ???
-  override def remoteAddress: String = ""
-  override def secure: Boolean = false
-  override def clientCertificateChain: Option[Seq[X509Certificate]] = ???
+  override def headers: Headers = Headers.create()
+
+  override def connection: RemoteConnection = RemoteConnection("", false, None)
+
+  override def target: RequestTarget = new RequestTarget {
+    override def uri: URI = URI.create("")
+
+    override def uriString: String = ""
+
+    override def path: String = ""
+
+    override def queryMap: Map[String, Seq[String]] = Map.empty
+  }
+
+  override def attrs: TypedMap = TypedMap.empty
 }

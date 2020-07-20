@@ -20,37 +20,35 @@ import java.net.URL
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject, Singleton}
 import org.joda.time.{DateTimeZone, LocalDate}
 import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.logging.Authorization
-import uk.gov.hmrc.http.{BadRequestException, _}
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DesConnector @Inject()(
-  @Named("des-baseUrl") baseUrl: URL,
-  @Named("des.authorizationToken") authorizationToken: String,
-  @Named("des.environment") environment: String,
-  @Named("inactive-relationships.show-last-days") showInactiveRelationshipsDuration: Duration,
-  httpGet: HttpGet,
-  httpPost: HttpPost,
-  metrics: Metrics,
-  agentCacheProvider: AgentCacheProvider)
+class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCacheProvider: AgentCacheProvider)(
+  implicit val appConfig: AppConfig)
     extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
+  val desAuthToken = appConfig.desToken
+  val desEnv = appConfig.desEnv
+  val showInactiveRelationshipsDuration = appConfig.inactiveRelationshipShowLastDays
+
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
-    val url = new URL(baseUrl, s"/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
+    val url = new URL(s"${appConfig.desUrl}/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
 
     getWithDesHeaders[HttpResponse]("GetRegistrationBusinessDetailsByMtdbsa", url).map { result =>
       (result.json \ "nino").as[Nino]
@@ -58,7 +56,7 @@ class DesConnector @Inject()(
   }
 
   def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[MtdItId] = {
-    val url = new URL(baseUrl, s"/registration/business-details/nino/${encodePathSegment(nino.value)}")
+    val url = new URL(s"${appConfig.desUrl}/registration/business-details/nino/${encodePathSegment(nino.value)}")
 
     getWithDesHeaders[HttpResponse]("GetRegistrationBusinessDetailsByNino", url).map { result =>
       (result.json \ "mtdbsa").as[MtdItId]
@@ -67,7 +65,7 @@ class DesConnector @Inject()(
 
   def getClientSaAgentSaReferences(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
-    val url = new URL(baseUrl, s"/registration/relationship/nino/${encodePathSegment(nino.value)}")
+    val url = new URL(s"${appConfig.desUrl}/registration/relationship/nino/${encodePathSegment(nino.value)}")
 
     getWithDesHeaders[Agents]("GetStatusAgentRelationship", url).map(
       _.agents
@@ -82,16 +80,16 @@ class DesConnector @Inject()(
     val url = taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"${appConfig.desUrl}/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"${appConfig.desUrl}/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case Utr(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"${appConfig.desUrl}/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"${appConfig.desUrl}/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
     }
 
     getWithDesHeaders[ActiveRelationshipResponse]("GetActiveClientItSaRelationships", url)
@@ -110,7 +108,7 @@ class DesConnector @Inject()(
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
     val regime = "AGSV"
     val url = new URL(
-      s"$baseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=$regime&from=$from&to=$now")
+      s"${appConfig.desUrl}/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=$regime&from=$from&to=$now")
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
@@ -138,7 +136,7 @@ class DesConnector @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
 
-    val url = new URL(baseUrl, s"/registration/relationship")
+    val url = new URL(s"${appConfig.desUrl}/registration/relationship")
     val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId))
 
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, requestBody)
@@ -148,7 +146,7 @@ class DesConnector @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
 
-    val url = new URL(baseUrl, s"/registration/relationship")
+    val url = new URL(s"${appConfig.desUrl}/registration/relationship")
     postWithDesHeaders[JsValue, RegistrationRelationshipResponse](
       "DeleteAgentRelationship",
       url,
@@ -168,10 +166,10 @@ class DesConnector @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[A] = {
     val desHeaderCarrier = hc.copy(
-      authorization = Some(Authorization(s"Bearer $authorizationToken")),
-      extraHeaders = hc.extraHeaders :+ "Environment" -> environment)
+      authorization = Some(Authorization(s"Bearer ${appConfig.desToken}")),
+      extraHeaders = hc.extraHeaders :+ "Environment" -> appConfig.desEnv)
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpGet.GET[A](url.toString)(implicitly[HttpReads[A]], desHeaderCarrier, ec)
+      httpClient.GET[A](url.toString)(implicitly[HttpReads[A]], desHeaderCarrier, ec)
     }
   }
 
@@ -179,10 +177,10 @@ class DesConnector @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[B] = {
     val desHeaderCarrier = hc.copy(
-      authorization = Some(Authorization(s"Bearer $authorizationToken")),
-      extraHeaders = hc.extraHeaders :+ "Environment" -> environment)
+      authorization = Some(Authorization(s"Bearer ${appConfig.desToken}")),
+      extraHeaders = hc.extraHeaders :+ "Environment" -> appConfig.desEnv)
     monitor(s"ConsumedAPI-DES-$apiName-POST") {
-      httpPost.POST[A, B](url.toString, body)(implicitly[Writes[A]], implicitly[HttpReads[B]], desHeaderCarrier, ec)
+      httpClient.POST[A, B](url.toString, body)(implicitly[Writes[A]], implicitly[HttpReads[B]], desHeaderCarrier, ec)
     }
   }
 

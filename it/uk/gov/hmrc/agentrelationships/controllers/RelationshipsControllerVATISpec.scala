@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import org.joda.time.LocalDate
+import play.api.libs.json.JodaReads._
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
@@ -1022,7 +1023,6 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       val result = await(doRequest)
       result.status shouldBe 200
 
-      val b = result.json
       (result.json \ "arn").get.as[String] shouldBe arn.value
       (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }

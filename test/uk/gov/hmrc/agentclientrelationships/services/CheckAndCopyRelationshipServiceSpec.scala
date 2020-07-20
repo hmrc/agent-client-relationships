@@ -23,9 +23,11 @@ import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
+import play.api.Configuration
 import play.api.mvc.Request
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
@@ -34,7 +36,8 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain._
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -77,6 +80,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val monitoring = resettingMock[Monitoring]
   val deleteRecordRepository = resettingMock[DeleteRecordRepository]
   val agentUserService = resettingMock[AgentUserService]
+  val servicesConfig = resettingMock[ServicesConfig]
+  val configuration = resettingMock[Configuration]
+
+  when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
+  when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
+  when(servicesConfig.getString(any[String])).thenReturn("")
+  implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
   val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
 
@@ -87,7 +97,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
     needsRetryStatuses.foreach { status =>
       s"create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
-        val record = defaultRecord.copy(syncToETMPStatus = status, syncToESStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
@@ -105,9 +114,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -150,9 +157,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -180,7 +185,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     needsRetryStatuses.foreach { status =>
       s"not create ETMP relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
-        val record = defaultRecord.copy(syncToETMPStatus = status, syncToESStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
@@ -198,9 +202,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -245,9 +247,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -293,9 +293,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -324,7 +322,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     needsRetryStatuses.foreach { status =>
       s"not create ES relationship if no relationship currently exists in CESA " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = $status" in {
-        val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
@@ -342,9 +339,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -384,9 +379,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -434,9 +427,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -471,9 +462,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -482,7 +471,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
 
-      an[Upstream5xxResponse] should be thrownBy await(check)
+      an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
@@ -507,9 +496,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
 
       val auditData = new AuditData()
@@ -552,9 +539,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
 
       val auditData = new AuditData()
@@ -579,7 +564,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
     needsRetryStatuses.foreach { status =>
       s"create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
-        val record = defaultRecordForMtdVat.copy(syncToETMPStatus = status, syncToESStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
@@ -597,9 +581,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -642,9 +624,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -672,7 +652,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     needsRetryStatuses.foreach { status =>
       s"not create ETMP relationship if no relationship currently exists in HMCE-VATDEC-ORG " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
-        val record = defaultRecordForMtdVat.copy(syncToETMPStatus = status, syncToESStatus = None)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
@@ -690,9 +669,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -735,9 +712,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -783,9 +758,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -814,7 +787,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     needsRetryStatuses.foreach { status =>
       s"not create ES relationship if no relationship currently exists in HMCE-VATDEC-ORG " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = $status" in {
-        val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
@@ -832,9 +804,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -874,9 +844,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -924,9 +892,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService,
             metrics),
           auditService,
-          metrics,
-          true,
-          true
+          metrics
         )
 
         val auditData = new AuditData()
@@ -961,9 +927,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -971,7 +935,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
 
-      an[Upstream5xxResponse] should be thrownBy await(check)
+      an[UpstreamErrorResponse] should be thrownBy await(check)
 
       verifyEsRecordNotCreatedMtdVat()
       verifyEtmpRecordNotCreatedForMtdVat()
@@ -997,9 +961,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
 
       val auditData = new AuditData()
@@ -1042,9 +1004,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
 
       val auditData = new AuditData()
@@ -1084,9 +1044,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -1094,7 +1052,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       mappingServiceUnavailable()
       val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
 
-      an[Upstream5xxResponse] should be thrownBy await(check)
+      an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
@@ -1119,9 +1077,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           agentUserService,
           metrics),
         auditService,
-        metrics,
-        true,
-        true
+        metrics
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -1129,7 +1085,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       mappingServiceUnavailableForMtdVat()
       val check = relationshipsService.lookupESForOldRelationship(arn, vrn)(ec, hc, request, auditData)
 
-      an[Upstream5xxResponse] should be thrownBy await(check)
+      an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreatedMtdVat()
       verifyEtmpRecordNotCreatedForMtdVat()
     }
@@ -1137,13 +1093,21 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   "checkForOldRelationshipAndCopy with feature flags" should {
 
-    behave like copyHasBeenDisabled(mtdItId, false, true)
-    behave like copyHasBeenDisabled(vrn, true, false)
+    when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(false)
+    when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
+    when(servicesConfig.getString(any[String])).thenReturn("")
+    var appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
-    def copyHasBeenDisabled(
-      identifier: TaxIdentifier,
-      copyMtdItRelationshipFlag: Boolean,
-      copyMtdVatRelationshipFlag: Boolean) =
+    behave like copyHasBeenDisabled(mtdItId, appConfig)
+
+    when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
+    when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(false)
+    when(servicesConfig.getString(any[String])).thenReturn("")
+    appConfig = new AppConfig(configuration, servicesConfig)
+
+    behave like copyHasBeenDisabled(vrn, appConfig)
+
+    def copyHasBeenDisabled(identifier: TaxIdentifier, appConfig: AppConfig) =
       s"not attempt to copy relationship for ${identifier.getClass.getSimpleName} " +
         s"and return CopyRelationshipNotAllowed if feature flag is disabled (set to false)" in {
         val relationshipCopyRepository = mock[RelationshipCopyRecordRepository]
@@ -1164,10 +1128,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               agentUserService,
               metrics),
             auditService,
-            metrics,
-            copyMtdItRelationshipFlag,
-            copyMtdVatRelationshipFlag
-          )
+            metrics
+          )(appConfig)
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -1197,7 +1159,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(des.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful nino)
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
-      .thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
+      .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
   private def mappingServiceUnavailableForMtdVat(): OngoingStubbing[Future[Seq[AgentCode]]] = {
@@ -1206,7 +1168,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
-      .thenReturn(Future failed Upstream5xxResponse("Error, no response", 502, 502))
+      .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {

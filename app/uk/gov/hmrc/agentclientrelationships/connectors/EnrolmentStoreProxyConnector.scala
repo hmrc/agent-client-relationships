@@ -18,17 +18,19 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
 
-import javax.inject.{Inject, Named, Singleton}
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, Upstream4xxResponse}
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,14 +40,13 @@ object ES8Request {
 }
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(
-  @Named("enrolment-store-proxy-baseUrl") espBaseUrl: URL,
-  @Named("tax-enrolments-baseUrl") teBaseUrl: URL,
-  http: HttpGet with HttpPost with HttpDelete,
-  metrics: Metrics)
+class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends TaxIdentifierSupport
     with HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+
+  val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
+  val teBaseUrl = new URL(appConfig.taxEnrolmentsUrl)
 
   // ES0 - principal
   def getPrincipalUserIdsFor(

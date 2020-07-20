@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import play.api.libs.json.{JsValue, Json, Writes, _}
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference, TaxIdentifier}
 
 sealed trait RelationshipReference {

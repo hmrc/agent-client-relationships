@@ -2,6 +2,7 @@ package uk.gov.hmrc.agentrelationships.controllers
 
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {

@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import java.util.UUID
 
+import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.Logger
@@ -26,10 +27,10 @@ import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers
+import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -40,6 +41,7 @@ object RecoveryRecord extends ReactiveMongoFormats {
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 
+@ImplementedBy(classOf[MongoRecoveryScheduleRepository])
 trait RecoveryScheduleRepository {
   def read(implicit ec: ExecutionContext): Future[RecoveryRecord]
   def write(nextUid: String, nextRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit]

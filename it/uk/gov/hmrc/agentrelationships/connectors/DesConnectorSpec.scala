@@ -3,10 +3,11 @@ package uk.gov.hmrc.agentrelationships.connectors
 import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
 import com.kenshoo.play.metrics.Metrics
 import org.joda.time.{DateTimeZone, LocalDate}
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
@@ -14,49 +15,53 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpPost, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-import scala.language.postfixOps
 
 class DesConnectorSpec
-    extends UnitSpec
-    with OneAppPerSuite
-    with WireMockSupport
-    with DesStubs
-    with DesStubsGet
-    with DataStreamStub
+    extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub
     with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpGet = app.injector.instanceOf[HttpGet]
-  val httpPost = app.injector.instanceOf[HttpPost]
+  val httpClient = app.injector.instanceOf[HttpClient]
   val metrics = app.injector.instanceOf[Metrics]
   val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
+  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.des.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+        "microservice.services.tax-enrolments.port"        -> wireMockPort,
+        "microservice.services.users-groups-search.port"   -> wireMockPort,
+        "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.auth.port"                  -> wireMockPort,
+        "microservice.services.des.environment"                  -> "stub",
+        "microservice.services.des.authorization-token" -> "token",
+        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "auditing.consumer.baseUri.host"                   -> wireMockHost,
+        "auditing.consumer.baseUri.port"                   -> wireMockPort,
+        "features.copy-relationship.mtd-it"                -> true,
+        "features.copy-relationship.mtd-vat"               -> true,
+        "features.recovery-enable"                         -> false,
         "agent.cache.size"                                 -> 1,
-        "agent.cache.expires"                            -> "1 millis",
-        "agent.cache.enabled"                            -> false,
-        "agent.trackPage.cache.size"                 -> 1,
-        "agent.trackPage.cache.expires"            -> "1 millis",
-        "agent.trackPage.cache.enabled"            -> false
+        "agent.cache.expires"                              -> "1 millis",
+        "agent.cache.enabled"                              -> false,
+        "agent.trackPage.cache.size"                       -> 1,
+        "agent.trackPage.cache.expires"                    -> "1 millis",
+        "agent.trackPage.cache.enabled"                    -> false
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val desConnector =
-    new DesConnector(wireMockBaseUrl, "token", "stub", 30 days, httpGet, httpPost, metrics, agentCacheProvider)
+    new DesConnector(httpClient, metrics, agentCacheProvider)
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
@@ -64,8 +69,8 @@ class DesConnectorSpec
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
-    case Vrn(_) => Vrn("101747641")
-    case Utr(_) => Utr("2134514321")
+    case Vrn(_)     => Vrn("101747641")
+    case Utr(_)     => Utr("2134514321")
   }
 
   "DesConnector GetRegistrationBusinessDetails" should {
@@ -139,8 +144,7 @@ class DesConnectorSpec
       val agentIds = Seq("001", "002", "003", "004", "005", "005", "007")
       givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
       givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(
-        SaAgentReference.apply)
+      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
     }
 
     "return empty seq when client has no active relationship with an agent" in {
@@ -256,32 +260,30 @@ class DesConnectorSpec
       verify(
         1,
         postRequestedFor(urlPathEqualTo("/registration/relationship"))
-          .withRequestBody(equalToJson(
-            s"""{
-               |"regime": "TRS",
-               |"idType" : "UTR"
-               |}""".stripMargin,
-            true,
-            true
-          ))
+          .withRequestBody(
+            equalToJson(
+              s"""{
+                 |"regime": "TRS",
+                 |"idType" : "UTR"
+                 |}""".stripMargin,
+              true,
+              true
+            ))
       )
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(
-        desConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(desConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
-      an[Upstream5xxResponse] should be thrownBy await(
-        desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
 
     "fail when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[Upstream5xxResponse] should be thrownBy await(
-        desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
   }
 
@@ -317,20 +319,17 @@ class DesConnectorSpec
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(
-        desConnector.deleteAgentRelationship(Eori("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(desConnector.deleteAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
-      an[Upstream5xxResponse] should be thrownBy await(
-        desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
 
     "fail when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[Upstream5xxResponse] should be thrownBy await(
-        desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
   }
 
@@ -488,11 +487,24 @@ class DesConnectorSpec
   }
 
   "isInactive" should {
-    val noEndRelationship = InactiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
+    val noEndRelationship =
+      InactiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
     val endsBeforeCurrentDate =
-      InactiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
+      InactiveRelationship(
+        Arn("foo"),
+        Some(LocalDate.parse("1111-11-11")),
+        Some(LocalDate.parse("1111-11-11")),
+        "123456789",
+        "personal",
+        "HMRC-MTD-VAT")
     val endsAtCurrentDateRelationship =
-      InactiveRelationship(Arn("foo"), Some(LocalDate.now(DateTimeZone.UTC)), Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
+      InactiveRelationship(
+        Arn("foo"),
+        Some(LocalDate.now(DateTimeZone.UTC)),
+        Some(LocalDate.parse("1111-11-11")),
+        "123456789",
+        "personal",
+        "HMRC-MTD-VAT")
 
     "return false when the relationship is active" in {
       desConnector.isNotActive(noEndRelationship) shouldBe false

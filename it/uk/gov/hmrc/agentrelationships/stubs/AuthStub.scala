@@ -3,7 +3,7 @@ package uk.gov.hmrc.agentrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.SessionKeys
@@ -288,7 +288,7 @@ trait AuthStub {
           """.stripMargin
     )
 
-    request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
   def givenAuthorisedAsValidAgent[A](request: FakeRequest[A], arn: String) =
@@ -314,7 +314,7 @@ trait AuthStub {
          |]}
           """.stripMargin
     )
-    request.withSession(SessionKeys.authToken -> "Bearer XYZ")
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
   def givenUnauthorisedWith(mdtpDetail: String): StubMapping =
@@ -346,7 +346,7 @@ trait AuthStub {
          |]}
           """.stripMargin
     )
-    request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
   def givenAuthorisedAsStrideUser[A](request: FakeRequest[A], strideUserId: String): FakeRequest[A] = {
@@ -368,7 +368,7 @@ trait AuthStub {
          |}
        """.stripMargin
     )
-    request.withSession(request.session + SessionKeys.authToken -> "Bearer XYZ")
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
   def givenAuthorisedFor(payload: String, responseBody: String): Seq[StubMapping] = {

@@ -21,17 +21,22 @@ import org.joda.time.{DateTime, LocalDate}
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.scalatestplus.mockito.MockitoSugar.mock
+import play.api.Configuration
+import play.api.mvc.Request
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, FakeDeleteRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain._
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream4xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -281,6 +286,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
   }
 
   "checkDeleteRecordAndEventuallyResume" should {
+    implicit val request: Request[_] = NoRequest
     "return true if there is no pending delete record" in new TestFixture {
       val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
@@ -317,7 +323,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
-      givenESDeAllocationFailsWith(Upstream4xxResponse("", 401, 401))
+      givenESDeAllocationFailsWith(UpstreamErrorResponse("", 401, 401))
 
       val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
@@ -426,6 +432,13 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     val repo = new FakeDeleteRecordRepository
     val lockService = new FakeLockService
 
+    val servicesConfig = mock[ServicesConfig]
+    val configuration = mock[Configuration]
+
+    when(servicesConfig.getInt(eqs("recovery-timeout"))).thenReturn(100)
+    when(servicesConfig.getString(any[String])).thenReturn("")
+    implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
+
     val underTest = new DeleteRelationshipsService(
       es,
       des,
@@ -435,8 +448,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       checkService,
       agentUserService,
       auditService,
-      metrics,
-      3600)
+      metrics)
 
     def givenAgentExists =
       when(
