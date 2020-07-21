@@ -45,7 +45,7 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
 
   val desAuthToken = appConfig.desToken
   val desEnv = appConfig.desEnv
-  val showInactiveRelationshipsDuration = appConfig.inactiveRelationshipShowLastDays
+  val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
     val url = new URL(s"${appConfig.desUrl}/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
@@ -105,7 +105,7 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
-    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDuration.toDays.toInt).toString
+    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDays).toString
     val regime = "AGSV"
     val url = new URL(
       s"${appConfig.desUrl}/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=$regime&from=$from&to=$now")

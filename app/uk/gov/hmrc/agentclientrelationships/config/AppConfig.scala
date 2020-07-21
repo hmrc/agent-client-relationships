@@ -60,10 +60,9 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val authUrl = servicesConfig.baseUrl("auth")
 
-  lazy val inactiveRelationshipShowLastDays =
-    Duration.apply(getConfigString("inactive-relationships.show-last-days"))
+  val inactiveRelationshipShowLastDays = servicesConfig.getInt("inactive-relationships.show-last-days")
 
-  lazy val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "utf-8")
+  val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "utf-8")
 
   val newAuthStrideRole = servicesConfig.getString("new.auth.stride.role")
 
