@@ -21,7 +21,7 @@ import java.util.UUID
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import javax.inject.{Inject, Singleton}
 import org.joda.time.{DateTime, Interval, PeriodType}
-import play.api.Logger
+import play.api.Logging
 import play.api.libs.concurrent.ExecutionContextProvider
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -37,7 +37,8 @@ class RecoveryScheduler @Inject()(
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
   deleteRelationshipsService: DeleteRelationshipsService,
   actorSystem: ActorSystem,
-  executionContextProvider: ExecutionContextProvider)(implicit val appConfig: AppConfig) {
+  executionContextProvider: ExecutionContextProvider)(implicit val appConfig: AppConfig)
+    extends Logging {
 
   implicit val ec: ExecutionContext = executionContextProvider.get()
 
@@ -50,7 +51,7 @@ class RecoveryScheduler @Inject()(
     })
     actorSystem.scheduler.scheduleOnce(5.seconds, taskActor, "<start>")
   } else
-    Logger(getClass).warn("Recovery job scheduler not enabled.")
+    logger.warn("Recovery job scheduler not enabled.")
 
   def recover: Future[Unit] =
     deleteRelationshipsService.tryToResume(ec, new AuditData).map(_ => ())
@@ -61,7 +62,8 @@ class TaskActor(
   executionContextProvider: ExecutionContextProvider,
   recoveryInterval: Int,
   recover: => Future[Unit])
-    extends Actor {
+    extends Actor
+    with Logging {
 
   implicit val ec: ExecutionContext = executionContextProvider.get()
 
@@ -79,7 +81,7 @@ class TaskActor(
               .write(newUid, nextRunAt)
               .map(_ => {
                 context.system.scheduler.scheduleOnce(delay, self, newUid)
-                Logger(getClass).info("About to start recovery job.")
+                logger.info("About to start recovery job.")
                 recover
               })
           } else {

@@ -21,7 +21,7 @@ import java.net.URL
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
@@ -29,8 +29,8 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, Upstream4xxResponse}
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,36 +42,12 @@ object ES8Request {
 @Singleton
 class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends TaxIdentifierSupport
-    with HttpAPIMonitor {
+    with HttpAPIMonitor
+    with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
   val teBaseUrl = new URL(appConfig.taxEnrolmentsUrl)
-
-  // ES0 - principal
-  def getPrincipalUserIdsFor(
-    taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[String]] = {
-    val enrolmentKeyPrefix = enrolmentKeyPrefixFor(taxIdentifier)
-    val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
-    val url =
-      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=principal")
-    monitor(s"ConsumedAPI-ES-getPrincipalUserIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
-      http.GET[HttpResponse](url.toString)
-    }.map { response =>
-        if (response.status == 204) throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-        else response.json
-      }
-      .map(json => {
-        val userIds = (json \ "principalUserIds").as[Seq[String]]
-        if (userIds.isEmpty)
-          throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-        else {
-          if (userIds.lengthCompare(1) > 0)
-            Logger(getClass).warn(s"Multiple userIds found for $enrolmentKeyPrefix")
-          userIds
-        }
-      })
-  }
 
   // ES1 - principal
   def getPrincipalGroupIdFor(
@@ -81,21 +57,23 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
     monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
-      http.GET[HttpResponse](url.toString)
-    }.map { response =>
-        if (response.status == 204) throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-        else response.json
-      }
-      .map(json => {
-        val groupIds = (json \ "principalGroupIds").as[Seq[String]]
-        if (groupIds.isEmpty)
-          throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
-        else {
-          if (groupIds.lengthCompare(1) > 0)
-            Logger(getClass).warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
-          groupIds.head
+      http.GET[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.NO_CONTENT => throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
+          case Status.OK =>
+            val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
+            if (groupIds.isEmpty)
+              throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(taxIdentifier)}")
+            else {
+              if (groupIds.lengthCompare(1) > 0)
+                logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
+              groupIds.head
+            }
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
         }
-      })
+      }
+    }
   }
 
   // ES1 - delegated
@@ -114,10 +92,14 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=delegated")
     monitor(s"ConsumedAPI-ES-getDelegatedGroupIdsFor-${enrolmentKey.split("~").take(2).mkString("_")}-GET") {
-      http.GET[HttpResponse](url.toString)
-    }.map { response =>
-      if (response.status == 204) Set.empty
-      else (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
+      http.GET[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.OK         => (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
+          case Status.NO_CONTENT => Set.empty
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
     }
   }
 
@@ -129,15 +111,19 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
         espBaseUrl,
         s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT")
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
-      http.GET[HttpResponse](url.toString)
-    }.map { response =>
-      if (response.status == 204) None
-      else
-        (response.json \ "enrolments")
-          .as[Seq[JsObject]]
-          .headOption
-          .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
-          .map(Arn.apply)
+      http.GET[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.OK =>
+            (response.json \ "enrolments")
+              .as[Seq[JsObject]]
+              .headOption
+              .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
+              .map(Arn.apply)
+          case Status.NO_CONTENT => None
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
     }
   }
 
@@ -151,14 +137,18 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
       teBaseUrl,
       s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKeyPrefix.replace("~", "_")}-POST") {
-      http.POST[ES8Request, HttpResponse](url.toString, ES8Request(userId, "delegated"))
-    }.map(_ => ())
-      .recover {
-        case e: Upstream4xxResponse if e.upstreamResponseCode == Status.CONFLICT =>
-          Logger(getClass).warn(
-            s"An attempt to allocate new enrolment $enrolmentKeyPrefix resulted in conflict with an existing one.")
-          ()
+      http.POST[ES8Request, HttpResponse](url.toString, ES8Request(userId, "delegated")).map { response =>
+        response.status match {
+          case Status.CREATED => ()
+          case Status.CONFLICT =>
+            logger.warn(
+              s"An attempt to allocate new enrolment $enrolmentKeyPrefix resulted in conflict with an existing one.")
+            ()
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
       }
+    }
   }
 
   // ES9
@@ -169,8 +159,13 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
     val enrolmentKey = enrolmentKeyPrefix + "~" + taxIdentifier.value
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey")
     monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKeyPrefix.replace("~", "_")}-DELETE") {
-      http.DELETE[HttpResponse](url.toString)
-    }.map(_ => ())
+      http.DELETE[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.NO_CONTENT => ()
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
   }
-
 }

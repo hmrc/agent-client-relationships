@@ -21,7 +21,6 @@ import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime.now
 import org.joda.time.DateTimeZone.UTC
 import org.joda.time.{DateTime, DateTimeZone}
-import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoComponent
@@ -124,7 +123,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
 
   def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int] =
     insert(record).map { result =>
-      result.writeErrors.foreach(error => Logger(getClass).warn(s"Creating DeleteRecord failed: ${error.errmsg}"))
+      result.writeErrors.foreach(error => logger.warn(s"Creating DeleteRecord failed: ${error.errmsg}"))
       result.n
     }
 
@@ -145,7 +144,10 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       update = Json.obj("$set" -> Json.obj("syncToETMPStatus" -> status.toString)),
       upsert = false
     ).map(
-      _.lastError.foreach(error => Logger(getClass).warn(s"Updating ETMP sync status ($status) failed: $error"))
+      _.lastError.foreach { error =>
+        if (!error.updatedExisting)
+          logger.warn(s"Updating ETMP sync status ($status) failed: $error")
+      }
     )
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
@@ -158,7 +160,10 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       update = Json.obj("$set" -> Json.obj("syncToESStatus" -> status.toString)),
       upsert = false
     ).map(
-      _.lastError.foreach(error => Logger(getClass).warn(s"Updating ES sync status ($status) failed: $error"))
+      _.lastError.foreach { error =>
+        if (!error.updatedExisting)
+          logger.warn(s"Updating ES sync status ($status) failed: $error")
+      }
     )
 
   def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Unit] =
@@ -173,7 +178,10 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
         "$inc" -> Json.obj("numberOfAttempts" -> JsNumber(1))
       )
     ).map(
-      _.lastError.foreach(error => Logger(getClass).warn(s"Marking recovery attempt failed: $error"))
+      _.lastError.foreach { error =>
+        if (!error.updatedExisting)
+          logger.warn(s"Marking recovery attempt failed: $error")
+      }
     )
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] =

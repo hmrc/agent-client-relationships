@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -72,7 +72,8 @@ class CheckAndCopyRelationshipsService @Inject()(
   createRelationshipsService: CreateRelationshipsService,
   val auditService: AuditService,
   val metrics: Metrics)(implicit val appConfig: AppConfig)
-    extends Monitoring {
+    extends Monitoring
+    with Logging {
 
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
@@ -113,8 +114,7 @@ class CheckAndCopyRelationshipsService @Inject()(
 
     relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-        Logger(getClass).warn(
-          s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
+        logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
@@ -140,7 +140,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                        }
                        .recover {
                          case NonFatal(ex) =>
-                           Logger(getClass).warn(
+                           logger.warn(
                              s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})",
                              ex)
                            auditService.sendCreateRelationshipAuditEvent
@@ -163,8 +163,7 @@ class CheckAndCopyRelationshipsService @Inject()(
 
     relationshipCopyRepository.findBy(arn, vrn).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-        Logger(getClass).warn(
-          s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
+        logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
@@ -183,8 +182,8 @@ class CheckAndCopyRelationshipsService @Inject()(
                        }
                        .recover {
                          case NonFatal(ex) =>
-                           Logger(getClass).warn(
-                             s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getName})",
+                           logger.warn(
+                             s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getSimpleName}) due to:",
                              ex)
                            auditService.sendCreateRelationshipAuditEventForMtdVat
                            mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
@@ -249,12 +248,12 @@ class CheckAndCopyRelationshipsService @Inject()(
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
-      Logger(getClass).warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
+      //logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
       returnValue(Set.empty)
     } else
       mappingServiceCall.map { mappingServiceIds =>
         val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
-        Logger(getClass).info(
+        logger.info(
           s"The CESA SA references have been found, " +
             s"${if (intersected.isEmpty) "but no previous relationship exists"
             else "and will attempt to copy existing relationship"}")
@@ -267,7 +266,7 @@ class CheckAndCopyRelationshipsService @Inject()(
       if (n == 0)
         Future.failed(RelationshipNotFound("Nothing has been removed from db."))
       else {
-        Logger(getClass).warn(s"Copy status record(s) has been removed for ${arn.value}, ${mtdItId.value}: $n")
+        logger.warn(s"Copy status record(s) has been removed for ${arn.value}, ${mtdItId.value}: $n")
         Future.successful(())
       }
     }

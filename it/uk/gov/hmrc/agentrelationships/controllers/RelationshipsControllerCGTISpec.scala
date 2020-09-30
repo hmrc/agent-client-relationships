@@ -64,7 +64,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 500
     }
 
     "return 502 when UGS returns 5xx" in {
@@ -73,7 +73,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 500
     }
 
     "return 502 when ES1/delegated returns 5xx" in {
@@ -82,7 +82,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
       givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 500
     }
 
     "return 400 when ES1/principal returns 4xx" in {
@@ -185,7 +185,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 502
+      result.status shouldBe 503
     }
 
     "return 502 when ES8 is unavailable" in {
@@ -204,7 +204,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "user1")
 
       val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 502
+      result.status shouldBe 503
       (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
     }
 
@@ -217,7 +217,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 502
+      result.status shouldBe 503
       (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 
@@ -501,7 +501,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       }
 
       "return 502" in new StubsForThisScenario {
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 503
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -521,7 +521,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       }
 
       "return 502" in new StubsForThisScenario {
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 503
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {

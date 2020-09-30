@@ -21,19 +21,18 @@ import java.net.URL
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
+import play.api.http.Status
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpReads.Implicits.readFromJson
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class SaMappings(mappings: Seq[SaMapping])
-
 case class SaMapping(arn: Arn, saAgentReference: SaAgentReference)
 
 object SaMappings {
@@ -58,14 +57,27 @@ class MappingConnector @Inject()(httpClient: HttpClient, metrics: Metrics)(impli
   def getSaAgentReferencesFor(
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
     val url = new URL(s"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
-    monitor(s"ConsumedAPI-Digital-Mappings-GET") { httpClient.GET[SaMappings](url.toString) }
-      .map(_.mappings.map(_.saAgentReference))
-
+    monitor(s"ConsumedAPI-Digital-Mappings-GET") {
+      httpClient.GET[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.OK => response.json.as[SaMappings].mappings.map(_.saAgentReference)
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
   }
 
   def getAgentCodesFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[AgentCode]] = {
     val url = new URL(s"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
-    monitor(s"ConsumedAPI-Digital-Mappings-GET") { httpClient.GET[AgentCodeMappings](url.toString) }
-      .map(_.mappings.map(_.agentCode))
+    monitor(s"ConsumedAPI-Digital-Mappings-GET") {
+      httpClient.GET[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.OK => response.json.as[AgentCodeMappings].mappings.map(_.agentCode)
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
   }
 }

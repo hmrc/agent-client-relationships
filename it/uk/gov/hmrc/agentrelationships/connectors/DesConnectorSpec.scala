@@ -16,7 +16,7 @@ import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsG
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}

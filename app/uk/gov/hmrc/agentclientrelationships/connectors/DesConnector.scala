@@ -22,6 +22,8 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import org.joda.time.{DateTimeZone, LocalDate}
+import play.api.Logging
+import play.api.http.Status
 import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
@@ -31,16 +33,17 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.logging.Authorization
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.{HttpClient, _}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCacheProvider: AgentCacheProvider)(
   implicit val appConfig: AppConfig)
-    extends HttpAPIMonitor {
+    extends HttpAPIMonitor
+    with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val desAuthToken = appConfig.desToken
@@ -50,16 +53,24 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
     val url = new URL(s"${appConfig.desUrl}/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
 
-    getWithDesHeaders[HttpResponse]("GetRegistrationBusinessDetailsByMtdbsa", url).map { result =>
-      (result.json \ "nino").as[Nino]
+    getWithDesHeaders("GetRegistrationBusinessDetailsByMtdbsa", url).map { result =>
+      result.status match {
+        case Status.OK => (result.json \ "nino").as[Nino]
+        case other =>
+          throw UpstreamErrorResponse(result.body, other, other)
+      }
     }
   }
 
   def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[MtdItId] = {
     val url = new URL(s"${appConfig.desUrl}/registration/business-details/nino/${encodePathSegment(nino.value)}")
 
-    getWithDesHeaders[HttpResponse]("GetRegistrationBusinessDetailsByNino", url).map { result =>
-      (result.json \ "mtdbsa").as[MtdItId]
+    getWithDesHeaders("GetRegistrationBusinessDetailsByNino", url).map { result =>
+      result.status match {
+        case Status.OK => (result.json \ "mtdbsa").as[MtdItId]
+        case other =>
+          throw UpstreamErrorResponse(result.body, other, other)
+      }
     }
   }
 
@@ -67,10 +78,18 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
     val url = new URL(s"${appConfig.desUrl}/registration/relationship/nino/${encodePathSegment(nino.value)}")
 
-    getWithDesHeaders[Agents]("GetStatusAgentRelationship", url).map(
-      _.agents
-        .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
-        .flatMap(_.agentId))
+    getWithDesHeaders("GetStatusAgentRelationship", url).map { response =>
+      response.status match {
+        case Status.OK =>
+          response.json
+            .as[Agents]
+            .agents
+            .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
+            .flatMap(_.agentId)
+        case other =>
+          throw UpstreamErrorResponse(response.body, other, other)
+      }
+    }
   }
 
   def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
@@ -92,13 +111,17 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
           s"${appConfig.desUrl}/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
     }
 
-    getWithDesHeaders[ActiveRelationshipResponse]("GetActiveClientItSaRelationships", url)
-      .map(_.relationship.find(isActive))
-      .recover {
-        case _: BadRequestException                          => None
-        case _: NotFoundException                            => None
-        case ex if ex.getMessage.contains("AGENT_SUSPENDED") => None
+    getWithDesHeaders("GetActiveClientItSaRelationships", url).map { response =>
+      response.status match {
+        case Status.OK =>
+          response.json.as[ActiveRelationshipResponse].relationship.find(isActive)
+        case Status.BAD_REQUEST                             => None
+        case Status.NOT_FOUND                               => None
+        case _ if response.body.contains("AGENT_SUSPENDED") => None
+        case other: Int =>
+          throw UpstreamErrorResponse(response.body, other, other)
       }
+    }
   }
 
   def getInactiveRelationships(
@@ -112,13 +135,17 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
-      getWithDesHeaders[InactiveRelationshipResponse](s"GetInactiveRelationships", url)
-        .map(_.relationship.filter(isNotActive))
-        .recover {
-          case _: BadRequestException                          => Seq.empty
-          case _: NotFoundException                            => Seq.empty
-          case ex if ex.getMessage.contains("AGENT_SUSPENDED") => Seq.empty
+      getWithDesHeaders(s"GetInactiveRelationships", url).map { response =>
+        response.status match {
+          case Status.OK =>
+            response.json.as[InactiveRelationshipResponse].relationship.filter(isNotActive)
+          case Status.BAD_REQUEST                             => Seq.empty
+          case Status.NOT_FOUND                               => Seq.empty
+          case _ if response.body.contains("AGENT_SUSPENDED") => Seq.empty
+          case other: Int =>
+            throw UpstreamErrorResponse(response.body, other, other)
         }
+      }
     }
   }
 
@@ -139,7 +166,13 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     val url = new URL(s"${appConfig.desUrl}/registration/relationship")
     val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId))
 
-    postWithDesHeaders[JsValue, RegistrationRelationshipResponse]("CreateAgentRelationship", url, requestBody)
+    postWithDesHeaders("CreateAgentRelationship", url, requestBody).map { response =>
+      response.status match {
+        case Status.OK => response.json.as[RegistrationRelationshipResponse]
+        case other: Int =>
+          throw UpstreamErrorResponse(response.body, other, other)
+      }
+    }
   }
 
   def deleteAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
@@ -147,10 +180,16 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
 
     val url = new URL(s"${appConfig.desUrl}/registration/relationship")
-    postWithDesHeaders[JsValue, RegistrationRelationshipResponse](
+    postWithDesHeaders(
       "DeleteAgentRelationship",
       url,
-      deleteAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId)))
+      deleteAgentRelationshipInputJson(clientId.value, arn.value, getRegimeFor(clientId))).map { response =>
+      response.status match {
+        case Status.OK => response.json.as[RegistrationRelationshipResponse]
+        case other: Int =>
+          throw UpstreamErrorResponse(response.body, other, other)
+      }
+    }
   }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
@@ -162,25 +201,29 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
-  private def getWithDesHeaders[A: HttpReads](apiName: String, url: URL)(
+  private def getWithDesHeaders(apiName: String, url: URL)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[A] = {
+    ec: ExecutionContext): Future[HttpResponse] = {
     val desHeaderCarrier = hc.copy(
       authorization = Some(Authorization(s"Bearer ${appConfig.desToken}")),
       extraHeaders = hc.extraHeaders :+ "Environment" -> appConfig.desEnv)
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET[A](url.toString)(implicitly[HttpReads[A]], desHeaderCarrier, ec)
+      httpClient.GET(url.toString)(implicitly[HttpReads[HttpResponse]], desHeaderCarrier, ec)
     }
   }
 
-  private def postWithDesHeaders[A: Writes, B: HttpReads](apiName: String, url: URL, body: A)(
+  private def postWithDesHeaders(apiName: String, url: URL, body: JsValue)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[B] = {
+    ec: ExecutionContext): Future[HttpResponse] = {
     val desHeaderCarrier = hc.copy(
       authorization = Some(Authorization(s"Bearer ${appConfig.desToken}")),
       extraHeaders = hc.extraHeaders :+ "Environment" -> appConfig.desEnv)
     monitor(s"ConsumedAPI-DES-$apiName-POST") {
-      httpClient.POST[A, B](url.toString, body)(implicitly[Writes[A]], implicitly[HttpReads[B]], desHeaderCarrier, ec)
+      httpClient.POST(url.toString, body)(
+        implicitly[Writes[JsValue]],
+        implicitly[HttpReads[HttpResponse]],
+        desHeaderCarrier,
+        ec)
     }
   }
 

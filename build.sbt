@@ -51,6 +51,8 @@ lazy val root = (project in file("."))
     majorVersion := 0,
     scalaVersion := "2.12.10",
     scalacOptions ++= Seq(
+      "-Yrangepos",
+      "-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
       "-Yno-adapted-args",
       "-Ywarn-value-discard",
@@ -87,6 +89,7 @@ lazy val root = (project in file("."))
     scalafmtOnCompile in IntegrationTest := true
   )
   .enablePlugins(PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory)
+  .disablePlugins(JUnitXmlReportPlugin)
 
 inConfig(IntegrationTest)(scalafmtCoreSettings)
 

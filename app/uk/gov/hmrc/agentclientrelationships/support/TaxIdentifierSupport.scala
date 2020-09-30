@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait TaxIdentifierSupport {

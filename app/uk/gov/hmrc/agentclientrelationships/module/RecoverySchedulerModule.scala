@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.support.RecoveryScheduler
 
 class RecoverySchedulerModule(val environment: Environment, val configuration: Configuration) extends AbstractModule {
   override def configure(): Unit =
-    if (configuration.getBoolean("features.recovery-enable").getOrElse(false)) {
+    if (configuration.get[Option[Boolean]]("features.recovery-enable").getOrElse(false)) {
       bind(classOf[RecoveryScheduler]).asEagerSingleton()
     }
 }

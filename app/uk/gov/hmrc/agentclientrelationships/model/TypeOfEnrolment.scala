@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 

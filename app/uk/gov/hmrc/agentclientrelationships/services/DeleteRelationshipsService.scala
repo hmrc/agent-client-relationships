@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import org.joda.time.{DateTime, DateTimeZone}
-import play.api.Logger
+import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, DeleteReco
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream4xxResponse, Upstream5xxResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -47,7 +47,8 @@ class DeleteRelationshipsService @Inject()(
   agentUserService: AgentUserService,
   val auditService: AuditService,
   val metrics: Metrics)(implicit val appConfig: AppConfig)
-    extends Monitoring {
+    extends Monitoring
+    with Logging {
 
   val recoveryTimeout = appConfig.recoveryTimeout
   //noinspection ScalaStyle
@@ -71,7 +72,7 @@ class DeleteRelationshipsService @Inject()(
         .map(_ => auditData.set("AgentDBRecord", true))
         .recoverWith {
           case NonFatal(ex) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"Inserting delete record into mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
               ex)
             Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
@@ -122,7 +123,7 @@ class DeleteRelationshipsService @Inject()(
     val updateEtmpSyncStatus = deleteRecordRepository.updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
 
     val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
-      Logger(getClass).warn(
+      logger.warn(
         s"De-authorising ETMP record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
         origExc)
       updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
@@ -136,7 +137,7 @@ class DeleteRelationshipsService @Inject()(
     } yield ())
       .recoverWith {
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
-          recoverWithException(e, Upstream5xxResponse("RELATIONSHIP_DELETE_FAILED_DES", upstreamCode, reportAs))
+          recoverWithException(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_DES", upstreamCode, reportAs))
         case NonFatal(ex) =>
           recoverWithException(ex, new Exception("RELATIONSHIP_DELETE_FAILED_DES"))
       }
@@ -152,7 +153,7 @@ class DeleteRelationshipsService @Inject()(
     val updateEsSyncStatus = deleteRecordRepository.updateEsSyncStatus(arn, taxIdentifier, _: SyncStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
-      Logger(getClass).warn(
+      logger.warn(
         s"De-allocating ES record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
         origExc)
       updateEsSyncStatus(Failed)
@@ -161,7 +162,7 @@ class DeleteRelationshipsService @Inject()(
 
     lazy val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
       case RelationshipNotFound(errorCode) =>
-        Logger(getClass).warn(
+        logger.warn(
           s"De-allocating ES record for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}) " +
             s"not possible because of incomplete data: $errorCode")
         updateEsSyncStatus(IncompleteInputParams)
@@ -169,11 +170,11 @@ class DeleteRelationshipsService @Inject()(
 
     lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
       case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
-        logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
+        logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
     }
 
     lazy val recoverUnauthorized: PartialFunction[Throwable, Future[Unit]] = {
-      case ex: Upstream4xxResponse if ex.upstreamResponseCode == 401 =>
+      case ex: UpstreamErrorResponse if ex.statusCode == 401 =>
         logAndMaybeFail(ex, ex)
     }
 
@@ -204,7 +205,7 @@ class DeleteRelationshipsService @Inject()(
       .map(_ > 0)
       .recoverWith {
         case NonFatal(ex) =>
-          Logger(getClass).warn(
+          logger.warn(
             s"Removing delete record from mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
             ex)
           Future.successful(false)
@@ -229,7 +230,7 @@ class DeleteRelationshipsService @Inject()(
               NoRequest)
         }
       case None =>
-        Logger(getClass).info("No Delete Record Found")
+        logger.info("No Delete Record Found")
         Future.successful(true)
     }
 
@@ -251,7 +252,7 @@ class DeleteRelationshipsService @Inject()(
                                else Future.successful(())
                          } yield isDone
                        } else {
-                         Logger(getClass).error(
+                         logger.error(
                            s"Terminating recovery of failed de-authorisation $record because timeout has passed.")
                          auditData.set("abandonmentReason", "timeout")
                          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
@@ -261,8 +262,8 @@ class DeleteRelationshipsService @Inject()(
                    }
     } yield isComplete)
       .recoverWith {
-        case e: Upstream4xxResponse if e.upstreamResponseCode == 401 =>
-          Logger(getClass).error(
+        case e: UpstreamErrorResponse if e.statusCode == 401 =>
+          logger.error(
             s"Terminating recovery of failed de-authorisation ($arn, $taxIdentifier) because auth token is invalid")
           auditData.set("abandonmentReason", "unauthorised")
           auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
@@ -279,7 +280,7 @@ class DeleteRelationshipsService @Inject()(
     val identifier = TaxIdentifierSupport.from(deleteRecord.clientIdentifier, deleteRecord.clientIdentifierType)
     lockService
       .tryLock(arn, identifier) {
-        Logger(getClass).info(
+        logger.info(
           s"Resuming unfinished removal of the ${identifier.getClass.getName} relationship between ${arn.value} and ${identifier.value}. Attempt: ${deleteRecord.numberOfAttempts + 1}")
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
@@ -294,7 +295,7 @@ class DeleteRelationshipsService @Inject()(
               _ <- deleteEsRecord(arn, identifier)
             } yield true
           case (true, false) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"ETMP relationship existed without ES relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                 s"This should not happen because we always remove the ETMP relationship first.")
             for {
@@ -302,7 +303,7 @@ class DeleteRelationshipsService @Inject()(
               _ <- deleteEtmpRecord(arn, identifier)
             } yield true
           case (false, false) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"resumeRelationshipRemoval called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
             Future.successful(true)
         }
@@ -335,7 +336,7 @@ class DeleteRelationshipsService @Inject()(
     implicit headerCarrier: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext) =
+    ec: ExecutionContext): Future[Unit] =
     if (currentUser.credentials.providerType == "GovernmentGateway")
       auditService.sendDeleteRelationshipAuditEvent
     else if (currentUser.credentials.providerType == "PrivilegedApplication")

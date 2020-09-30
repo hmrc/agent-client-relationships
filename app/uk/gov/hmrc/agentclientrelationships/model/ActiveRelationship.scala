@@ -17,6 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import org.joda.time.LocalDate
+import play.api.libs.functional.syntax._
+import play.api.libs.json.JodaReads._
 import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import play.api.libs.functional.syntax._

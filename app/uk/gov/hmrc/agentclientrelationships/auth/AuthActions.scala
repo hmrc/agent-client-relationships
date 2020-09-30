@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.auth
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
 
-import play.api.Logger
+import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -37,7 +37,7 @@ import scala.util.matching.Regex
 
 case class CurrentUser(credentials: Credentials, affinityGroup: Option[AffinityGroup])
 
-trait AuthActions extends AuthorisedFunctions {
+trait AuthActions extends AuthorisedFunctions with Logging {
   me: Results =>
 
   override def authConnector: AuthConnector
@@ -168,13 +168,13 @@ trait AuthActions extends AuthorisedFunctions {
       action
     }.recover {
       case _: NoActiveSession =>
-        Logger(getClass).warn(s"user not logged in")
+        logger.warn(s"user not logged in")
         Unauthorized
       case _: InsufficientEnrolments =>
-        Logger(getClass).warn(s"stride user doesn't have permission to terminate an agent")
+        logger.warn(s"stride user doesn't have permission to terminate an agent")
         Forbidden
       case _: UnsupportedAuthProvider =>
-        Logger(getClass).warn(s"user logged in with unsupported auth provider")
+        logger.warn(s"user logged in with unsupported auth provider")
         Forbidden
     }
 
@@ -201,15 +201,15 @@ trait AuthActions extends AuthorisedFunctions {
         decodeFromBase64(encodedAuthHeader) match {
           case decodedAuth(username, password) =>
             if (BasicAuthentication(username, password) == expectedAuth) { body } else {
-              Logger.warn("Authorization header found in the request but invalid username or password")
+              logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
             }
           case _ =>
-            Logger.warn("Authorization header found in the request but its not in the expected format")
+            logger.warn("Authorization header found in the request but its not in the expected format")
             Future successful Unauthorized
         }
       case _ =>
-        Logger.warn("No Authorization header found in the request for agent termination")
+        logger.warn("No Authorization header found in the request for agent termination")
         Future successful Unauthorized
     }
 
