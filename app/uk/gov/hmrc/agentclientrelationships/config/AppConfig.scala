@@ -23,8 +23,6 @@ import play.api.Configuration
 import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import scala.concurrent.duration.Duration
-
 case class ConfigNotFoundException(message: String) extends RuntimeException(message)
 
 @Singleton

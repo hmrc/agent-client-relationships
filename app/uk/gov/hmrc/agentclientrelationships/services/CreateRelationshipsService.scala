@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
@@ -41,7 +41,8 @@ class CreateRelationshipsService @Inject()(
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
   val metrics: Metrics)
-    extends Monitoring {
+    extends Monitoring
+    with Logging {
 
   //noinspection ScalaStyle
   def createRelationship(
@@ -66,7 +67,7 @@ class CreateRelationshipsService @Inject()(
         .map(_ => auditData.set("AgentDBRecord", true))
         .recoverWith {
           case NonFatal(ex) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
               ex)
             if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
@@ -87,7 +88,7 @@ class CreateRelationshipsService @Inject()(
     val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
 
     val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
-      Logger(getClass).warn(
+      logger.warn(
         s"Creating ETMP record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
         origExc)
       updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
@@ -103,7 +104,7 @@ class CreateRelationshipsService @Inject()(
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
           recoverWithException(
             e,
-            Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_DES", upstreamCode, reportAs, headers))
+            UpstreamErrorResponse("RELATIONSHIP_CREATE_FAILED_DES", upstreamCode, reportAs, headers))
         case NonFatal(ex) =>
           recoverWithException(ex, new Exception("RELATIONSHIP_CREATE_FAILED_DES"))
       }
@@ -118,7 +119,7 @@ class CreateRelationshipsService @Inject()(
     val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
-      Logger(getClass).warn(
+      logger.warn(
         s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
         origExc)
       updateEsSyncStatus(Failed).flatMap { _ =>
@@ -129,7 +130,7 @@ class CreateRelationshipsService @Inject()(
 
     val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
       case RelationshipNotFound(errorCode) =>
-        Logger(getClass).warn(
+        logger.warn(
           s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
             s"not possible because of incomplete data: $errorCode")
         updateEsSyncStatus(IncompleteInputParams)
@@ -137,7 +138,7 @@ class CreateRelationshipsService @Inject()(
 
     val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
       case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
-        logAndMaybeFail(e, Upstream5xxResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs, headers))
+        logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs, headers))
     }
 
     val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
@@ -151,7 +152,7 @@ class CreateRelationshipsService @Inject()(
         .map(_ => ())
         .recover {
           case NonFatal(ex) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"Inserting delete record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
               ex)
             ()
@@ -163,7 +164,7 @@ class CreateRelationshipsService @Inject()(
         .map(_ > 0)
         .recoverWith {
           case NonFatal(ex) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"Removing delete record from mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
               ex)
             Future.successful(false)
@@ -177,7 +178,7 @@ class CreateRelationshipsService @Inject()(
                 maybeArn <- es.getAgentReferenceNumberFor(groupId)
                 _ <- maybeArn match {
                       case None =>
-                        Future { Logger(getClass).warn(s"Arn not found for provided groupId: $groupId") }
+                        Future { logger.warn(s"Arn not found for provided groupId: $groupId") }
                       case Some(arnToRemove) =>
                         createDeleteRecord(
                           DeleteRecord(
@@ -195,7 +196,7 @@ class CreateRelationshipsService @Inject()(
                     }
               } yield ()).recover {
                 case NonFatal(ex) =>
-                  Logger(getClass).error(s"Could not deallocate previous relationship because of: $ex. Will try later.")
+                  logger.error(s"Could not deallocate previous relationship because of: $ex. Will try later.")
               }
             })
       } yield ()
@@ -234,12 +235,12 @@ class CreateRelationshipsService @Inject()(
           case (false, true) =>
             recoverEsRecord()
           case (true, false) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"ES relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
                 s"This should not happen because we always create the ETMP relationship first,")
             recoverEtmpRecord()
           case (false, false) =>
-            Logger(getClass).warn(
+            logger.warn(
               s"recoverRelationshipCreation called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
             Future.successful(())
         }

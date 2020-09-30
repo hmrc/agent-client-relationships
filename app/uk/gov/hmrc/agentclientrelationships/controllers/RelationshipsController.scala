@@ -21,7 +21,7 @@ import javax.inject.{Inject, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
@@ -33,7 +33,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -42,7 +42,6 @@ import scala.util.control.NonFatal
 class RelationshipsController @Inject()(
   override val authConnector: AuthConnector,
   appConfig: AppConfig,
-  auditService: AuditService,
   checkService: CheckRelationshipsService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,
@@ -77,7 +76,7 @@ class RelationshipsController @Inject()(
       } else if (service == "HMRC-CGT-PD" && clientIdType == "CGTPDRef" && CgtRef.isValid(clientId)) {
         checkWithTaxIdentifier(arn, CgtRef(clientId))
       } else {
-        Logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
+        logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
         Future.successful(BadRequest)
       }
     }
@@ -108,7 +107,7 @@ class RelationshipsController @Inject()(
         case AdminNotFound(errorCode) =>
           checkOldRelationship(arn, taxIdentifier, errorCode)
         case e @ RelationshipDeletePending() =>
-          Logger(getClass).warn("Denied access because relationship removal is pending.")
+          logger.warn("Denied access because relationship removal is pending.")
           Future.successful(Left(e.getMessage))
       }
       .map {
@@ -135,7 +134,7 @@ class RelationshipsController @Inject()(
         case upS: Upstream5xxResponse =>
           throw upS
         case NonFatal(ex) =>
-          Logger(getClass).warn(
+          logger.warn(
             s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
             ex)
           Left(errorCode)
@@ -175,7 +174,7 @@ class RelationshipsController @Inject()(
               .recover {
                 case upS: Upstream5xxResponse => throw upS
                 case NonFatal(ex) =>
-                  Logger(getClass).warn("Could not create relationship due to ", ex)
+                  logger.warn("Could not create relationship due to ", ex)
                   NotFound(toJson(ex.getMessage))
               }
           }
@@ -214,7 +213,7 @@ class RelationshipsController @Inject()(
               .recover {
                 case upS: Upstream5xxResponse => throw upS
                 case NonFatal(ex) =>
-                  Logger(getClass).warn("Could not delete relationship", ex)
+                  logger.warn("Could not delete relationship", ex)
                   NotFound(toJson(ex.getMessage))
               }
           }
@@ -237,7 +236,7 @@ class RelationshipsController @Inject()(
       .recover {
         case upS: Upstream5xxResponse => throw upS
         case NonFatal(_) =>
-          Logger(getClass).warn("checkWithVrn: lookupESForOldRelationship failed")
+          logger.warn("checkWithVrn: lookupESForOldRelationship failed")
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
   }
@@ -302,7 +301,7 @@ class RelationshipsController @Inject()(
         .terminateAgent(arn)
         .fold(
           error => {
-            Logger(getClass).warn(s"unexpected error during agent termination: $arn, error = $error")
+            logger.warn(s"unexpected error during agent termination: $arn, error = $error")
             InternalServerError
           }, { result =>
             Ok(Json.toJson(result))

@@ -185,7 +185,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
 
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 500
     }
 
     "return 502 when UGS returns 5xx" in {
@@ -194,7 +194,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
 
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 500
     }
 
     "return 502 when ES1/delegated returns 5xx" in {
@@ -203,7 +203,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 500
     }
 
     "return 400 when ES1/principal returns 4xx" in {
@@ -572,7 +572,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "any")
 
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 503
     }
   }
 
@@ -648,7 +648,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenServiceReturnsServiceUnavailable()
 
       val result = await(doRequest)
-      result.status shouldBe 502
+      result.status shouldBe 503
     }
 
     "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
@@ -1014,7 +1014,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       }
 
       "return 502" in new StubsForThisScenario {
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 503
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
       }
 
@@ -1032,7 +1032,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
               mtdItIdType,
               DateTime.now.minusMinutes(1)
             )))
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 503
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
       }
     }
@@ -1048,7 +1048,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       }
 
       "return 502" in new StubsForThisScenario {
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 503
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), None)
       }
 
@@ -1378,7 +1378,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       }
 
       "return 502" in new StubsForThisScenario {
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 503
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
       }
 
@@ -1400,7 +1400,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       }
 
       "return 502" in new StubsForThisScenario {
-        await(doAgentDeleteRequest(requestPath)).status shouldBe 502
+        await(doAgentDeleteRequest(requestPath)).status shouldBe 503
         verifyDeleteRecordNotExists
       }
 
@@ -1575,7 +1575,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 502
+      result.status shouldBe 503
     }
 
     "return 502 when ES8 is unavailable" in {
@@ -1594,7 +1594,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "user1")
 
       val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 502
+      result.status shouldBe 503
       (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
     }
 
@@ -1607,7 +1607,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "any")
 
       val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 502
+      result.status shouldBe 503
       (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
     }
 

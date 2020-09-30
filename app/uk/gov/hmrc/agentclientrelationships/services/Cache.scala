@@ -20,7 +20,7 @@ import com.codahale.metrics.MetricRegistry
 import com.github.blemale.scaffeine.Scaffeine
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Environment, Logger}
+import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 
@@ -28,13 +28,13 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
-trait KenshooCacheMetrics {
+trait KenshooCacheMetrics extends Logging {
 
   val kenshooRegistry: MetricRegistry
 
   def record[T](name: String): Unit = {
     kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
-    Logger(getClass).debug(s"kenshoo-event::meter::$name::recorded")
+    logger.debug(s"kenshoo-event::meter::$name::recorded")
   }
 
 }
@@ -68,7 +68,7 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
       case None =>
         body.andThen {
           case Success(v) =>
-            Logger(getClass).info(s"Missing $name cache hit, storing new value.")
+            logger.info(s"Missing $name cache hit, storing new value.")
             record("Count-" + name + "-from-source")
             underlying.put(key, v)
         }

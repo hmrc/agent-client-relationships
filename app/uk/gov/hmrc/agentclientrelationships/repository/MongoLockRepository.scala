@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import javax.inject.{Inject, Singleton}
-
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.lock.LockRepository
 

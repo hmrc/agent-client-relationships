@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -32,7 +32,8 @@ case class AgentUser(userId: String, groupId: String, agentCode: AgentCode, arn:
 class AgentUserService @Inject()(
   es: EnrolmentStoreProxyConnector,
   ugs: UsersGroupsSearchConnector,
-  agentCacheProvider: AgentCacheProvider) {
+  agentCacheProvider: AgentCacheProvider)
+    extends Logging {
 
   val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache
@@ -54,13 +55,13 @@ class AgentUserService @Inject()(
       (adminUserId, groupInfo, agentCode) match {
         case (Some(userId), Some(_), Some(code)) => Right(AgentUser(userId, agentGroupId, code, arn))
         case (None, _, _) =>
-          Logger.warn(s"Admin user had no userId for Arn: $arn")
+          logger.warn(s"Admin user had no userId for Arn: $arn")
           Left("NO_ADMIN_USER")
         case (Some(userId), None, _) =>
-          Logger.warn(s"Missing Group for Arn: $arn and admin user: $userId")
+          logger.warn(s"Missing Group for Arn: $arn and admin user: $userId")
           Left("MISSING_GROUP")
         case (_, Some(groupInfo), None) =>
-          Logger.warn(s"Missing AgentCode for Arn: $arn and group: ${groupInfo.groupId}")
+          logger.warn(s"Missing AgentCode for Arn: $arn and group: ${groupInfo.groupId}")
           Left("NO_AGENT_CODE")
       }
 }

@@ -12,8 +12,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
+import uk.gov.hmrc.http
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.play.bootstrap.http
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -118,48 +118,6 @@ class EnrolmentStoreProxyConnectorSpec
       await(connector.getDelegatedGroupIdsFor(Vrn("foo"))) should be(empty)
     }
 
-    "return some clients userIds for given MTDITID" in {
-      givenAuditConnector()
-      givenPrincipalUserIdExistFor(MtdItId("foo"), "bar")
-      await(connector.getPrincipalUserIdsFor(MtdItId("foo"))) shouldBe List("bar")
-    }
-
-    "return RelationshipNotFound Exception when MTDITID not found" in {
-      givenAuditConnector()
-      givenPrincipalUserIdNotExistFor(MtdItId("foo"))
-      an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdsFor(MtdItId("foo")))
-      }
-    }
-
-    "return some clients userIds for given NINO" in {
-      givenAuditConnector()
-      givenPrincipalUserIdExistFor(Nino("AB123456C"), "bar")
-      await(connector.getPrincipalUserIdsFor(Nino("AB123456C"))) shouldBe List("bar")
-    }
-
-    "return RelationshipNotFound Exception when NINO not found" in {
-      givenAuditConnector()
-      givenPrincipalUserIdNotExistFor(Nino("AB123456C"))
-      an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdsFor(Nino("AB123456C")))
-      }
-    }
-
-    "return some clients userIds for given VRN" in {
-      givenAuditConnector()
-      givenPrincipalUserIdExistFor(Vrn("foo"), "bar")
-      await(connector.getPrincipalUserIdsFor(Vrn("foo"))) shouldBe List("bar")
-    }
-
-    "return RelationshipNotFound Exception when VRN not found" in {
-      givenAuditConnector()
-      givenPrincipalUserIdNotExistFor(Vrn("foo"))
-      an[RelationshipNotFound] shouldBe thrownBy {
-        await(connector.getPrincipalUserIdsFor(Vrn("foo")))
-      }
-    }
-
     "return some ARN for the known groupId" in {
       givenAuditConnector()
       givenEnrolmentExistsForGroupId("bar", Arn("foo"))
@@ -185,7 +143,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
       givenEnrolmentAllocationFailsWith(404)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      an[NotFoundException] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
       verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
@@ -194,7 +152,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if allocation failed because of bad request" in {
       givenAuditConnector()
       givenEnrolmentAllocationFailsWith(400)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      an[BadRequestException] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
       }
       verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
@@ -235,7 +193,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if de-allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
       givenEnrolmentDeallocationFailsWith(404)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
-      an[NotFoundException] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
       verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
@@ -244,7 +202,7 @@ class EnrolmentStoreProxyConnectorSpec
     "throw an exception if de-allocation failed because of bad request" in {
       givenAuditConnector()
       givenEnrolmentDeallocationFailsWith(400)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
-      an[BadRequestException] shouldBe thrownBy {
+      an[UpstreamErrorResponse] shouldBe thrownBy {
         await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
       }
       verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
