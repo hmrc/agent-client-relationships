@@ -57,6 +57,7 @@ object UserDetails {
 @Singleton
 class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends HttpAPIMonitor
+    with HttpErrorFunctions
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -66,7 +67,7 @@ class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
       httpGet.GET[HttpResponse](url.toString).map { response =>
         response.status match {
-          case Status.OK => response.json.as[Seq[UserDetails]].find(_.credentialRole.exists(_ == "Admin"))
+          case status if is2xx(status) => response.json.as[Seq[UserDetails]].find(_.credentialRole.exists(_ == "Admin"))
           case Status.NOT_FOUND =>
             logger.warn(s"Group $groupId not found in SCP")
             None
@@ -82,7 +83,7 @@ class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics
     monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
       httpGet.GET[HttpResponse](url.toString).map { response =>
         response.status match {
-          case Status.OK => Some(response.json.as[GroupInfo])
+          case status if is2xx(status) => Some(response.json.as[GroupInfo])
           case Status.NOT_FOUND =>
             logger.warn(s"Group $groupId not found in SCP")
             None
