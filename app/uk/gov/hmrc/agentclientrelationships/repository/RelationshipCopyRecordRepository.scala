@@ -126,7 +126,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         "clientIdentifier"     -> identifier.value,
         "clientIdentifierType" -> clientIdentifierType(identifier)),
       update = Json.obj("$set" -> Json.obj("syncToETMPStatus" -> status.toString))
-    ).map(_.lastError.foreach(error => logger.warn(s"Updating ETMP sync status ($status) failed: $error")))
+    ).map(
+      _.lastError.flatMap(_.err).foreach(error => logger.warn(s"Updating ETMP sync status ($status) failed: $error")))
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
     implicit ec: ExecutionContext): Future[Unit] =
@@ -136,7 +137,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
         "clientIdentifier"     -> identifier.value,
         "clientIdentifierType" -> clientIdentifierType(identifier)),
       update = Json.obj("$set" -> Json.obj("syncToESStatus" -> status.toString))
-    ).map(_.lastError.foreach(error => logger.warn(s"Updating ES sync status ($status) failed: $error")))
+    ).map(_.lastError.flatMap(_.err).foreach(error => logger.warn(s"Updating ES sync status ($status) failed: $error")))
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] =
     remove(

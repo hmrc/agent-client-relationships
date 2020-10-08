@@ -88,9 +88,7 @@ class CreateRelationshipsService @Inject()(
     val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
 
     val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
-      logger.warn(
-        s"Creating ETMP record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
-        origExc)
+      logger.warn(s"Creating ETMP record failed for ${arn.value}, $identifier due to: ${origExc.getMessage}", origExc)
       updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
     }
 
