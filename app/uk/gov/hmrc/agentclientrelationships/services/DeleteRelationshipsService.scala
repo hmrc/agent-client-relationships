@@ -124,7 +124,7 @@ class DeleteRelationshipsService @Inject()(
 
     val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
       logger.warn(
-        s"De-authorising ETMP record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
+        s"De-authorising ETMP record failed for ${arn.value}, $taxIdentifier due to: ${origExc.getMessage}",
         origExc)
       updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
     }

@@ -114,7 +114,7 @@ class CheckAndCopyRelationshipsService @Inject()(
 
     relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-        logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
+        //logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
@@ -163,7 +163,7 @@ class CheckAndCopyRelationshipsService @Inject()(
 
     relationshipCopyRepository.findBy(arn, vrn).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-        logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
+        //logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
@@ -183,7 +183,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                        .recover {
                          case NonFatal(ex) =>
                            logger.warn(
-                             s"Failed to copy ES relationship for ${arn.value}, ${vrn.value} (${vrn.getClass.getSimpleName}) due to:",
+                             s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
                              ex)
                            auditService.sendCreateRelationshipAuditEventForMtdVat
                            mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
