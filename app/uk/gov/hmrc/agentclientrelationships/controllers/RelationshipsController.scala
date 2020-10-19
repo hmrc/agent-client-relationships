@@ -249,6 +249,14 @@ class RelationshipsController @Inject()(
     }
   }
 
+  def getInactiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsClient { identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =>
+      findService
+        .getInactiveRelationshipsForClient(identifiers)
+        .map(inactiveRelationships => Ok(Json.toJson(inactiveRelationships)))
+    }
+  }
+
   def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = Action.async { implicit request =>
     authorisedAsClient(service) { implicit clientId =>
       findService.getActiveRelationshipsForClient(clientId).map {

@@ -326,4 +326,46 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       await(repo.find("arn" -> arn.value)) shouldBe empty
     }
   }
+
+  "GET /client/relationships/inactive" should {
+
+    val requestPath: String = s"/agent-client-relationships/client/relationships/inactive"
+
+    def doRequest: HttpResponse = doAgentGetRequest(requestPath)
+
+    val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/client/relationships/inactive")
+
+    "return a sequence of inactive relationships" in {
+
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+
+      getInactiveRelationshipsForClient(mtdItId)
+      getInactiveRelationshipsForClient(vrn)
+      getInactiveRelationshipsForClient(utr)
+
+      val result = await(doRequest)
+
+      result.status shouldBe 200
+
+      (result.json \\ "arn").head.as[String] shouldBe "ABCDE123456"
+      (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2018-09-09"
+      (result.json \\ "clientId").head.as[String] shouldBe "ABCDEF123456789"
+      (result.json \\ "clientType").head.as[String] shouldBe "personal"
+      (result.json \\ "service").head.as[String] shouldBe "HMRC-MTD-IT"
+    }
+
+    "return OK with empty body if no inactive relationships found" in {
+
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+
+      getNoInactiveRelationshipsForClient(mtdItId)
+      getNoInactiveRelationshipsForClient(vrn)
+      getNoInactiveRelationshipsForClient(utr)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      result.body shouldBe "[]"
+    }
+  }
 }
