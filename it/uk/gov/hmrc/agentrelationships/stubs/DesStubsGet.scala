@@ -202,6 +202,79 @@ trait DesStubsGet {
   private def inactiveUrl(arn: Arn) = s"/registration/relationship?arn=${arn.value}" +
       s"&agent=true&active-only=false&regime=AGSV&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"
 
+  private val inactiveUrlClient: TaxIdentifier => String = {
+    case MtdItId(mtdItId) =>
+      s"/registration/relationship?ref-no=$mtdItId&agent=false&active-only=false&regime=ITSA&from=2015-01-01&to=${LocalDate.now().toString}"
+    case Vrn(vrn) =>
+      s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=false&regime=VATC&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
+    case Utr(utr) =>
+      s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
+    case CgtRef(ref) =>
+      s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=false&regime=CGT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
+  }
+
+  def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {
+
+    stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(s"""
+                     |{
+                     |"relationship" :[
+                     |{
+                     |  "referenceNumber" : "${taxIdentifier.value}",
+                     |  "agentReferenceNumber" : "ABCDE123456",
+                     |  "individual" : {
+                     |    "firstName": "someName"
+                     |  },
+                     |  "dateFrom" : "2015-09-10",
+                     |  "dateTo" : "2018-09-09",
+                     |  "contractAccountCategory" : "01",
+                     |  "activity" : "09"
+                     |},
+                     |{
+                     | "referenceNumber" : "${taxIdentifier.value}",
+                     |  "agentReferenceNumber" : "ABCDE777777",
+                     |  "individual" : {
+                     |    "firstName": "someName"
+                     |  },
+                     |  "dateFrom" : "2019-09-09",
+                     |  "dateTo" : "2050-09-09",
+                     |  "contractAccountCategory" : "01",
+                     |  "activity" : "09"
+                     |  }
+                     |]
+                     |}""".stripMargin)))
+  }
+
+  def getNoInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {
+
+    stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(s"""
+                     |{
+                     |"relationship" :[
+                     |{
+                     |  "referenceNumber" : "${taxIdentifier.value}",
+                     |  "agentReferenceNumber" : "ABCDE123456",
+                     |  "individual" : {
+                     |    "firstName": "someName"
+                     |  },
+                     |  "dateFrom" : "2015-09-10",
+                     |  "dateTo" : "2050-09-09",
+                     |  "contractAccountCategory" : "01",
+                     |  "activity" : "09"
+                     |}
+                     |]
+                     |}""".stripMargin)))
+  }
+
+  def getFailInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, status: Int) =
+    stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
+      .willReturn(aResponse().withStatus(status))
+    )
+
   def getInactiveRelationshipsViaAgent(arn: Arn, otherTaxIdentifier: TaxIdentifier, taxIdentifier: TaxIdentifier): StubMapping = {
 
     stubFor(get(urlEqualTo(inactiveUrl(arn)))

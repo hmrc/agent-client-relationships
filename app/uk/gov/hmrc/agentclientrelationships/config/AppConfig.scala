@@ -76,4 +76,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val terminationStrideRole = servicesConfig.getString("termination.stride.role")
 
+  val inactiveRelationshipsClientRecordStartDate =
+    servicesConfig.getString("inactive-relationships-client.record-start-date")
+
 }

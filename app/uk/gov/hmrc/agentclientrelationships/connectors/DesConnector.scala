@@ -124,6 +124,49 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     }
   }
 
+  def getInactiveClientRelationships(taxIdentifier: TaxIdentifier)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
+
+    val url = inactiveClientRelationshipDesUrl(taxIdentifier, encodedClientId)
+
+    getWithDesHeaders("GetInactiveClientRelationships", url).map { response =>
+      response.status match {
+        case Status.OK =>
+          response.json.as[InactiveRelationshipResponse].relationship.filter(isNotActive)
+        case Status.BAD_REQUEST => Seq.empty
+        case Status.NOT_FOUND   => Seq.empty
+        case other: Int =>
+          throw UpstreamErrorResponse(response.body, other, other)
+      }
+    }
+  }
+
+  private def inactiveClientRelationshipDesUrl(taxIdentifier: TaxIdentifier, encodedClientId: String) = {
+    val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
+    val from = LocalDate.parse(fromDateString).toString
+    val now = LocalDate.now().toString
+    taxIdentifier match {
+      case MtdItId(_) =>
+        new URL(
+          s"${appConfig.desUrl}/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now")
+      case Vrn(_) =>
+        new URL(
+          s"${appConfig.desUrl}/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+      case Utr(_) =>
+        new URL(
+          s"${appConfig.desUrl}/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now")
+      case CgtRef(_) =>
+        new URL(
+          s"${appConfig.desUrl}/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+    }
+  }
+
   def getInactiveRelationships(
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")

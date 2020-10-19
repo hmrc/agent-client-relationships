@@ -75,4 +75,42 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
           }
         ))
       .map(_.collect { case Some(x) => x }.groupBy(_._1).mapValues(_.map(_._2)))
+
+  def getInactiveRelationshipsForClient(identifiers: Map[EnrolmentService, EnrolmentIdentifierValue])(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+    Future
+      .sequence(
+        Seq(
+          identifiers.get(EnrolmentMtdIt.enrolmentService).map(_.asMtdItId) match {
+            case Some(mtdItId) =>
+              getInactiveRelationshipsForClient(mtdItId)
+            case None => Future successful (Seq.empty)
+          },
+          identifiers.get(EnrolmentMtdVat.enrolmentService).map(_.asVrn) match {
+            case Some(vrn) =>
+              getInactiveRelationshipsForClient(vrn)
+            case None => Future successful (Seq.empty)
+          },
+          identifiers.get(EnrolmentTrust.enrolmentService).map(_.asUtr) match {
+            case Some(utr) =>
+              getInactiveRelationshipsForClient(utr)
+            case None => Future successful (Seq.empty)
+          },
+          identifiers.get(EnrolmentCgt.enrolmentService).map(_.asCgtRef) match {
+            case Some(cgtRef) =>
+              getInactiveRelationshipsForClient(cgtRef)
+            case None => Future successful (Seq.empty)
+          }
+        ))
+      .map(_.flatten)
+
+  def getInactiveRelationshipsForClient(
+    taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+    taxIdentifier match {
+      case MtdItId(_) | Vrn(_) | Utr(_) | CgtRef(_) => des.getInactiveClientRelationships(taxIdentifier)
+      case e =>
+        logger.warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
+        Future.successful(Seq.empty)
+    }
 }

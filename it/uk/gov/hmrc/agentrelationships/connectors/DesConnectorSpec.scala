@@ -66,6 +66,8 @@ class DesConnectorSpec
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
   val agentARN = Arn("ABCDE123456")
+  val utr = Utr("1704066305")
+  val cgt = CgtRef("XMCGTP837878749")
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
@@ -514,6 +516,99 @@ class DesConnectorSpec
     }
     "return true when the end date is equal to the current date" in {
       desConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
+    }
+  }
+
+  "getInactiveClientRelationships" should {
+
+    "return existing inactive relationships for specified clientId for ItSa service" in {
+
+        getInactiveRelationshipsForClient(mtdItId)
+
+      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+
+      result.head shouldBe InactiveRelationship(
+        arn = agentARN,
+        dateTo = Some(LocalDate.parse("2018-09-09")),
+        dateFrom = Some(LocalDate.parse("2015-09-10")),
+        clientId = mtdItId.value,
+        service = "HMRC-MTD-IT",
+        clientType = "personal"
+      )
+    }
+
+    "return existing inactive relationships for specified clientId for VAT service" in {
+
+      getInactiveRelationshipsForClient(vrn)
+
+      val result = await(desConnector.getInactiveClientRelationships(vrn))
+
+      result.head shouldBe InactiveRelationship(
+        arn = agentARN,
+        dateTo = Some(LocalDate.parse("2018-09-09")),
+        dateFrom = Some(LocalDate.parse("2015-09-10")),
+        clientId = vrn.value,
+        service = "HMRC-MTD-VAT",
+        clientType = "personal"
+      )
+    }
+
+    "return existing inactive relationships for specified clientId for Trust service" in {
+
+      getInactiveRelationshipsForClient(utr)
+
+      val result = await(desConnector.getInactiveClientRelationships(utr))
+
+      result.head shouldBe InactiveRelationship(
+        arn = agentARN,
+        dateTo = Some(LocalDate.parse("2018-09-09")),
+        dateFrom = Some(LocalDate.parse("2015-09-10")),
+        clientId = utr.value,
+        service = "HMRC-TERS-ORG",
+        clientType = "personal"
+      )
+    }
+
+    "return existing inactive relationships for specified clientId for CGT-PD service" in {
+
+      getInactiveRelationshipsForClient(cgt)
+
+      val result = await(desConnector.getInactiveClientRelationships(cgt))
+
+      result.head shouldBe InactiveRelationship(
+        arn = agentARN,
+        dateTo = Some(LocalDate.parse("2018-09-09")),
+        dateFrom = Some(LocalDate.parse("2015-09-10")),
+        clientId = cgt.value,
+        service = "HMRC-CGT-PD",
+        clientType = "personal"
+      )
+    }
+
+    "return empty Seq if the identifier is valid but there are no inactive relationships" in {
+
+      getNoInactiveRelationshipsForClient(mtdItId)
+      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+      result.isEmpty shouldBe true
+    }
+
+    "return empty Seq if the identifier if DES responds with a Bad Request" in {
+
+      getFailInactiveRelationshipsForClient(mtdItId, 400)
+      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+      result.isEmpty shouldBe true
+    }
+
+    "return empty Seq if the identifier if DES responds with Not Found" in {
+
+      getFailInactiveRelationshipsForClient(mtdItId, 404)
+      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+      result.isEmpty shouldBe true
+    }
+
+    "fail when DES is unavailable" in {
+      givenDesReturnsServiceUnavailable()
+      an[UpstreamErrorResponse] should be thrownBy await(desConnector.getInactiveClientRelationships(mtdItId))
     }
   }
 }

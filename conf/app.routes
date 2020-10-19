@@ -6,6 +6,7 @@ GET           /agent/relationships/inactive                                     
 DELETE      /agent/:arn/terminate                                                                 @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 GET           /client/relationships/active                                                     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
+GET           /client/relationships/inactive                                            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsForClient
 GET           /client/relationships/service/:service                                     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
 
 # stride endpoints
