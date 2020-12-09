@@ -82,9 +82,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val agentUserService = resettingMock[AgentUserService]
   val servicesConfig = resettingMock[ServicesConfig]
   val configuration = resettingMock[Configuration]
+  val agentCacheProvider = resettingMock[AgentCacheProvider]
 
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
+  when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
   implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
@@ -172,7 +174,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         })
 
-        maybeCheck.value shouldBe FoundAndCopied
+        maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
         verifyEtmpRecordNotCreated()
         val auditDetails = verifyAuditEventSent()
@@ -272,7 +274,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToESStatus shouldBe Some(Success)
       }
 
-      s"skip recovery of ES relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
+      s"skip recovery of ES relationship and return FoundButLockedCouldNotCopy if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = $status and syncToESStatus = None " +
         s"and recovery of this relationship is already in progress" in {
         val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
@@ -308,7 +310,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         })
 
-        maybeCheck.value shouldBe FoundAndCopied
+        maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
         verifyEtmpRecordNotCreated()
         verifyEsRecordNotCreated()
@@ -558,6 +560,88 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       verifyEsRecordNotCreated()
       verifyEtmpRecordNotCreated()
     }
+
+    "allow only a single request at a time to create a relationship for MTD-IT i.e. apply a lock on the first request before creating " +
+      "a relationshipCopyRecord and return FoundButLockedCouldNotCopy to any request that may arrive while copy across is in progress" in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService = new CheckAndCopyRelationshipsService(
+        es,
+        des,
+        mapping,
+        ugs,
+        relationshipCopyRepository,
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          agentUserService,
+          metrics),
+        auditService,
+        metrics
+      )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      cesaRelationshipExists()
+      metricsStub()
+
+      val check = await(lockService.tryLock(arn, mtdItId) {
+        relationshipsService
+          .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
+      })
+
+      check.value shouldBe FoundButLockedCouldNotCopy
+
+      verifyEtmpRecordNotCreated()
+      verifyEsRecordNotCreated()
+
+      await(relationshipCopyRepository.findBy(arn, mtdItId)) shouldBe None
+    }
+
+    "allow only a single request at a time to create a relationship for MTD-VAT i.e. apply a lock on the first request before creating " +
+      "a relationshipCopyRecord and return FoundButLockedCouldNotCopy to any request that may arrive while copy across is in progress" in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService = new CheckAndCopyRelationshipsService(
+        es,
+        des,
+        mapping,
+        ugs,
+        relationshipCopyRepository,
+        new CreateRelationshipsService(
+          es,
+          des,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          agentUserService,
+          metrics),
+        auditService,
+        metrics
+      )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      oldESRelationshipExists()
+      metricsStub()
+
+      val check = await(lockService.tryLock(arn, vrn) {
+        relationshipsService
+          .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
+      })
+
+      check.value shouldBe FoundButLockedCouldNotCopy
+
+      verifyEtmpRecordNotCreated()
+      verifyEsRecordNotCreated()
+
+      await(relationshipCopyRepository.findBy(arn, vrn)) shouldBe None
+    }
   }
 
   "checkESForOldRelationshipAndCopyForMtdVat" should {
@@ -602,7 +686,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToETMPStatus shouldBe Some(Success)
       }
 
-      s"skip recovery of ETMP relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
+      s"skip recovery of ETMP relationship and return FoundButLockedCouldNotCopy if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = $status and syncToESStatus = None " +
         s"and recovery of this relationship is already in progress" in {
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = status, syncToESStatus = None)
@@ -639,7 +723,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         })
 
-        maybeCheck.value shouldBe FoundAndCopied
+        maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
         verifyEtmpRecordNotCreatedForMtdVat()
         val auditDetails = verifyESAuditEventSent()
@@ -737,7 +821,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToESStatus shouldBe Some(Success)
       }
 
-      s"skip recovery of ES relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
+      s"skip recovery of ES relationship return FoundButLockedCouldNotCopy if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = $status and syncToESStatus = None " +
         s"and recovery of this relationship is already in progress" in {
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
@@ -773,7 +857,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         })
 
-        maybeCheck.value shouldBe FoundAndCopied
+        maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
         verifyEtmpRecordNotCreatedForMtdVat()
         verifyEsRecordNotCreated()
