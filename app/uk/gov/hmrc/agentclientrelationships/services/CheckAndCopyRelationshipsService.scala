@@ -50,6 +50,10 @@ case object FoundAndCopied extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
+case object FoundButLockedCouldNotCopy extends CheckAndCopyResult {
+  override val grantAccess = true
+}
+
 case object FoundAndFailedToCopy extends CheckAndCopyResult {
   override val grantAccess = true
 }
@@ -114,29 +118,27 @@ class CheckAndCopyRelationshipsService @Inject()(
 
     relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-        //logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
+        logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
           nino       <- des.getNinoFor(mtdItId)
           references <- lookupCesaForOldRelationship(arn, nino)
           result <- if (references.nonEmpty)
-                     maybeRelationshipCopyRecord
-                       .map(relationshipCopyRecord =>
-                         createRelationshipsService
-                           .resumeRelationshipCreation(relationshipCopyRecord, arn, mtdItId))
-                       .getOrElse(
-                         createRelationshipsService
-                           .createRelationship(
-                             arn,
-                             mtdItId,
-                             references.map(SaRef.apply),
-                             failIfCreateRecordFails = true,
-                             failIfAllocateAgentInESFails = false))
-                       .map { _ =>
-                         auditService.sendCreateRelationshipAuditEvent
-                         mark("Count-CopyRelationship-ITSA-FoundAndCopied")
-                         FoundAndCopied
+                     findOrCreateRelationshipCopyRecordAndCopy(
+                       references.map(SaRef.apply),
+                       maybeRelationshipCopyRecord,
+                       arn,
+                       mtdItId)
+                       .map {
+                         case Some(_) =>
+                           auditService.sendCreateRelationshipAuditEvent
+                           mark("Count-CopyRelationship-ITSA-FoundAndCopied")
+                           FoundAndCopied
+                         case None =>
+                           auditService.sendCreateRelationshipAuditEvent
+                           mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
+                           FoundButLockedCouldNotCopy
                        }
                        .recover {
                          case NonFatal(ex) =>
@@ -150,6 +152,26 @@ class CheckAndCopyRelationshipsService @Inject()(
         } yield result
     }
   }
+
+  private def findOrCreateRelationshipCopyRecordAndCopy(
+    references: Set[RelationshipReference],
+    maybeRelationshipCopyRecord: Option[RelationshipCopyRecord],
+    arn: Arn,
+    identifier: TaxIdentifier
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData) =
+    maybeRelationshipCopyRecord
+      .map(
+        relationshipCopyRecord =>
+          createRelationshipsService
+            .resumeRelationshipCreation(relationshipCopyRecord, arn, identifier))
+      .getOrElse(
+        createRelationshipsService
+          .createRelationship(
+            arn,
+            identifier,
+            references,
+            failIfCreateRecordFails = true,
+            failIfAllocateAgentInESFails = false))
 
   private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn)(
     implicit ec: ExecutionContext,
@@ -169,16 +191,20 @@ class CheckAndCopyRelationshipsService @Inject()(
         for {
           references <- lookupESForOldRelationship(arn, vrn)
           result <- if (references.nonEmpty)
-                     maybeRelationshipCopyRecord
-                       .map(relationshipCopyRecord =>
-                         createRelationshipsService
-                           .resumeRelationshipCreation(relationshipCopyRecord, arn, vrn))
-                       .getOrElse(createRelationshipsService
-                         .createRelationship(arn, vrn, references.map(VatRef.apply), true, false))
-                       .map { _ =>
-                         auditService.sendCreateRelationshipAuditEventForMtdVat
-                         mark("Count-CopyRelationship-VAT-FoundAndCopied")
-                         FoundAndCopied
+                     findOrCreateRelationshipCopyRecordAndCopy(
+                       references.map(VatRef.apply),
+                       maybeRelationshipCopyRecord,
+                       arn,
+                       vrn)
+                       .map {
+                         case Some(_) =>
+                           auditService.sendCreateRelationshipAuditEventForMtdVat
+                           mark("Count-CopyRelationship-VAT-FoundAndCopied")
+                           FoundAndCopied
+                         case None =>
+                           auditService.sendCreateRelationshipAuditEventForMtdVat
+                           mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
+                           FoundButLockedCouldNotCopy
                        }
                        .recover {
                          case NonFatal(ex) =>

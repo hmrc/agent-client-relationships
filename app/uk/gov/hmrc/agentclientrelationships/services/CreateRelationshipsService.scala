@@ -53,7 +53,9 @@ class CreateRelationshipsService @Inject()(
     failIfAllocateAgentInESFails: Boolean)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] = {
+    auditData: AuditData): Future[Option[Unit]] =
+    lockService
+      .tryLock(arn, identifier) {
 
     auditData.set("AgentDBRecord", false)
     auditData.set("enrolmentDelegated", false)
@@ -217,7 +219,7 @@ class CreateRelationshipsService @Inject()(
   def resumeRelationshipCreation(relationshipCopyRecord: RelationshipCopyRecord, arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] =
+    auditData: AuditData): Future[Option[Unit]] =
     lockService
       .tryLock(arn, identifier) {
         def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
@@ -243,5 +245,4 @@ class CreateRelationshipsService @Inject()(
             Future.successful(())
         }
       }
-      .map(_ => ())
 }
