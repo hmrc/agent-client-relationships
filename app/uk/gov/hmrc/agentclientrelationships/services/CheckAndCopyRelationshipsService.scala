@@ -138,6 +138,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                          case None =>
                            auditService.sendCreateRelationshipAuditEvent
                            mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
+                           logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
                            FoundButLockedCouldNotCopy
                        }
                        .recover {
@@ -204,6 +205,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                          case None =>
                            auditService.sendCreateRelationshipAuditEventForMtdVat
                            mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
+                           logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
                            FoundButLockedCouldNotCopy
                        }
                        .recover {
