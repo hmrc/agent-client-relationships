@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,8 @@ class RelationshipsController @Inject()(
         checkLegacyWithNino(arn, Nino(clientId))
       } else if (service == "HMRC-TERS-ORG" && Utr.isValid(clientId)) {
         checkWithTaxIdentifier(arn, Utr(clientId))
+      } else if (service == "HMRC-TERSNT-ORG" && Urn.isValid(clientId)) {
+        checkWithTaxIdentifier(arn, Urn(clientId))
       } else if (service == "HMRC-CGT-PD" && clientIdType == "CGTPDRef" && CgtRef.isValid(clientId)) {
         checkWithTaxIdentifier(arn, CgtRef(clientId))
       } else {
@@ -194,6 +196,7 @@ class RelationshipsController @Inject()(
       case ("IR-SA", "ni") if Nino.isValid(clientId)               => Right(("IR-SA", Nino(clientId)))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)     => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
       case ("HMRC-TERS-ORG", "SAUTR") if Utr.isValid(clientId)     => Right(("HMRC-TERS-ORG", Utr(clientId)))
+      case ("HMRC-TERSNT-ORG", "URN") if Utr.isValid(clientId)     => Right(("HMRC-TERSNT-ORG", Urn(clientId)))
       case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId) => Right(("HMRC-CGT-PD", CgtRef(clientId)))
       case (a, b)                                                  => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }

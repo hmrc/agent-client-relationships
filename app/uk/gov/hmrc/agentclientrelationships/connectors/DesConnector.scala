@@ -95,23 +95,31 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
   def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+    val baseUrl: String = if (appConfig.desIFEnabled)appConfig.ifPlatformBaseUrl else appConfig.desUrl
+    val env: String = if (appConfig.desIFEnabled)appConfig.ifEnvironment else desEnv
+    val authToken: String = if (appConfig.desIFEnabled)appConfig.ifAuthToken else desAuthToken
+
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
     val url = taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"${appConfig.desUrl}/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$baseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case Vrn(_) =>
         new URL(
-          s"${appConfig.desUrl}/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$baseUrl/registration/relationship?idtype=VRN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case Utr(_) =>
         new URL(
-          s"${appConfig.desUrl}/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$baseUrl/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+      case Urn(_) =>
+        new URL(
+          s"$baseUrl/registration/relationship?idtype=URN&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case CgtRef(_) =>
         new URL(
-          s"${appConfig.desUrl}/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$baseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
     }
 
-    getWithDesHeaders("GetActiveClientItSaRelationships", url).map { response =>
+
+    getWithDesHeaders("GetActiveClientItSaRelationships", url, authToken, env).map { response =>
       response.status match {
         case Status.OK =>
           response.json.as[ActiveRelationshipResponse].relationship.find(isActive)
@@ -159,6 +167,10 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       case Utr(_) =>
         new URL(
           s"${appConfig.desUrl}/registration/relationship?idtype=UTR&ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now")
+      case Urn(_) =>
+        new URL(
+          s"${appConfig.desUrl}/registration/relationship?idtype=URN&ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now")
       case CgtRef(_) =>
         new URL(
@@ -240,16 +252,17 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       case MtdItId(_) => "ITSA"
       case Vrn(_)     => "VATC"
       case Utr(_)     => "TRS"
+      case Urn(_)     => "TRS"
       case CgtRef(_)  => "CGT"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
-  private def getWithDesHeaders(apiName: String, url: URL)(
+  private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[HttpResponse] = {
     val desHeaderCarrier = hc.copy(
-      authorization = Some(Authorization(s"Bearer ${appConfig.desToken}")),
-      extraHeaders = hc.extraHeaders :+ "Environment" -> appConfig.desEnv)
+      authorization = Some(Authorization(s"Bearer $desAuthToken")),
+      extraHeaders = hc.extraHeaders :+ "Environment" -> desEnv)
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
       httpClient.GET(url.toString)(implicitly[HttpReads[HttpResponse]], desHeaderCarrier, ec)
     }
@@ -303,6 +316,9 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       case Some("TRS") =>
         request +
           (("idType", JsString("UTR")))
+      case Some("TrustNT") =>
+        request +
+          (("idType", JsString("URN")))
       case Some("CGT") =>
         request +
           (("relationshipType", JsString("ZA01"))) +

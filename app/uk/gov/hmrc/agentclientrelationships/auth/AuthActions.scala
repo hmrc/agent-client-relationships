@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,6 +103,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     case EnrolmentMtdIt.enrolmentKey  => EnrolmentMtdIt.identifierKey
     case EnrolmentMtdVat.enrolmentKey => EnrolmentMtdVat.identifierKey
     case EnrolmentTrust.enrolmentKey  => EnrolmentTrust.identifierKey
+    case EnrolmentTrustNT.enrolmentKey => EnrolmentTrustNT.identifierKey
     case EnrolmentCgt.enrolmentKey    => EnrolmentCgt.identifierKey
   }
 
@@ -120,6 +121,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         case "MTDITID"  => MtdItId(i.value)
         case "VRN"      => Vrn(i.value)
         case "SAUTR"    => Utr(i.value)
+        case "URN"      => Urn(i.value)
         case "CGTPDRef" => CgtRef(i.value)
       }
     }

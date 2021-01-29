@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     taxIdentifier match {
-      case MtdItId(_) | Vrn(_) | Utr(_) | CgtRef(_) => des.getActiveClientRelationships(taxIdentifier)
+      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) => des.getActiveClientRelationships(taxIdentifier)
       case e =>
         logger.warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
         Future.successful(None)
@@ -71,6 +71,11 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
           identifiers.get(EnrolmentTrust.enrolmentService).map(_.asUtr) match {
             case Some(utr) =>
               getActiveRelationshipsForClient(utr).map(_.map(r => (EnrolmentTrust.enrolmentService, r.arn)))
+            case None => Future.successful(None)
+          },
+          identifiers.get(EnrolmentTrust.enrolmentService).map(_.asUrn) match {
+            case Some(urn) =>
+              getActiveRelationshipsForClient(urn).map(_.map(r => (EnrolmentTrust.enrolmentService, r.arn)))
             case None => Future.successful(None)
           }
         ))

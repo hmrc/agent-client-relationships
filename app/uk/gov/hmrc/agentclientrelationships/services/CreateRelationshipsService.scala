@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,32 +57,32 @@ class CreateRelationshipsService @Inject()(
     lockService
       .tryLock(arn, identifier) {
 
-    auditData.set("AgentDBRecord", false)
-    auditData.set("enrolmentDelegated", false)
-    auditData.set("etmpRelationshipCreated", false)
+        auditData.set("AgentDBRecord", false)
+        auditData.set("enrolmentDelegated", false)
+        auditData.set("etmpRelationshipCreated", false)
 
-    def createRelationshipRecord: Future[Unit] = {
-      val identifierType = TypeOfEnrolment(identifier).identifierKey
-      val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
-      relationshipCopyRepository
-        .create(record)
-        .map(_ => auditData.set("AgentDBRecord", true))
-        .recoverWith {
-          case NonFatal(ex) =>
-            logger.warn(
-              s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
-              ex)
-            if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
-            else Future.successful(())
+        def createRelationshipRecord: Future[Unit] = {
+          val identifierType = TypeOfEnrolment(identifier).identifierKey
+          val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
+          relationshipCopyRepository
+            .create(record)
+            .map(_ => auditData.set("AgentDBRecord", true))
+            .recoverWith {
+              case NonFatal(ex) =>
+                logger.warn(
+                  s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
+                  ex)
+                if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
+                else Future.successful(())
+            }
         }
-    }
 
-    for {
-      _ <- createRelationshipRecord
-      _ <- createEtmpRecord(arn, identifier)
-      _ <- createEsRecord(arn, identifier, failIfAllocateAgentInESFails)
-    } yield ()
-  }
+        for {
+          _ <- createRelationshipRecord
+          _ <- createEtmpRecord(arn, identifier)
+          _ <- createEsRecord(arn, identifier, failIfAllocateAgentInESFails)
+        } yield ()
+      }
 
   private def createEtmpRecord(
     arn: Arn,

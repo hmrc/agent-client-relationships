@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import org.joda.time.LocalDate
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Urn, Utr, Vrn}
 import play.api.libs.json.JodaWrites._
 import play.api.libs.json.JodaReads._
 
@@ -45,6 +45,7 @@ object InactiveRelationship {
         case _ if clientId.matches(CgtRef.cgtRegex) => "HMRC-CGT-PD"
         case _ if Vrn.isValid(clientId)             => "HMRC-MTD-VAT"
         case _ if Utr.isValid(clientId)             => "HMRC-TERS-ORG"
+        case _ if Urn.isValid(clientId)             => "HMRC-TERSNT-ORG"
         case _ if MtdItId.isValid(clientId)         => "HMRC-MTD-IT"
       }
       JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
