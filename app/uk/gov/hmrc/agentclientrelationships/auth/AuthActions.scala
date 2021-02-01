@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,16 +100,17 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
 
   private val supportedIdentifierKeys: String => String = {
-    case EnrolmentMtdIt.enrolmentKey  => EnrolmentMtdIt.identifierKey
-    case EnrolmentMtdVat.enrolmentKey => EnrolmentMtdVat.identifierKey
-    case EnrolmentTrust.enrolmentKey  => EnrolmentTrust.identifierKey
-    case EnrolmentCgt.enrolmentKey    => EnrolmentCgt.identifierKey
+    case EnrolmentMtdIt.enrolmentKey   => EnrolmentMtdIt.identifierKey
+    case EnrolmentMtdVat.enrolmentKey  => EnrolmentMtdVat.identifierKey
+    case EnrolmentTrust.enrolmentKey   => EnrolmentTrust.identifierKey
+    case EnrolmentTrustNT.enrolmentKey => EnrolmentTrustNT.identifierKey
+    case EnrolmentCgt.enrolmentKey     => EnrolmentCgt.identifierKey
   }
 
   private def supportedEnrolments(enrolment: Enrolment): Option[Enrolment] =
     enrolment.key match {
       case EnrolmentMtdIt.enrolmentKey | EnrolmentMtdVat.enrolmentKey | EnrolmentTrust.enrolmentKey |
-          EnrolmentCgt.enrolmentKey =>
+          EnrolmentTrustNT.enrolmentKey | EnrolmentCgt.enrolmentKey =>
         Some(enrolment)
       case _ => None
     }
@@ -120,6 +121,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         case "MTDITID"  => MtdItId(i.value)
         case "VRN"      => Vrn(i.value)
         case "SAUTR"    => Utr(i.value)
+        case "URN"      => Urn(i.value)
         case "CGTPDRef" => CgtRef(i.value)
       }
     }
@@ -151,7 +153,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
         val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = (for {
-          supportedEnrolments <- Seq(EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentTrust, EnrolmentCgt)
+          supportedEnrolments <- Seq(EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentTrust, EnrolmentTrustNT, EnrolmentCgt)
           enrolment           <- enrolments.getEnrolment(supportedEnrolments.enrolmentKey)
           clientId            <- enrolment.identifiers.headOption
         } yield (EnrolmentService(enrolment.key), EnrolmentIdentifierValue(clientId.value))).toMap

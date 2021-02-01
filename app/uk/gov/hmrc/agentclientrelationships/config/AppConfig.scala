@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,12 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val desUrl = servicesConfig.baseUrl("des")
   val desEnv = getConfigString("des.environment")
   val desToken = getConfigString("des.authorization-token")
+
+  val desIFEnabled: Boolean = servicesConfig.getBoolean("des-if.enabled")
+
+  val ifPlatformBaseUrl = servicesConfig.baseUrl("if")
+  val ifEnvironment = getConfigString("if.environment")
+  val ifAuthToken = getConfigString("if.authorization-token")
 
   val agentMappingUrl = servicesConfig.baseUrl("agent-mapping")
 

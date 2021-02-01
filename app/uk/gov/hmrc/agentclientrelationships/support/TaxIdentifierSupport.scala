@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ trait TaxIdentifierSupport {
     case _: Vrn     => "HMRC-MTD-VAT~VRN"
     case _: Nino    => "HMRC-MTD-IT~NINO"
     case _: Utr     => "HMRC-TERS-ORG~SAUTR"
+    case _: Urn     => "HMRC-TERSNT-ORG~URN"
     case _: CgtRef  => "HMRC-CGT-PD~CGTPDRef"
     case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
@@ -37,6 +38,7 @@ trait TaxIdentifierSupport {
     case _: Vrn     => "VRN"
     case _: Nino    => "NINO"
     case _: Utr     => "SAUTR"
+    case _: Urn     => "URN"
     case _: CgtRef  => "CGTPDRef"
     case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
@@ -50,6 +52,7 @@ object TaxIdentifierSupport {
     case "VRN"                  => Vrn(value)
     case "AgentReferenceNumber" => Arn(value)
     case "SAUTR"                => Utr(value)
+    case "URN"                  => Urn(value)
     case "CGTPDRef"             => CgtRef(value)
     case _                      => throw new Exception("Invalid tax identifier type " + `type`)
   }

@@ -2,13 +2,13 @@ package uk.gov.hmrc.agentrelationships.controllers
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
-
 import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json.JodaReads._
 import play.api.libs.json.JsObject
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
 
@@ -155,6 +155,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
+      val clientType = if(testClient.clientId.isInstanceOf[MtdItId]) "personal" else "business"
+
       val otherId: TaxIdentifier = otherTaxIdentifier(testClient.clientId)
 
       getInactiveRelationshipsViaAgent(arn, otherId, testClient.clientId)
@@ -165,13 +167,13 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       (result.json \\ "arn").head.as[String] shouldBe arn.value
       (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
       (result.json \\ "clientId").head.as[String] shouldBe otherId.value
-      (result.json \\ "clientType").head.as[String] shouldBe "business"
+      (result.json \\ "clientType").head.as[String] shouldBe clientType
       (result.json \\ "service").head.as[String] shouldBe testClient.service
 
       (result.json \\ "arn")(1).as[String] shouldBe arn.value
       (result.json \\ "dateTo")(1).as[LocalDate].toString() shouldBe LocalDate.now().toString
       (result.json \\ "clientId")(1).as[String] shouldBe testClient.clientId.value
-      (result.json \\ "clientType")(1).as[String] shouldBe "business"
+      (result.json \\ "clientType")(1).as[String] shouldBe clientType
       (result.json \\ "service")(1).as[String] shouldBe testClient.service
     }
   }
