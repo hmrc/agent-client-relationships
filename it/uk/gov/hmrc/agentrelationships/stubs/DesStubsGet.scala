@@ -20,6 +20,8 @@ trait DesStubsGet {
       s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=true&regime=VATC&relationship=ZA01&auth-profile=ALL00001"
     case Utr(utr) =>
       s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=true&regime=TRS"
+    case Urn(urn) =>
+      s"/registration/relationship?idtype=URN&ref-no=$urn&agent=false&active-only=true&regime=TRS"
     case CgtRef(ref) =>
       s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01&auth-profile=ALL00001"
   }
@@ -146,8 +148,8 @@ trait DesStubsGet {
          |{
          |  "referenceNumber" : "$clientId",
          |  "agentReferenceNumber" : "${arn.value}",
-         |  "organisation" : {
-         |    "organisationName": "someOrganisationName"
+         |  "individual" : {
+         |    "firstName": "someName"
          |  },
          |  "dateFrom" : "2015-09-10",
          |  "dateTo" : "2015-09-21",
@@ -170,6 +172,20 @@ trait DesStubsGet {
          |}
        """.stripMargin
     case Utr(clientId) => arn =>
+      s"""
+         |{
+         |  "referenceNumber" : "$clientId",
+         |  "agentReferenceNumber" : "${arn.value}",
+         |  "organisation" : {
+         |    "organisationName": "someOrganisationName"
+         |  },
+         |  "dateFrom" : "2015-09-10",
+         |  "dateTo" : "2015-09-21",
+         |  "contractAccountCategory" : "01",
+         |  "activity" : "09"
+         |}
+       """.stripMargin
+    case Urn(clientId) => arn =>
       s"""
          |{
          |  "referenceNumber" : "$clientId",
@@ -209,11 +225,26 @@ trait DesStubsGet {
       s"/registration/relationship?idtype=VRN&ref-no=$vrn&agent=false&active-only=false&regime=VATC&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case Utr(utr) =>
       s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
+    case Urn(urn) =>
+      s"/registration/relationship?idtype=URN&ref-no=$urn&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
     case CgtRef(ref) =>
       s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=false&regime=CGT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
   }
 
   def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {
+
+    val individualOrOrganisationJson = if(taxIdentifier.isInstanceOf[MtdItId])
+      s"""
+         | "individual" : {
+         |  "firstName" : "someName"
+         |  },
+         |""".stripMargin
+    else
+      s"""
+         | "organisation" : {
+         | "organisationName" : "someOrgName"
+         | },
+         |""".stripMargin
 
     stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
       .willReturn(aResponse()
@@ -223,10 +254,7 @@ trait DesStubsGet {
                      |"relationship" :[
                      |{
                      |  "referenceNumber" : "${taxIdentifier.value}",
-                     |  "agentReferenceNumber" : "ABCDE123456",
-                     |  "individual" : {
-                     |    "firstName": "someName"
-                     |  },
+                     |  "agentReferenceNumber" : "ABCDE123456", """.stripMargin + individualOrOrganisationJson + s"""
                      |  "dateFrom" : "2015-09-10",
                      |  "dateTo" : "2018-09-09",
                      |  "contractAccountCategory" : "01",
@@ -234,10 +262,7 @@ trait DesStubsGet {
                      |},
                      |{
                      | "referenceNumber" : "${taxIdentifier.value}",
-                     |  "agentReferenceNumber" : "ABCDE777777",
-                     |  "individual" : {
-                     |    "firstName": "someName"
-                     |  },
+                     |  "agentReferenceNumber" : "ABCDE777777", """.stripMargin + individualOrOrganisationJson + s"""
                      |  "dateFrom" : "2019-09-09",
                      |  "dateTo" : "2050-09-09",
                      |  "contractAccountCategory" : "01",
@@ -277,6 +302,17 @@ trait DesStubsGet {
 
   def getInactiveRelationshipsViaAgent(arn: Arn, otherTaxIdentifier: TaxIdentifier, taxIdentifier: TaxIdentifier): StubMapping = {
 
+    val individualOrOrganisation: TaxIdentifier => String = {
+    case MtdItId(_) =>
+      s""" "individual" : {
+         | "firstName" : "someName"
+         |  },""".stripMargin
+    case _ =>
+      s""" "organisation" : {
+         |  "organisationName" : "someOrganisationName"
+         |    },""".stripMargin
+    }
+
     stubFor(get(urlEqualTo(inactiveUrl(arn)))
       .willReturn(aResponse()
         .withStatus(200)
@@ -286,11 +322,9 @@ trait DesStubsGet {
                      |${otherInactiveRelationship(otherTaxIdentifier)(arn)},
                      |{
                      |  "referenceNumber" : "${taxIdentifier.value}",
-                     |  "agentReferenceNumber" : "${arn.value}",
-                     |  "organisation" : {
-                     |    "organisationName": "someOrganisationName"
-                     |  },
-                     |  "dateFrom" : "2015-09-10",
+                     |  "agentReferenceNumber" : "${arn.value}",""".stripMargin +
+          individualOrOrganisation(taxIdentifier) +
+                     s"""  "dateFrom" : "2015-09-10",
                      |  "dateTo" : "${LocalDate.now().toString}",
                      |  "contractAccountCategory" : "01",
                      |  "activity" : "09"
@@ -354,4 +388,5 @@ trait DesStubsGet {
                      |}
                      |]
                      |}""".stripMargin)))
+
 }

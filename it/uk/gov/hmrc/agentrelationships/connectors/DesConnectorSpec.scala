@@ -276,11 +276,11 @@ class DesConnectorSpec
       )
     }
 
-  /*  "request body contains regime as TRS and idType as URN when client Id is a URN" in {
+    "request body contains regime as TRS and idType as URN when client Id is a URN" in {
       givenAgentCanBeAllocatedInDes(Urn("someUrn"), Arn("someArn"))
       givenAuditConnector()
 
-      await(desConnector.createAgentRelationship(Utr("someUrn"), Arn("someArn")))
+      await(desConnector.createAgentRelationship(Urn("someUrn"), Arn("someArn")))
 
       verify(
         1,
@@ -295,7 +295,7 @@ class DesConnectorSpec
               true
             ))
       )
-    }*/
+    }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(desConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
@@ -572,7 +572,7 @@ class DesConnectorSpec
         dateFrom = Some(LocalDate.parse("2015-09-10")),
         clientId = vrn.value,
         service = "HMRC-MTD-VAT",
-        clientType = "personal"
+        clientType = "business"
       )
     }
 
@@ -588,25 +588,25 @@ class DesConnectorSpec
         dateFrom = Some(LocalDate.parse("2015-09-10")),
         clientId = utr.value,
         service = "HMRC-TERS-ORG",
-        clientType = "personal"
+        clientType = "business"
       )
     }
 
-//    "return existing inactive relationships for specified clientId for Trust service with URN" in {
-//
-//      getInactiveRelationshipsForClient(urn)
-//
-//      val result = await(desConnector.getInactiveClientRelationships(utr))
-//
-//      result.head shouldBe InactiveRelationship(
-//        arn = agentARN,
-//        dateTo = Some(LocalDate.parse("2018-09-09")),
-//        dateFrom = Some(LocalDate.parse("2015-09-10")),
-//        clientId = urn.value,
-//        service = "HMRC-TERSNT-ORG",
-//        clientType = "personal"
-//      )
-//    }
+    "return existing inactive relationships for specified clientId for Trust service with URN" in {
+
+      getInactiveRelationshipsForClient(urn)
+
+      val result = await(desConnector.getInactiveClientRelationships(urn))
+
+      result.head shouldBe InactiveRelationship(
+        arn = agentARN,
+        dateTo = Some(LocalDate.parse("2018-09-09")),
+        dateFrom = Some(LocalDate.parse("2015-09-10")),
+        clientId = urn.value,
+        service = "HMRC-TERSNT-ORG",
+        clientType = "business"
+      )
+    }
 
     "return existing inactive relationships for specified clientId for CGT-PD service" in {
 
@@ -620,7 +620,7 @@ class DesConnectorSpec
         dateFrom = Some(LocalDate.parse("2015-09-10")),
         clientId = cgt.value,
         service = "HMRC-CGT-PD",
-        clientType = "personal"
+        clientType = "business"
       )
     }
 

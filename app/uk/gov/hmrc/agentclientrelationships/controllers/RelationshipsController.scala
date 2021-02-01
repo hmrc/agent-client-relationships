@@ -196,7 +196,7 @@ class RelationshipsController @Inject()(
       case ("IR-SA", "ni") if Nino.isValid(clientId)               => Right(("IR-SA", Nino(clientId)))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)     => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
       case ("HMRC-TERS-ORG", "SAUTR") if Utr.isValid(clientId)     => Right(("HMRC-TERS-ORG", Utr(clientId)))
-      case ("HMRC-TERSNT-ORG", "URN") if Utr.isValid(clientId)     => Right(("HMRC-TERSNT-ORG", Urn(clientId)))
+      case ("HMRC-TERSNT-ORG", "URN") if Urn.isValid(clientId)     => Right(("HMRC-TERSNT-ORG", Urn(clientId)))
       case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId) => Right(("HMRC-CGT-PD", CgtRef(clientId)))
       case (a, b)                                                  => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }

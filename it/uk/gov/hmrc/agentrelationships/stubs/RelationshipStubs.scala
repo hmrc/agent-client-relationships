@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentrelationships.stubs
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Urn, Utr, Vrn}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
@@ -34,17 +34,26 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenDelegatedGroupIdsExistForTrust(utr: Utr, ids: String*) =
     givenDelegatedGroupIdsExistFor(utr, Set("bar", "foo") ++ ids.toSet)
 
+  def givenDelegatedGroupIdsExistForTrustNT(urn: Urn, ids: String*) =
+    givenDelegatedGroupIdsExistFor(urn, Set("bar", "foo") ++ ids.toSet)
+
   def givenDelegatedGroupIdsExistForCgt(cgtRef: CgtRef, ids: String*) =
     givenDelegatedGroupIdsExistFor(cgtRef, Set("bar", "foo") ++ ids.toSet)
 
   def givenDelegatedGroupIdsNotExistForTrust(utr: Utr) =
     givenDelegatedGroupIdsNotExistFor(utr)
 
+  def givenDelegatedGroupIdsNotExistForTrustNT(urn: Urn) =
+    givenDelegatedGroupIdsNotExistFor(urn)
+
   def givenDelegatedGroupIdsNotExistForCgt(cgtRef: CgtRef) =
     givenDelegatedGroupIdsNotExistFor(cgtRef)
 
   def givenTrustEnrolmentAllocationSucceeds(utr: Utr, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-TERS-ORG", "SAUTR", utr.value, agentCode)
+
+  def givenTrustNTEnrolmentAllocationSucceeds(urn: Urn, agentCode: String) =
+    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-TERSNT-ORG", "URN", urn.value, agentCode)
 
   def givenCGTEnrolmentAllocationSucceeds(cgtRef: CgtRef, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-CGT-PD", "CGTPDRef", cgtRef.value, agentCode)

@@ -218,6 +218,7 @@ trait AuthStub {
       case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
       case Vrn(v)     => ("HMRC-MTD-VAT", "VRN", v)
       case Utr(v)     => ("HMRC-TERS-ORG", "SAUTR", v)
+      case Urn(v)     => ("HMRC-TERSNT-ORG", "URN", v)
       case CgtRef(v)  => ("HMRC-CGT-PD", "CGTPDRef", v)
     }
 
@@ -228,7 +229,7 @@ trait AuthStub {
             .withStatus(200)
             .withBody(s"""
                          |{
-                         |"affinityGroup": "Individual",
+                         |"affinityGroup": "${if(key == "URN")"Organisation" else "Individual"}",
                          |"allEnrolments": [{
                          |  "key": "$service",
                          |  "identifiers": [{
@@ -269,7 +270,11 @@ trait AuthStub {
 
   def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn, utr: Utr): FakeRequest[A] = {
     val enrolments =
-      Seq(Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value), Enrolment("HMRC-MTD-VAT", "VRN", vrn.value), Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value))
+      Seq(
+        Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value),
+        Enrolment("HMRC-MTD-VAT", "VRN", vrn.value),
+        Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value),
+        Enrolment("HMRC-TERSNT-ORG", "URN", utr.value))
 
     givenAuthorisedFor(
       s"""
