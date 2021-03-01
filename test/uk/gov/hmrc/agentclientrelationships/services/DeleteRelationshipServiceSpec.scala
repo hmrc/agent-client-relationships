@@ -428,6 +428,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     val checkService = mock[CheckRelationshipsService]
     val agentUserService = mock[AgentUserService]
     val metrics = mock[Metrics]
+    val ifConnector = mock[IFConnector]
 
     val repo = new FakeDeleteRecordRepository
     val lockService = new FakeLockService
@@ -442,6 +443,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     val underTest = new DeleteRelationshipsService(
       es,
       des,
+      ifConnector,
       ugs,
       repo,
       lockService,

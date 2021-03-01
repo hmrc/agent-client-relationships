@@ -37,6 +37,8 @@ trait RelationshipsBaseControllerISpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
+  val additionalConfig: Map[String, Any] = Map("des-if.enabled" -> false)
+
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
@@ -44,6 +46,7 @@ trait RelationshipsBaseControllerISpec
         "microservice.services.tax-enrolments.port"        -> wireMockPort,
         "microservice.services.users-groups-search.port"   -> wireMockPort,
         "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.if.port"                    -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
@@ -58,7 +61,7 @@ trait RelationshipsBaseControllerISpec
         "agent.trackPage.cache.expires"                              -> "1 millis",
         "agent.trackPage.cache.enabled"                              -> true
       )
-      .configure(mongoConfiguration)
+      .configure(mongoConfiguration ++ additionalConfig)
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val hc: HeaderCarrier = HeaderCarrier()

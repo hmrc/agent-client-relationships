@@ -1,14 +1,16 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import org.joda.time.LocalDate
-
-import play.api.test.FakeRequest
 import play.api.libs.json.JodaReads._
+import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Urn}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISpec {
+
+  override val additionalConfig = Map("des-if.enabled" -> true)
 
   "GET  /agent/:arn/service/HMRC-TERSNT-ORG/client/URN/:urn" should {
 
@@ -206,24 +208,24 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
     }
 
-    "return 502 when DES is unavailable" in {
+    "return 502 when IF is unavailable" in {
       givenUserIsSubscribedClient(urn)
       givenDelegatedGroupIdsNotExistForTrustNT(urn)
       givenDesReturnsServiceUnavailable()
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
-    "return 404 if DES returns 404" in {
+    "return 404 if IF returns 404" in {
       givenUserIsSubscribedClient(urn)
       givenDelegatedGroupIdsNotExistForTrustNT(urn)
       givenAgentCanNotBeAllocatedInDes(status = 404)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 404
-      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 403 for a client with a mismatched MtdItId" in {
@@ -502,7 +504,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       }
     }
 
-    "DES is unavailable" should {
+    "IF is unavailable" should {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
         givenPrincipalUser(arn, "foo")
@@ -522,7 +524,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       }
     }
 
-    "DES responds with 404" should {
+    "IF responds with 404" should {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
         givenPrincipalUser(arn, "foo")
@@ -628,7 +630,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
     }
 
-    "return 404 when DES returns 404 relationship not found" in {
+    "return 404 when IF returns 404 relationship not found" in {
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
       getActiveRelationshipFailsWith(urn, status = 404)
@@ -637,7 +639,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       result.status shouldBe 404
     }
 
-    "return 404 when DES returns 400 (treated as relationship not found)" in {
+    "return 404 when IF returns 400 (treated as relationship not found)" in {
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
       getActiveRelationshipFailsWith(urn, status = 400)

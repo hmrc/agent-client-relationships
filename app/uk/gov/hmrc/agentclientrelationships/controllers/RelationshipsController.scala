@@ -41,7 +41,7 @@ import scala.util.control.NonFatal
 @Singleton
 class RelationshipsController @Inject()(
   override val authConnector: AuthConnector,
-  appConfig: AppConfig,
+  val appConfig: AppConfig,
   checkService: CheckRelationshipsService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,

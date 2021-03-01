@@ -17,8 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
@@ -29,20 +31,29 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics) extends Monitoring with Logging {
+class FindRelationshipsService @Inject()(
+  des: DesConnector,
+  ifConnector: IFConnector,
+  appConfig: AppConfig,
+  val metrics: Metrics)
+    extends Monitoring
+    with Logging {
 
   def getItsaRelationshipForClient(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     for {
-      mtdItId       <- des.getMtdIdFor(nino)
-      relationships <- des.getActiveClientRelationships(mtdItId)
+      mtdItId <- des.getMtdIdFor(nino)
+      relationships <- if (appConfig.iFPlatformEnabled) ifConnector.getActiveClientRelationships(mtdItId)
+                      else des.getActiveClientRelationships(mtdItId)
     } yield relationships
 
   def getActiveRelationshipsForClient(taxIdentifier: TaxIdentifier)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     taxIdentifier match {
-      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) => des.getActiveClientRelationships(taxIdentifier)
+      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) =>
+        if (appConfig.iFPlatformEnabled) ifConnector.getActiveClientRelationships(taxIdentifier)
+        else des.getActiveClientRelationships(taxIdentifier)
       case e =>
         logger.warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
         Future.successful(None)
@@ -50,7 +61,7 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
 
   def getInactiveRelationshipsForAgent(
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
-    des.getInactiveRelationships(arn)
+    if (appConfig.iFPlatformEnabled) ifConnector.getInactiveRelationships(arn) else des.getInactiveRelationships(arn)
 
   def getActiveRelationshipsForClient(identifiers: Map[EnrolmentService, EnrolmentIdentifierValue])(
     implicit hc: HeaderCarrier,
@@ -74,8 +85,11 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
             case None => Future.successful(None)
           },
           identifiers.get(EnrolmentTrustNT.enrolmentService).map(_.asUrn) match {
-            case Some(urn) =>
-              getActiveRelationshipsForClient(urn).map(_.map(r => (EnrolmentTrustNT.enrolmentService, r.arn)))
+            case Some(urn) => {
+              if (appConfig.iFPlatformEnabled)
+                getActiveRelationshipsForClient(urn).map(_.map(r => (EnrolmentTrustNT.enrolmentService, r.arn)))
+              else Future.successful(None)
+            }
             case None => Future.successful(None)
           }
         ))
@@ -103,8 +117,11 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
             case None => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentTrustNT.enrolmentService).map(_.asUrn) match {
-            case Some(urn) =>
-              getInactiveRelationshipsForClient(urn)
+            case Some(urn) => {
+              if (appConfig.iFPlatformEnabled)
+                getInactiveRelationshipsForClient(urn)
+              else Future successful (Seq.empty)
+            }
             case None => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentCgt.enrolmentService).map(_.asCgtRef) match {
@@ -118,7 +135,9 @@ class FindRelationshipsService @Inject()(des: DesConnector, val metrics: Metrics
   def getInactiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     taxIdentifier match {
-      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) => des.getInactiveClientRelationships(taxIdentifier)
+      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) =>
+        if (appConfig.iFPlatformEnabled) ifConnector.getInactiveClientRelationships(taxIdentifier)
+        else des.getInactiveClientRelationships(taxIdentifier)
       case e =>
         logger.warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
         Future.successful(Seq.empty)

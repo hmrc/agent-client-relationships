@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.Base64
-
 import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
@@ -32,6 +29,8 @@ import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 

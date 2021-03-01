@@ -21,7 +21,7 @@ trait DesStubsGet {
     case Utr(utr) =>
       s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=true&regime=TRS"
     case Urn(urn) =>
-      s"/registration/relationship?idtype=URN&ref-no=$urn&agent=false&active-only=true&regime=TRS"
+      s"/registration/relationship?idtype=URN&referenceNumber=$urn&agent=false&active-only=true&regime=TRS"
     case CgtRef(ref) =>
       s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01&auth-profile=ALL00001"
   }
@@ -226,7 +226,7 @@ trait DesStubsGet {
     case Utr(utr) =>
       s"/registration/relationship?idtype=UTR&ref-no=$utr&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
     case Urn(urn) =>
-      s"/registration/relationship?idtype=URN&ref-no=$urn&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
+      s"/registration/relationship?idtype=URN&referenceNumber=$urn&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
     case CgtRef(ref) =>
       s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=false&regime=CGT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
   }
