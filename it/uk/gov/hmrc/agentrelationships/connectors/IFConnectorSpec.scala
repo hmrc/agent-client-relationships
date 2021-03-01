@@ -8,22 +8,23 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-class DesConnectorSpec
-    extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub
+class IFConnectorSpec
+  extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub
     with MetricTestSupport {
+
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -39,10 +40,10 @@ class DesConnectorSpec
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
         "microservice.services.tax-enrolments.port"        -> wireMockPort,
         "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.if.port"                    -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.des.environment"                  -> "stub",
-        "microservice.services.des.authorization-token" -> "token",
+        "microservice.services.if.environment"            -> "stub",
+        "microservice.services.if.authorization-token"    -> "token",
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
@@ -55,14 +56,14 @@ class DesConnectorSpec
         "agent.trackPage.cache.size"                       -> 1,
         "agent.trackPage.cache.expires"                    -> "1 millis",
         "agent.trackPage.cache.enabled"                    -> false,
-        "des-if.enabled"                                   -> false
+        "des-if.enabled"                                   -> true
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  val desConnector =
-    new DesConnector(httpClient, metrics, agentCacheProvider)
+  val ifConnector =
+    new IFConnector(httpClient, metrics, agentCacheProvider)
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")
@@ -78,155 +79,24 @@ class DesConnectorSpec
     case Urn(_)     => Urn("AAAAA6426901067")
   }
 
-  "DesConnector GetRegistrationBusinessDetails" should {
-
-    val mtdItId = MtdItId("foo")
-    val nino = Nino("AB123456C")
-
-    "return some nino when agent's mtdbsa identifier is known to ETMP" in {
-      givenNinoIsKnownFor(mtdItId, nino)
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId)) shouldBe nino
-    }
-
-    "return nothing when agent's mtdbsa identifier is unknown to ETMP" in {
-      givenNinoIsUnknownFor(mtdItId)
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
-    }
-
-    "fail when agent's mtdbsa identifier is invalid" in {
-      givenMtdbsaIsInvalid(mtdItId)
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
-    }
-
-    "fail when DES is unavailable" in {
-      givenDesReturnsServiceUnavailable()
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
-    }
-
-    "fail when DES is throwing errors" in {
-      givenDesReturnsServerError()
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
-    }
-
-    "record metrics for GetRegistrationBusinessDetailsByMtdbsa" in {
-      givenNinoIsKnownFor(mtdItId, Nino("AB123456C"))
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId))
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET")
-    }
-
-    "return MtdItId when agent's nino is known to ETMP" in {
-      givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenAuditConnector()
-      await(desConnector.getMtdIdFor(nino)) shouldBe mtdItId
-    }
-
-    "return nothing when agent's nino identifier is unknown to ETMP" in {
-      givenMtdItIdIsUnKnownFor(nino)
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getMtdIdFor(nino))
-    }
-  }
-
-  "DesConnector GetStatusAgentRelationship" should {
-
-    val nino = Nino("AB123456C")
-
-    "return a CESA identifier when client has an active agent" in {
-      val agentId = "bar"
-      givenClientHasRelationshipWithAgentInCESA(nino, agentId)
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe Seq(SaAgentReference(agentId))
-    }
-
-    "return multiple CESA identifiers when client has multiple active agents" in {
-      val agentIds = Seq("001", "002", "003", "004", "005", "005", "007")
-      givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
-    }
-
-    "return empty seq when client has no active relationship with an agent" in {
-      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
-    }
-
-    "return empty seq when client has/had no relationship with any agent" in {
-      givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
-    }
-
-    "return empty seq when client relationship with agent ceased" in {
-      givenClientRelationshipWithAgentCeasedInCESA(nino, "foo")
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
-    }
-
-    "return empty seq when all client's relationships with agents ceased" in {
-      givenAllClientRelationshipsWithAgentsCeasedInCESA(nino, Seq("001", "002", "003", "004", "005", "005", "007"))
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
-    }
-
-    "fail when client's nino is invalid" in {
-      givenNinoIsInvalid(nino)
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
-    }
-
-    "fail when client is unknown" in {
-      givenClientIsUnknownInCESAFor(nino)
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
-    }
-
-    "fail when DES is unavailable" in {
-      givenDesReturnsServiceUnavailable()
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
-    }
-
-    "fail when DES is throwing errors" in {
-      givenDesReturnsServerError()
-      givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
-    }
-
-    "record metrics for GetStatusAgentRelationship Cesa" in {
-      givenClientHasRelationshipWithAgentInCESA(nino, "bar")
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino))
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
-    }
-  }
-
-  "DesConnector CreateAgentRelationship" should {
+  "IFConnector CreateAgentRelationship" should {
     "create relationship between agent and client and return 200" in {
       givenAgentCanBeAllocatedInDes(MtdItId("foo"), Arn("bar"))
       givenAuditConnector()
-      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }
 
     "not create relationship between agent and client and return 404" in {
       givenAgentCanNotBeAllocatedInDes(status = 404)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
+      an[Exception] should be thrownBy await(ifConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
 
     "request body contains regime as ITSA when client Id is an MtdItId" in {
       givenAgentCanBeAllocatedInDes(MtdItId("foo"), Arn("someArn"))
       givenAuditConnector()
 
-      await(desConnector.createAgentRelationship(MtdItId("foo"), Arn("someArn")))
+      await(ifConnector.createAgentRelationship(MtdItId("foo"), Arn("someArn")))
 
       verify(
         1,
@@ -238,7 +108,7 @@ class DesConnectorSpec
       givenAgentCanBeAllocatedInDes(Vrn("someVrn"), Arn("someArn"))
       givenAuditConnector()
 
-      await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
 
       verify(
         1,
@@ -260,7 +130,7 @@ class DesConnectorSpec
       givenAgentCanBeAllocatedInDes(Utr("someUtr"), Arn("someArn"))
       givenAuditConnector()
 
-      await(desConnector.createAgentRelationship(Utr("someUtr"), Arn("someArn")))
+      await(ifConnector.createAgentRelationship(Utr("someUtr"), Arn("someArn")))
 
       verify(
         1,
@@ -277,132 +147,162 @@ class DesConnectorSpec
       )
     }
 
+    "request body contains regime as TRS and idType as URN when client Id is a URN" in {
+      givenAgentCanBeAllocatedInDes(Urn("someUrn"), Arn("someArn"))
+      givenAuditConnector()
+
+      await(ifConnector.createAgentRelationship(Urn("someUrn"), Arn("someArn")))
+
+      verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withRequestBody(
+            equalToJson(
+              s"""{
+                 |"regime": "TRS",
+                 |"idType" : "URN"
+                 |}""".stripMargin,
+              true,
+              true
+            ))
+      )
+    }
+
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(desConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(ifConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
     "fail when DES is throwing errors" in {
       givenDesReturnsServerError()
-      an[UpstreamErrorResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
 
     "fail when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[UpstreamErrorResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
   }
 
-  "DesConnector DeleteAgentRelationship" should {
+  "IFConnector DeleteAgentRelationship" should {
     "delete relationship between agent and client and return 200 for ItSa service" in {
       givenAgentCanBeDeallocatedInDes(MtdItId("foo"), Arn("bar"))
       givenAuditConnector()
-      await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Vat service" in {
       givenAgentCanBeDeallocatedInDes(Vrn("foo"), Arn("bar"))
       givenAuditConnector()
-      await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service" in {
       givenAgentCanBeDeallocatedInDes(Utr("foo"), Arn("bar"))
       givenAuditConnector()
-      await(desConnector.deleteAgentRelationship(Utr("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(Utr("foo"), Arn("bar"))).processingDate should not be null
+    }
+
+    "delete relationship between agent and client and return 200 for Trust service with URN" in {
+      givenAgentCanBeDeallocatedInDes(Urn("foo"), Arn("bar"))
+      givenAuditConnector()
+      await(ifConnector.deleteAgentRelationship(Urn("foo"), Arn("bar"))).processingDate should not be null
     }
 
     "not delete relationship between agent and client and return 404 for ItSa service" in {
       givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
+      an[Exception] should be thrownBy await(ifConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
     }
 
     "not delete relationship between agent and client and return 404 for Vat service" in {
       givenAgentCanNotBeDeallocatedInDes(status = 404)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar")))
+      an[Exception] should be thrownBy await(ifConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar")))
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(desConnector.deleteAgentRelationship(Eori("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(ifConnector.deleteAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
-    "fail when DES is throwing errors" in {
+    "fail when IF is throwing errors" in {
       givenDesReturnsServerError()
-      an[UpstreamErrorResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
 
-    "fail when DES is unavailable" in {
+    "fail when IF is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[UpstreamErrorResponse] should be thrownBy await(desConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
   }
 
-  "DesConnector GetActiveClientItsaRelationships and GetActiveClientVatRelationships" should {
+  "IFConnector GetActiveClientItsaRelationships and GetActiveClientVatRelationships" should {
 
     "return existing active relationships for specified clientId for ItSa service" in {
       getActiveRelationshipsViaClient(mtdItId, agentARN)
 
-      val result = await(desConnector.getActiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Vat service" in {
       getActiveRelationshipsViaClient(vrn, agentARN)
 
-      val result = await(desConnector.getActiveClientRelationships(vrn))
+      val result = await(ifConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
     }
 
-    "return None if DES returns 404 for ItSa service" in {
+    "return None if IF returns 404 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 404)
 
-      val result = await(desConnector.getActiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
-    "return None if DES returns 404 for Vat service" in {
+    "return None if IF returns 404 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 404)
 
-      val result = await(desConnector.getActiveClientRelationships(vrn))
+      val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
-    "return None if DES returns 400 for ItSa service" in {
+    "return None if IF returns 400 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 400)
 
-      val result = await(desConnector.getActiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
-    "return None if DES returns 400 for Vat service" in {
+    "return None if IF returns 400 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 400)
 
-      val result = await(desConnector.getActiveClientRelationships(vrn))
+      val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
-    "return None if DES returns 403 AGENT_SUSPENDED" in {
+    "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
 
-      val result = await(desConnector.getActiveClientRelationships(vrn))
+      val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "record metrics for GetStatusAgentRelationship for ItSa service" in {
+      givenCleanMetricRegistry()
+      givenAuditConnector()
       getActiveRelationshipsViaClient(mtdItId, agentARN)
-
-      val result = await(desConnector.getActiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetActiveClientRelationships-GET")
     }
 
     "record metrics for GetStatusAgentRelationship for Vat service" in {
+      givenCleanMetricRegistry()
+      givenAuditConnector()
       getActiveRelationshipsViaClient(vrn, agentARN)
 
-      val result = await(desConnector.getActiveClientRelationships(vrn))
+      val result = await(ifConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetActiveClientRelationships-GET")
     }
   }
 
@@ -412,7 +312,7 @@ class DesConnectorSpec
     "return existing inactive relationships for specified clientId for ItSa service" in {
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN))
+      val result = await(ifConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
@@ -426,7 +326,7 @@ class DesConnectorSpec
     "return existing inactive relationships for specified clientId for Vat service" in {
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN))
+      val result = await(ifConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
@@ -438,38 +338,38 @@ class DesConnectorSpec
 
     }
 
-    "return empty sequence if DES returns 404 for ItSa service" in {
+    "return empty sequence if IF returns 404 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 404)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN))
+      val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
-    "return empty sequence if DES returns 404 for Vat service" in {
+    "return empty sequence if IF returns 404 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 404)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN))
+      val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
-    "return empty sequence if DES returns 400 for ItSa service" in {
+    "return empty sequence if IF returns 400 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 400)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN))
+      val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
-    "return empty sequence if DES returns 400 for Vat service" in {
+    "return empty sequence if IF returns 400 for Vat service" in {
       getFailWithSuspendedAgentInactiveRelationships(encodedArn)
 
-      val result = await(desConnector.getInactiveRelationships(agentARN))
+      val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
-    "return None if DES returns 403 AGENT_SUSPENDED" in {
+    "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
 
-      val result = await(desConnector.getActiveClientRelationships(vrn))
+      val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
   }
@@ -481,13 +381,13 @@ class DesConnectorSpec
     val beforeCurrentDateRelationship =
       ActiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")))
     "return true when the relationship has no end date" in {
-      desConnector.isActive(noEndRelationship) shouldBe true
+      ifConnector.isActive(noEndRelationship) shouldBe true
     }
     "return true when the end date is after the current date" in {
-      desConnector.isActive(afterCurrentDateRelationship) shouldBe true
+      ifConnector.isActive(afterCurrentDateRelationship) shouldBe true
     }
     "return false when the end date is before the current date" in {
-      desConnector.isActive(beforeCurrentDateRelationship) shouldBe false
+      ifConnector.isActive(beforeCurrentDateRelationship) shouldBe false
     }
   }
 
@@ -512,13 +412,13 @@ class DesConnectorSpec
         "HMRC-MTD-VAT")
 
     "return false when the relationship is active" in {
-      desConnector.isNotActive(noEndRelationship) shouldBe false
+      ifConnector.isNotActive(noEndRelationship) shouldBe false
     }
     "return true when the end date is before the current date" in {
-      desConnector.isNotActive(endsBeforeCurrentDate) shouldBe true
+      ifConnector.isNotActive(endsBeforeCurrentDate) shouldBe true
     }
     "return true when the end date is equal to the current date" in {
-      desConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
+      ifConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
     }
   }
 
@@ -526,9 +426,9 @@ class DesConnectorSpec
 
     "return existing inactive relationships for specified clientId for ItSa service" in {
 
-        getInactiveRelationshipsForClient(mtdItId)
+      getInactiveRelationshipsForClient(mtdItId)
 
-      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -544,7 +444,7 @@ class DesConnectorSpec
 
       getInactiveRelationshipsForClient(vrn)
 
-      val result = await(desConnector.getInactiveClientRelationships(vrn))
+      val result = await(ifConnector.getInactiveClientRelationships(vrn))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -560,7 +460,7 @@ class DesConnectorSpec
 
       getInactiveRelationshipsForClient(utr)
 
-      val result = await(desConnector.getInactiveClientRelationships(utr))
+      val result = await(ifConnector.getInactiveClientRelationships(utr))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -572,11 +472,27 @@ class DesConnectorSpec
       )
     }
 
+    "return existing inactive relationships for specified clientId for Trust service with URN" in {
+
+      getInactiveRelationshipsForClient(urn)
+
+      val result = await(ifConnector.getInactiveClientRelationships(urn))
+
+      result.head shouldBe InactiveRelationship(
+        arn = agentARN,
+        dateTo = Some(LocalDate.parse("2018-09-09")),
+        dateFrom = Some(LocalDate.parse("2015-09-10")),
+        clientId = urn.value,
+        service = "HMRC-TERSNT-ORG",
+        clientType = "business"
+      )
+    }
+
     "return existing inactive relationships for specified clientId for CGT-PD service" in {
 
       getInactiveRelationshipsForClient(cgt)
 
-      val result = await(desConnector.getInactiveClientRelationships(cgt))
+      val result = await(ifConnector.getInactiveClientRelationships(cgt))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -591,27 +507,28 @@ class DesConnectorSpec
     "return empty Seq if the identifier is valid but there are no inactive relationships" in {
 
       getNoInactiveRelationshipsForClient(mtdItId)
-      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
-    "return empty Seq if the identifier if DES responds with a Bad Request" in {
+    "return empty Seq if the identifier if IF responds with a Bad Request" in {
 
       getFailInactiveRelationshipsForClient(mtdItId, 400)
-      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
-    "return empty Seq if the identifier if DES responds with Not Found" in {
+    "return empty Seq if the identifier if IF responds with Not Found" in {
 
       getFailInactiveRelationshipsForClient(mtdItId, 404)
-      val result = await(desConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
-    "fail when DES is unavailable" in {
+    "fail when IF is unavailable" in {
       givenDesReturnsServiceUnavailable()
-      an[UpstreamErrorResponse] should be thrownBy await(desConnector.getInactiveClientRelationships(mtdItId))
+      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.getInactiveClientRelationships(mtdItId))
     }
   }
 }
+

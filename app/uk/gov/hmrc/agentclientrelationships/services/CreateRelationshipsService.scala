@@ -17,9 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
@@ -36,13 +38,17 @@ import scala.util.control.NonFatal
 class CreateRelationshipsService @Inject()(
   es: EnrolmentStoreProxyConnector,
   des: DesConnector,
+  ifConnector: IFConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: RecoveryLockService,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
+  appConfig: AppConfig,
   val metrics: Metrics)
     extends Monitoring
     with Logging {
+
+  private val platformErrorKey = if (appConfig.iFPlatformEnabled) "IF" else "DES"
 
   //noinspection ScalaStyle
   def createRelationship(
@@ -96,7 +102,8 @@ class CreateRelationshipsService @Inject()(
 
     (for {
       _ <- updateEtmpSyncStatus(InProgress)
-      _ <- des.createAgentRelationship(identifier, arn)
+      _ <- if (appConfig.iFPlatformEnabled) ifConnector.createAgentRelationship(identifier, arn)
+          else des.createAgentRelationship(identifier, arn)
       _ = auditData.set("etmpRelationshipCreated", true)
       _ <- updateEtmpSyncStatus(Success)
     } yield ())
@@ -104,9 +111,9 @@ class CreateRelationshipsService @Inject()(
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
           recoverWithException(
             e,
-            UpstreamErrorResponse("RELATIONSHIP_CREATE_FAILED_DES", upstreamCode, reportAs, headers))
+            UpstreamErrorResponse(s"RELATIONSHIP_CREATE_FAILED_$platformErrorKey", upstreamCode, reportAs, headers))
         case NonFatal(ex) =>
-          recoverWithException(ex, new Exception("RELATIONSHIP_CREATE_FAILED_DES"))
+          recoverWithException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_$platformErrorKey"))
       }
   }
 

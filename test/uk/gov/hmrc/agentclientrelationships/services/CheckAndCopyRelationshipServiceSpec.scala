@@ -73,6 +73,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   val es = resettingMock[EnrolmentStoreProxyConnector]
   val des = resettingMock[DesConnector]
+  val ifConnector = resettingMock[IFConnector]
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]
   val auditService = resettingMock[AuditService]
@@ -87,8 +88,10 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
+  when(servicesConfig.getBoolean(eqs("des-if.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
   implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
+  val appConfig1: AppConfig = new AppConfig(configuration, servicesConfig)
 
   val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
 
@@ -110,10 +113,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -153,10 +158,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -198,10 +205,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -243,10 +252,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -289,10 +300,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -335,10 +348,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -375,10 +390,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -423,10 +440,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -458,10 +477,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -492,10 +513,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -535,10 +558,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -574,10 +599,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -615,10 +642,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -659,10 +688,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -702,10 +733,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -747,10 +780,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -790,10 +825,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -836,10 +873,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -882,10 +921,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -922,10 +963,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -970,10 +1013,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           new CreateRelationshipsService(
             es,
             des,
+            ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
+            appConfig1,
             metrics),
           auditService,
           metrics
@@ -1005,10 +1050,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1039,10 +1086,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1082,10 +1131,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1122,10 +1173,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1155,10 +1208,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         new CreateRelationshipsService(
           es,
           des,
+          ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
+          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1206,10 +1261,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             new CreateRelationshipsService(
               es,
               des,
+              ifConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
               agentUserService,
+              appConfig1,
               metrics),
             auditService,
             metrics

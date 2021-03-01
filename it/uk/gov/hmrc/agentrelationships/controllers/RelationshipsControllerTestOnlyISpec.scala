@@ -47,12 +47,14 @@ class RelationshipsControllerTestOnlyISpec
         "microservice.services.tax-enrolments.port"        -> wireMockPort,
         "microservice.services.users-groups-search.port"   -> wireMockPort,
         "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.if.port"                    -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
         "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes",
-        "features.recovery-enable"                         -> false
+        "features.recovery-enable"                         -> false,
+        "des-if.enabled"                                    -> false
       )
       .configure(mongoConfiguration)
 
