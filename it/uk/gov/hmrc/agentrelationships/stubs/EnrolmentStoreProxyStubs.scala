@@ -46,7 +46,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenPrincipalGroupIdRequestFailsWith(status: Int) =
     stubFor(
       get(urlContains("/groups?type=principal"))
-        .willReturn(aResponse().withStatus(status)))
+        .willReturn(aResponse().withStatus(status).withBody("FAILED_ESP")))
 
   def givenDelegatedGroupIdsExistFor(taxIdentifier: TaxIdentifier, groupIds: Set[String]) = {
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value

@@ -35,9 +35,6 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
     "return 404 when credentials are not found in es" in {
       givenPrincipalGroupIdNotExistsFor(arn)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-      givenDelegatedGroupIdsNotExistForKey(s"HMRC-CGT-PD~CGTPDRef~${cgtRef.value}")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -47,8 +44,6 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "return 404 when agent code is not found in ugs (and no relationship in old world)" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoNoAgentCode("foo")
-      givenDelegatedGroupIdsExistFor(cgtRef, Set("foo"))
-      givenDelegatedGroupIdsNotExistForKey(s"HMRC-CGT-PD~CGTPDRef~${cgtRef.value}")
       givenAdminUser("foo", "any")
 
       val result = await(doRequest)
@@ -58,37 +53,34 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
     //FAILURE CASES
 
-    "return 502 when ES1/principal returns 5xx" in {
+    "return 5xx when ES1/principal returns 5xx" in {
       givenPrincipalGroupIdRequestFailsWith(500)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 500
     }
 
-    "return 502 when UGS returns 5xx" in {
+    "return 5xx when UGS returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(500)
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+      //givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 500
     }
 
-    "return 502 when ES1/delegated returns 5xx" in {
+    "return 5xx when ES1/delegated returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenAdminUser("foo", "any")
 
       givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
       result.status shouldBe 500
     }
 
-    "return 400 when ES1/principal returns 4xx" in {
+    "return 400 when ES1/principal returns 400" in {
       givenPrincipalGroupIdRequestFailsWith(400)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 400
@@ -97,7 +89,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "return 400 when UGS returns 4xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(400)
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+      //givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 400
@@ -178,7 +170,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 201
     }
 
-    "return 502 when ES1 is unavailable" in new StubsForThisScenario {
+    "return 503 when ES1 is unavailable" in new StubsForThisScenario {
       givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
@@ -583,7 +575,9 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(cgtRef)
-        givenPrincipalGroupIdNotExistsFor(cgtRef)
+        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAuditConnector()
+        //givenPrincipalGroupIdNotExistsFor(cgtRef)
       }
 
       "return 404" in new StubsForScenario {
