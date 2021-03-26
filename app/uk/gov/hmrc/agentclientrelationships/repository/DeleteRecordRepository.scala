@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import com.google.inject.ImplementedBy
-import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime.now
 import org.joda.time.DateTimeZone.UTC
 import org.joda.time.{DateTime, DateTimeZone}
@@ -33,11 +32,12 @@ import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.logging.{Authorization, SessionId}
-import uk.gov.hmrc.http.{HeaderCarrier, Token}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class DeleteRecord(
@@ -68,7 +68,6 @@ object DeleteRecord {
         Seq(
           "authorization" -> hc.authorization.map(_.value),
           "sessionId"     -> hc.sessionId.map(_.value),
-          "token"         -> hc.token.map(_.value),
           "gaToken"       -> hc.gaToken
         ).collect {
           case (key, Some(value)) => (key, JsString(value))
@@ -80,9 +79,8 @@ object DeleteRecord {
   implicit val reads: Reads[HeaderCarrier] = (
     (JsPath \ "authorization").readNullable[String].map(_.map(Authorization.apply)) and
       (JsPath \ "sessionId").readNullable[String].map(_.map(SessionId.apply)) and
-      (JsPath \ "token").readNullable[String].map(_.map(Token.apply)) and
       (JsPath \ "gaToken").readNullable[String]
-  )((a, s, t, g) => HeaderCarrier(authorization = a, sessionId = s, token = t, gaToken = g))
+  )((a, s, g) => HeaderCarrier(authorization = a, sessionId = s, gaToken = g))
 
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }

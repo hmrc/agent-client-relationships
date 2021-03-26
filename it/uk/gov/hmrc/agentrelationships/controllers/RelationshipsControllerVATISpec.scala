@@ -847,7 +847,11 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(vrn)
-        givenPrincipalGroupIdNotExistsFor(vrn)
+        givenAgentCanBeDeallocatedInDes(vrn, arn)
+        givenPrincipalGroupIdExistsFor(arn, "foo")
+        givenAdminUser("foo", "any")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdRequestFailsWith(404)
       }
 
       "return 404" in new StubsForScenario {

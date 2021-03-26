@@ -20,7 +20,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.Inside
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, SyncStatus}
-import uk.gov.hmrc.http.{HeaderCarrier, Token}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.logging.{Authorization, SessionId}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -39,7 +39,6 @@ class DeleteRecordSpec extends UnitSpec with Inside {
           HeaderCarrier(
             authorization = Some(Authorization("foo1")),
             sessionId = Some(SessionId("foo2")),
-            token = Some(Token("foo3")),
             gaToken = Some("foo4")
           ))
       )
@@ -60,7 +59,6 @@ class DeleteRecordSpec extends UnitSpec with Inside {
         case Some(hc: HeaderCarrier) =>
           hc.authorization.map(_.value) shouldBe Some("foo1")
           hc.sessionId.map(_.value) shouldBe Some("foo2")
-          hc.token.map(_.value) shouldBe Some("foo3")
           hc.gaToken.get shouldBe "foo4"
       }
     }

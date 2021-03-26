@@ -41,19 +41,15 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
     "return 404 when credentials are not found in es" in {
       givenPrincipalGroupIdNotExistsFor(arn)
       givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
-      givenDelegatedGroupIdsNotExistForKey(s"HMRC-TERSNT-ORG~URN~${urn.value}")
 
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
-    "return 404 when agent code is not found in ugs (and no relationship in old world)" in {
+    "return 404 when agent code is not found in ugs" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoNoAgentCode("foo")
-      givenDelegatedGroupIdsExistFor(urn, Set("foo"))
-      givenDelegatedGroupIdsNotExistForKey(s"HMRC-TERSNT-ORG~URN~${urn.value}")
       givenAdminUser("foo", "any")
 
       val result = await(doRequest)
@@ -63,16 +59,15 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
 
     //FAILURE CASES
 
-    "return 502 when ES1/principal returns 5xx" in {
+    "return 5xx when ES1/principal returns 5xx" in {
       givenPrincipalGroupIdRequestFailsWith(500)
       givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 500
     }
 
-    "return 502 when UGS returns 5xx" in {
+    "return 5xx when UGS returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(500)
       givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
@@ -81,7 +76,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       result.status shouldBe 500
     }
 
-    "return 502 when ES1/delegated returns 5xx" in {
+    "return 5xx when ES1/delegated returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
 
@@ -124,23 +119,26 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-TERSNT-ORG/client/URN/${urn.value}"
 
     trait StubsForThisScenario {
+      givenAgentCanBeAllocatedInDes(urn, arn)
+
       givenPrincipalUser(arn, "foo")
+      givenAdminUser("foo", "any")
       givenGroupInfo("foo", "bar")
+
+      givenDelegatedGroupIdsExistForTrustNT(urn) // allocated to groupId's "foo" and "bar"
       givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
       givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
-      givenDelegatedGroupIdsExistForTrustNT(urn)
-      givenAgentCanBeAllocatedInDes(urn, arn)
-      givenEnrolmentDeallocationSucceeds("foo", urn)
-      givenEnrolmentDeallocationSucceeds("bar", urn)
+
       givenTrustNTEnrolmentAllocationSucceeds(urn, "bar")
-      givenAdminUser("foo", "any")
+
     }
 
     "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
       givenUserIsSubscribedClient(urn)
-      givenDelegatedGroupIdsExistForTrustNT(urn, "zoo")
-      givenEnrolmentExistsForGroupId("zoo", Arn("zooArn"))
-      givenEnrolmentDeallocationFailsWith(502, "zoo", urn)
+      //givenDelegatedGroupIdsExistForTrustNT(urn, "zoo")
+      //givenEnrolmentExistsForGroupId("zoo", Arn("zooArn"))
+      givenEnrolmentDeallocationFailsWith(502, "foo", urn)
+      givenEnrolmentDeallocationFailsWith(502, "bar", urn)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -148,6 +146,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
 
     "return 201 when the relationship exists and the URN matches that of current Client user" in new StubsForThisScenario {
       givenUserIsSubscribedClient(urn)
+      givenEnrolmentDeallocationSucceeds("foo", urn)
+      givenEnrolmentDeallocationSucceeds("bar", urn)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -155,6 +155,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
 
     "return 201 when the relationship exists and the user is authenticated with Stride" in new StubsForThisScenario {
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-983283")
+      givenEnrolmentDeallocationSucceeds("foo", urn)
+      givenEnrolmentDeallocationSucceeds("bar", urn)
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -163,11 +165,12 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
     "return 201 when there are no previous relationships to deallocate" in {
       givenUserIsSubscribedClient(urn)
       givenPrincipalUser(arn, "foo")
+      givenAdminUser("foo", "any")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(urn)
       givenAgentCanBeAllocatedInDes(urn, arn)
       givenTrustNTEnrolmentAllocationSucceeds(urn, "bar")
-      givenAdminUser("foo", "any")
+
 
       val result = await(doAgentPutRequest(requestPath))
       result.status shouldBe 201
@@ -577,7 +580,11 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(urn)
-        givenPrincipalGroupIdNotExistsFor(urn)
+        givenAgentCanBeDeallocatedInDes(urn, arn)
+        givenPrincipalGroupIdExistsFor(arn, "foo")
+        givenAdminUser("foo", "any")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdRequestFailsWith(404)
       }
 
       "return 404" in new StubsForScenario {

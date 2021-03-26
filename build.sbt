@@ -16,12 +16,12 @@ lazy val scoverageSettings = {
 
 lazy val compileDeps = Seq(
   ws,
-  "uk.gov.hmrc" %% "bootstrap-backend-play-27" % "2.24.0",
+  "uk.gov.hmrc" %% "bootstrap-backend-play-27" % "3.4.0",
   "uk.gov.hmrc" %% "auth-client" % "3.0.0-play-27",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.20.0-play-27",
+  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.23.0-play-27",
   "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.4.0",
-  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.30.0-play-27",
-  "uk.gov.hmrc" %% "mongo-lock" % "6.23.0-play-27",
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "8.0.0-play-27",
+  "uk.gov.hmrc" %% "mongo-lock" % "7.0.0-play-27",
   "com.kenshoo" %% "metrics-play" % "2.7.3_0.8.2",
   "com.github.blemale" %% "scaffeine" % "4.0.1",
   "org.typelevel" %% "cats-core" % "2.0.0",
@@ -29,8 +29,8 @@ lazy val compileDeps = Seq(
 )
 
 def testDeps(scope: String) = Seq(
-  "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-26" % scope,
-  "uk.gov.hmrc" %% "reactivemongo-test" % "4.21.0-play-27" % scope,
+  "uk.gov.hmrc" %% "hmrctest" % "3.10.0-play-26" % scope,
+  "uk.gov.hmrc" %% "reactivemongo-test" % "5.0.0-play-27" % scope,
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "org.mockito" % "mockito-core" % "2.24.0" % scope,
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.3" % scope,

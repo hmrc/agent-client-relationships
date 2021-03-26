@@ -93,6 +93,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
       givenAdminUser("foo", "any")
+      givenEnrolmentDeallocationFailsWith(404, "foo", mtdItId)
 
       await(
         deleteRecordRepository.create(
@@ -117,6 +118,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAgentGroupWithUsers("foo",
         List(UserDetails(userId = Some("any"), credentialRole = Some("Assistant")))
       )
+      givenNinoIsUnknownFor(mtdItId)
 
       await(
         deleteRecordRepository.create(
@@ -601,6 +603,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenAdminUser("foo", "any")
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientRelationshipWithAgentCeasedInCESA(nino, "baz")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -1169,7 +1173,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenAgentCanBeDeallocatedInDes(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
-        //givenAdminUser("foo", "any")
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -1469,7 +1473,12 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(nino)
-        givenPrincipalGroupIdNotExistsFor(mtdItId)
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenPrincipalGroupIdExistsFor(arn, "foo")
+        givenAdminUser("foo", "any")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdRequestFailsWith(404)
       }
 
       "return 404" in new StubsForScenario {
