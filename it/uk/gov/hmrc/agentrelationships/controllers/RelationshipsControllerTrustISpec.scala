@@ -592,7 +592,11 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(utr)
-        givenPrincipalGroupIdNotExistsFor(utr)
+        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenPrincipalGroupIdExistsFor(arn, "foo")
+        givenAdminUser("foo", "any")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdRequestFailsWith(404)
       }
 
       "return 404" in new StubsForScenario {

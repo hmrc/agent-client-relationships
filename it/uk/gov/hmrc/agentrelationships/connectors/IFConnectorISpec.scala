@@ -68,14 +68,14 @@ class IFConnectorISpec
   val vrn = Vrn("101747641")
   val agentARN = Arn("ABCDE123456")
   val utr = Utr("1704066305")
-  val urn = Urn("AAAAA6426901064")
+  val urn = Urn("XXTRUST12345678")
   val cgt = CgtRef("XMCGTP837878749")
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_)     => Vrn("101747641")
     case Utr(_)     => Utr("2134514321")
-    case Urn(_)     => Urn("AAAAA6426901067")
+    case Urn(_)     => Urn("XXTRUST12345678")
   }
 
   "IFConnector CreateAgentRelationship" should {

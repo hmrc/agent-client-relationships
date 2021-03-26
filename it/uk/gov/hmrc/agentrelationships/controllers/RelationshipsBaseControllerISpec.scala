@@ -106,7 +106,7 @@ trait RelationshipsBaseControllerISpec
   val TERMINATION_STRIDE_ROLE = "caat"
 
   val utr = Utr("3087612352")
-  val urn = Urn("TRUSTNT12345678")
+  val urn = Urn("XXTRUST12345678")
   val utrUriEncoded: String = UriEncoding.encodePathSegment(utr.value, "UTF-8")
   val saUtrType = "SAUTR"
   val urnType = "URN"
