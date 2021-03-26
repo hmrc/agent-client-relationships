@@ -382,13 +382,12 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
     "the relationship exists in ETMP and not exist in ES" should {
       trait StubsForThisScenario {
+        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
         givenUserIsSubscribedClient(cgtRef, withThisGgUserId = "ggUserId-client")
         givenPrincipalUser(arn, "foo")
-        givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
-        givenDelegatedGroupIdsNotExistForCgt(cgtRef)
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
         givenAdminUser("foo", "any")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdsNotExistForCgt(cgtRef)
       }
 
       "return 204" in new StubsForThisScenario {
@@ -500,7 +499,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenAgentCanBeDeallocatedInDes(cgtRef, arn)
       }
 
-      "return 502" in new StubsForThisScenario {
+      "return 503" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 503
       }
 
@@ -513,10 +512,6 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "DES is unavailable" should {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
-        givenPrincipalUser(arn, "foo")
-        givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
-        givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
         givenDesReturnsServiceUnavailable()
       }
 
@@ -533,10 +528,6 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "DES responds with 404" should {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
-        givenPrincipalUser(arn, "foo")
-        givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
-        givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
         givenAgentCanNotBeDeallocatedInDes(status = 404)
       }
 
@@ -583,7 +574,11 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(cgtRef)
-        givenPrincipalGroupIdNotExistsFor(cgtRef)
+        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenPrincipalGroupIdExistsFor(arn, "foo")
+        givenAdminUser("foo", "any")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdRequestFailsWith(404)
       }
 
       "return 404" in new StubsForScenario {
@@ -596,5 +591,4 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       }
     }
   }
-
 }

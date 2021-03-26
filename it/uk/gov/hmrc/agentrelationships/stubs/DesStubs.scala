@@ -150,5 +150,12 @@ trait DesStubs {
         .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(aResponse()
           .withStatus(status)
-          .withBody(s"""{"reason": "Service unavailable"}""")))
+          .withBody(s"""{"reason": "${failureMessage(status)}"}""")))
+
+  private def failureMessage(status: Int): String = status match  {
+    case 404 => "The remote endpoint has indicated that no activeRelationship can be found"
+    case 503 => "Dependent systems are currently not responding"
+    case o    => s"reason for status code $o"
+
+  }
 }
