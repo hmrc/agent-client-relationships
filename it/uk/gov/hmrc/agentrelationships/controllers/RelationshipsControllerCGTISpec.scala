@@ -35,9 +35,6 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
     "return 404 when credentials are not found in es" in {
       givenPrincipalGroupIdNotExistsFor(arn)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-      givenDelegatedGroupIdsNotExistForKey(s"HMRC-CGT-PD~CGTPDRef~${cgtRef.value}")
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -47,8 +44,6 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "return 404 when agent code is not found in ugs (and no relationship in old world)" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoNoAgentCode("foo")
-      givenDelegatedGroupIdsExistFor(cgtRef, Set("foo"))
-      givenDelegatedGroupIdsNotExistForKey(s"HMRC-CGT-PD~CGTPDRef~${cgtRef.value}")
       givenAdminUser("foo", "any")
 
       val result = await(doRequest)
@@ -58,37 +53,34 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
     //FAILURE CASES
 
-    "return 502 when ES1/principal returns 5xx" in {
+    "return 5xx when ES1/principal returns 5xx" in {
       givenPrincipalGroupIdRequestFailsWith(500)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 500
     }
 
-    "return 502 when UGS returns 5xx" in {
+    "return 5xx when UGS returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(500)
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+      //givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 500
     }
 
-    "return 502 when ES1/delegated returns 5xx" in {
+    "return 5xx when ES1/delegated returns 5xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenAdminUser("foo", "any")
 
       givenDelegatedGroupIdRequestFailsWith(500)
       val result = await(doRequest)
       result.status shouldBe 500
     }
 
-    "return 400 when ES1/principal returns 4xx" in {
+    "return 400 when ES1/principal returns 400" in {
       givenPrincipalGroupIdRequestFailsWith(400)
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 400
@@ -97,7 +89,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "return 400 when UGS returns 4xx" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfoFailsWith(400)
-      givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
+      //givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
 
       val result = await(doRequest)
       result.status shouldBe 400
@@ -178,7 +170,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 201
     }
 
-    "return 502 when ES1 is unavailable" in new StubsForThisScenario {
+    "return 503 when ES1 is unavailable" in new StubsForThisScenario {
       givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
@@ -382,12 +374,13 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
     "the relationship exists in ETMP and not exist in ES" should {
       trait StubsForThisScenario {
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
         givenUserIsSubscribedClient(cgtRef, withThisGgUserId = "ggUserId-client")
         givenPrincipalUser(arn, "foo")
-        givenAdminUser("foo", "any")
         givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
         givenDelegatedGroupIdsNotExistForCgt(cgtRef)
+        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAdminUser("foo", "any")
       }
 
       "return 204" in new StubsForThisScenario {
@@ -499,7 +492,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenAgentCanBeDeallocatedInDes(cgtRef, arn)
       }
 
-      "return 503" in new StubsForThisScenario {
+      "return 502" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 503
       }
 
@@ -512,6 +505,10 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "DES is unavailable" should {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
         givenDesReturnsServiceUnavailable()
       }
 
@@ -528,6 +525,10 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "DES responds with 404" should {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
+        givenPrincipalUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
+        givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
         givenAgentCanNotBeDeallocatedInDes(status = 404)
       }
 
@@ -575,10 +576,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       trait StubsForScenario {
         givenUserIsSubscribedClient(cgtRef)
         givenAgentCanBeDeallocatedInDes(cgtRef, arn)
-        givenPrincipalGroupIdExistsFor(arn, "foo")
-        givenAdminUser("foo", "any")
-        givenGroupInfo("foo", "bar")
-        givenDelegatedGroupIdRequestFailsWith(404)
+        givenAuditConnector()
+        //givenPrincipalGroupIdNotExistsFor(cgtRef)
       }
 
       "return 404" in new StubsForScenario {
@@ -591,4 +590,5 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       }
     }
   }
+
 }
