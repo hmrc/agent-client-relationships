@@ -231,6 +231,45 @@ trait DesStubsGet {
       s"/registration/relationship?idtype=ZCGT&ref-no=$ref&agent=false&active-only=false&regime=CGT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
   }
 
+  private val agentRecordUrl: TaxIdentifier => String = {
+    case Arn(arn) => s"/registration/personal-details/arn/$arn"
+    case Utr(utr) => s"/registration/personal-details/utr/$utr"
+  }
+
+  def getAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping = {
+    stubFor(get(urlEqualTo(agentRecordUrl(taxIdentifier)))
+      .willReturn(aResponse()
+      .withStatus(200)
+        .withBody(
+          s"""
+             | {
+             |  "suspensionDetails" : {
+             |    "suspensionStatus": false,
+             |    "regimes": []
+             |  }
+             | }
+             |""".stripMargin)
+      )
+    )
+  }
+
+  def getSuspendedAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping = {
+    stubFor(get(urlEqualTo(agentRecordUrl(taxIdentifier)))
+      .willReturn(aResponse()
+        .withStatus(200)
+        .withBody(
+          s"""
+             | {
+             |  "suspensionDetails" : {
+             |    "suspensionStatus": true,
+             |    "regimes": ["ITSA"]
+             |  }
+             | }
+             |""".stripMargin)
+      )
+    )
+  }
+
   def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {
 
     val individualOrOrganisationJson = if(taxIdentifier.isInstanceOf[MtdItId])

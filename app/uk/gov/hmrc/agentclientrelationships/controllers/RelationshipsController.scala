@@ -17,10 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.implicits._
+
 import javax.inject.{Inject, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -61,26 +62,40 @@ class RelationshipsController @Inject()(
 
   def checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] =
     Action.async { implicit request =>
-      if (service == "HMRC-MTD-IT" && clientIdType == "MTDITID" && MtdItId.isValid(clientId)) {
-        checkWithTaxIdentifier(arn, MtdItId(clientId))
-      } else if (service == "HMCE-VATDEC-ORG" && clientIdType == "vrn" && Vrn.isValid(clientId)) {
-        checkWithVrn(arn, Vrn(clientId))
-      } else if (service == "HMRC-MTD-VAT" && Vrn.isValid(clientId)) {
-        checkWithTaxIdentifier(arn, Vrn(clientId))
-      } else if (service == "HMRC-MTD-IT" && clientIdType == "NI" && Nino.isValid(clientId)) {
-        des.getMtdIdFor(Nino(clientId)).flatMap(checkWithTaxIdentifier(arn, _))
-      } else if (service == "IR-SA" && Nino.isValid(clientId)) {
-        checkLegacyWithNino(arn, Nino(clientId))
-      } else if (service == "HMRC-TERS-ORG" && Utr.isValid(clientId)) {
-        checkWithTaxIdentifier(arn, Utr(clientId))
-      } else if (service == "HMRC-TERSNT-ORG" && Urn.isValid(clientId)) {
-        checkWithTaxIdentifier(arn, Urn(clientId))
-      } else if (service == "HMRC-CGT-PD" && clientIdType == "CGTPDRef" && CgtRef.isValid(clientId)) {
-        checkWithTaxIdentifier(arn, CgtRef(clientId))
-      } else {
-        logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
-        Future.successful(BadRequest)
+      (service, clientIdType, clientId) match {
+        case ("HMRC-MTD-IT", "MTDITID", _) if MtdItId.isValid(clientId) =>
+          checkWithTaxIdentifier(arn, MtdItId(clientId))
+        case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
+        case ("HMRC-MTD-VAT", _, _) if Vrn.isValid(clientId)        => checkWithTaxIdentifier(arn, Vrn(clientId))
+        case ("HMRC-MTD-IT", "NI", _) if Nino.isValid(clientId) =>
+          des.getMtdIdFor(Nino(clientId)).flatMap(checkWithTaxIdentifier(arn, _))
+        case ("IR-SA", _, _) if Nino.isValid(clientId) =>
+          withSuspensionCheck(arn, service) { checkLegacyWithNino(arn, Nino(clientId)) }
+        case ("HMRC-TERS-ORG", _, _) if Utr.isValid(clientId)           => checkWithTaxIdentifier(arn, Utr(clientId))
+        case ("HMRC-TERSNT-ORG", _, _) if Urn.isValid(clientId)         => checkWithTaxIdentifier(arn, Urn(clientId))
+        case ("HMRC-CGT-PD", "CGTPDRef", _) if CgtRef.isValid(clientId) => checkWithTaxIdentifier(arn, CgtRef(clientId))
+        case _ =>
+          logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
+          Future.successful(BadRequest)
       }
+    }
+
+  private def withSuspensionCheck(agentId: TaxIdentifier, service: String)(
+    proceed: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+    des.getAgentRecord(agentId).flatMap {
+      case record if record.isSuspended && record.suspendedFor(getDesRegimeFor(service)) =>
+        logger.warn(s"agent with id : ${agentId.value} is suspended for regime ${getDesRegimeFor(service)}")
+        Future.successful(BadRequest)
+      case _ => proceed
+    }
+
+  private def getDesRegimeFor(regime: String) =
+    regime match {
+      case "HMRC-MTD-IT" | "IR-SA" => "ITSA"
+      case "HMRC-MTD-VAT"          => "VATC"
+      case "HMRC-TERS-ORG"         => "TRS"
+      case "HMRC-TERSNT-ORG"       => "TRS" //this is the same with "HMRC-TERS-ORG"
+      case "HMRC-CGT-PD"           => "CGT"
     }
 
   private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier)(implicit request: Request[_]) = {
