@@ -9,7 +9,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship, SuspensionDetails, AgentRecord}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
@@ -290,6 +290,20 @@ class DesConnectorSpec
       givenDesReturnsServiceUnavailable()
       an[UpstreamErrorResponse] should be thrownBy await(desConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
+  }
+
+  "DesConnector GetAgentRecord" should {
+
+    "get agentRecord detail should retrieve agent record from DES" in {
+      getAgentRecordForClient(agentARN)
+
+      await(desConnector.getAgentRecord(agentARN)) should be (AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty)))))
+    }
+
+    "throw an IllegalArgumentException when the tax identifier is not supported" in {
+      an[Exception] should be thrownBy await(desConnector.getAgentRecord(Eori("foo")))
+    }
+
   }
 
   "DesConnector DeleteAgentRelationship" should {

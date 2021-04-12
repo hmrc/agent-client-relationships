@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentrelationships.controllers
 
 import com.google.inject.AbstractModule
+
 import javax.inject.Inject
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -26,7 +27,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, MappingStubs, RelationshipStubs}
+import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, MappingStubs, RelationshipStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -48,6 +49,7 @@ class RelationshipsControllerWithoutMongoISpec
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
+    with DesStubsGet
     with MappingStubs
     with DataStreamStub {
 
@@ -229,6 +231,7 @@ class RelationshipsControllerWithoutMongoISpec
     val identifierType: String = "NINO"
 
     "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
+      getAgentRecordForClient(arn)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()

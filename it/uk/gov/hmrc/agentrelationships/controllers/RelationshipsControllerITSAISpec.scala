@@ -620,6 +620,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     //CESA CHECK UNHAPPY PATHS
 
     "return 404 when agent not allocated to client in es nor identifier not found in des" in {
+      getAgentRecordForClient(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForNino(nino)
@@ -632,6 +633,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 404 when agent not allocated to client in es nor cesa" in {
+      getAgentRecordForClient(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForNino(nino)
@@ -644,6 +646,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 5xx mapping is unavailable" in {
+      getAgentRecordForClient(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForNino(nino)
@@ -656,6 +659,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
+      getAgentRecordForClient(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForNino(nino)
@@ -668,7 +672,15 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
+    "return 400 when agent record is suspended" in {
+      getSuspendedAgentRecordForClient(arn)
+
+      val result = await(doRequest)
+      result.status shouldBe 400
+    }
+
     "return 200 when agent credentials unknown but relationship exists in cesa" in {
+      getAgentRecordForClient(arn)
       givenPrincipalGroupIdNotExistsFor(arn)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
@@ -691,6 +703,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
 
     "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
+      getAgentRecordForClient(arn)
       givenPrincipalGroupIdNotExistsFor(arn)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")

@@ -129,6 +129,27 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     }
   }
 
+  def getAgentRecord(agentId: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AgentRecord] =
+    getWithDesHeaders("GetAgentRecord", new URL(getAgentRecordUrl(agentId))).map { response =>
+      response.status match {
+        case Status.OK =>
+          response.json.as[AgentRecord]
+        case status => throw UpstreamErrorResponse(response.body, status, status)
+      }
+    }
+
+  private def getAgentRecordUrl(agentId: TaxIdentifier) =
+    agentId match {
+      case Arn(arn) =>
+        val encodedArn = UriEncoding.encodePathSegment(arn, "UTF-8")
+        s"$desBaseUrl/registration/personal-details/arn/$encodedArn"
+      case Utr(utr) =>
+        val encodedUtr = UriEncoding.encodePathSegment(utr, "UTF-8")
+        s"$desBaseUrl/registration/personal-details/utr/$encodedUtr"
+      case _ =>
+        throw new Exception(s"The client identifier $agentId is not supported.")
+    }
+
   // DES API #1168 (for client)
   def getInactiveClientRelationships(taxIdentifier: TaxIdentifier)(
     implicit hc: HeaderCarrier,
