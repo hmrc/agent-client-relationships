@@ -88,7 +88,8 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "AgentDBRecord",
     "Journey")
 
-  val CheckCESADetailsFields: Seq[String] = Seq("agentCode", "credId", "arn", "saAgentRef", "CESARelationship", "nino")
+  val CheckCESADetailsFields: Seq[String] =
+    Seq("agentCode", "credId", "arn", "saAgentRef", "CESARelationship", "nino", "partialAuth")
 
   val CheckESDetailsFields: Seq[String] = Seq("agentCode", "credId", "oldAgentCodes", "vrn", "arn", "ESRelationship")
 

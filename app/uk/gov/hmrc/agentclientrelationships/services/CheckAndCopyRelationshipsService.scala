@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -31,6 +30,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -72,6 +72,7 @@ class CheckAndCopyRelationshipsService @Inject()(
   des: DesConnector,
   mapping: MappingConnector,
   ugs: UsersGroupsSearchConnector,
+  aca: AgentClientAuthorisationConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
   val auditService: AuditService,
@@ -235,10 +236,24 @@ class CheckAndCopyRelationshipsService @Inject()(
       _ = auditData.set("saAgentRef", matching.mkString(","))
       _ = auditData.set("CESARelationship", matching.nonEmpty)
     } yield {
-      auditService.sendCheckCESAAuditEvent
+      if (matching.nonEmpty) auditService.sendCheckCESAAuditEvent
       matching
     }
   }
+
+  def hasLegacyRelationshipInCesaOrHasPartialAuth(arn: Arn, nino: Nino)(
+    implicit ec: ExecutionContext,
+    hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData): Future[Boolean] =
+    lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
+      if (matching.isEmpty) {
+        aca.getPartialAuthExistsFor(nino, arn, "HMRC-MTD-IT").map { partialAuth =>
+          auditData.set("partialAuth", partialAuth)
+          auditService.sendCheckCESAAuditEvent
+          partialAuth
+        }
+      } else Future successful true)
 
   def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(
     implicit

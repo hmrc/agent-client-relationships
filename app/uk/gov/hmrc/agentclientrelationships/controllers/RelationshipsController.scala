@@ -17,11 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.implicits._
-
-import javax.inject.{Inject, Provider, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
+import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -36,6 +34,7 @@ import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import javax.inject.{Inject, Provider, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -162,10 +161,10 @@ class RelationshipsController @Inject()(
     auditData.set("arn", arn)
 
     checkOldAndCopyService
-      .lookupCesaForOldRelationship(arn, nino)
+      .hasLegacyRelationshipInCesaOrHasPartialAuth(arn, nino)
       .map {
-        case references if references.nonEmpty => Ok
-        case _                                 => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+        case true  => Ok
+        case false => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
       .recover {
         case upS: Upstream5xxResponse =>

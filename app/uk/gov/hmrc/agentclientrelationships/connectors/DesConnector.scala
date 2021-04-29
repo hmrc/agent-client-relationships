@@ -34,7 +34,6 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.logging.Authorization
 import uk.gov.hmrc.http.{HttpClient, _}
 
 import java.util.UUID

@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentrelationships.support
 
 import play.api.http.{HeaderNames, MimeTypes}
 import play.api.libs.ws.{EmptyBody, WSClient, WSRequest, WSResponse}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -27,33 +27,33 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 object Http {
 
-  def get(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
+  def get(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
     request.get()
   }
 
   def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(
-    implicit hc: HeaderCarrier,
+    implicit
     ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.addHttpHeaders(headers: _*).post(body)
     }
 
-  def postEmpty(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
+  def postEmpty(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
     request.post(EmptyBody)
   }
 
-  def putEmpty(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
+  def putEmpty(url: String)(implicit  ws: WSClient): HttpResponse = perform(url) { request =>
     request.put(EmptyBody)
   }
 
-  def delete(url: String)(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse = perform(url) { request =>
+  def delete(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
     request.delete()
   }
 
   private def perform(url: String)(
-    fun: WSRequest => Future[WSResponse])(implicit hc: HeaderCarrier, ws: WSClient): HttpResponse =
+    fun: WSRequest => Future[WSResponse])(implicit ws: WSClient): HttpResponse =
     await(
-      fun(ws.url(url).addHttpHeaders(hc.headers: _*).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
+      fun(ws.url(url).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
 
   private def await[A](future: Future[A]) = Await.result(future, Duration(10, SECONDS))
 
@@ -63,14 +63,14 @@ class Resource(path: String, port: Int) {
 
   private def url() = s"http://localhost:$port$path"
 
-  def get()(implicit hc: HeaderCarrier = HeaderCarrier(), ws: WSClient): HttpResponse = Http.get(url())
+  def get()(implicit ws: WSClient): HttpResponse = Http.get(url())
 
-  def postAsJson(body: String)(implicit hc: HeaderCarrier = HeaderCarrier(), ws: WSClient): HttpResponse =
+  def postAsJson(body: String)(implicit ws: WSClient): HttpResponse =
     Http.post(url(), body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))
 
-  def postEmpty()(implicit hc: HeaderCarrier = HeaderCarrier(), ws: WSClient): HttpResponse =
+  def postEmpty()(implicit ws: WSClient): HttpResponse =
     Http.postEmpty(url())
 
-  def putEmpty()(implicit hc: HeaderCarrier = HeaderCarrier(), ws: WSClient): HttpResponse =
+  def putEmpty()(implicit  ws: WSClient): HttpResponse =
     Http.putEmpty(url())
 }
