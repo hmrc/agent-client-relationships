@@ -69,7 +69,7 @@ class RelationshipsController @Inject()(
         case ("HMRC-MTD-IT", "NI", _) if Nino.isValid(clientId) =>
           des.getMtdIdFor(Nino(clientId)).flatMap(checkWithTaxIdentifier(arn, _))
         case ("IR-SA", _, _) if Nino.isValid(clientId) =>
-          withSuspensionCheck(arn, service) { checkLegacyWithNino(arn, Nino(clientId)) }
+          withSuspensionCheck(arn, service) { checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId)) }
         case ("HMRC-TERS-ORG", _, _) if Utr.isValid(clientId)           => checkWithTaxIdentifier(arn, Utr(clientId))
         case ("HMRC-TERSNT-ORG", _, _) if Urn.isValid(clientId)         => checkWithTaxIdentifier(arn, Urn(clientId))
         case ("HMRC-CGT-PD", "CGTPDRef", _) if CgtRef.isValid(clientId) => checkWithTaxIdentifier(arn, CgtRef(clientId))
@@ -156,7 +156,7 @@ class RelationshipsController @Inject()(
           Left(errorCode)
       }
 
-  private def checkLegacyWithNino(arn: Arn, nino: Nino)(implicit request: Request[_]) = {
+  private def checkLegacyWithNinoOrPartialAuth(arn: Arn, nino: Nino)(implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
 

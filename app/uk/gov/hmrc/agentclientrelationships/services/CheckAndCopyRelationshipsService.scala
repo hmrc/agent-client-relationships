@@ -248,10 +248,10 @@ class CheckAndCopyRelationshipsService @Inject()(
     auditData: AuditData): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
-        aca.getPartialAuthExistsFor(nino, arn, "HMRC-MTD-IT").map { partialAuth =>
-          auditData.set("partialAuth", partialAuth)
+        aca.getPartialAuthExistsFor(nino, arn, "HMRC-MTD-IT").map { hasPartialAuth =>
+          auditData.set("partialAuth", hasPartialAuth)
           auditService.sendCheckCESAAuditEvent
-          partialAuth
+          hasPartialAuth
         }
       } else Future successful true)
 
