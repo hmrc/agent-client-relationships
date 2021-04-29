@@ -76,6 +76,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val ifConnector = resettingMock[IFConnector]
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]
+  val aca = resettingMock[AgentClientAuthorisationConnector]
   val auditService = resettingMock[AuditService]
   val metrics = resettingMock[Metrics]
   val monitoring = resettingMock[Monitoring]
@@ -109,6 +110,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -154,6 +156,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -201,6 +204,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -248,6 +252,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -296,6 +301,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -344,6 +350,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -386,6 +393,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -436,6 +444,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -473,6 +482,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -509,6 +519,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -554,6 +565,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -595,6 +607,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -638,6 +651,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -684,6 +698,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -729,6 +744,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -776,6 +792,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -821,6 +838,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -869,6 +887,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -917,6 +936,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -959,6 +979,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -1009,6 +1030,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           des,
           mapping,
           ugs,
+          aca,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -1046,6 +1068,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -1082,6 +1105,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -1127,6 +1151,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -1169,6 +1194,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -1204,6 +1230,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         des,
         mapping,
         ugs,
+        aca,
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
@@ -1257,6 +1284,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             des,
             mapping,
             ugs,
+            aca,
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,

@@ -30,7 +30,6 @@ import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, ActiveRel
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Urn, Utr, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.logging.Authorization
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HttpClient, _}
 

@@ -27,7 +27,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, MappingStubs, RelationshipStubs}
+import uk.gov.hmrc.agentrelationships.stubs.{ACAStubs, DataStreamStub, DesStubs, DesStubsGet, MappingStubs, RelationshipStubs}
 import uk.gov.hmrc.agentrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -51,7 +51,8 @@ class RelationshipsControllerWithoutMongoISpec
     with DesStubs
     with DesStubsGet
     with MappingStubs
-    with DataStreamStub {
+    with DataStreamStub
+    with ACAStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -65,6 +66,7 @@ class RelationshipsControllerWithoutMongoISpec
         "microservice.services.des.port"                   -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
         "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "microservice.services.agent-client-authorisation.port" -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
         "features.recovery-enable"                         -> false,
@@ -252,6 +254,84 @@ class RelationshipsControllerWithoutMongoISpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "foo", "CESARelationship" -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
+    }
+
+    "return 200 when relationship does not exist in CESA but there is a PartialAuth invitation" in {
+      getAgentRecordForClient(arn)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenPartialAuthExistsFor(arn, nino)
+      givenAuditConnector()
+
+      def query =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doAgentRequest(requestPath))
+      result.status shouldBe 200
+
+      await(query) shouldBe empty
+
+      verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
+
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "", "CESARelationship" -> "false", "partialAuth" -> "true"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
+    }
+
+    "return 404 when relationship does not exist in CESA and there is no PartialAuth invitation" in {
+      getAgentRecordForClient(arn)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenPartialAuthNotExistsFor(arn, nino)
+      givenAuditConnector()
+
+      def query =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doAgentRequest(requestPath))
+      result.status shouldBe 404
+
+      await(query) shouldBe empty
+
+      verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
+
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "", "CESARelationship" -> "false", "partialAuth" -> "false"),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
+    }
+
+    "return 404 when relationship does not exist in CESA and ACA returns a 5xx for the PartialAuth call" in {
+      getAgentRecordForClient(arn)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenAgentClientAuthorisationReturnsError(arn, nino, 503)
+      givenAuditConnector()
+
+      def query =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+
+      await(query) shouldBe empty
+
+      val result = await(doAgentRequest(requestPath))
+      result.status shouldBe 404
+
+      await(query) shouldBe empty
+
+      verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
+
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "", "CESARelationship" -> "false", "partialAuth" -> "false"),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }

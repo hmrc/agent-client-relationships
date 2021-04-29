@@ -20,8 +20,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.Inside
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, SyncStatus}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging.{Authorization, SessionId}
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
 import uk.gov.hmrc.play.test.UnitSpec
 
 class DeleteRecordSpec extends UnitSpec with Inside {
