@@ -179,8 +179,8 @@ class RelationshipsController @Inject()(
   def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
       validateParams(service, clientIdType, clientId) match {
-        case Right((a, taxIdentifier)) =>
-          authorisedClientOrStrideUser(taxIdentifier, strideRoles) { _ =>
+        case Right((_, taxIdentifier)) =>
+          authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { _ =>
             implicit val auditData: AuditData = new AuditData()
             auditData.set("arn", arn)
 

@@ -925,12 +925,15 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 201
     }
 
-    "return 403 for an agent tries to create a relationship" in {
+    "return 201 when an agent tries to create a relationship" in {
       givenUserIsSubscribedAgent(arn)
+      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenPrincipalGroupIdExistsFor(arn, "foo")
 
       val result = await(doAgentPutRequest(requestPath))
-      result.status shouldBe 403
+      result.status shouldBe 201
     }
+
 
     "return 502 when ES1 is unavailable" in {
       givenUserIsSubscribedClient(vrn)
