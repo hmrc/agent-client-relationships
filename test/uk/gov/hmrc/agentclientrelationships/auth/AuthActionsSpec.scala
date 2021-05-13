@@ -60,7 +60,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   class TestAuth() extends AuthActions with Results {
     implicit val hc: HeaderCarrier = HeaderCarrier()
     def testAuthActions(arn: Arn, identifier: TaxIdentifier, strideRoles: Seq[String]) =
-      authorisedClientOrStrideUser(identifier, strideRoles) { _ =>
+      authorisedClientOrStrideUserOrAgent(identifier, strideRoles) { _ =>
         Future.successful(Ok)
       }
 

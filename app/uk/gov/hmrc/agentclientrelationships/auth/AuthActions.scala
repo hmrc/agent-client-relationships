@@ -61,14 +61,14 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
-  def authorisedClientOrStrideUser(clientId: TaxIdentifier, strideRoles: Seq[String])(
+  def authorisedClientOrStrideUserOrAgent(clientId: TaxIdentifier, strideRoles: Seq[String])(
     body: RequestAndCurrentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) {
       case enrolments ~ affinity ~ optCreds =>
         optCreds
           .collect {
             case creds @ Credentials(_, "GovernmentGateway")
-                if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
+                if isAgent(affinity) | hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
               creds
             case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
               creds
@@ -94,6 +94,9 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           TypeOfEnrolment(requiredIdentifier)
             .extractIdentifierFrom(enrolments.enrolments)
             .contains(requiredIdentifier))
+
+  def isAgent(affinity: Option[AffinityGroup]): Boolean =
+    affinity.contains(AffinityGroup.Agent)
 
   def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean =
     strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
