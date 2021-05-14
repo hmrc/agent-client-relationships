@@ -87,4 +87,7 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val inactiveRelationshipsClientRecordStartDate =
     servicesConfig.getString("inactive-relationships-client.record-start-date")
 
+  val altItsaEnabled =
+    servicesConfig.getBoolean("alt-itsa.enabled")
+
 }

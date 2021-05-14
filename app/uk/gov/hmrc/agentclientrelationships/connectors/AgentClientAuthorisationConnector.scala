@@ -25,9 +25,10 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
+
 import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -59,6 +60,25 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
           response.status match {
             case Status.OK => !(response.json \ "_embedded" \ "invitations").as[JsArray].equals(JsArray.empty)
             case _         => false
+          }
+        }
+    }
+  }
+
+  def updateAltItsaFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
+
+    val url: URL = new URL(
+      acaBaseUrl,
+      s"/agent-client-authorisation/alt-itsa/update/${encodePathSegment(nino.value)}"
+    )
+
+    monitor(s"ConsumedAPI-ACA-updateAltItsaFor-GET") {
+      httpClient
+        .PUTString[HttpResponse](url = url.toString, "")
+        .map { response =>
+          response.status match {
+            case Status.CREATED => true
+            case _              => false
           }
         }
     }

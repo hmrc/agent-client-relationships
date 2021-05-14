@@ -33,7 +33,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-
+import uk.gov.hmrc.agentclientrelationships.util._
 sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
 }
@@ -63,6 +63,14 @@ case object NotFound extends CheckAndCopyResult {
 }
 
 case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
+  override val grantAccess = false
+}
+
+case object AltItsaCreateRelationshipSuccess extends CheckAndCopyResult {
+  override val grantAccess = true
+}
+
+case object AltItsaNotFoundOrFailed extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
@@ -150,10 +158,17 @@ class CheckAndCopyRelationshipsService @Inject()(
                            auditService.sendCreateRelationshipAuditEvent
                            mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                            FoundAndFailedToCopy
-                       } else Future.successful(NotFound)
+                       } else tryCreateRelationshipFromAltItsa(nino)
         } yield result
     }
   }
+
+  private def tryCreateRelationshipFromAltItsa(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext) =
+    if (appConfig.altItsaEnabled)
+      aca
+        .updateAltItsaFor(nino)
+        .map(created => if (created) AltItsaCreateRelationshipSuccess else AltItsaNotFoundOrFailed)
+    else toFuture(NotFound)
 
   private def findOrCreateRelationshipCopyRecordAndCopy(
     references: Set[RelationshipReference],
