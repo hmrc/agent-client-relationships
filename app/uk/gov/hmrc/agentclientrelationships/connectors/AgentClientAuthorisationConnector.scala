@@ -72,7 +72,7 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
       s"/agent-client-authorisation/alt-itsa/update/${encodePathSegment(nino.value)}"
     )
 
-    monitor(s"ConsumedAPI-ACA-updateAltItsaFor-GET") {
+    monitor(s"ConsumedAPI-ACA-updateAltItsaFor-PUT") {
       httpClient
         .PUTString[HttpResponse](url = url.toString, "")
         .map { response =>
