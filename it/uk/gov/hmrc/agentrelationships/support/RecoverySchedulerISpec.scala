@@ -226,13 +226,12 @@ class RecoverySchedulerISpec
         await(deleteRepo.create(deleteRecord))
       }
 
-      await(deleteRepo.findAll()).length shouldBe 11
 
       eventually {
         await(deleteRepo.findAll()).length shouldBe 1
       }
 
-      Thread.sleep(3000)
+      //Thread.sleep(3000)
 
       eventually {
         val deleteRecords = await(deleteRepo.findAll())
