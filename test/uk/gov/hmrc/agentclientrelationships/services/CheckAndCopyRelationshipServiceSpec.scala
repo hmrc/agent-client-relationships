@@ -91,6 +91,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
   when(servicesConfig.getBoolean(eqs("des-if.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
+  when(servicesConfig.getBoolean(eqs("alt-itsa.enabled"))).thenReturn(true)
   implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
   val appConfig1: AppConfig = new AppConfig(configuration, servicesConfig)
 
@@ -195,7 +196,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
     // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
-      s"not create ETMP relationship if no relationship currently exists in CESA " +
+      s"not create ETMP relationship if no relationship currently exists in CESA (and there is no PartialAuth invitation)" +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
@@ -224,10 +225,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         cesaRelationshipDoesNotExist()
+        tryCreateRelationshipFromAltItsa()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
-        await(check) shouldBe NotFound
+        await(check) shouldBe AltItsaNotFoundOrFailed
 
         verifyEtmpRecordNotCreated()
       }
@@ -341,7 +343,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     }
 
     needsRetryStatuses.foreach { status =>
-      s"not create ES relationship if no relationship currently exists in CESA " +
+      s"not create ES relationship if no relationship currently exists in CESA (and no AltItsa invitation) " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = $status" in {
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
@@ -370,10 +372,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         cesaRelationshipDoesNotExist()
+        tryCreateRelationshipFromAltItsa()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
-        await(check) shouldBe NotFound
+        await(check) shouldBe AltItsaNotFoundOrFailed
 
         verifyEsRecordNotCreated()
         verifyEtmpRecordNotCreated()
@@ -433,7 +436,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
     // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
-      s"not create ES relationship if no relationship currently exists in CESA " +
+      s"not create ES relationship if no relationship currently exists in CESA (and no AltItsa invitation found)" +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = Success" in {
         val record = defaultRecord.copy(syncToETMPStatus = status, syncToESStatus = Some(Success))
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
@@ -464,10 +467,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         cesaRelationshipDoesNotExist()
+        tryCreateRelationshipFromAltItsa()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
-        await(check) shouldBe NotFound
+        await(check) shouldBe AltItsaNotFoundOrFailed
 
         verifyEsRecordNotCreated()
         verifyEtmpRecordNotCreated()
@@ -684,6 +688,42 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       verifyEsRecordNotCreated()
 
       await(relationshipCopyRepository.findBy(arn, vrn)) shouldBe None
+    }
+
+    "create relationship when there is no legacy relationship in CESA but there is a alt-itsa authorisation in place. " +
+      "Note - the relationship is created from agent-client-authorisation" in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService = new CheckAndCopyRelationshipsService(
+        es,
+        des,
+        mapping,
+        ugs,
+        aca,
+        relationshipCopyRepository,
+        new CreateRelationshipsService(
+          es,
+          des,
+          ifConnector,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          agentUserService,
+          appConfig1,
+          metrics),
+        auditService,
+        metrics
+      )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      cesaRelationshipDoesNotExist()
+      tryCreateRelationshipFromAltItsa(true)
+
+      val check = relationshipsService
+        .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
+      await(check) shouldBe AltItsaCreateRelationshipSuccess
     }
   }
 
@@ -1385,6 +1425,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         eqs(ec)))
       .thenReturn(Future.successful(()))
   }
+
+  private def tryCreateRelationshipFromAltItsa(created: Boolean = false): OngoingStubbing[Future[Boolean]] =
+    when(aca.updateAltItsaFor(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful created)
 
   private def metricsStub(): OngoingStubbing[MetricRegistry] =
     when(metrics.defaultRegistry).thenReturn(new MetricRegistry)

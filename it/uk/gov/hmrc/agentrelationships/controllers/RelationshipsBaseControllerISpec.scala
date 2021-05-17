@@ -29,7 +29,8 @@ trait RelationshipsBaseControllerISpec
     with DataStreamStub
     with AuthStub
     with MockitoSugar
-    with JsonMatchers {
+    with JsonMatchers
+    with ACAStubs {
 
   override lazy val port: Int = Random.nextInt(1000) + 19000
 
@@ -49,6 +50,7 @@ trait RelationshipsBaseControllerISpec
         "microservice.services.if.port"                    -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
         "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "microservice.services.agent-client-authorisation.port" -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
         "features.copy-relationship.mtd-it"                -> true,
@@ -59,7 +61,8 @@ trait RelationshipsBaseControllerISpec
         "agent.cache.enabled"                              -> true,
         "agent.trackPage.cache.size"                                 -> 1,
         "agent.trackPage.cache.expires"                              -> "1 millis",
-        "agent.trackPage.cache.enabled"                              -> true
+        "agent.trackPage.cache.enabled"                              -> true,
+        "alt-itsa.enabled"                                      -> true
       )
       .configure(mongoConfiguration ++ additionalConfig)
 

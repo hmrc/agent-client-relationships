@@ -152,20 +152,21 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when agent not allocated to client in es nor cesa" in {
+    "return 404 when agent not allocated to client in es nor cesa and no alt-itsa" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(mtdItId)
       givenNinoIsKnownFor(mtdItId, nino)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAdminUser("foo", "any")
+      givenAltItsaUpdate(nino, 200)
 
       val result = await(doRequest)
       result.status shouldBe 404
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
+    "return 404 when agent not allocated to client in es, cesa mapping not found and no alt-itsa" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(mtdItId)
@@ -173,6 +174,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenArnIsUnknownFor(arn)
       givenAdminUser("foo", "any")
+      givenAltItsaUpdate(nino, 200)
 
       val result = await(doRequest)
       result.status shouldBe 404
@@ -423,6 +425,38 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
 
+    }
+
+    // HAPPY PATH FOR ALTERNATIVE-ITSA
+
+    "return 200 when no relationship in CESA but there is an alt-itsa invitation for client" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenArnIsUnknownFor(arn)
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
+      givenAdminUser("foo", "any")
+      givenAltItsaUpdate(nino, 201)
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+    }
+
+    // UNHAPPY PATH FOR ALTERNATIVE-ITSA
+
+    "return 404 when no relationship in CESA and no alt-itsa invitation for client" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenArnIsUnknownFor(arn)
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
+      givenAdminUser("foo", "any")
+      givenAltItsaUpdate(nino, 200)
+
+      val result = await(doRequest)
+      result.status shouldBe 404
     }
 
     //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS

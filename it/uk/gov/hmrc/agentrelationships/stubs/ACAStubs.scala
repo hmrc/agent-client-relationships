@@ -85,4 +85,10 @@ trait ACAStubs {
           .withStatus(responseCode))
     )
 
+  def givenAltItsaUpdate(nino: Nino, responseStatus: Int) =
+    stubFor(
+      put(urlEqualTo(s"/agent-client-authorisation/alt-itsa/update/${nino.value}"))
+        .willReturn(aResponse().withStatus(responseStatus))
+    )
+
 }
