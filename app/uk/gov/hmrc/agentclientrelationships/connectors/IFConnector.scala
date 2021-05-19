@@ -44,10 +44,14 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  val ifBaseUrl = appConfig.ifPlatformBaseUrl
-  val ifAuthToken = appConfig.ifAuthToken
-  val ifEnv = appConfig.ifEnvironment
-  val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
+  private val ifBaseUrl = appConfig.ifPlatformBaseUrl
+  private val ifAuthToken = appConfig.ifAuthToken
+  private val ifEnv = appConfig.ifEnvironment
+  private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
+
+  private val Environment = "Environment"
+  private val CorrelationId = "CorrelationId"
+  private val headerNames = Seq(Environment, CorrelationId, HeaderNames.authorisation)
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
@@ -214,11 +218,15 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       authorization = Some(Authorization(s"Bearer $authToken")),
       extraHeaders =
         hc.extraHeaders :+
-          "Environment"   -> env :+
-          "CorrelationId" -> UUID.randomUUID().toString
+          Environment   -> env :+
+          CorrelationId -> UUID.randomUUID().toString
     )
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.GET(url.toString)(implicitly[HttpReads[HttpResponse]], ifHeaderCarrier, ec)
+      httpClient
+        .GET(url.toString, Nil, ifHeaderCarrier.headers(headerNames))(
+          implicitly[HttpReads[HttpResponse]],
+          ifHeaderCarrier,
+          ec)
     }
   }
 
@@ -229,12 +237,16 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       authorization = Some(Authorization(s"Bearer $authToken")),
       extraHeaders =
         hc.extraHeaders :+
-          "Environment"   -> env :+
-          "CorrelationId" -> UUID.randomUUID().toString
+          Environment   -> env :+
+          CorrelationId -> UUID.randomUUID().toString
     )
     monitor(s"ConsumedAPI-IF-$apiName-POST") {
       httpClient
-        .POST(url.toString, body)(implicitly[Writes[JsValue]], implicitly[HttpReads[HttpResponse]], ifHeaderCarrier, ec)
+        .POST(url.toString, body, ifHeaderCarrier.headers(headerNames))(
+          implicitly[Writes[JsValue]],
+          implicitly[HttpReads[HttpResponse]],
+          ifHeaderCarrier,
+          ec)
     }
   }
 
