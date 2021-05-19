@@ -46,10 +46,14 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  val desBaseUrl = appConfig.desUrl
-  val desAuthToken = appConfig.desToken
-  val desEnv = appConfig.desEnv
-  val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
+  private val desBaseUrl = appConfig.desUrl
+  private val desAuthToken = appConfig.desToken
+  private val desEnv = appConfig.desEnv
+  private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
+
+  private val Environment = "Environment"
+  private val CorrelationId = "CorrelationId"
+  private val headerNames = Seq(Environment, CorrelationId, HeaderNames.authorisation)
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
     val url = new URL(s"${appConfig.desUrl}/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
@@ -285,11 +289,15 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       authorization = Some(Authorization(s"Bearer $authToken")),
       extraHeaders =
         hc.extraHeaders :+
-          "Environment"   -> env :+
-          "CorrelationId" -> UUID.randomUUID().toString
+          Environment   -> env :+
+          CorrelationId -> UUID.randomUUID().toString
     )
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET(url.toString)(implicitly[HttpReads[HttpResponse]], desHeaderCarrier, ec)
+      httpClient
+        .GET(url.toString, Nil, desHeaderCarrier.headers(headerNames))(
+          implicitly[HttpReads[HttpResponse]],
+          desHeaderCarrier,
+          ec)
     }
   }
 
@@ -300,11 +308,11 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       authorization = Some(Authorization(s"Bearer $authToken")),
       extraHeaders =
         hc.extraHeaders :+
-          "Environment"   -> env :+
-          "CorrelationId" -> UUID.randomUUID().toString
+          Environment   -> env :+
+          CorrelationId -> UUID.randomUUID().toString
     )
     monitor(s"ConsumedAPI-DES-$apiName-POST") {
-      httpClient.POST(url.toString, body)(
+      httpClient.POST(url.toString, body, desHeaderCarrier.headers(headerNames))(
         implicitly[Writes[JsValue]],
         implicitly[HttpReads[HttpResponse]],
         desHeaderCarrier,
