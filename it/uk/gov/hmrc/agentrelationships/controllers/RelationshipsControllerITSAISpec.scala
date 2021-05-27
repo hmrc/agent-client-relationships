@@ -1760,4 +1760,27 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
     }
   }
 
+  "GET /agent/:arn/client/:nino/haslegacymapping" should {
+    val requestPath: String = s"/agent-client-relationships/agent/$arn/client/$nino/haslegacymapping"
+    def doRequest = doAgentGetRequest(requestPath)
+    val req = FakeRequest()
+
+    "find legacy relationship" in {
+      givenAuthorisedAsValidAgent(req, arn.value)
+      givenClientHasRelationshipWithAgentInCESA(nino, arn.value)
+      givenArnIsKnownFor(arn, SaAgentReference(arn.value))
+
+      val result = await(doRequest)
+      result.status shouldBe 204
+    }
+
+    "not find legacy relationship" in {
+      givenAuthorisedAsValidAgent(req, arn.value)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenArnIsKnownFor(arn, SaAgentReference(arn.value))
+
+      val result = await(doRequest)
+      result.status shouldBe 404
+    }
+  }
 }
