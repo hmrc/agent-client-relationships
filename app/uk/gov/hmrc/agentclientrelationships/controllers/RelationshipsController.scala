@@ -334,4 +334,20 @@ class RelationshipsController @Inject()(
         )
     }
   }
+
+  def hasLegacyMapping(arn: Arn, nino: Nino): Action[AnyContent] = Action async { implicit request =>
+    implicit val auditData: AuditData = new AuditData()
+    auditData.set("arn", arn)
+    auditData.set("Journey", "hasLegacyMapping")
+    auditData.set("service", "mtd-it")
+    auditData.set("clientId", nino)
+    auditData.set("clientIdType", "nino")
+
+    withAuthorisedAsAgent { arn =>
+      checkOldAndCopyService.lookupCesaForOldRelationship(arn, nino).map(_.nonEmpty).map {
+        case true  => NoContent
+        case false => NotFound
+      }
+    }
+  }
 }
