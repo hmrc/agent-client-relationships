@@ -53,7 +53,6 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
-  private val headerNames = Seq(Environment, CorrelationId, HeaderNames.authorisation)
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
     val url = new URL(s"${appConfig.desUrl}/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
@@ -282,43 +281,29 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
+  private def desHeaders(authToken: String, env: String) = Seq(
+    HeaderNames.authorisation -> s"Bearer $authToken",
+    Environment               -> env,
+    CorrelationId             -> UUID.randomUUID().toString
+  )
+
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] = {
-    val desHeaderCarrier = hc.copy(
-      authorization = Some(Authorization(s"Bearer $authToken")),
-      extraHeaders =
-        hc.extraHeaders :+
-          Environment   -> env :+
-          CorrelationId -> UUID.randomUUID().toString
-    )
+    ec: ExecutionContext): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient
-        .GET(url.toString, Nil, desHeaderCarrier.headers(headerNames))(
-          implicitly[HttpReads[HttpResponse]],
-          desHeaderCarrier,
-          ec)
+      httpClient.GET(url.toString, Nil, desHeaders(authToken, env))(implicitly[HttpReads[HttpResponse]], hc, ec)
     }
-  }
 
   private def postWithDesHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] = {
-    val desHeaderCarrier = hc.copy(
-      authorization = Some(Authorization(s"Bearer $authToken")),
-      extraHeaders =
-        hc.extraHeaders :+
-          Environment   -> env :+
-          CorrelationId -> UUID.randomUUID().toString
-    )
+    ec: ExecutionContext): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-POST") {
-      httpClient.POST(url.toString, body, desHeaderCarrier.headers(headerNames))(
+      httpClient.POST(url.toString, body, desHeaders(authToken, env))(
         implicitly[Writes[JsValue]],
         implicitly[HttpReads[HttpResponse]],
-        desHeaderCarrier,
+        hc,
         ec)
     }
-  }
 
   private def createAgentRelationshipInputJson(refNum: String, agentRefNum: String, clientId: TaxIdentifier) =
     includeIdTypeIfNeeded(clientId)(Json.parse(s"""{
