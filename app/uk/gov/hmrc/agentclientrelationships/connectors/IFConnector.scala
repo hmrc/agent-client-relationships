@@ -51,7 +51,6 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
-  private val headerNames = Seq(Environment, CorrelationId, HeaderNames.authorisation)
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
@@ -213,42 +212,27 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
 
   private def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] = {
-    val ifHeaderCarrier = hc.copy(
-      authorization = Some(Authorization(s"Bearer $authToken")),
-      extraHeaders =
-        hc.extraHeaders :+
-          Environment   -> env :+
-          CorrelationId -> UUID.randomUUID().toString
-    )
+    ec: ExecutionContext): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient
-        .GET(url.toString, Nil, ifHeaderCarrier.headers(headerNames))(
-          implicitly[HttpReads[HttpResponse]],
-          ifHeaderCarrier,
-          ec)
+      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env))(implicitly[HttpReads[HttpResponse]], hc, ec)
     }
-  }
 
   private def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] = {
-    val ifHeaderCarrier = hc.copy(
-      authorization = Some(Authorization(s"Bearer $authToken")),
-      extraHeaders =
-        hc.extraHeaders :+
-          Environment   -> env :+
-          CorrelationId -> UUID.randomUUID().toString
-    )
+    ec: ExecutionContext): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-POST") {
-      httpClient
-        .POST(url.toString, body, ifHeaderCarrier.headers(headerNames))(
-          implicitly[Writes[JsValue]],
-          implicitly[HttpReads[HttpResponse]],
-          ifHeaderCarrier,
-          ec)
+      httpClient.POST(url.toString, body, ifHeaders(authToken, env))(
+        implicitly[Writes[JsValue]],
+        implicitly[HttpReads[HttpResponse]],
+        hc,
+        ec)
     }
-  }
+
+  private def ifHeaders(authToken: String, env: String) = Seq(
+    HeaderNames.authorisation -> s"Bearer $authToken",
+    Environment               -> env,
+    CorrelationId             -> UUID.randomUUID().toString
+  )
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {
