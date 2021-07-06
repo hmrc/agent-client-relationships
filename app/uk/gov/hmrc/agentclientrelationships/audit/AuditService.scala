@@ -86,7 +86,9 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "etmpRelationshipCreated",
     "enrolmentDelegated",
     "AgentDBRecord",
-    "Journey")
+    "Journey",
+    "vrnExistsInEtmp"
+  )
 
   val CheckCESADetailsFields: Seq[String] =
     Seq("agentCode", "credId", "arn", "saAgentRef", "CESARelationship", "nino", "partialAuth")

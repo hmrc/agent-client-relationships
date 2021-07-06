@@ -628,4 +628,23 @@ class DesConnectorSpec
       an[UpstreamErrorResponse] should be thrownBy await(desConnector.getInactiveClientRelationships(mtdItId))
     }
   }
+
+  "Des Connector vrnIsKnownInETMP" should {
+    "return true when the vrn is known in ETMP" in {
+      getVrnIsKnownInETMPFor(vrn)
+      val result = await(desConnector.vrnIsKnownInEtmp(vrn))
+      result shouldBe true
+    }
+
+    "return false when the vrn is not known in ETMP" in {
+      getVrnIsKnownInETMPFor(vrn, 404)
+      val result = await(desConnector.vrnIsKnownInEtmp(vrn))
+      result shouldBe false
+    }
+
+    "fail when DES is unavailable" in {
+      getVrnIsKnownInETMPFor(vrn, 503)
+      an[UpstreamErrorResponse] should be thrownBy await(desConnector.vrnIsKnownInEtmp(vrn))
+    }
+  }
 }

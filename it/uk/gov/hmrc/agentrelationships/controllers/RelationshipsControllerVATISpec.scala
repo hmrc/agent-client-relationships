@@ -153,6 +153,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAdminUser("foo", "any")
+      getVrnIsKnownInETMPFor(vrn)
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -185,7 +186,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "true",
           "AgentDBRecord"           -> "true",
-          "Journey"                 -> "CopyExistingESRelationship"
+          "Journey"                 -> "CopyExistingESRelationship",
+          "vrnExistsInEtmp"         -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
       )
@@ -209,6 +211,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentCanBeAllocatedInDes(vrn, arn)
+      getVrnIsKnownInETMPFor(vrn)
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -241,7 +244,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "false",
           "AgentDBRecord"           -> "true",
-          "Journey"                 -> "CopyExistingESRelationship"
+          "Journey"                 -> "CopyExistingESRelationship",
+          "vrnExistsInEtmp"         -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
       )
@@ -268,6 +272,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAdminUser("foo", "any")
+      getVrnIsKnownInETMPFor(vrn)
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -300,7 +305,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "false",
           "AgentDBRecord"           -> "true",
-          "Journey"                 -> "CopyExistingESRelationship"
+          "Journey"                 -> "CopyExistingESRelationship",
+          "vrnExistsInEtmp"         -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
       )
@@ -331,6 +337,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAgentCanNotBeAllocatedInDes(status = 404)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAdminUser("foo", "any")
+      getVrnIsKnownInETMPFor(vrn)
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -359,6 +366,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAgentCanBeAllocatedInDes(vrn, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, "bar")
       givenAdminUser("foo", "any")
+      getVrnIsKnownInETMPFor(vrn)
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -391,7 +399,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "false",
           "AgentDBRecord"           -> "true",
-          "Journey"                 -> "CopyExistingESRelationship"
+          "Journey"                 -> "CopyExistingESRelationship",
+          "vrnExistsInEtmp"         -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
       )
@@ -409,6 +418,60 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         tags = Map("transactionName" -> "check-es", "path" -> requestPath)
       )
     }
+
+    "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because vrn is not known in ETMP" in {
+      givenPrincipalUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
+      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
+      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
+      getVrnIsKnownInETMPFor(vrn, 404)
+      givenAdminUser("foo", "any")
+
+      def query() =
+        repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+
+      await(query()) shouldBe empty
+
+      val result = await(doRequest)
+      result.status shouldBe 200
+
+      await(query()) shouldBe empty
+
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.CreateRelationship,
+        detail = Map(
+          "arn"                     -> arn.value,
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "service"                 -> "mtd-vat",
+          "vrn"                     -> vrn.value,
+          "oldAgentCodes"           -> oldAgentCode,
+          "ESRelationship"          -> "true",
+          "etmpRelationshipCreated" -> "",
+          "enrolmentDelegated"      -> "",
+          "AgentDBRecord"           -> "",
+          "Journey"                 -> "CopyExistingESRelationship",
+          "vrnExistsInEtmp"         -> "false"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
+
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.CheckES,
+        detail = Map(
+          "arn"                      -> arn.value,
+          "credId"                   -> "any",
+          "agentCode"                -> "bar",
+          "ESRelationship"           -> "true",
+          "vrn"                      -> vrn.value,
+          "oldAgentCodes"            -> oldAgentCode),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
+    }
+
 
     "return 404 when relationship is not found in es but relationship copy was made before" in {
       givenPrincipalUser(arn, "foo")

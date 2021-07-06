@@ -172,6 +172,19 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     }
   }
 
+  //DES API #1363  Get Vat Customer Information
+  def vrnIsKnownInEtmp(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
+    val url = new URL(s"$desBaseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information")
+    getWithDesHeaders("GetVatCustomerInformation", url, desAuthToken, desEnv).map { response =>
+      response.status match {
+        case Status.OK        => true
+        case Status.NOT_FOUND => false
+        case other: Int =>
+          throw UpstreamErrorResponse(response.body, other, other)
+      }
+    }
+  }
+
   private def inactiveClientRelationshipDesUrl(taxIdentifier: TaxIdentifier, encodedClientId: String) = {
     val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
     val from = LocalDate.parse(fromDateString).toString
