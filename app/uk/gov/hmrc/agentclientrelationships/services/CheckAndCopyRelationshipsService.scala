@@ -74,6 +74,10 @@ case object AltItsaNotFoundOrFailed extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
+case object VrnNotFoundInEtmp extends CheckAndCopyResult {
+  override val grantAccess = true
+}
+
 @Singleton
 class CheckAndCopyRelationshipsService @Inject()(
   es: EnrolmentStoreProxyConnector,
@@ -195,11 +199,9 @@ class CheckAndCopyRelationshipsService @Inject()(
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData): Future[CheckAndCopyResult] = {
-
     auditData.set("Journey", "CopyExistingESRelationship")
     auditData.set("service", "mtd-vat")
     auditData.set("vrn", vrn)
-
     relationshipCopyRepository.findBy(arn, vrn).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         //logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
@@ -207,35 +209,50 @@ class CheckAndCopyRelationshipsService @Inject()(
       case maybeRelationshipCopyRecord @ _ =>
         for {
           references <- lookupESForOldRelationship(arn, vrn)
-          result <- if (references.nonEmpty)
-                     findOrCreateRelationshipCopyRecordAndCopy(
-                       references.map(VatRef.apply),
-                       maybeRelationshipCopyRecord,
-                       arn,
-                       vrn)
-                       .map {
-                         case Some(_) =>
-                           auditService.sendCreateRelationshipAuditEventForMtdVat
-                           mark("Count-CopyRelationship-VAT-FoundAndCopied")
-                           FoundAndCopied
-                         case None =>
-                           auditService.sendCreateRelationshipAuditEventForMtdVat
-                           mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
-                           logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
-                           FoundButLockedCouldNotCopy
-                       }
-                       .recover {
-                         case NonFatal(ex) =>
-                           logger.warn(
-                             s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
-                             ex)
-                           auditService.sendCreateRelationshipAuditEventForMtdVat
-                           mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
-                           FoundAndFailedToCopy
-                       } else Future.successful(NotFound)
+          result <- if (references.nonEmpty) checkVrnExistsInEtmp(vrn).flatMap {
+                     case true => {
+                       findOrCreateRelationshipCopyRecordAndCopy(
+                         references.map(VatRef.apply),
+                         maybeRelationshipCopyRecord,
+                         arn,
+                         vrn)
+                         .map {
+                           case Some(_) =>
+                             auditService.sendCreateRelationshipAuditEventForMtdVat
+                             mark("Count-CopyRelationship-VAT-FoundAndCopied")
+                             FoundAndCopied
+                           case None =>
+                             auditService.sendCreateRelationshipAuditEventForMtdVat
+                             mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
+                             logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
+                             FoundButLockedCouldNotCopy
+                         }
+                         .recover {
+                           case NonFatal(ex) =>
+                             logger.warn(
+                               s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
+                               ex)
+                             auditService.sendCreateRelationshipAuditEventForMtdVat
+                             mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
+                             FoundAndFailedToCopy
+                         }
+                     }
+                     case false => {
+                       auditService.sendCreateRelationshipAuditEventForMtdVat
+                       Future.successful(VrnNotFoundInEtmp)
+                     }
+                   } else Future.successful(NotFound)
         } yield result
     }
   }
+
+  private def checkVrnExistsInEtmp(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext, auditData: AuditData) =
+    des
+      .vrnIsKnownInEtmp(vrn)
+      .map(result => {
+        auditData.set("vrnExistsInEtmp", result)
+        result
+      })
 
   def lookupCesaForOldRelationship(arn: Arn, nino: Nino)(
     implicit ec: ExecutionContext,

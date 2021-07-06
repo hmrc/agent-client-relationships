@@ -181,6 +181,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
       givenAdminUser("foo", "any")
+      getVrnIsKnownInETMPFor(vrn)
 
       def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
 
@@ -205,7 +206,8 @@ class RelationshipsControllerWithoutMongoISpec
           "etmpRelationshipCreated" -> "false",
           "enrolmentDelegated"      -> "false",
           "AgentDBRecord"           -> "false",
-          "Journey"                 -> "CopyExistingESRelationship"
+          "Journey"                 -> "CopyExistingESRelationship",
+          "vrnExistsInEtmp"         -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
       )

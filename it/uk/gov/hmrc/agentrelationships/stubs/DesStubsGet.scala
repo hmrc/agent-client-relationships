@@ -428,4 +428,9 @@ trait DesStubsGet {
                      |]
                      |}""".stripMargin)))
 
+  def getVrnIsKnownInETMPFor(vrn: Vrn, status: Int = 200): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
+      .willReturn(aResponse().withStatus(status)))
+
 }

@@ -675,6 +675,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val request = FakeRequest()
 
       oldESRelationshipExists()
+      vrnIsKnownInETMP(vrn, true)
       metricsStub()
 
       val check = await(lockService.tryLock(arn, vrn) {
@@ -758,6 +759,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         oldESRelationshipExists()
+        vrnIsKnownInETMP(vrn, true)
         relationshipWillBeCreated(vrn)
         metricsStub()
 
@@ -769,6 +771,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         verifyEtmpRecordCreatedForMtdVat()
         val auditDetails = verifyESAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
+        auditDetails("vrnExistsInEtmp") shouldBe true
         await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToETMPStatus shouldBe Some(Success)
       }
 
@@ -804,6 +807,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         oldESRelationshipExists()
+        vrnIsKnownInETMP(vrn, true)
         relationshipWillBeCreated(vrn)
         metricsStub()
 
@@ -861,6 +865,43 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       }
     }
 
+    s"return VrnNotFoundInEtmp when relationship currently exists in HMCE-VATDEC-ORG but Vrn is not known in ETMP " in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService = new CheckAndCopyRelationshipsService(
+        es,
+        des,
+        mapping,
+        ugs,
+        aca,
+        relationshipCopyRepository,
+        new CreateRelationshipsService(
+          es,
+          des,
+          ifConnector,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          agentUserService,
+          appConfig1,
+          metrics),
+        auditService,
+        metrics
+      )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      oldESRelationshipExists()
+      vrnIsKnownInETMP(vrn, false)
+
+      val check = relationshipsService
+        .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
+      await(check) shouldBe VrnNotFoundInEtmp
+
+      verifyEtmpRecordNotCreatedForMtdVat()
+    }
+
     needsRetryStatuses.filterNot(s => s.contains(InProgress) || s.contains(InProgress)) foreach { status =>
       s"create ES relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = Success and syncToESStatus = $status" in {
@@ -899,6 +940,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         arnExistsForGroupId
         oldESRelationshipExists()
+        vrnIsKnownInETMP(vrn, true)
         previousRelationshipWillBeRemoved(vrn)
         relationshipWillBeCreated(vrn)
         metricsStub()
@@ -948,6 +990,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         oldESRelationshipExists()
         relationshipWillBeCreated(vrn)
+        vrnIsKnownInETMP(vrn, true)
         metricsStub()
 
         val maybeCheck = await(lockService.tryLock(arn, vrn) {
@@ -1040,6 +1083,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         metricsStub()
         oldESRelationshipExists()
+        vrnIsKnownInETMP(vrn, true)
         relationshipWillBeCreated(vrn)
 
         val check = relationshipsService
@@ -1415,6 +1459,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(identifier))(any[HeaderCarrier](), any[ExecutionContext]()))
       .thenReturn(Future.successful(()))
   }
+
+  private def vrnIsKnownInETMP(vrn: Vrn, isKnown: Boolean): OngoingStubbing[Future[Boolean]] =
+    when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(identifier: TaxIdentifier): OngoingStubbing[Future[Unit]] = {
     when(des.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec)))
