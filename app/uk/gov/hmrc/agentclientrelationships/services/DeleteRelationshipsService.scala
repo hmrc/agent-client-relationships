@@ -85,8 +85,8 @@ class DeleteRelationshipsService @Inject()(
       val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType, headerCarrier = Some(hc))
       for {
         _ <- createDeleteRecord(record)
-        _ <- deleteEtmpRecord(arn, taxIdentifier)
         _ <- deleteEsRecord(arn, taxIdentifier)
+        _ <- deleteEtmpRecord(arn, taxIdentifier)
         _ <- removeDeleteRecord(arn, taxIdentifier)
       } yield ()
     }
@@ -293,8 +293,8 @@ class DeleteRelationshipsService @Inject()(
           case (true, true) =>
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
-              _ <- deleteEtmpRecord(arn, identifier)
               _ <- deleteEsRecord(arn, identifier)
+              _ <- deleteEtmpRecord(arn, identifier)
             } yield true
           case (false, true) =>
             for {
