@@ -1061,12 +1061,11 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
         givenEsIsUnavailable()
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
       }
 
-      "return 502" in new StubsForThisScenario {
+      "return 503" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 503
-        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
+        verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1084,7 +1083,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
               DateTime.now.minusMinutes(1)
             )))
         await(doAgentDeleteRequest(requestPath)).status shouldBe 503
-        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
+        verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
       }
     }
 
@@ -1093,14 +1092,15 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenUserIsSubscribedAgent(arn)
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenDesReturnsServiceUnavailable()
+        givenAdminUser("foo", "any")
       }
 
-      "return 502" in new StubsForThisScenario {
+      "return 503" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 503
-        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), None)
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), Some(SyncStatus.Success))
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1116,12 +1116,14 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAdminUser("foo", "any")
       }
 
       "return 404" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
-        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), None)
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), Some(SyncStatus.Success))
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1425,12 +1427,11 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenUserIsSubscribedAgent(arn)
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenEsIsUnavailable()
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
       }
 
-      "return 502" in new StubsForThisScenario {
+      "return 503" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 503
-        verifyDeleteRecordHasStatuses(Some(SyncStatus.Success), Some(SyncStatus.Failed))
+        verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1469,12 +1470,14 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAdminUser("foo", "any")
       }
 
       "return 404" in new StubsForThisScenario {
         await(doAgentDeleteRequest(requestPath)).status shouldBe 404
-        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), None)
+        verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), Some(SyncStatus.Success))
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {

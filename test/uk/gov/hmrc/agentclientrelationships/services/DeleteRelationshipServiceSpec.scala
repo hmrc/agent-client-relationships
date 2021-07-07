@@ -73,11 +73,31 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.findBy(arn, mtdItId)) shouldBe None
     }
 
-    "save deleteRecord if ES de-allocation partially failed" in new TestFixture {
+    "save deleteRecord if ES de-allocation failed" in new TestFixture {
       givenRelationshipBetweenAgentAndClientExists
       givenAgentExists
-      givenETMPDeAuthSucceeds
       givenESDeAllocationFails
+
+      implicit val request = FakeRequest()
+      implicit val currentUser =
+        CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
+      an[Exception] shouldBe thrownBy {
+        await(underTest.deleteRelationship(arn, mtdItId))
+      }
+
+      verifyESDeAllocateHasBeenPerformed
+      verifyETMPDeAuthorisationHasNOTBeenPerformed
+
+      await(repo.findBy(arn, mtdItId)) should matchPattern {
+        case Some(DeleteRecord(arn.value, _, _, _, None, Some(Failed), None, _, _)) =>
+      }
+    }
+
+    "save deleteRecord if ETMP de-authorisation failed" in new TestFixture {
+      givenAgentExists
+      givenRelationshipBetweenAgentAndClientExists
+      givenESDeAllocationSucceeds
+      givenETMPDeAuthFails
 
       implicit val request = FakeRequest()
       implicit val currentUser =
@@ -90,27 +110,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyETMPDeAuthorisationHasBeenPerformed
 
       await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Success), Some(Failed), None, _, _)) =>
-      }
-    }
-
-    "save deleteRecord if ETMP de-authorisation partially failed" in new TestFixture {
-      givenAgentExists
-      givenRelationshipBetweenAgentAndClientExists
-      givenETMPDeAuthFails
-
-      implicit val request = FakeRequest()
-      implicit val currentUser =
-        CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
-      an[Exception] shouldBe thrownBy {
-        await(underTest.deleteRelationship(arn, mtdItId))
-      }
-
-      verifyESDeAllocateHasNOTBeenPerformed
-      verifyETMPDeAuthorisationHasBeenPerformed
-
-      await(repo.findBy(arn, mtdItId)) should matchPattern {
-        case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), None, None, _, _)) =>
+        case Some(DeleteRecord(arn.value, _, _, _, Some(Failed), Some(Success), None, _, _)) =>
       }
       await(repo.remove(arn, mtdItId))
     }
