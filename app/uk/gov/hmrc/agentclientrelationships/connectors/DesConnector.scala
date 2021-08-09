@@ -177,8 +177,9 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     val url = new URL(s"$desBaseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information")
     getWithDesHeaders("GetVatCustomerInformation", url, desAuthToken, desEnv).map { response =>
       response.status match {
-        case Status.OK        => true
-        case Status.NOT_FOUND => false
+        case Status.OK if response.json.as[JsObject].fields.isEmpty => false
+        case Status.OK                                              => true
+        case Status.NOT_FOUND                                       => false
         case other: Int =>
           throw UpstreamErrorResponse(response.body, other, other)
       }

@@ -425,7 +425,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
-      getVrnIsKnownInETMPFor(vrn, 404)
+      getVrnIsNotKnownInETMPFor(vrn)
       givenAdminUser("foo", "any")
 
       def query() =

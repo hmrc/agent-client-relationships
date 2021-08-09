@@ -428,9 +428,19 @@ trait DesStubsGet {
                      |]
                      |}""".stripMargin)))
 
-  def getVrnIsKnownInETMPFor(vrn: Vrn, status: Int = 200): StubMapping =
+  def getVrnIsKnownInETMPFor(vrn: Vrn): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
-      .willReturn(aResponse().withStatus(status)))
+      .willReturn(aResponse().withBody(s"""{ "vrn": "${vrn.value}"}""").withStatus(200)))
+
+  def getVrnIsNotKnownInETMPFor(vrn: Vrn): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
+        .willReturn(aResponse().withBody(s"""{}""").withStatus(200)))
+
+  def givenDESRespondsWithStatusForVrn(vrn: Vrn, status: Int): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
+        .willReturn(aResponse().withStatus(status)))
 
 }
