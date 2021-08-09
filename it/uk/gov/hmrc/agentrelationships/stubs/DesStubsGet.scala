@@ -428,9 +428,128 @@ trait DesStubsGet {
                      |]
                      |}""".stripMargin)))
 
-  def getVrnIsKnownInETMPFor(vrn: Vrn, status: Int = 200): StubMapping =
+  def getVrnIsKnownInETMPFor(vrn: Vrn): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
-      .willReturn(aResponse().withStatus(status)))
+      .willReturn(aResponse().withBody(s"""{
+                                          |    "vrn": "${vrn.value}",
+                                          |    "approvedInformation": {
+                                          |        "customerDetails": {
+                                          |            "individual": {
+                                          |                "firstName": "Daniel",
+                                          |                "lastName": "Begum"
+                                          |            },
+                                          |            "dateOfBirth": "1939-08-11",
+                                          |            "tradingName": "Dominum",
+                                          |            "mandationStatus": "3",
+                                          |            "registrationReason": "0001",
+                                          |            "effectiveRegistrationDate": "2009-11-10",
+                                          |            "businessStartDate": "2005-07-15"
+                                          |        },
+                                          |        "PPOB": {
+                                          |            "address": {
+                                          |                "line1": "73 Tut Hole",
+                                          |                "line2": "Motherwell",
+                                          |                "postCode": "ML93 5ML",
+                                          |                "countryCode": "GB"
+                                          |            },
+                                          |            "RLS": "0006",
+                                          |            "contactDetails": {
+                                          |                "primaryPhoneNumber": "04538 597689",
+                                          |                "mobileNumber": "08217 419358",
+                                          |                "faxNumber": "08217 419358",
+                                          |                "emailAddress": "l@D.eu"
+                                          |            },
+                                          |            "websiteAddress": "v"
+                                          |        },
+                                          |        "correspondenceContactDetails": {
+                                          |            "address": {
+                                          |                "line1": "58 Abercorn Place",
+                                          |                "line2": "The Hassan House",
+                                          |                "postCode": "CA32 8AC",
+                                          |                "countryCode": "GB"
+                                          |            },
+                                          |            "RLS": "0006",
+                                          |            "contactDetails": {
+                                          |                "primaryPhoneNumber": "04538 597689",
+                                          |                "mobileNumber": "08217 419358",
+                                          |                "faxNumber": "08217 419358",
+                                          |                "emailAddress": "l@D.eu"
+                                          |            }
+                                          |        },
+                                          |        "bankDetails": {
+                                          |            "IBAN": "v",
+                                          |            "BIC": "v",
+                                          |            "accountHolderName": "v",
+                                          |            "bankAccountNumber": "82174193",
+                                          |            "sortCode": "821741",
+                                          |            "buildingSocietyNumber": "v",
+                                          |            "bankBuildSocietyName": "v"
+                                          |        },
+                                          |        "businessActivities": {
+                                          |            "primaryMainCode": "82174",
+                                          |            "mainCode2": "82174",
+                                          |            "mainCode3": "82174",
+                                          |            "mainCode4": "82174"
+                                          |        },
+                                          |        "flatRateScheme": {
+                                          |            "FRSCategory": "015",
+                                          |            "FRSPercentage": 0,
+                                          |            "startDate": "1985-04-09",
+                                          |            "limitedCostTrader": true
+                                          |        },
+                                          |        "returnPeriod": {
+                                          |            "stdReturnPeriod": "MC",
+                                          |            "nonStdTaxPeriods": {
+                                          |                "period01": "2009-11-10",
+                                          |                "period02": "2009-11-10",
+                                          |                "period03": "2009-11-10",
+                                          |                "period04": "2009-11-10",
+                                          |                "period05": "2009-11-10",
+                                          |                "period06": "2009-11-10",
+                                          |                "period07": "2009-11-10",
+                                          |                "period08": "2009-11-10",
+                                          |                "period09": "2009-11-10",
+                                          |                "period10": "2009-11-10",
+                                          |                "period11": "2009-11-10",
+                                          |                "period12": "2009-11-10",
+                                          |                "period13": "2009-11-10",
+                                          |                "period14": "2009-11-10",
+                                          |                "period15": "2009-11-10",
+                                          |                "period16": "2009-11-10",
+                                          |                "period17": "2009-11-10",
+                                          |                "period18": "2009-11-10",
+                                          |                "period19": "2009-11-10",
+                                          |                "period20": "2009-11-10",
+                                          |                "period21": "2009-11-10",
+                                          |                "period22": "2009-11-10"
+                                          |            }
+                                          |        },
+                                          |        "groupOrPartnerMbrs": [
+                                          |            {
+                                          |                "typeOfRelationship": "01",
+                                          |                "organisationName": "Dominum",
+                                          |                "individual": {
+                                          |                    "title": "0003",
+                                          |                    "firstName": "Daniel",
+                                          |                    "middleName": "Lincoln",
+                                          |                    "lastName": "Bonneviot"
+                                          |                },
+                                          |                "SAP_Number": "174193586055099507220032829225513697468686"
+                                          |            }
+                                          |        ]
+                                          |    },
+                                          |    "id": "6111032d3700004c3db66092"
+                                          |}""".stripMargin).withStatus(200)))
+
+  def getVrnIsNotKnownInETMPFor(vrn: Vrn): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
+        .willReturn(aResponse().withBody(s"""{}""").withStatus(200)))
+
+  def givenDESRespondsWithStatusForVrn(vrn: Vrn, status: Int): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
+        .willReturn(aResponse().withStatus(status)))
 
 }
