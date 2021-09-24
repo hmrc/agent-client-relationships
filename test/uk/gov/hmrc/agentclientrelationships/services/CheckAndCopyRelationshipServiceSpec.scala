@@ -26,6 +26,7 @@ import org.scalatest.BeforeAndAfterEach
 import play.api.Configuration
 import play.api.mvc.Request
 import play.api.test.FakeRequest
+import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -38,7 +39,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -1392,7 +1393,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         await(check) shouldBe CopyRelationshipNotEnabled
 
-        verifyZeroInteractions(des, mapping, relationshipCopyRepository, lockService, auditService, es)
+        verifyNoInteractions(des, mapping, relationshipCopyRepository, lockService, auditService, es)
       }
   }
 
@@ -1541,6 +1542,4 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     auditDetails("ESRelationship") shouldBe true
     auditDetails
   }
-  // remove implicit
-  override def liftFuture[A](v: A): Future[A] = super.liftFuture(v)
 }
