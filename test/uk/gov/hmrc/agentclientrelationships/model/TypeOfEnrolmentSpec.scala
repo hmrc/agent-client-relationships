@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 class TypeOfEnrolmentSpec extends UnitSpec {
 

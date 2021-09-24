@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.support
 
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.play.test.UnitSpec
 
 class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
@@ -45,7 +44,7 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
     "return IllegalArgumentException when tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy
-        await(enrolmentKeyPrefixFor(Eori("foo")))
+        enrolmentKeyPrefixFor(Eori("foo"))
     }
   }
 
@@ -72,7 +71,7 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
     "return IllegalArgumentException when tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy
-        await(identifierNickname(Eori("foo")))
+        identifierNickname(Eori("foo"))
     }
   }
 

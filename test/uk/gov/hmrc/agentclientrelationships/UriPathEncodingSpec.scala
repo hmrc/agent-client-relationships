@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships
 
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 class UriPathEncodingSpec extends UnitSpec {
   "encodePathSegments" should {

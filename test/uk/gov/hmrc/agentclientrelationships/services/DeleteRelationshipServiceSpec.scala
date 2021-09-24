@@ -24,6 +24,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.Configuration
 import play.api.mvc.Request
 import play.api.test.FakeRequest
+import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -37,7 +38,7 @@ import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -461,7 +462,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       when(
         checkService
           .checkForRelationship(eqs(mtdItId), eqs(agentUser))(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(Right(true))
+        .thenReturn(Future.successful(Right(true)))
 
     def givenETMPDeAuthSucceeds =
       when(des.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
