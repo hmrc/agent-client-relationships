@@ -116,7 +116,7 @@ trait RelationshipsBaseControllerISpec
 
   val cgtRef = CgtRef("XMCGTP123456789")
 
-  val pptRef = PptRef("XAPPT1234567890")
+  val pptRef = PptRef("XAPPT0004567890")
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
