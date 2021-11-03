@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.binders
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, PptRef, Utr, Vrn}
 import uk.gov.hmrc.domain.Nino
 
 object PathBinders {
@@ -25,4 +25,5 @@ object PathBinders {
   implicit object NinoBinder extends SimpleObjectBinder[Nino](Nino.apply, _.value)
   implicit object VrnBinder extends SimpleObjectBinder[Vrn](Vrn.apply, _.value)
   implicit object UtrBinder extends SimpleObjectBinder[Utr](Utr.apply, _.value)
+  implicit object PptRefBinder extends SimpleObjectBinder[PptRef](PptRef.apply, _.value)
 }

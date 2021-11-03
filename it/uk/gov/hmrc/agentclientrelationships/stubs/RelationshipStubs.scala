@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
@@ -40,6 +40,9 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenDelegatedGroupIdsExistForCgt(cgtRef: CgtRef, ids: String*) =
     givenDelegatedGroupIdsExistFor(cgtRef, Set("bar", "foo") ++ ids.toSet)
 
+  def givenDelegatedGroupIdsExistForPpt(pptRef: PptRef, ids: String*) =
+    givenDelegatedGroupIdsExistFor(pptRef, Set("bar", "foo") ++ ids.toSet)
+
   def givenDelegatedGroupIdsNotExistForTrust(utr: Utr) =
     givenDelegatedGroupIdsNotExistFor(utr)
 
@@ -49,6 +52,9 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenDelegatedGroupIdsNotExistForCgt(cgtRef: CgtRef) =
     givenDelegatedGroupIdsNotExistFor(cgtRef)
 
+  def givenDelegatedGroupIdsNotExistForPpt(pptRef: PptRef) =
+    givenDelegatedGroupIdsNotExistFor(pptRef)
+
   def givenTrustEnrolmentAllocationSucceeds(utr: Utr, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-TERS-ORG", "SAUTR", utr.value, agentCode)
 
@@ -57,6 +63,9 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
 
   def givenCGTEnrolmentAllocationSucceeds(cgtRef: CgtRef, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-CGT-PD", "CGTPDRef", cgtRef.value, agentCode)
+
+  def givenPptEnrolmentAllocationSucceeds(pptRef: PptRef, agentCode: String) =
+    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-PPT-ORG", "PPTReference", pptRef.value, agentCode)
 
   def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) =
     givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))

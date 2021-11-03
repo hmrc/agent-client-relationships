@@ -96,12 +96,9 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     }
   }
 
-  // DES API #1168 Get Agent Status Relationship. This API is moving to IF platform hence baseUrl is feature switched
-  def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
-    val url = taxIdentifier match {
+    taxIdentifier match {
       case MtdItId(_) =>
         new URL(
           s"$desBaseUrl/registration/relationship?ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
@@ -116,8 +113,16 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       case CgtRef(_) =>
         new URL(
           s"$desBaseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+      case PptRef(_) =>
+        throw new Exception("PptRef is not supported on DES platform")
     }
+  }
 
+  // DES API #1168 Get Agent Status Relationship. This API is moving to IF platform hence baseUrl is feature switched
+  def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+    val url = getActiveClientRelationshipsUrl(taxIdentifier)
     getWithDesHeaders("GetActiveClientItSaRelationships", url, desAuthToken, desEnv).map { response =>
       response.status match {
         case Status.OK =>

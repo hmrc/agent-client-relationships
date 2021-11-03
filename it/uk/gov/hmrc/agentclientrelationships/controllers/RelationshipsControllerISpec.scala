@@ -242,7 +242,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
 
     "return 200 with a map of relationships and filter only on active ones" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
 
       getActiveRelationshipsViaClient(mtdItId, arn)
       getActiveRelationshipsViaClient(vrn, arn2)
@@ -259,7 +259,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 200 with empty map of active relationships when they are found inactive" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
 
       desOnlyList.foreach { notActiveClient =>
         getInactiveRelationshipViaClient(notActiveClient.clientId, arn.value)
@@ -275,7 +275,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 200 with empty map of active relationships when not found" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
 
       desOnlyList.foreach { notActiveClient =>
         getActiveRelationshipFailsWith(notActiveClient.clientId, 404)
@@ -340,7 +340,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
     "return a sequence of inactive relationships" in {
 
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
 
       getInactiveRelationshipsForClient(mtdItId)
       getInactiveRelationshipsForClient(vrn)
@@ -359,7 +359,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
     "return OK with empty body if no inactive relationships found" in {
 
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
 
       getNoInactiveRelationshipsForClient(mtdItId)
       getNoInactiveRelationshipsForClient(vrn)

@@ -220,6 +220,7 @@ trait AuthStub {
       case Utr(v)     => ("HMRC-TERS-ORG", "SAUTR", v)
       case Urn(v)     => ("HMRC-TERSNT-ORG", "URN", v)
       case CgtRef(v)  => ("HMRC-CGT-PD", "CGTPDRef", v)
+      case PptRef(v)  => ("HMRC-PPT-ORG", "PPTReference", v)
     }
 
     stubFor(
@@ -268,13 +269,14 @@ trait AuthStub {
     this
   }
 
-  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn, utr: Utr): FakeRequest[A] = {
+  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn, utr: Utr, pptRef: PptRef): FakeRequest[A] = {
     val enrolments =
       Seq(
         Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value),
         Enrolment("HMRC-MTD-VAT", "VRN", vrn.value),
         Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value),
-        Enrolment("HMRC-TERSNT-ORG", "URN", utr.value))
+        Enrolment("HMRC-TERSNT-ORG", "URN", utr.value),
+        Enrolment("HMRC-PPT-ORG", "PPTReference", pptRef.value))
 
     givenAuthorisedFor(
       s"""

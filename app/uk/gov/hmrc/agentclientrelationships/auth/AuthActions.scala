@@ -107,12 +107,13 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     case EnrolmentTrust.enrolmentKey   => EnrolmentTrust.identifierKey
     case EnrolmentTrustNT.enrolmentKey => EnrolmentTrustNT.identifierKey
     case EnrolmentCgt.enrolmentKey     => EnrolmentCgt.identifierKey
+    case EnrolmentPpt.enrolmentKey     => EnrolmentPpt.identifierKey
   }
 
   private def supportedEnrolments(enrolment: Enrolment): Option[Enrolment] =
     enrolment.key match {
       case EnrolmentMtdIt.enrolmentKey | EnrolmentMtdVat.enrolmentKey | EnrolmentTrust.enrolmentKey |
-          EnrolmentTrustNT.enrolmentKey | EnrolmentCgt.enrolmentKey =>
+          EnrolmentTrustNT.enrolmentKey | EnrolmentCgt.enrolmentKey | EnrolmentPpt.enrolmentKey =>
         Some(enrolment)
       case _ => None
     }
@@ -120,11 +121,12 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   private def extractIdentifier(enrolment: Enrolment, service: String) =
     enrolment.getIdentifier(supportedIdentifierKeys(service)).map { i =>
       i.key match {
-        case "MTDITID"  => MtdItId(i.value)
-        case "VRN"      => Vrn(i.value)
-        case "SAUTR"    => Utr(i.value)
-        case "URN"      => Urn(i.value)
-        case "CGTPDRef" => CgtRef(i.value)
+        case "MTDITID"      => MtdItId(i.value)
+        case "VRN"          => Vrn(i.value)
+        case "SAUTR"        => Utr(i.value)
+        case "URN"          => Urn(i.value)
+        case "CGTPDRef"     => CgtRef(i.value)
+        case "PPTReference" => PptRef(i.value)
       }
     }
 
