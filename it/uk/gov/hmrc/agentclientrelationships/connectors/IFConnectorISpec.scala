@@ -70,12 +70,14 @@ class IFConnectorISpec
   val utr = Utr("1704066305")
   val urn = Urn("XXTRUST12345678")
   val cgt = CgtRef("XMCGTP837878749")
+  val pptRef = PptRef("XAPPT0004567890")
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_)     => Vrn("101747641")
     case Utr(_)     => Utr("2134514321")
     case Urn(_)     => Urn("XXTRUST12345678")
+    case PptRef(_)  => PptRef("XAPPT0004567890")
   }
 
   "IFConnector CreateAgentRelationship" should {
@@ -167,16 +169,37 @@ class IFConnectorISpec
       )
     }
 
+    "request body contains regime as PPT and idType as ZPPT when client Id is a PptRef" in {
+      givenAgentCanBeAllocatedInIF(PptRef("somePpt"), Arn("someArn"))
+      givenAuditConnector()
+
+      await(ifConnector.createAgentRelationship(PptRef("somePpt"), Arn("someArn")))
+
+      verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withRequestBody(
+            equalToJson(
+              s"""{
+                 |"regime": "PPT",
+                 |"refNumber" : "somePpt"
+                 |}""".stripMargin,
+              true,
+              true
+            ))
+      )
+    }
+
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(ifConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
-    "fail when DES is throwing errors" in {
+    "fail when IF is throwing errors" in {
       givenIFReturnsServerError()
       an[UpstreamErrorResponse] should be thrownBy await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
 
-    "fail when DES is unavailable" in {
+    "fail when IT is unavailable" in {
       givenIFReturnsServiceUnavailable()
       an[UpstreamErrorResponse] should be thrownBy await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
     }
@@ -205,6 +228,12 @@ class IFConnectorISpec
       givenAgentCanBeDeallocatedInIF(Urn("foo"), Arn("bar"))
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(Urn("foo"), Arn("bar"))).processingDate should not be null
+    }
+
+    "delete relationship between agent and client and return 200 for PPT service with PptRef" in {
+      givenAgentCanBeDeallocatedInIF(PptRef("foo"), Arn("bar"))
+      givenAuditConnector()
+      await(ifConnector.deleteAgentRelationship(PptRef("foo"), Arn("bar"))).processingDate should not be null
     }
 
     "not delete relationship between agent and client and return 404 for ItSa service" in {

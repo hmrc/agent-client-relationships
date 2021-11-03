@@ -88,6 +88,8 @@ trait RelationshipsBaseControllerISpec
 
   val HMRCCGTPD = "HMRC-CGT-PD"
 
+  val HMRCPPTORG = "HMRC-PPT-ORG"
+
   val arn = Arn("AARN0000002")
   val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
   val arn2 = Arn("AARN0000004")
@@ -114,11 +116,14 @@ trait RelationshipsBaseControllerISpec
 
   val cgtRef = CgtRef("XMCGTP123456789")
 
+  val pptRef = PptRef("XAPPT0004567890")
+
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_) => Vrn("101747641")
     case Utr(_) => Utr("2134514321")
     case CgtRef(_) => cgtRef
+    case PptRef(_) => pptRef
   }
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()

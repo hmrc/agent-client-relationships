@@ -28,7 +28,7 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, ActiveRelationshipResponse, InactiveRelationship, InactiveRelationshipResponse, RegistrationRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HttpClient, _}
@@ -62,12 +62,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     case Some(d) => d.isBefore(LocalDate.now(DateTimeZone.UTC)) || d.equals(LocalDate.now(DateTimeZone.UTC))
   }
 
-  // IF API #1168
-  def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
-    val url = taxIdentifier match {
+    taxIdentifier match {
       case MtdItId(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
@@ -83,8 +80,17 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case CgtRef(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idtype=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+      case PptRef(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
     }
+  }
 
+  // IF API #1168
+  def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+    val url = getActiveClientRelationshipsUrl(taxIdentifier)
     getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
         case Status.OK =>
@@ -207,6 +213,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         new URL(
           s"$ifBaseUrl/registration/relationship?idtype=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+      case PptRef(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now")
     }
   }
 
@@ -241,6 +251,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case Utr(_)     => "TRS"
       case Urn(_)     => "TRS"
       case CgtRef(_)  => "CGT"
+      case PptRef(_)  => "PPT"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
@@ -285,6 +296,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
           (("relationshipType", JsString("ZA01"))) +
           (("authProfile", JsString("ALL00001"))) +
           (("idType", JsString("ZCGT")))
+      case Some("PPT") =>
+        request +
+          (("relationshipType", JsString("ZA01"))) +
+          (("IdType", JsString("ZPPT")))
       case _ =>
         request
     }
