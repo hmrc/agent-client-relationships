@@ -67,7 +67,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case Vrn(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idtype=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
@@ -300,6 +300,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         request +
           (("relationshipType", JsString("ZA01"))) +
           (("IdType", JsString("ZPPT")))
+      case Some("ITSA") =>
+        request +
+          (("relationshipType", JsString("ZA01"))) +
+          (("authProfile", JsString("ALL00001")))
       case _ =>
         request
     }

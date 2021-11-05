@@ -11,7 +11,7 @@ trait IFStubs {
 
   val url: TaxIdentifier => String = {
     case MtdItId(mtdItId) =>
-      s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=true&regime=ITSA"
+      s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=true&regime=ITSA&relationship=ZA01&auth-profile=ALL00001"
     case Vrn(vrn) =>
       s"/registration/relationship?idtype=VRN&referenceNumber=$vrn&agent=false&active-only=true&regime=VATC&relationship=ZA01&auth-profile=ALL00001"
     case Utr(utr) =>

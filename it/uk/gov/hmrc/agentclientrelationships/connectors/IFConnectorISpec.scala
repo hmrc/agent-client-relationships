@@ -102,7 +102,13 @@ class IFConnectorISpec
       verify(
         1,
         postRequestedFor(urlPathEqualTo("/registration/relationship"))
-          .withRequestBody(equalToJson(s"""{ "regime": "ITSA"}""", true, true)))
+          .withRequestBody(equalToJson(
+            s"""
+               |{
+               |"regime": "ITSA",
+               |"authProfile": "ALL00001",
+               |"relationshipType": "ZA01"
+               |}""".stripMargin, true, true)))
     }
 
     "request body contains regime as VATC and idType as VRN when client Id is a Vrn" in {
