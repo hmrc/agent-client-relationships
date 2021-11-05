@@ -20,10 +20,10 @@ import cats.implicits._
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService}
 import uk.gov.hmrc.agentclientrelationships.services._
@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, Relationship
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Provider, Singleton}
@@ -51,6 +51,8 @@ class RelationshipsController @Inject()(
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
   ecp: Provider[ExecutionContext],
+  mappingConnector: MappingConnector,
+  auditService: AuditService,
   override val controllerComponents: ControllerComponents)
     extends BackendController(controllerComponents)
     with AuthActions {
@@ -338,7 +340,11 @@ class RelationshipsController @Inject()(
     }
   }
 
-  def hasLegacyMapping(arn: Arn, nino: Nino): Action[AnyContent] = Action async { implicit request =>
+  /*
+   * This endpoint is used by agent-invitations-frontend to determine if the client has a legacy SA relationship in CESA
+   * and whether the relationship has been mapped to the Arn.
+   * */
+  def getLegacySaRelationshipStatus(arn: Arn, nino: Nino): Action[AnyContent] = Action async { implicit request =>
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
     auditData.set("Journey", "hasLegacyMapping")
@@ -347,9 +353,22 @@ class RelationshipsController @Inject()(
     auditData.set("clientIdType", "nino")
 
     withAuthorisedAsAgent { arn =>
-      checkOldAndCopyService.lookupCesaForOldRelationship(arn, nino).map(_.nonEmpty).map {
-        case true  => NoContent
-        case false => NotFound
+      des.getClientSaAgentSaReferences(nino).flatMap { references =>
+        if (references.nonEmpty) {
+          checkOldAndCopyService
+            .intersection(references)(mappingConnector.getSaAgentReferencesFor(arn))
+            .map { matching =>
+              if (matching.nonEmpty) {
+                auditData.set("saAgentRef", matching.mkString(","))
+                auditData.set("CESARelationship", matching.nonEmpty)
+                auditService.sendCheckCESAAuditEvent
+                NoContent // a legacy SA relationship was found and it is mapped to the Arn
+              } else Ok // A legacy SA relationship was found but it is not mapped to the Arn
+            }
+            .recover {
+              case e: UpstreamErrorResponse if e.statusCode == 404 => Ok
+            }
+        } else Future successful NotFound // No legacy SA relationship was found
       }
     }
   }
