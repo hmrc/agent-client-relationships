@@ -196,7 +196,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case MtdItId(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now")
+            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
       case Vrn(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idtype=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(

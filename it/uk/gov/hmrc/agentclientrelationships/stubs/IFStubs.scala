@@ -273,7 +273,7 @@ trait IFStubs {
 
   private val inactiveUrlClient: TaxIdentifier => String = {
     case MtdItId(mtdItId) =>
-      s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=false&regime=ITSA&from=2015-01-01&to=${LocalDate.now().toString}"
+      s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=false&regime=ITSA&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case Vrn(vrn) =>
       s"/registration/relationship?idtype=VRN&referenceNumber=$vrn&agent=false&active-only=false&regime=VATC&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case Utr(utr) =>
