@@ -220,7 +220,7 @@ trait AuthStub {
       case Utr(v)     => ("HMRC-TERS-ORG", "SAUTR", v)
       case Urn(v)     => ("HMRC-TERSNT-ORG", "URN", v)
       case CgtRef(v)  => ("HMRC-CGT-PD", "CGTPDRef", v)
-      case PptRef(v)  => ("HMRC-PPT-ORG", "PPTReference", v)
+      case PptRef(v)  => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
     }
 
     stubFor(
@@ -276,7 +276,7 @@ trait AuthStub {
         Enrolment("HMRC-MTD-VAT", "VRN", vrn.value),
         Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value),
         Enrolment("HMRC-TERSNT-ORG", "URN", utr.value),
-        Enrolment("HMRC-PPT-ORG", "PPTReference", pptRef.value))
+        Enrolment("HMRC-PPT-ORG", "EtmpRegistrationNumber", pptRef.value))
 
     givenAuthorisedFor(
       s"""

@@ -65,7 +65,7 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-CGT-PD", "CGTPDRef", cgtRef.value, agentCode)
 
   def givenPptEnrolmentAllocationSucceeds(pptRef: PptRef, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-PPT-ORG", "PPTReference", pptRef.value, agentCode)
+    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-PPT-ORG", "EtmpRegistrationNumber", pptRef.value, agentCode)
 
   def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) =
     givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))
