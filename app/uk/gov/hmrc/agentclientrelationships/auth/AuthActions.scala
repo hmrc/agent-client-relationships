@@ -121,12 +121,12 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   private def extractIdentifier(enrolment: Enrolment, service: String) =
     enrolment.getIdentifier(supportedIdentifierKeys(service)).map { i =>
       i.key match {
-        case "MTDITID"      => MtdItId(i.value)
-        case "VRN"          => Vrn(i.value)
-        case "SAUTR"        => Utr(i.value)
-        case "URN"          => Urn(i.value)
-        case "CGTPDRef"     => CgtRef(i.value)
-        case "PPTReference" => PptRef(i.value)
+        case "MTDITID"                => MtdItId(i.value)
+        case "VRN"                    => Vrn(i.value)
+        case "SAUTR"                  => Utr(i.value)
+        case "URN"                    => Urn(i.value)
+        case "CGTPDRef"               => CgtRef(i.value)
+        case "EtmpRegistrationNumber" => PptRef(i.value)
       }
     }
 

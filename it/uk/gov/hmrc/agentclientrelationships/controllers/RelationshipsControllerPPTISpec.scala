@@ -11,10 +11,10 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
 
   override val additionalConfig = Map("des-if.enabled" -> true)
 
-  "GET  /agent/:arn/service/HMRC-PPT-ORG/client/PPTReference/:pptReference" should {
+  "GET  /agent/:arn/service/HMRC-PPT-ORG/client/EtmpRegistrationNumber/:EtmpRegistrationNumber" should {
 
     val requestPath: String =
-      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-PPT-ORG/client/PPTReference/${pptRef.value}"
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-PPT-ORG/client/EtmpRegistrationNumber/${pptRef.value}"
 
     def doRequest = doAgentGetRequest(requestPath)
 
@@ -27,7 +27,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "any")
 
       def query() =
-        repo.find("arn" -> arn.value, "clientIdentifier" -> pptRef.value, "clientIdentifierType" -> "PPTReference")
+        repo.find("arn" -> arn.value, "clientIdentifier" -> pptRef.value, "clientIdentifierType" -> "EtmpRegistrationNumber")
 
       await(query()) shouldBe empty
       val result = doRequest
@@ -108,10 +108,10 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
   }
 
 
-  "PUT /agent/:arn/service/HMRC-PPT-ORG/client/PPTReference/:pptReference" should {
+  "PUT /agent/:arn/service/HMRC-PPT-ORG/client/EtmpRegistrationNumber/:EtmpRegistrationNumber" should {
 
     val requestPath: String =
-      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-PPT-ORG/client/PPTReference/${pptRef.value}"
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-PPT-ORG/client/EtmpRegistrationNumber/${pptRef.value}"
 
     trait StubsForThisScenario {
       givenPrincipalUser(arn, "foo")
@@ -192,7 +192,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         groupId = "foo",
         clientUserId = "user1",
         key = "HMRC-PPT-ORG",
-        identifier = "PPTReference",
+        identifier = "EtmpRegistrationNumber",
         value = pptRef.value,
         agentCode = "bar")
       givenAdminUser("foo", "user1")
@@ -244,10 +244,10 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
 
   }
 
-  "DELETE /agent/:arn/service/HMRC-PPT-ORG/client/PPTReference/:pptReference" when {
+  "DELETE /agent/:arn/service/HMRC-PPT-ORG/client/EtmpRegistrationNumber/:EtmpRegistrationNumber" when {
 
     val requestPath: String =
-      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-PPT-ORG/client/PPTReference/${pptRef.value}"
+      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-PPT-ORG/client/EtmpRegistrationNumber/${pptRef.value}"
 
     def verifyClientRemovedAgentServiceAuthorisationAuditSent(
                                                                arn: String,

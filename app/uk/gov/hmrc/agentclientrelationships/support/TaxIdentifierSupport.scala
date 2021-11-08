@@ -29,7 +29,7 @@ trait TaxIdentifierSupport {
     case _: Utr     => "HMRC-TERS-ORG~SAUTR"
     case _: Urn     => "HMRC-TERSNT-ORG~URN"
     case _: CgtRef  => "HMRC-CGT-PD~CGTPDRef"
-    case _: PptRef  => "HMRC-PPT-ORG~PPTReference"
+    case _: PptRef  => "HMRC-PPT-ORG~EtmpRegistrationNumber"
     case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
@@ -41,7 +41,7 @@ trait TaxIdentifierSupport {
     case _: Utr     => "SAUTR"
     case _: Urn     => "URN"
     case _: CgtRef  => "CGTPDRef"
-    case _: PptRef  => "PPTReference"
+    case _: PptRef  => "EtmpRegistrationNumber"
     case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
@@ -49,14 +49,14 @@ trait TaxIdentifierSupport {
 
 object TaxIdentifierSupport {
   def from(value: String, `type`: String): TaxIdentifier = `type` match {
-    case "MTDITID"              => MtdItId(value)
-    case "NINO"                 => Nino(value)
-    case "VRN"                  => Vrn(value)
-    case "AgentReferenceNumber" => Arn(value)
-    case "SAUTR"                => Utr(value)
-    case "URN"                  => Urn(value)
-    case "CGTPDRef"             => CgtRef(value)
-    case "PPTReference"         => PptRef(value)
-    case _                      => throw new Exception("Invalid tax identifier type " + `type`)
+    case "MTDITID"                => MtdItId(value)
+    case "NINO"                   => Nino(value)
+    case "VRN"                    => Vrn(value)
+    case "AgentReferenceNumber"   => Arn(value)
+    case "SAUTR"                  => Utr(value)
+    case "URN"                    => Urn(value)
+    case "CGTPDRef"               => CgtRef(value)
+    case "EtmpRegistrationNumber" => PptRef(value)
+    case _                        => throw new Exception("Invalid tax identifier type " + `type`)
   }
 }
