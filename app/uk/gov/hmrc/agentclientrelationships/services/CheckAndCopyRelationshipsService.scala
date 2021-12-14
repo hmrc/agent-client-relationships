@@ -318,7 +318,7 @@ class CheckAndCopyRelationshipsService @Inject()(
     }
   }
 
-  private def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(
+  def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(
     implicit ec: ExecutionContext): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
