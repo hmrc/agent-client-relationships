@@ -51,7 +51,7 @@ class FindRelationshipsService @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     taxIdentifier match {
-      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) =>
+      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) | PptRef(_) =>
         if (appConfig.iFPlatformEnabled) ifConnector.getActiveClientRelationships(taxIdentifier)
         else des.getActiveClientRelationships(taxIdentifier)
       case e =>
@@ -82,6 +82,11 @@ class FindRelationshipsService @Inject()(
           identifiers.get(EnrolmentTrust.enrolmentService).map(_.asUtr) match {
             case Some(utr) =>
               getActiveRelationshipsForClient(utr).map(_.map(r => (EnrolmentTrust.enrolmentService, r.arn)))
+            case None => Future.successful(None)
+          },
+          identifiers.get(EnrolmentPpt.enrolmentService).map(_.asPptRef) match {
+            case Some(pptRef) =>
+              getActiveRelationshipsForClient(pptRef).map(_.map(r => (EnrolmentPpt.enrolmentService, r.arn)))
             case None => Future.successful(None)
           },
           identifiers.get(EnrolmentTrustNT.enrolmentService).map(_.asUrn) match {
@@ -128,6 +133,11 @@ class FindRelationshipsService @Inject()(
             case Some(cgtRef) =>
               getInactiveRelationshipsForClient(cgtRef)
             case None => Future successful (Seq.empty)
+          },
+          identifiers.get(EnrolmentPpt.enrolmentService).map(_.asPptRef) match {
+            case Some(pptRef) =>
+              getInactiveRelationshipsForClient(pptRef)
+            case None => Future successful (Seq.empty)
           }
         ))
       .map(_.flatten)
@@ -135,7 +145,7 @@ class FindRelationshipsService @Inject()(
   def getInactiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     taxIdentifier match {
-      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) =>
+      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) | PptRef(_) =>
         if (appConfig.iFPlatformEnabled) ifConnector.getInactiveClientRelationships(taxIdentifier)
         else des.getInactiveClientRelationships(taxIdentifier)
       case e =>
