@@ -114,7 +114,8 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
         new URL(
           s"$desBaseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case PptRef(_) =>
-        throw new Exception("PptRef is not supported on DES platform")
+        new URL(
+          s"$desBaseUrl/registration/relationship?idtype=ZPPT&ref-no=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
     }
   }
 
@@ -214,6 +215,10 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
         new URL(
           s"$desBaseUrl/registration/relationship?idtype=ZCGT&ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+      case PptRef(_) =>
+        new URL(
+          s"$desBaseUrl/registration/relationship?idtype=ZPPT&ref-no=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
     }
   }
 
@@ -297,6 +302,7 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
       case Vrn(_)     => "VATC"
       case Utr(_)     => "TRS"
       case CgtRef(_)  => "CGT"
+      case PptRef(_)  => "PPT"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
@@ -361,6 +367,11 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
           (("relationshipType", JsString("ZA01"))) +
           (("authProfile", JsString("ALL00001"))) +
           (("idType", JsString("ZCGT")))
+      case Some("PPT") =>
+        request +
+          (("relationshipType", JsString("ZA01"))) +
+          (("authProfile", JsString("ALL00001"))) +
+          (("idType", JsString("ZPPT")))
       case _ =>
         request
     }
