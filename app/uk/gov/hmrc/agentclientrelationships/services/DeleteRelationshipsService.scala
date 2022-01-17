@@ -51,8 +51,6 @@ class DeleteRelationshipsService @Inject()(
     extends Monitoring
     with Logging {
 
-  private val platformErrorKey = if (appConfig.iFPlatformEnabled) "IF" else "DES"
-
   val recoveryTimeout = appConfig.recoveryTimeout
   //noinspection ScalaStyle
   def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(
@@ -134,19 +132,15 @@ class DeleteRelationshipsService @Inject()(
 
     (for {
       _ <- updateEtmpSyncStatus(InProgress)
-      _ <- if (appConfig.iFPlatformEnabled)
-            ifConnector.deleteAgentRelationship(taxIdentifier, arn)
-          else des.deleteAgentRelationship(taxIdentifier, arn)
+      _ <- ifConnector.deleteAgentRelationship(taxIdentifier, arn)
       _ = auditData.set("etmpRelationshipDeAuthorised", true)
       _ <- updateEtmpSyncStatus(Success)
     } yield ())
       .recoverWith {
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
-          recoverWithException(
-            e,
-            UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_$platformErrorKey", upstreamCode, reportAs))
+          recoverWithException(e, UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_IF", upstreamCode, reportAs))
         case NonFatal(ex) =>
-          recoverWithException(ex, new Exception(s"RELATIONSHIP_DELETE_FAILED_$platformErrorKey"))
+          recoverWithException(ex, new Exception(s"RELATIONSHIP_DELETE_FAILED_IF"))
       }
 
   }

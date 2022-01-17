@@ -54,8 +54,7 @@ class RelationshipsControllerTestOnlyISpec
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
         "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes",
-        "features.recovery-enable"                         -> false,
-        "des-if.enabled"                                    -> false
+        "features.recovery-enable"                         -> false
       )
       .configure(mongoConfiguration)
 

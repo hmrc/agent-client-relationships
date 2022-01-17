@@ -90,7 +90,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
-  when(servicesConfig.getBoolean(eqs("des-if.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
   when(servicesConfig.getBoolean(eqs("alt-itsa.enabled"))).thenReturn(true)
   implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
@@ -1465,7 +1464,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(identifier: TaxIdentifier): OngoingStubbing[Future[Unit]] = {
-    when(des.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec)))
+    when(ifConnector.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(identifier), eqs(agentCodeForAsAgent))(
@@ -1481,16 +1480,16 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
 
   def verifyEtmpRecordCreated(): Future[RegistrationRelationshipResponse] =
-    verify(des).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreated(): Future[RegistrationRelationshipResponse] =
-    verify(des, never()).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector, never()).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
-    verify(des).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
-    verify(des, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEsRecordCreated(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(mtdItId), eqs(agentCodeForAsAgent))(

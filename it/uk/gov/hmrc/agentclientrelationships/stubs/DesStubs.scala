@@ -1,8 +1,8 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.domain.Nino
 
 trait DesStubs {
 
@@ -35,6 +35,17 @@ trait DesStubs {
     stubFor(
       get(urlMatching(s"/registration/.*?/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(400)))
+
+  def givenDesReturnsServiceUnavailable() =
+    stubFor(
+      any(urlMatching(s"/registration/.*"))
+        .willReturn(aResponse().withStatus(503)))
+
+  def givenDesReturnsServerError() =
+    stubFor(
+      any(urlMatching(s"/registration/.*"))
+        .willReturn(aResponse().withStatus(500)))
+
 
   val someAlienAgent = """{"hasAgent":false,"agentId":"alien"}"""
   val someCeasedAgent = """{"hasAgent":true,"agentId":"ex-agent","agentCeasedDate":"someDate"}"""
@@ -95,67 +106,4 @@ trait DesStubs {
     stubFor(
       get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(404)))
-
-  def givenDesReturnsServerError() =
-    stubFor(
-      any(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(500)))
-
-  def givenDesReturnsServiceUnavailable() =
-    stubFor(
-      any(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(503)))
-
-  def givenAgentCanBeAllocatedInDes(taxIdentifier: TaxIdentifier, arn: Arn) =
-    stubFor(
-      post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing(taxIdentifier.value))
-        .withRequestBody(containing(arn.value))
-        .withRequestBody(containing("\"Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(200)
-          .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}""")))
-
-  def givenAgentCanNotBeAllocatedInDes(status: Int) =
-    stubFor(
-      post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing("\"Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(status)
-          .withBody(s"""{"reason": "Service unavailable"}""")))
-
-  def givenAgentCanBeDeallocatedInDes(taxIdentifier: TaxIdentifier, arn: Arn) =
-    stubFor(
-      post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing(taxIdentifier.value))
-        .withRequestBody(containing(arn.value))
-        .withRequestBody(containing("\"De-Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(200)
-          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")))
-
-  def givenAgentHasNoActiveRelationshipInDes(taxIdentifier: TaxIdentifier, arn: Arn) =
-    stubFor(
-      post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing(taxIdentifier.value))
-        .withRequestBody(containing(arn.value))
-        .withRequestBody(containing("\"De-Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(200)
-          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")))
-
-  def givenAgentCanNotBeDeallocatedInDes(status: Int) =
-    stubFor(
-      post(urlEqualTo(s"/registration/relationship"))
-        .withRequestBody(containing("\"De-Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(status)
-          .withBody(s"""{"reason": "${failureMessage(status)}"}""")))
-
-  private def failureMessage(status: Int): String = status match  {
-    case 404 => "The remote endpoint has indicated that no activeRelationship can be found"
-    case 503 => "Dependent systems are currently not responding"
-    case o    => s"reason for status code $o"
-
-  }
 }

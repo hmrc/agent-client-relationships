@@ -11,8 +11,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISpec {
 
-  override val additionalConfig = Map("des-if.enabled" -> true)
-
   "GET  /agent/:arn/service/HMRC-TERSNT-ORG/client/URN/:urn" should {
 
     val requestPath: String =
@@ -120,7 +118,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-TERSNT-ORG/client/URN/${urn.value}"
 
     trait StubsForThisScenario {
-      givenAgentCanBeAllocatedInDes(urn, arn)
+      givenAgentCanBeAllocatedInIF(urn, arn)
 
       givenPrincipalUser(arn, "foo")
       givenAdminUser("foo", "any")
@@ -169,7 +167,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       givenAdminUser("foo", "any")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(urn)
-      givenAgentCanBeAllocatedInDes(urn, arn)
+      givenAgentCanBeAllocatedInIF(urn, arn)
       givenTrustNTEnrolmentAllocationSucceeds(urn, "bar")
 
 
@@ -179,7 +177,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
 
     "return 201 when an agent tries to create a relationship" in {
       givenUserIsSubscribedAgent(arn)
-      givenAgentCanBeAllocatedInDes(urn, arn)
+      givenAgentCanBeAllocatedInIF(urn, arn)
       givenPrincipalGroupIdExistsFor(arn, "foo")
 
       val result = doAgentPutRequest(requestPath)
@@ -199,7 +197,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForTrustNT(urn)
-      givenAgentCanBeAllocatedInDes(urn, arn)
+      givenAgentCanBeAllocatedInIF(urn, arn)
       givenEnrolmentAllocationFailsWith(503)(
         groupId = "foo",
         clientUserId = "user1",
@@ -227,7 +225,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
     "return 404 if IF returns 404" in {
       givenUserIsSubscribedClient(urn)
       givenDelegatedGroupIdsNotExistForTrustNT(urn)
-      givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenAgentCanNotBeAllocatedInIF(status = 404)
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 404
@@ -304,7 +302,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
-        givenAgentCanBeDeallocatedInDes(urn, arn)
+        givenAgentCanBeDeallocatedInIF(urn, arn)
         givenEnrolmentDeallocationSucceeds("foo", urn)
         givenAdminUser("foo", "any")
       }
@@ -332,7 +330,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
-        givenAgentCanBeDeallocatedInDes(urn, arn)
+        givenAgentCanBeDeallocatedInIF(urn, arn)
         givenEnrolmentDeallocationSucceeds("foo", urn)
         givenAdminUser("foo", "any")
       }
@@ -360,7 +358,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
-        givenAgentCanBeDeallocatedInDes(urn, arn)
+        givenAgentCanBeDeallocatedInIF(urn, arn)
         givenEnrolmentDeallocationSucceeds("foo", urn)
         givenAdminUser("foo", "any")
       }
@@ -387,7 +385,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(urn, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrustNT(urn)
-        givenAgentCanBeDeallocatedInDes(urn, arn)
+        givenAgentCanBeDeallocatedInIF(urn, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -415,7 +413,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrustNT(urn)
-        givenAgentHasNoActiveRelationshipInDes(urn, arn)
+        givenAgentHasNoActiveRelationshipInIF(urn, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -442,7 +440,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
-        givenAgentHasNoActiveRelationshipInDes(urn, arn)
+        givenAgentHasNoActiveRelationshipInIF(urn, arn)
         givenEnrolmentDeallocationSucceeds("foo", urn)
         givenAdminUser("foo", "any")
       }
@@ -497,7 +495,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
         givenEsIsUnavailable()
-        givenAgentCanBeDeallocatedInDes(urn, arn)
+        givenAgentCanBeDeallocatedInIF(urn, arn)
       }
 
       "return 502" in new StubsForThisScenario {
@@ -537,7 +535,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(urn, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(urn, "bar")
-        givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
       "return 404" in new StubsForThisScenario {
@@ -583,7 +581,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(urn)
-        givenAgentCanBeDeallocatedInDes(urn, arn)
+        givenAgentCanBeDeallocatedInIF(urn, arn)
         givenPrincipalGroupIdExistsFor(arn, "foo")
         givenAdminUser("foo", "any")
         givenGroupInfo("foo", "bar")

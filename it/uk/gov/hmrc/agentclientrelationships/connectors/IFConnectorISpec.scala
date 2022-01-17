@@ -54,8 +54,7 @@ class IFConnectorISpec
         "agent.cache.enabled"                              -> false,
         "agent.trackPage.cache.size"                       -> 1,
         "agent.trackPage.cache.expires"                    -> "1 millis",
-        "agent.trackPage.cache.enabled"                    -> false,
-        "des-if.enabled"                                   -> true
+        "agent.trackPage.cache.enabled"                    -> false
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -269,7 +268,7 @@ class IFConnectorISpec
     }
   }
 
-  "IFConnector GetActiveClientItsaRelationships and GetActiveClientVatRelationships" should {
+  "IFConnector GetActiveClientRelationships" should {
 
     "return existing active relationships for specified clientId for ItSa service" in {
       getActiveRelationshipsViaClient(mtdItId, agentARN)
@@ -285,6 +284,37 @@ class IFConnectorISpec
       result.get.arn shouldBe agentARN
     }
 
+    "return existing active relationships for specified clientId for CGT service" in {
+      getActiveRelationshipsViaClient(cgt, agentARN)
+
+      val result = await(ifConnector.getActiveClientRelationships(cgt))
+      result.get.arn shouldBe agentARN
+    }
+
+    "return existing active relationships for specified clientId for TRS (UTR) service" in {
+      getActiveRelationshipsViaClient(utr, agentARN)
+
+      val result = await(ifConnector.getActiveClientRelationships(utr))
+      result.get.arn shouldBe agentARN
+
+    }
+
+    "return existing active relationships for specified clientId for TRS (URN) service" in {
+      getActiveRelationshipsViaClient(urn, agentARN)
+
+      val result = await(ifConnector.getActiveClientRelationships(urn))
+      result.get.arn shouldBe agentARN
+
+    }
+
+    "return existing active relationships for specified clientId for PPT service" in {
+      getActiveRelationshipsViaClient(pptRef, agentARN)
+
+      val result = await(ifConnector.getActiveClientRelationships(pptRef))
+      result.get.arn shouldBe agentARN
+    }
+
+
     "return None if IF returns 404 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 404)
 
@@ -296,6 +326,34 @@ class IFConnectorISpec
       getActiveRelationshipFailsWith(vrn, status = 404)
 
       val result = await(ifConnector.getActiveClientRelationships(vrn))
+      result shouldBe None
+    }
+
+    "return None if IF returns 404 for CGT service" in {
+      getActiveRelationshipFailsWith(cgt, status = 404)
+
+      val result = await(ifConnector.getActiveClientRelationships(cgt))
+      result shouldBe None
+    }
+
+    "return None if IF returns 404 for TRS (UTR) service" in {
+      getActiveRelationshipFailsWith(utr, status = 404)
+
+      val result = await(ifConnector.getActiveClientRelationships(utr))
+      result shouldBe None
+    }
+
+    "return None if IF returns 404 for TRS (URN) service" in {
+      getActiveRelationshipFailsWith(urn, status = 404)
+
+      val result = await(ifConnector.getActiveClientRelationships(urn))
+      result shouldBe None
+    }
+
+    "return None if IF returns 404 for PPT service" in {
+      getActiveRelationshipFailsWith(pptRef, status = 404)
+
+      val result = await(ifConnector.getActiveClientRelationships(pptRef))
       result shouldBe None
     }
 

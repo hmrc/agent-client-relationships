@@ -48,8 +48,6 @@ class CreateRelationshipsService @Inject()(
     extends Monitoring
     with Logging {
 
-  private val platformErrorKey = if (appConfig.iFPlatformEnabled) "IF" else "DES"
-
   //noinspection ScalaStyle
   def createRelationship(
     arn: Arn,
@@ -102,8 +100,7 @@ class CreateRelationshipsService @Inject()(
 
     (for {
       _ <- updateEtmpSyncStatus(InProgress)
-      _ <- if (appConfig.iFPlatformEnabled) ifConnector.createAgentRelationship(identifier, arn)
-          else des.createAgentRelationship(identifier, arn)
+      _ <- ifConnector.createAgentRelationship(identifier, arn)
       _ = auditData.set("etmpRelationshipCreated", true)
       _ <- updateEtmpSyncStatus(Success)
     } yield ())
@@ -111,9 +108,9 @@ class CreateRelationshipsService @Inject()(
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
           recoverWithException(
             e,
-            UpstreamErrorResponse(s"RELATIONSHIP_CREATE_FAILED_$platformErrorKey", upstreamCode, reportAs, headers))
+            UpstreamErrorResponse(s"RELATIONSHIP_CREATE_FAILED_IF", upstreamCode, reportAs, headers))
         case NonFatal(ex) =>
-          recoverWithException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_$platformErrorKey"))
+          recoverWithException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_IF"))
       }
   }
 

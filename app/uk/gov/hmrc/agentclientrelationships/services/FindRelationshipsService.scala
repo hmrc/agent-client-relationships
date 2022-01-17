@@ -42,9 +42,8 @@ class FindRelationshipsService @Inject()(
   def getItsaRelationshipForClient(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     for {
-      mtdItId <- des.getMtdIdFor(nino)
-      relationships <- if (appConfig.iFPlatformEnabled) ifConnector.getActiveClientRelationships(mtdItId)
-                      else des.getActiveClientRelationships(mtdItId)
+      mtdItId       <- des.getMtdIdFor(nino)
+      relationships <- ifConnector.getActiveClientRelationships(mtdItId)
     } yield relationships
 
   def getActiveRelationshipsForClient(taxIdentifier: TaxIdentifier)(
@@ -52,8 +51,7 @@ class FindRelationshipsService @Inject()(
     ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     taxIdentifier match {
       case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) | PptRef(_) =>
-        if (appConfig.iFPlatformEnabled) ifConnector.getActiveClientRelationships(taxIdentifier)
-        else des.getActiveClientRelationships(taxIdentifier)
+        ifConnector.getActiveClientRelationships(taxIdentifier)
       case e =>
         logger.warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
         Future.successful(None)
@@ -61,7 +59,7 @@ class FindRelationshipsService @Inject()(
 
   def getInactiveRelationshipsForAgent(
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
-    if (appConfig.iFPlatformEnabled) ifConnector.getInactiveRelationships(arn) else des.getInactiveRelationships(arn)
+    ifConnector.getInactiveRelationships(arn)
 
   def getActiveRelationshipsForClient(identifiers: Map[EnrolmentService, EnrolmentIdentifierValue])(
     implicit hc: HeaderCarrier,
@@ -90,11 +88,8 @@ class FindRelationshipsService @Inject()(
             case None => Future.successful(None)
           },
           identifiers.get(EnrolmentTrustNT.enrolmentService).map(_.asUrn) match {
-            case Some(urn) => {
-              if (appConfig.iFPlatformEnabled)
-                getActiveRelationshipsForClient(urn).map(_.map(r => (EnrolmentTrustNT.enrolmentService, r.arn)))
-              else Future.successful(None)
-            }
+            case Some(urn) =>
+              getActiveRelationshipsForClient(urn).map(_.map(r => (EnrolmentTrustNT.enrolmentService, r.arn)))
             case None => Future.successful(None)
           }
         ))
@@ -122,11 +117,8 @@ class FindRelationshipsService @Inject()(
             case None => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentTrustNT.enrolmentService).map(_.asUrn) match {
-            case Some(urn) => {
-              if (appConfig.iFPlatformEnabled)
-                getInactiveRelationshipsForClient(urn)
-              else Future successful (Seq.empty)
-            }
+            case Some(urn) =>
+              getInactiveRelationshipsForClient(urn)
             case None => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentCgt.enrolmentService).map(_.asCgtRef) match {
@@ -146,8 +138,7 @@ class FindRelationshipsService @Inject()(
     taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     taxIdentifier match {
       case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) | PptRef(_) =>
-        if (appConfig.iFPlatformEnabled) ifConnector.getInactiveClientRelationships(taxIdentifier)
-        else des.getInactiveClientRelationships(taxIdentifier)
+        ifConnector.getInactiveClientRelationships(taxIdentifier)
       case e =>
         logger.warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")
         Future.successful(Seq.empty)

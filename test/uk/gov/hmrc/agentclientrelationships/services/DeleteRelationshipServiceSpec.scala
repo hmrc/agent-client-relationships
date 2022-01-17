@@ -465,11 +465,11 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         .thenReturn(Future.successful(Right(true)))
 
     def givenETMPDeAuthSucceeds =
-      when(des.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
+      when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.successful(RegistrationRelationshipResponse(LocalDate.now.toString)))
 
     def givenETMPDeAuthFails =
-      when(des.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
+      when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.failed(new Exception))
 
     def givenESDeAllocationSucceeds =
@@ -493,11 +493,11 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         .deallocateEnrolmentFromAgent(any[String], any[TaxIdentifier])(any[HeaderCarrier], any[ExecutionContext])
 
     def verifyETMPDeAuthorisationHasBeenPerformed =
-      verify(des, times(1))
+      verify(ifConnector, times(1))
         .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
     def verifyETMPDeAuthorisationHasNOTBeenPerformed =
-      verify(des, never)
+      verify(ifConnector, never)
         .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
   }

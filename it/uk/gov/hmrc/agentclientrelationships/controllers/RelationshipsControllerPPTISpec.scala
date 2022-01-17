@@ -9,8 +9,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
 
-  override val additionalConfig = Map("des-if.enabled" -> true)
-
   "GET  /agent/:arn/service/HMRC-PPT-ORG/client/EtmpRegistrationNumber/:EtmpRegistrationNumber" should {
 
     val requestPath: String =
@@ -119,7 +117,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
       givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
       givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenDelegatedGroupIdsExistForPpt(pptRef)
-      givenAgentCanBeAllocatedInDes(pptRef, arn)
+      givenAgentCanBeAllocatedInIF(pptRef, arn)
       givenEnrolmentDeallocationSucceeds("foo", pptRef)
       givenEnrolmentDeallocationSucceeds("bar", pptRef)
       givenPptEnrolmentAllocationSucceeds(pptRef, "bar")
@@ -164,7 +162,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(pptRef)
-      givenAgentCanBeAllocatedInDes(pptRef, arn)
+      givenAgentCanBeAllocatedInIF(pptRef, arn)
       givenPptEnrolmentAllocationSucceeds(pptRef, "bar")
       givenAdminUser("foo", "any")
 
@@ -187,7 +185,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForPpt(pptRef)
-      givenAgentCanBeAllocatedInDes(pptRef, arn)
+      givenAgentCanBeAllocatedInIF(pptRef, arn)
       givenEnrolmentAllocationFailsWith(503)(
         groupId = "foo",
         clientUserId = "user1",
@@ -220,7 +218,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForPpt(pptRef)
-      givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenAgentCanNotBeAllocatedInIF(status = 404)
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
@@ -299,7 +297,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(pptRef,"foo")
         givenAgentIsAllocatedAndAssignedToClient(pptRef, "bar")
-        givenAgentCanBeDeallocatedInDes(pptRef, arn)
+        givenAgentCanBeDeallocatedInIF(pptRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", pptRef)
         givenAdminUser("foo", "any")
       }
@@ -327,7 +325,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(pptRef, "bar")
-        givenAgentCanBeDeallocatedInDes(pptRef, arn)
+        givenAgentCanBeDeallocatedInIF(pptRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", pptRef)
         givenAdminUser("foo", "any")
       }
@@ -355,7 +353,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(pptRef, "bar")
-        givenAgentCanBeDeallocatedInDes(pptRef, arn)
+        givenAgentCanBeDeallocatedInIF(pptRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", pptRef)
         givenAdminUser("foo", "any")
       }
@@ -382,7 +380,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(pptRef, "clientGroupId")
         givenDelegatedGroupIdsNotExistForPpt(pptRef)
-        givenAgentCanBeDeallocatedInDes(pptRef, arn)
+        givenAgentCanBeDeallocatedInIF(pptRef, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -410,7 +408,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(pptRef, "clientGroupId")
         givenDelegatedGroupIdsNotExistForPpt(pptRef)
-        givenAgentHasNoActiveRelationshipInDes(pptRef, arn)
+        givenAgentHasNoActiveRelationshipInIF(pptRef, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -437,7 +435,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(pptRef, "bar")
-        givenAgentHasNoActiveRelationshipInDes(pptRef, arn)
+        givenAgentHasNoActiveRelationshipInIF(pptRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", pptRef)
         givenAdminUser("foo", "any")
       }
@@ -492,7 +490,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
         givenEsIsUnavailable()
-        givenAgentCanBeDeallocatedInDes(pptRef, arn)
+        givenAgentCanBeDeallocatedInIF(pptRef, arn)
       }
 
       "return 502" in new StubsForThisScenario {
@@ -532,7 +530,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(pptRef, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(pptRef, "bar")
-        givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
       "return 404" in new StubsForThisScenario {
@@ -565,7 +563,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(pptRef)
-        givenAgentCanBeDeallocatedInDes(pptRef, arn)
+        givenAgentCanBeDeallocatedInIF(pptRef, arn)
         givenAuditConnector()
         //givenPrincipalGroupIdNotExistsFor(pptRef)
       }
