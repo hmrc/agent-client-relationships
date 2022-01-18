@@ -157,9 +157,15 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
         val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = (for {
-          supportedEnrolments <- Seq(EnrolmentMtdIt, EnrolmentMtdVat, EnrolmentTrust, EnrolmentTrustNT, EnrolmentCgt)
-          enrolment           <- enrolments.getEnrolment(supportedEnrolments.enrolmentKey)
-          clientId            <- enrolment.identifiers.headOption
+          supportedEnrolments <- Seq(
+                                  EnrolmentMtdIt,
+                                  EnrolmentMtdVat,
+                                  EnrolmentTrust,
+                                  EnrolmentTrustNT,
+                                  EnrolmentCgt,
+                                  EnrolmentPpt)
+          enrolment <- enrolments.getEnrolment(supportedEnrolments.enrolmentKey)
+          clientId  <- enrolment.identifiers.headOption
         } yield (EnrolmentService(enrolment.key), EnrolmentIdentifierValue(clientId.value))).toMap
 
         identifiers match {

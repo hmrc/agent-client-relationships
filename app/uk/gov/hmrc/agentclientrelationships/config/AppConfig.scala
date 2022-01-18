@@ -54,8 +54,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val desEnv = getConfigString("des.environment")
   val desToken = getConfigString("des.authorization-token")
 
-  val iFPlatformEnabled: Boolean = servicesConfig.getBoolean("des-if.enabled")
-
   val ifPlatformBaseUrl = servicesConfig.baseUrl("if")
   val ifEnvironment = getConfigString("if.environment")
   val ifAuthToken = getConfigString("if.authorization-token")

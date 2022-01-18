@@ -70,19 +70,19 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
           s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case Utr(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=UTR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case Urn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=URN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
     }
   }
 
@@ -199,24 +199,24 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
             taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
       case Utr(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=UTR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now")
       case Urn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=URN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now")
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idtype=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
       case PptRef(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now")
+            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
     }
   }
 

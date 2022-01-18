@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import org.joda.time.LocalDate
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
 import play.api.libs.json.JodaWrites._
 import play.api.libs.json.JodaReads._
 
@@ -43,6 +43,7 @@ object InactiveRelationship {
         if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
       val service = clientId match {
         case _ if clientId.matches(CgtRef.cgtRegex)                => "HMRC-CGT-PD"
+        case _ if PptRef.isValid(clientId)                         => "HMRC-PPT-ORG"
         case _ if Vrn.isValid(clientId)                            => "HMRC-MTD-VAT"
         case _ if Utr.isValid(clientId)                            => "HMRC-TERS-ORG"
         case _ if clientType == "business" & Urn.isValid(clientId) => "HMRC-TERSNT-ORG"

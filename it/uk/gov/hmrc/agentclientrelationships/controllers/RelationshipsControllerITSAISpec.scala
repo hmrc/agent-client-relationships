@@ -248,7 +248,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
       givenAdminUser("foo", "any")
 
@@ -310,7 +310,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
 
       def query() =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
@@ -371,7 +371,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")  // Old world
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
       givenAdminUser("foo", "any")
 
@@ -470,7 +470,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenAgentCanNotBeAllocatedInIF(status = 404)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
       givenAdminUser("foo", "any")
 
@@ -501,7 +501,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, "bar")
       givenAdminUser("foo", "any")
 
@@ -581,7 +581,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
       await(repo.insert(relationshipCopiedSuccessfully))
@@ -820,7 +820,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -890,7 +890,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -919,7 +919,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -947,7 +947,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -976,7 +976,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenAgentHasNoActiveRelationshipInIF(mtdItId, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -1004,7 +1004,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenAgentHasNoActiveRelationshipInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -1118,7 +1118,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
-        givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAgentCanNotBeDeallocatedInIF(status = 404)
         givenAdminUser("foo", "any")
       }
 
@@ -1221,7 +1221,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -1251,7 +1251,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -1281,7 +1281,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -1310,7 +1310,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -1340,7 +1340,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenAgentHasNoActiveRelationshipInIF(mtdItId, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -1369,7 +1369,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenGroupInfo("foo", "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-        givenAgentHasNoActiveRelationshipInDes(mtdItId, arn)
+        givenAgentHasNoActiveRelationshipInIF(mtdItId, arn)
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
         givenAdminUser("foo", "any")
       }
@@ -1472,7 +1472,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
         givenEnrolmentDeallocationSucceeds("foo", mtdItId)
-        givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAgentCanNotBeDeallocatedInIF(status = 404)
         givenAdminUser("foo", "any")
       }
 
@@ -1525,7 +1525,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       trait StubsForScenario {
         givenUserIsSubscribedClient(nino)
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenAgentCanBeDeallocatedInDes(mtdItId, arn)
+        givenAgentCanBeDeallocatedInIF(mtdItId, arn)
         givenPrincipalGroupIdExistsFor(arn, "foo")
         givenAdminUser("foo", "any")
         givenGroupInfo("foo", "bar")
@@ -1567,7 +1567,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
       givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenDelegatedGroupIdsExistForMtdItId(mtdItId)
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenEnrolmentDeallocationSucceeds("foo", mtdItId)
       givenEnrolmentDeallocationSucceeds("bar", mtdItId)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
@@ -1613,7 +1613,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
       givenAdminUser("foo", "any")
 
@@ -1623,7 +1623,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
     "return 201 when an agent tries to create a relationship" in {
       givenUserIsSubscribedAgent(arn)
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenPrincipalGroupIdExistsFor(arn, "foo")
 
       val result = doAgentPutRequest(requestPath)
@@ -1645,7 +1645,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-      givenAgentCanBeAllocatedInDes(mtdItId, arn)
+      givenAgentCanBeAllocatedInIF(mtdItId, arn)
       givenEnrolmentAllocationFailsWith(503)(
         groupId = "foo",
         clientUserId = "user1",
@@ -1670,20 +1670,20 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
-    "return 404 if DES returns 404" in {
+    "return 404 if IF returns 404" in {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-      givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenAgentCanNotBeAllocatedInIF(status = 404)
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 404
-      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 403 for a client with a mismatched MtdItId" in {

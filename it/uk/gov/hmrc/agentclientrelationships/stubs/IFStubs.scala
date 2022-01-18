@@ -13,13 +13,15 @@ trait IFStubs {
     case MtdItId(mtdItId) =>
       s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=true&regime=ITSA&relationship=ZA01&auth-profile=ALL00001"
     case Vrn(vrn) =>
-      s"/registration/relationship?idtype=VRN&referenceNumber=$vrn&agent=false&active-only=true&regime=VATC&relationship=ZA01&auth-profile=ALL00001"
+      s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=true&regime=VATC&relationship=ZA01&auth-profile=ALL00001"
     case Utr(utr) =>
-      s"/registration/relationship?idtype=UTR&referenceNumber=$utr&agent=false&active-only=true&regime=TRS"
+      s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=true&regime=TRS"
     case Urn(urn) =>
-      s"/registration/relationship?idtype=URN&referenceNumber=$urn&agent=false&active-only=true&regime=TRS"
+      s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=true&regime=TRS"
     case CgtRef(ref) =>
-      s"/registration/relationship?idtype=ZCGT&referenceNumber=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01&auth-profile=ALL00001"
+      s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01&auth-profile=ALL00001"
+    case PptRef(ref) =>
+      s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=true&regime=PPT&relationship=ZA01&auth-profile=ALL00001"
   }
 
 
@@ -252,6 +254,20 @@ trait IFStubs {
          |  "activity" : "09"
          |}
        """.stripMargin
+    case PptRef(clientId) => arn =>
+      s"""
+         |{
+         |  "referenceNumber" : "$clientId",
+         |  "agentReferenceNumber" : "${arn.value}",
+         |  "organisation" : {
+         |    "organisationName": "someOrganisationName"
+         |  },
+         |  "dateFrom" : "2015-09-10",
+         |  "dateTo" : "2015-09-21",
+         |  "contractAccountCategory" : "01",
+         |  "activity" : "09"
+         |}
+       """.stripMargin
     case CgtRef(clientId) => arn =>
       s"""
          |{
@@ -275,13 +291,15 @@ trait IFStubs {
     case MtdItId(mtdItId) =>
       s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=false&regime=ITSA&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case Vrn(vrn) =>
-      s"/registration/relationship?idtype=VRN&referenceNumber=$vrn&agent=false&active-only=false&regime=VATC&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
+      s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=false&regime=VATC&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case Utr(utr) =>
-      s"/registration/relationship?idtype=UTR&referenceNumber=$utr&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
+      s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
     case Urn(urn) =>
-      s"/registration/relationship?idtype=URN&referenceNumber=$urn&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
+      s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
     case CgtRef(ref) =>
-      s"/registration/relationship?idtype=ZCGT&referenceNumber=$ref&agent=false&active-only=false&regime=CGT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
+      s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=false&regime=CGT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
+    case PptRef(ref) =>
+      s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=false&regime=PPT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
   }
 
   def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {

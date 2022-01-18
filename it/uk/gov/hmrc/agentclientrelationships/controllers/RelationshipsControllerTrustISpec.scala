@@ -145,7 +145,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
       givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenDelegatedGroupIdsExistForTrust(utr)
-      givenAgentCanBeAllocatedInDes(utr, arn)
+      givenAgentCanBeAllocatedInIF(utr, arn)
       givenEnrolmentDeallocationSucceeds("foo", utr)
       givenEnrolmentDeallocationSucceeds("bar", utr)
       givenTrustEnrolmentAllocationSucceeds(utr, "bar")
@@ -181,7 +181,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(utr)
-      givenAgentCanBeAllocatedInDes(utr, arn)
+      givenAgentCanBeAllocatedInIF(utr, arn)
       givenTrustEnrolmentAllocationSucceeds(utr, "bar")
       givenAdminUser("foo", "any")
 
@@ -191,7 +191,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
 
     "return 201 when an agent tries to create a relationship" in {
       givenUserIsSubscribedAgent(arn)
-      givenAgentCanBeAllocatedInDes(utr, arn)
+      givenAgentCanBeAllocatedInIF(utr, arn)
       givenPrincipalGroupIdExistsFor(arn, "foo")
 
       val result = doAgentPutRequest(requestPath)
@@ -211,7 +211,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForTrust(utr)
-      givenAgentCanBeAllocatedInDes(utr, arn)
+      givenAgentCanBeAllocatedInIF(utr, arn)
       givenEnrolmentAllocationFailsWith(503)(
         groupId = "foo",
         clientUserId = "user1",
@@ -233,17 +233,17 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 404 if DES returns 404" in {
       givenUserIsSubscribedClient(utr)
       givenDelegatedGroupIdsNotExistForTrust(utr)
-      givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenAgentCanNotBeAllocatedInIF(status = 404)
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 404
-      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 403 for a client with a mismatched MtdItId" in {
@@ -316,7 +316,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
-        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenAgentCanBeDeallocatedInIF(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
         givenAdminUser("foo", "any")
       }
@@ -344,7 +344,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
-        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenAgentCanBeDeallocatedInIF(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
         givenAdminUser("foo", "any")
       }
@@ -372,7 +372,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
-        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenAgentCanBeDeallocatedInIF(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
         givenAdminUser("foo", "any")
       }
@@ -399,7 +399,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(utr, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrust(utr)
-        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenAgentCanBeDeallocatedInIF(utr, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -427,7 +427,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(vrn, "clientGroupId")
         givenDelegatedGroupIdsNotExistForTrust(utr)
-        givenAgentHasNoActiveRelationshipInDes(utr, arn)
+        givenAgentHasNoActiveRelationshipInIF(utr, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -454,7 +454,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
-        givenAgentHasNoActiveRelationshipInDes(utr, arn)
+        givenAgentHasNoActiveRelationshipInIF(utr, arn)
         givenEnrolmentDeallocationSucceeds("foo", utr)
         givenAdminUser("foo", "any")
       }
@@ -509,7 +509,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
         givenEsIsUnavailable()
-        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenAgentCanBeDeallocatedInIF(utr, arn)
       }
 
       "return 502" in new StubsForThisScenario {
@@ -549,7 +549,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(utr, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(utr, "bar")
-        givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
       "return 404" in new StubsForThisScenario {
@@ -595,7 +595,7 @@ class RelationshipsControllerTrustISpec extends RelationshipsBaseControllerISpec
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(utr)
-        givenAgentCanBeDeallocatedInDes(utr, arn)
+        givenAgentCanBeDeallocatedInIF(utr, arn)
         givenPrincipalGroupIdExistsFor(arn, "foo")
         givenAdminUser("foo", "any")
         givenGroupInfo("foo", "bar")

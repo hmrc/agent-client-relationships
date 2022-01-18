@@ -32,12 +32,14 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val itsaClient = TestClient(HMRCMTDIT, "ITSA", mtdItId)
   val vatClient = TestClient(HMRCMTDVAT, "VATC", vrn)
   val trustClient = TestClient(HMRCTERSORG, "TRS", utr)
+  val trustNTClient = TestClient(HMRCTERSNTORG, "TRS", urn)
   val cgtClient = TestClient(HMRCCGTPD, "CGT", cgtRef)
+  val pptClient = TestClient(HMRCPPTORG, "PPT", pptRef)
 
-  val individualList = List(itsaClient, vatClient, cgtClient)
-  val businessList = List(vatClient, trustClient, cgtClient)
+  val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
+  val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient)
 
-  val desOnlyList = List(itsaClient, vatClient, trustClient, cgtClient)
+  val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient)
 
   val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
 
@@ -46,8 +48,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE,"strideId-1234456")
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE,"strideId-1234456")
     }
-    else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef)
-    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, cgtRef)
+    else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
+    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef)
     else requestIsNotAuthenticated()
   }
 
@@ -125,7 +127,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
 
 
-    "return 404 when DES returns 400 (treated as relationship not found) " +
+    "return 404 when IF returns 400 (treated as relationship not found) " +
       s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
@@ -138,7 +140,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   }
 
   "GET /agent/relationships/inactive/service/:service" should {
-    desOnlyList.foreach { client =>
+    servicesInIF.foreach { client =>
       runInactiveRelationshipsScenario(client)
       runInactiveRelationshipsErrorScenario(client)
     }
@@ -242,11 +244,13 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
 
     "return 200 with a map of relationships and filter only on active ones" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
 
       getActiveRelationshipsViaClient(mtdItId, arn)
       getActiveRelationshipsViaClient(vrn, arn2)
       getActiveRelationshipsViaClient(utr, arn)
+      getActiveRelationshipsViaClient(urn, arn)
+      getActiveRelationshipsViaClient(pptRef, arn)
 
 
       val result = doRequest
@@ -256,12 +260,14 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       response should havePropertyArrayOf[String]("HMRC-MTD-IT", be(arn.value))
       response should havePropertyArrayOf[String]("HMRC-MTD-VAT", be(arn2.value))
       response should havePropertyArrayOf[String]("HMRC-TERS-ORG", be(arn.value))
+      response should havePropertyArrayOf[String]("HMRC-TERSNT-ORG", be(arn.value))
+      response should havePropertyArrayOf[String]("HMRC-PPT-ORG", be(arn.value))
     }
 
     "return 200 with empty map of active relationships when they are found inactive" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
 
-      desOnlyList.foreach { notActiveClient =>
+      servicesInIF.foreach { notActiveClient =>
         getInactiveRelationshipViaClient(notActiveClient.clientId, arn.value)
       }
 
@@ -269,15 +275,15 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 200
       val response = result.json.as[JsObject]
 
-      desOnlyList.foreach { notActiveClient =>
+      servicesInIF.foreach { notActiveClient =>
         response should notHaveProperty(notActiveClient.service)
       }
     }
 
     "return 200 with empty map of active relationships when not found" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
 
-      desOnlyList.foreach { notActiveClient =>
+      servicesInIF.foreach { notActiveClient =>
         getActiveRelationshipFailsWith(notActiveClient.clientId, 404)
       }
 
@@ -285,7 +291,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 200
       val response = result.json.as[JsObject]
 
-      desOnlyList.foreach { notActiveClient =>
+      servicesInIF.foreach { notActiveClient =>
         response should notHaveProperty(notActiveClient.service)
       }
     }
@@ -340,30 +346,48 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
     "return a sequence of inactive relationships" in {
 
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
 
       getInactiveRelationshipsForClient(mtdItId)
       getInactiveRelationshipsForClient(vrn)
       getInactiveRelationshipsForClient(utr)
+      getInactiveRelationshipsForClient(urn)
+      getInactiveRelationshipsForClient(pptRef)
 
       val result = doRequest
 
       result.status shouldBe 200
 
-      (result.json \\ "arn").head.as[String] shouldBe "ABCDE123456"
-      (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2018-09-09"
-      (result.json \\ "clientId").head.as[String] shouldBe "ABCDEF123456789"
-      (result.json \\ "clientType").head.as[String] shouldBe "personal"
-      (result.json \\ "service").head.as[String] shouldBe "HMRC-MTD-IT"
+      (result.json(0) \ "arn").as[String] shouldBe "ABCDE123456"
+      (result.json(0) \ "dateTo").as[LocalDate].toString() shouldBe "2018-09-09"
+      (result.json(0) \ "clientId").as[String] shouldBe "ABCDEF123456789"
+      (result.json(0) \ "clientType").as[String] shouldBe "personal"
+      (result.json(0) \ "service").as[String] shouldBe "HMRC-MTD-IT"
+
+      (result.json(1) \ "clientId").as[String] shouldBe "101747641"
+      (result.json(1) \ "service").as[String] shouldBe "HMRC-MTD-VAT"
+
+      (result.json(2) \ "clientId").as[String] shouldBe "3087612352"
+      (result.json(2) \ "service").as[String] shouldBe "HMRC-TERS-ORG"
+
+      (result.json(3) \ "clientId").as[String] shouldBe "XXTRUST12345678"
+      (result.json(3) \ "service").as[String] shouldBe "HMRC-TERSNT-ORG"
+
+      (result.json(4) \ "clientId").as[String] shouldBe "XAPPT0004567890"
+      (result.json(4) \ "service").as[String] shouldBe "HMRC-PPT-ORG"
+
     }
 
     "return OK with empty body if no inactive relationships found" in {
 
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
 
       getNoInactiveRelationshipsForClient(mtdItId)
       getNoInactiveRelationshipsForClient(vrn)
       getNoInactiveRelationshipsForClient(utr)
+      getNoInactiveRelationshipsForClient(urn)
+      getNoInactiveRelationshipsForClient(pptRef)
+
 
       val result = doRequest
       result.status shouldBe 200

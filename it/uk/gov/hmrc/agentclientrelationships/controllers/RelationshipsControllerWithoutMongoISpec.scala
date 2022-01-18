@@ -28,7 +28,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentclientrelationships.stubs.{ACAStubs, DataStreamStub, DesStubs, DesStubsGet, MappingStubs, RelationshipStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs.{ACAStubs, DataStreamStub, DesStubs, DesStubsGet, IFStubs, MappingStubs, RelationshipStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -50,6 +50,7 @@ class RelationshipsControllerWithoutMongoISpec
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
+      with IFStubs
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
@@ -117,7 +118,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenMtdItIdIsKnownFor(nino, mtditid)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAgentCanBeAllocatedInDes(mtditid, arn)
+      givenAgentCanBeAllocatedInIF(mtditid, arn)
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
       givenAdminUser("foo", "any")
@@ -178,7 +179,7 @@ class RelationshipsControllerWithoutMongoISpec
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
-      givenAgentCanBeAllocatedInDes(vrn, arn)
+      givenAgentCanBeAllocatedInIF(vrn, arn)
       givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
       givenAuditConnector()
       givenAdminUser("foo", "any")

@@ -118,7 +118,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenEnrolmentExistsForGroupId("bar", Arn("barArn"))
       givenEnrolmentExistsForGroupId("foo", Arn("fooArn"))
       givenDelegatedGroupIdsExistForCgt(cgtRef)
-      givenAgentCanBeAllocatedInDes(cgtRef, arn)
+      givenAgentCanBeAllocatedInIF(cgtRef, arn)
       givenEnrolmentDeallocationSucceeds("foo", cgtRef)
       givenEnrolmentDeallocationSucceeds("bar", cgtRef)
       givenCGTEnrolmentAllocationSucceeds(cgtRef, "bar")
@@ -163,7 +163,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistFor(cgtRef)
-      givenAgentCanBeAllocatedInDes(cgtRef, arn)
+      givenAgentCanBeAllocatedInIF(cgtRef, arn)
       givenCGTEnrolmentAllocationSucceeds(cgtRef, "bar")
       givenAdminUser("foo", "any")
 
@@ -186,7 +186,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdsNotExistForCgt(cgtRef)
-      givenAgentCanBeAllocatedInDes(cgtRef, arn)
+      givenAgentCanBeAllocatedInIF(cgtRef, arn)
       givenEnrolmentAllocationFailsWith(503)(
         groupId = "foo",
         clientUserId = "user1",
@@ -206,12 +206,12 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForCgt(cgtRef)
-      givenDesReturnsServiceUnavailable()
+      givenIFReturnsServiceUnavailable()
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 404 if DES returns 404" in {
@@ -219,12 +219,12 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForCgt(cgtRef)
-      givenAgentCanNotBeAllocatedInDes(status = 404)
+      givenAgentCanNotBeAllocatedInIF(status = 404)
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 404
-      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_DES")
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 403 for a client with a mismatched CgtRef" in {
@@ -297,7 +297,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAgentCanBeDeallocatedInIF(cgtRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", cgtRef)
         givenAdminUser("foo", "any")
       }
@@ -325,7 +325,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAgentCanBeDeallocatedInIF(cgtRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", cgtRef)
         givenAdminUser("foo", "any")
       }
@@ -353,7 +353,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAgentCanBeDeallocatedInIF(cgtRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", cgtRef)
         givenAdminUser("foo", "any")
       }
@@ -380,7 +380,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
         givenDelegatedGroupIdsNotExistForCgt(cgtRef)
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAgentCanBeDeallocatedInIF(cgtRef, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -408,7 +408,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
         givenDelegatedGroupIdsNotExistForCgt(cgtRef)
-        givenAgentHasNoActiveRelationshipInDes(cgtRef, arn)
+        givenAgentHasNoActiveRelationshipInIF(cgtRef, arn)
         givenAdminUser("foo", "any")
       }
 
@@ -435,7 +435,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenPrincipalUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-        givenAgentHasNoActiveRelationshipInDes(cgtRef, arn)
+        givenAgentHasNoActiveRelationshipInIF(cgtRef, arn)
         givenEnrolmentDeallocationSucceeds("foo", cgtRef)
         givenAdminUser("foo", "any")
       }
@@ -490,7 +490,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn)
         givenEsIsUnavailable()
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAgentCanBeDeallocatedInIF(cgtRef, arn)
       }
 
       "return 502" in new StubsForThisScenario {
@@ -510,7 +510,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-        givenDesReturnsServiceUnavailable()
+        givenIFReturnsServiceUnavailable()
       }
 
       "return 502" in new StubsForThisScenario {
@@ -530,7 +530,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenGroupInfo("foo", "bar")
         givenPrincipalGroupIdExistsFor(cgtRef, "clientGroupId")
         givenAgentIsAllocatedAndAssignedToClient(cgtRef, "bar")
-        givenAgentCanNotBeDeallocatedInDes(status = 404)
+        givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
       "return 404" in new StubsForThisScenario {
@@ -576,7 +576,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
     "client has no groupId" should {
       trait StubsForScenario {
         givenUserIsSubscribedClient(cgtRef)
-        givenAgentCanBeDeallocatedInDes(cgtRef, arn)
+        givenAgentCanBeDeallocatedInIF(cgtRef, arn)
         givenAuditConnector()
         //givenPrincipalGroupIdNotExistsFor(cgtRef)
       }

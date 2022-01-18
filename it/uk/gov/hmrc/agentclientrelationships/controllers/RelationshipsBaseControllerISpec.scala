@@ -24,6 +24,7 @@ trait RelationshipsBaseControllerISpec
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
+      with IFStubs
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
@@ -36,7 +37,7 @@ trait RelationshipsBaseControllerISpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val additionalConfig: Map[String, Any] = Map("des-if.enabled" -> false)
+  val additionalConfig: Map[String, Any] = Map.empty
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -86,6 +87,8 @@ trait RelationshipsBaseControllerISpec
 
   val HMRCTERSORG = "HMRC-TERS-ORG"
 
+  val HMRCTERSNTORG = "HMRC-TERSNT-ORG"
+
   val HMRCCGTPD = "HMRC-CGT-PD"
 
   val HMRCPPTORG = "HMRC-PPT-ORG"
@@ -122,6 +125,7 @@ trait RelationshipsBaseControllerISpec
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_) => Vrn("101747641")
     case Utr(_) => Utr("2134514321")
+    case Urn(_) => Urn("XXTRUST12345678")
     case CgtRef(_) => cgtRef
     case PptRef(_) => pptRef
   }

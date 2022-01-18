@@ -20,92 +20,121 @@ trait AuthStub {
 
   //VIA Client
 
-  def givenLoginClientIndAll(mtdItId: MtdItId, vrn: Vrn, nino: Nino, cgtRef: CgtRef, withThisGgUserId: String = "12345-credId") = {
+  def givenLoginClientIndAll(mtdItId: MtdItId, vrn: Vrn, nino: Nino, cgtRef: CgtRef, pptRef: PptRef, withThisGgUserId: String = "12345-credId") = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"affinityGroup": "Individual",
-                         |"authorisedEnrolments": [{
-                         |  "key": "HMRC-MTD-IT",
-                         |  "identifiers": [{
-                         |			"key": "MTDITID",
-                         |			"value": "${mtdItId.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "HMRC-MTD-VAT",
-                         |		"identifiers": [{
-                         |			"key": "VRN",
-                         |			"value": "${vrn.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "HMRC-CGT-PD",
-                         |		"identifiers": [{
-                         |			"key": "CGTPDRef",
-                         |			"value": "${cgtRef.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "HMRC-NI",
-                         |		"identifiers": [{
-                         |			"key": "NINO",
-                         |			"value": "${nino.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "$withThisGgUserId",
-                         |    "providerType": "GovernmentGateway"
-                         |  }
-                         |}
-       """.stripMargin)))
+            .withBody(givenLoginClientIndAllJsonResponseBody(mtdItId, vrn, nino, cgtRef, pptRef, withThisGgUserId))))
     this
   }
 
-  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  cgtRef: CgtRef, withThisGgUserId: String = "12345-credId") = {
+  private def givenLoginClientIndAllJsonResponseBody(mtdItId: MtdItId, vrn: Vrn, nino: Nino, cgtRef: CgtRef, pptRef: PptRef, withThisGgUserId: String) =
+    s"""
+       |{
+       |"affinityGroup": "Individual",
+       |"authorisedEnrolments": [{
+       |  "key": "HMRC-MTD-IT",
+       |  "identifiers": [{
+       |			"key": "MTDITID",
+       |			"value": "${mtdItId.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}, {
+       |		"key": "HMRC-MTD-VAT",
+       |		"identifiers": [{
+       |			"key": "VRN",
+       |			"value": "${vrn.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}, {
+       |		"key": "HMRC-CGT-PD",
+       |		"identifiers": [{
+       |			"key": "CGTPDRef",
+       |			"value": "${cgtRef.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}, {
+       |		"key": "HMRC-PPT-ORG",
+       |		"identifiers": [{
+       |			"key": "EtmpRegistrationNumber",
+       |			"value": "${pptRef.value}"
+       |		}],
+       |		"state": "Activated"
+       |	},
+       |  {
+       |		"key": "HMRC-NI",
+       |		"identifiers": [{
+       |			"key": "NINO",
+       |			"value": "${nino.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}],
+       |  "optionalCredentials": {
+       |    "providerId": "$withThisGgUserId",
+       |    "providerType": "GovernmentGateway"
+       |  }
+       |}
+       """.stripMargin
+
+  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef,  withThisGgUserId: String = "12345-credId") = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"affinityGroup": "Organisation",
-                         |"authorisedEnrolments": [{
-                         |  "key": "HMRC-TERS-ORG",
-                         |  "identifiers": [{
-                         |			"key": "SAUTR",
-                         |			"value": "${utr.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "HMRC-MTD-VAT",
-                         |		"identifiers": [{
-                         |			"key": "VRN",
-                         |			"value": "${vrn.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "HMRC-CGT-PD",
-                         |		"identifiers": [{
-                         |			"key": "CGTPDRef",
-                         |			"value": "${cgtRef.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "$withThisGgUserId",
-                         |    "providerType": "GovernmentGateway"
-                         |  }
-                         |}
-       """.stripMargin)))
+            .withBody(givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, withThisGgUserId))))
     this
   }
+
+  private def givenLoginClientBusinessAllJsonResponseBody(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef,  withThisGgUserId: String) =
+    s"""
+       |{
+       |"affinityGroup": "Organisation",
+       |"authorisedEnrolments": [{
+       |  "key": "HMRC-TERS-ORG",
+       |  "identifiers": [{
+       |			"key": "SAUTR",
+       |			"value": "${utr.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}, {
+       |		"key": "HMRC-MTD-VAT",
+       |		"identifiers": [{
+       |			"key": "VRN",
+       |			"value": "${vrn.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}, {
+       |		"key": "HMRC-TERSNT-ORG",
+       |		"identifiers": [{
+       |			"key": "URN",
+       |			"value": "${urn.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}, {
+       |		"key": "HMRC-PPT-ORG",
+       |		"identifiers": [{
+       |			"key": "EtmpRegistrationNumber",
+       |			"value": "${pptRef.value}"
+       |		}],
+       |		"state": "Activated"
+       |	},
+       | {
+       |		"key": "HMRC-CGT-PD",
+       |		"identifiers": [{
+       |			"key": "CGTPDRef",
+       |			"value": "${cgtRef.value}"
+       |		}],
+       |		"state": "Activated"
+       |	}],
+       |  "optionalCredentials": {
+       |    "providerId": "$withThisGgUserId",
+       |    "providerType": "GovernmentGateway"
+       |  }
+       |}
+       """.stripMargin
 
   //VIA Stride
 
@@ -269,13 +298,13 @@ trait AuthStub {
     this
   }
 
-  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn, utr: Utr, pptRef: PptRef): FakeRequest[A] = {
+  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn, utr: Utr, urn: Urn, pptRef: PptRef): FakeRequest[A] = {
     val enrolments =
       Seq(
         Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value),
         Enrolment("HMRC-MTD-VAT", "VRN", vrn.value),
         Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value),
-        Enrolment("HMRC-TERSNT-ORG", "URN", utr.value),
+        Enrolment("HMRC-TERSNT-ORG", "URN", urn.value),
         Enrolment("HMRC-PPT-ORG", "EtmpRegistrationNumber", pptRef.value))
 
     givenAuthorisedFor(
