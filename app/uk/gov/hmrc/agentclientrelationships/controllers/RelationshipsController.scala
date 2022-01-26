@@ -231,7 +231,7 @@ class RelationshipsController @Inject()(
                      case nino @ Nino(_) => des.getMtdIdFor(nino)
                      case _              => Future successful taxIdentifier
                    }
-              _ <- deleteService.deleteRelationship(arn, id)
+              _ <- deleteService.deleteRelationship(arn, id, currentUser.affinityGroup)
             } yield NoContent)
               .recover {
                 case upS: Upstream5xxResponse => throw upS

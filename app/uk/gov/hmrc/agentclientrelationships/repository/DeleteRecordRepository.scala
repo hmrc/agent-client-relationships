@@ -48,7 +48,8 @@ case class DeleteRecord(
   syncToESStatus: Option[SyncStatus] = None,
   lastRecoveryAttempt: Option[DateTime] = None,
   numberOfAttempts: Int = 0,
-  headerCarrier: Option[HeaderCarrier] = None) {
+  headerCarrier: Option[HeaderCarrier] = None,
+  relationshipEndedBy: Option[String] = None) {
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
   def needToDeleteEtmpRecord: Boolean = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))

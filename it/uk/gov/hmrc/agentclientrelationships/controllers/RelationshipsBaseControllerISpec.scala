@@ -140,7 +140,7 @@ trait RelationshipsBaseControllerISpec
                                                etmpStatus: Option[SyncStatus.Value],
                                                esStatus: Option[SyncStatus.Value]) =
     await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
-      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _)) =>
+      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _, _)) =>
     }
 
   protected def verifyDeleteRecordNotExists =
