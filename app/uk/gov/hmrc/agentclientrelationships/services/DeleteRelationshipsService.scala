@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import akka.Done
 import com.kenshoo.play.metrics.Metrics
+
 import javax.inject.{Inject, Singleton}
 import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Logging
@@ -29,7 +31,8 @@ import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, DeleteRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound, TaxIdentifierSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
+import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
 
@@ -42,6 +45,7 @@ class DeleteRelationshipsService @Inject()(
   des: DesConnector,
   ifConnector: IFConnector,
   ugs: UsersGroupsSearchConnector,
+  aca: AgentClientAuthorisationConnector,
   deleteRecordRepository: DeleteRecordRepository,
   lockService: RecoveryLockService,
   checkService: CheckRelationshipsService,
@@ -53,7 +57,7 @@ class DeleteRelationshipsService @Inject()(
 
   val recoveryTimeout = appConfig.recoveryTimeout
   //noinspection ScalaStyle
-  def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier)(
+  def deleteRelationship(arn: Arn, taxIdentifier: TaxIdentifier, affinityGroup: Option[AffinityGroup])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -80,12 +84,19 @@ class DeleteRelationshipsService @Inject()(
         }
 
     def delete: Future[Unit] = {
-      val record = DeleteRecord(arn.value, taxIdentifier.value, identifierType, headerCarrier = Some(hc))
+      val endedBy = determineUserTypeFromAG(affinityGroup)
+      val record = DeleteRecord(
+        arn.value,
+        taxIdentifier.value,
+        identifierType,
+        headerCarrier = Some(hc),
+        relationshipEndedBy = endedBy)
       for {
         _ <- createDeleteRecord(record)
         _ <- deleteEsRecord(arn, taxIdentifier)
         _ <- deleteEtmpRecord(arn, taxIdentifier)
         _ <- removeDeleteRecord(arn, taxIdentifier)
+        _ <- setRelationshipEnded(arn, taxIdentifier, endedBy.getOrElse("HMRC"))
       } yield ()
     }
 
@@ -216,20 +227,17 @@ class DeleteRelationshipsService @Inject()(
     deleteRecordRepository.selectNextToRecover.flatMap {
       case Some(record) =>
         val headerCarrier = record.headerCarrier.getOrElse(HeaderCarrier())
-        record.clientIdentifierType match {
-          case "MTDITID" =>
-            checkDeleteRecordAndEventuallyResume(MtdItId(record.clientIdentifier), Arn(record.arn))(
-              ec,
-              headerCarrier,
-              auditData,
-              NoRequest)
-          case "VRN" =>
-            checkDeleteRecordAndEventuallyResume(Vrn(record.clientIdentifier), Arn(record.arn))(
-              ec,
-              headerCarrier,
-              auditData,
-              NoRequest)
+        val taxIdentifier: TaxIdentifier = record.clientIdentifierType match {
+          case "MTDITID"                => MtdItId(record.clientIdentifier)
+          case "VRN"                    => Vrn(record.clientIdentifier)
+          case "SAUTR"                  => Utr(record.clientIdentifier)
+          case "URN"                    => Urn(record.clientIdentifier)
+          case "CGTPDRef"               => CgtRef(record.clientIdentifier)
+          case "EtmpRegistrationNumber" => PptRef(record.clientIdentifier)
+          case _                        => throw new RuntimeException("unsupported client identifier type found in Delete record")
         }
+        checkDeleteRecordAndEventuallyResume(taxIdentifier, Arn(record.arn))(ec, headerCarrier, auditData, NoRequest)
+
       case None =>
         logger.info("No Delete Record Found")
         Future.successful(true)
@@ -289,19 +297,22 @@ class DeleteRelationshipsService @Inject()(
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
               _ <- deleteEsRecord(arn, identifier)
               _ <- deleteEtmpRecord(arn, identifier)
+              _ <- setRelationshipEnded(arn, identifier, deleteRecord.relationshipEndedBy.getOrElse("HMRC"))
             } yield true
           case (false, true) =>
+            logger.warn(
+              s"ES relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
+                s"This should not happen because we always remove the ES relationship first.")
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
               _ <- deleteEsRecord(arn, identifier)
+              _ <- setRelationshipEnded(arn, identifier, deleteRecord.relationshipEndedBy.getOrElse("HMRC"))
             } yield true
           case (true, false) =>
-            logger.warn(
-              s"ETMP relationship existed without ES relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
-                s"This should not happen because we always remove the ETMP relationship first.")
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, identifier)
               _ <- deleteEtmpRecord(arn, identifier)
+              _ <- setRelationshipEnded(arn, identifier, deleteRecord.relationshipEndedBy.getOrElse("HMRC"))
             } yield true
           case (false, false) =>
             logger.warn(
@@ -343,4 +354,26 @@ class DeleteRelationshipsService @Inject()(
     else if (currentUser.credentials.providerType == "PrivilegedApplication")
       auditService.sendHmrcLedDeleteRelationshipAuditEvent
     else throw new IllegalStateException("No Client Provider Type Found")
+
+  private def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
+    maybeGroup match {
+      case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => Some("Client")
+      case Some(AffinityGroup.Agent)                                         => Some("Agent")
+      case _                                                                 => Some("HMRC")
+    }
+
+  private def setRelationshipEnded(arn: Arn, clientIdentifier: TaxIdentifier, endedBy: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Done] = {
+    val service = TypeOfEnrolment(clientIdentifier).enrolmentKey
+    aca
+      .setRelationshipEnded(arn, clientIdentifier, service, endedBy)
+      .map(
+        success =>
+          if (success) Done
+          else {
+            logger.warn("setRelationshipEnded failed")
+            Done
+        })
+  }
 }

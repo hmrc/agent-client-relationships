@@ -24,10 +24,11 @@ import play.api.libs.json.JsArray
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.SetRelationshipEndedPayload
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -83,4 +84,33 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
         }
     }
   }
+
+  /*
+  Updates the invitation record to Deauthorised.
+   */
+  def setRelationshipEnded(arn: Arn, clientIdentifier: TaxIdentifier, service: String, endedBy: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext) = {
+    val url: URL = new URL(
+      acaBaseUrl,
+      "/agent-client-authorisation/invitations/set-relationship-ended"
+    )
+    val payload = SetRelationshipEndedPayload(
+      arn = arn,
+      clientId = clientIdentifier.value,
+      service = service,
+      endedBy = Some(endedBy))
+    monitor(s"ConsumedAPI-ACA-setRelationshipEnded-PUT") {
+      httpClient
+        .PUT[SetRelationshipEndedPayload, HttpResponse](url = url.toString, payload)
+        .map { response =>
+          response.status match {
+            case Status.NO_CONTENT => true
+            case _                 => false
+          }
+        }
+    }
+
+  }
+
 }
