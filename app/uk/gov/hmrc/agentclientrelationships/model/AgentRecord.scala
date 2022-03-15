@@ -17,13 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.{Format, Json}
-
-case class SuspensionDetails(suspensionStatus: Boolean, regimes: Option[Set[String]] = None)
-
-object SuspensionDetails {
-  implicit val format: Format[SuspensionDetails] =
-    Json.format[SuspensionDetails]
-}
+import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
 
 case class AgentRecord(suspensionDetails: Option[SuspensionDetails]) {
 
