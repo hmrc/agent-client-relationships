@@ -116,8 +116,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       response.status match {
         case Status.OK =>
           response.json.as[InactiveRelationshipResponse].relationship.filter(isNotActive)
-        case Status.BAD_REQUEST => Seq.empty
-        case Status.NOT_FOUND   => Seq.empty
+        case Status.BAD_REQUEST                             => Seq.empty
+        case Status.NOT_FOUND                               => Seq.empty
+        case _ if response.body.contains("AGENT_SUSPENDED") => Seq.empty
         case other: Int =>
           throw UpstreamErrorResponse(response.body, other, other)
       }

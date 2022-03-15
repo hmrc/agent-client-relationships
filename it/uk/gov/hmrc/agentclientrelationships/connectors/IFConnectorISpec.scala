@@ -617,6 +617,12 @@ class IFConnectorISpec
       result.isEmpty shouldBe true
     }
 
+    "return empty Seq if IF returns 403 and body AGENT_SUSPENDED" in {
+      getFailInactiveRelationshipsForClient(mtdItId, 403, Some(s""""{"code":"AGENT_SUSPENDED","reason":"The remote endpoint has indicated that the agent is suspended"}"""))
+      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
+      result.isEmpty shouldBe true
+    }
+
     "fail when IF is unavailable" in {
       givenIFReturnsServiceUnavailable()
       an[UpstreamErrorResponse] should be thrownBy await(ifConnector.getInactiveClientRelationships(mtdItId))
