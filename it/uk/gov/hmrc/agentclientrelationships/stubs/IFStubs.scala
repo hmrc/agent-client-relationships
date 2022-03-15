@@ -366,9 +366,9 @@ trait IFStubs {
                      |}""".stripMargin)))
   }
 
-  def getFailInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, status: Int) =
+  def getFailInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, status: Int, body: Option[String] = None) =
     stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
-      .willReturn(aResponse().withStatus(status))
+      .willReturn(aResponse().withStatus(status).withBody(body.getOrElse("")))
     )
 
   def getInactiveRelationshipsViaAgent(arn: Arn, otherTaxIdentifier: TaxIdentifier, taxIdentifier: TaxIdentifier): StubMapping = {
