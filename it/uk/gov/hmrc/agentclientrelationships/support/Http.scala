@@ -27,6 +27,8 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 object Http {
 
+  private val authHeader = "Authorization" -> "Bearer 123"
+
   def get(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
     request.get()
   }
@@ -53,7 +55,7 @@ object Http {
   private def perform(url: String)(
     fun: WSRequest => Future[WSResponse])(implicit ws: WSClient): HttpResponse =
     await(
-      fun(ws.url(url).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
+      fun(ws.url(url).withHttpHeaders(authHeader).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
 
   private def await[A](future: Future[A]) = Await.result(future, Duration(10, SECONDS))
 
