@@ -69,7 +69,10 @@ class RelationshipsController @Inject()(
         case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
         case ("HMRC-MTD-VAT", _, _) if Vrn.isValid(clientId)        => checkWithTaxIdentifier(arn, Vrn(clientId))
         case ("HMRC-MTD-IT", "NI", _) if Nino.isValid(clientId) =>
-          des.getMtdIdFor(Nino(clientId)).flatMap(checkWithTaxIdentifier(arn, _))
+          des
+            .getMtdIdFor(Nino(clientId))
+            .flatMap(
+              _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(checkWithTaxIdentifier(arn, _)))
         case ("IR-SA", _, _) if Nino.isValid(clientId) =>
           withSuspensionCheck(arn, service) { checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId)) }
         case ("HMRC-TERS-ORG", _, _) if Utr.isValid(clientId)           => checkWithTaxIdentifier(arn, Utr(clientId))
@@ -86,7 +89,9 @@ class RelationshipsController @Inject()(
   private def withSuspensionCheck(agentId: TaxIdentifier, service: String)(
     proceed: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     des.getAgentRecord(agentId).flatMap {
-      case record if record.isSuspended && record.suspendedFor(getDesRegimeFor(service)) =>
+      case None =>
+        Future.successful(BadRequest)
+      case Some(record) if record.isSuspended && record.suspendedFor(getDesRegimeFor(service)) =>
         logger.warn(s"agent with id : ${agentId.value} is suspended for regime ${getDesRegimeFor(service)}")
         Future.successful(BadRequest)
       case _ => proceed
@@ -229,9 +234,13 @@ class RelationshipsController @Inject()(
             (for {
               id <- taxIdentifier match {
                      case nino @ Nino(_) => des.getMtdIdFor(nino)
-                     case _              => Future successful taxIdentifier
+                     case _              => Future successful Option(taxIdentifier)
                    }
-              _ <- deleteService.deleteRelationship(arn, id, currentUser.affinityGroup)
+              _ <- id.fold {
+                    Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
+                  } {
+                    deleteService.deleteRelationship(arn, _, currentUser.affinityGroup)
+                  }
             } yield NoContent)
               .recover {
                 case upS: Upstream5xxResponse => throw upS

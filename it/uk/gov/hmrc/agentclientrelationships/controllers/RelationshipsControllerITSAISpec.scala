@@ -68,8 +68,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalGroupIdNotExistsFor(arn)
       givenGroupInfo("foo", "bar")
       givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientIsUnknownInCESAFor(nino)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, arn.value)
 
       val result = doRequest
       result.status shouldBe 404
@@ -80,8 +80,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenPrincipalUser(arn, "foo")
       givenGroupInfoNotExists("foo")
       givenDelegatedGroupIdsExistFor(mtdItId, Set("foo"))
-      givenNinoIsUnknownFor(mtdItId)
-      givenClientIsUnknownInCESAFor(nino)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenClientHasRelationshipWithAgentInCESA(nino, arn.value)
       givenAdminUser("foo", "any")
 
       val result = doRequest
@@ -119,7 +119,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAgentGroupWithUsers("foo",
         List(UserDetails(userId = Some("any"), credentialRole = Some("Assistant")))
       )
-      givenNinoIsUnknownFor(mtdItId)
+      givenClientHasRelationshipWithAgentInCESA(nino, arn.value)
+      givenNinoIsKnownFor(mtdItId, nino)
 
       await(
         deleteRecordRepository.create(
@@ -1452,8 +1453,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenDesReturnsServiceUnavailable()
       }
 
-      "return 502" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 503
+      "return 204" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 204
         verifyDeleteRecordNotExists
       }
 
@@ -1532,8 +1533,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenDelegatedGroupIdRequestFailsWith(404)
       }
 
-      "return 404" in new StubsForScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 204" in new StubsForScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 204
         verifyDeleteRecordNotExists
       }
 

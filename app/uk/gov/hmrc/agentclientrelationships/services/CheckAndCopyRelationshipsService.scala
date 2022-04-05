@@ -135,8 +135,9 @@ class CheckAndCopyRelationshipsService @Inject()(
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
-          nino       <- des.getNinoFor(mtdItId)
-          references <- lookupCesaForOldRelationship(arn, nino)
+          nino <- des.getNinoFor(mtdItId)
+          references <- nino.fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(
+                         lookupCesaForOldRelationship(arn, _))
           result <- if (references.nonEmpty)
                      findOrCreateRelationshipCopyRecordAndCopy(
                        references.map(SaRef.apply),
@@ -162,7 +163,8 @@ class CheckAndCopyRelationshipsService @Inject()(
                            auditService.sendCreateRelationshipAuditEvent
                            mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                            FoundAndFailedToCopy
-                       } else tryCreateRelationshipFromAltItsa(nino)
+                       } else
+                     nino.fold[Future[CheckAndCopyResult]](Future(NotFound))(tryCreateRelationshipFromAltItsa(_))
         } yield result
     }
   }

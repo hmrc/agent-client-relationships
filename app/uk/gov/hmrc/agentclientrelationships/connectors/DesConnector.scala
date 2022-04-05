@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HttpClient, _}
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
 
 import java.net.URL
 import java.util.UUID
@@ -51,26 +51,28 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Nino] = {
+  def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
     val url = new URL(s"${appConfig.desUrl}/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
 
     getWithDesHeaders("GetRegistrationBusinessDetailsByMtdbsa", url).map { result =>
       result.status match {
-        case Status.OK => (result.json \ "nino").as[Nino]
+        case Status.OK => Option((result.json \ "nino").as[Nino])
         case other =>
-          throw UpstreamErrorResponse(result.body, other, other)
+          logger.error(s"Error in GetRegistrationBusinessDetailsByMtdbsa. $other, ${result.body}")
+          None
       }
     }
   }
 
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[MtdItId] = {
+  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
     val url = new URL(s"${appConfig.desUrl}/registration/business-details/nino/${encodePathSegment(nino.value)}")
 
     getWithDesHeaders("GetRegistrationBusinessDetailsByNino", url).map { result =>
       result.status match {
-        case Status.OK => (result.json \ "mtdbsa").as[MtdItId]
+        case Status.OK => Option((result.json \ "mtdbsa").as[MtdItId])
         case other =>
-          throw UpstreamErrorResponse(result.body, other, other)
+          logger.error(s"Error in GetRegistrationBusinessDetailsByNino. $other, ${result.body}")
+          None
       }
     }
   }
@@ -88,17 +90,21 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
             .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
             .flatMap(_.agentId)
         case other =>
-          throw UpstreamErrorResponse(response.body, other, other)
+          logger.error(s"Error in GetStatusAgentRelationship. $other, ${response.body}")
+          Seq.empty
       }
     }
   }
 
-  def getAgentRecord(agentId: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AgentRecord] =
+  def getAgentRecord(
+    agentId: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentRecord]] =
     getWithDesHeaders("GetAgentRecord", new URL(getAgentRecordUrl(agentId))).map { response =>
       response.status match {
         case Status.OK =>
-          response.json.as[AgentRecord]
-        case status => throw UpstreamErrorResponse(response.body, status, status)
+          Option(response.json.as[AgentRecord])
+        case status =>
+          logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
+          None
       }
     }
 
@@ -123,7 +129,8 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
         case Status.OK                                              => true
         case Status.NOT_FOUND                                       => false
         case other: Int =>
-          throw UpstreamErrorResponse(response.body, other, other)
+          logger.error(s"Error in GetVatCustomerInformation. $other, ${response.body}")
+          false
       }
     }
   }
