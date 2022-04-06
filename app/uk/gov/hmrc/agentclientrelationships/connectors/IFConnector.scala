@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HttpClient, _}
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
 
 import java.net.URL
 import java.util.UUID
@@ -99,7 +99,8 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         case Status.NOT_FOUND                               => None
         case _ if response.body.contains("AGENT_SUSPENDED") => None
         case other: Int =>
-          throw UpstreamErrorResponse(response.body, other, other)
+          logger.error(s"Error in IF GetActiveClientRelationships: $other, ${response.body}")
+          None
       }
     }
   }
@@ -120,7 +121,8 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         case Status.NOT_FOUND                               => Seq.empty
         case _ if response.body.contains("AGENT_SUSPENDED") => Seq.empty
         case other: Int =>
-          throw UpstreamErrorResponse(response.body, other, other)
+          logger.error(s"Error in IF GetInactiveClientRelationships: $other, ${response.body}")
+          Seq.empty
       }
     }
   }
@@ -145,7 +147,8 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
           case Status.NOT_FOUND                               => Seq.empty
           case _ if response.body.contains("AGENT_SUSPENDED") => Seq.empty
           case other: Int =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            logger.error(s"Error in IF GetInactiveRelationships: $other, ${response.body}")
+            Seq.empty
         }
       }
     }
@@ -154,7 +157,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
   // IF API #1167 Create/Update Agent Relationship
   def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
+    ec: ExecutionContext): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$ifBaseUrl/registration/relationship")
     val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, clientId)
@@ -162,9 +165,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     postWithIFHeaders("CreateAgentRelationship", url, requestBody, ifAuthToken, ifEnv)
       .map { response =>
         response.status match {
-          case Status.OK => response.json.as[RegistrationRelationshipResponse]
+          case Status.OK => Option(response.json.as[RegistrationRelationshipResponse])
           case other: Int =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            logger.error(s"Error in IF CreateAgentRelationship: $other, ${response.body}")
+            None
         }
       }
   }
@@ -172,7 +176,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
   // IF API #1167 Create/Update Agent Relationship
   def deleteAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[RegistrationRelationshipResponse] = {
+    ec: ExecutionContext): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$ifBaseUrl/registration/relationship")
     postWithIFHeaders(
@@ -182,9 +186,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       ifAuthToken,
       ifEnv).map { response =>
       response.status match {
-        case Status.OK => response.json.as[RegistrationRelationshipResponse]
+        case Status.OK => Option(response.json.as[RegistrationRelationshipResponse])
         case other: Int =>
-          throw UpstreamErrorResponse(response.body, other, other)
+          logger.error(s"Error in IF DeleteAgentRelationship: $other, ${response.body}")
+          None
       }
     }
   }

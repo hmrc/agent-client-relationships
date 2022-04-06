@@ -11,12 +11,11 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, IFStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, UpstreamErrorResponse}
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
@@ -83,13 +82,13 @@ class IFConnectorISpec
     "create relationship between agent and client and return 200" in {
       givenAgentCanBeAllocatedInIF(MtdItId("foo"), Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))).get.processingDate should not be null
     }
 
-    "not create relationship between agent and client and return 404" in {
+    "not create relationship between agent and client and return nothing" in {
       givenAgentCanNotBeAllocatedInIF(status = 404)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(ifConnector.createAgentRelationship(MtdItId("foo"), Arn("bar")))
+      await(ifConnector.createAgentRelationship(MtdItId("foo"), Arn("bar"))) shouldBe None
     }
 
     "request body contains regime as ITSA when client Id is an MtdItId" in {
@@ -199,14 +198,14 @@ class IFConnectorISpec
       an[IllegalArgumentException] should be thrownBy await(ifConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
-    "fail when IF is throwing errors" in {
+    "return nothing when IF is throwing errors" in {
       givenIFReturnsServerError()
-      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn"))) shouldBe None
     }
 
-    "fail when IT is unavailable" in {
+    "return nothing when IF is unavailable" in {
       givenIFReturnsServiceUnavailable()
-      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      await(ifConnector.createAgentRelationship(Vrn("someVrn"), Arn("someArn"))) shouldBe None
     }
   }
 
@@ -214,57 +213,57 @@ class IFConnectorISpec
     "delete relationship between agent and client and return 200 for ItSa service" in {
       givenAgentCanBeDeallocatedInIF(MtdItId("foo"), Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Vat service" in {
       givenAgentCanBeDeallocatedInIF(Vrn("foo"), Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service" in {
       givenAgentCanBeDeallocatedInIF(Utr("foo"), Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(Utr("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(Utr("foo"), Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service with URN" in {
       givenAgentCanBeDeallocatedInIF(Urn("foo"), Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(Urn("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(Urn("foo"), Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for PPT service with PptRef" in {
       givenAgentCanBeDeallocatedInIF(PptRef("foo"), Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(PptRef("foo"), Arn("bar"))).processingDate should not be null
+      await(ifConnector.deleteAgentRelationship(PptRef("foo"), Arn("bar"))).get.processingDate should not be null
     }
 
-    "not delete relationship between agent and client and return 404 for ItSa service" in {
+    "not delete relationship between agent and client and return nothing for ItSa service" in {
       givenAgentCanNotBeDeallocatedInIF(status = 404)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(ifConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar")))
+      await(ifConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))) shouldBe None
     }
 
-    "not delete relationship between agent and client and return 404 for Vat service" in {
+    "not delete relationship between agent and client and return nothing for Vat service" in {
       givenAgentCanNotBeDeallocatedInIF(status = 404)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(ifConnector.deleteAgentRelationship(Vrn("foo"), Arn("bar")))
+      await(ifConnector.deleteAgentRelationship(MtdItId("foo"), Arn("bar"))) shouldBe None
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(ifConnector.deleteAgentRelationship(Eori("foo"), Arn("bar")))
     }
 
-    "fail when IF is throwing errors" in {
+    "return nothing when IF is throwing errors" in {
       givenIFReturnsServerError()
-      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      await(ifConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn"))) shouldBe None
     }
 
-    "fail when IF is unavailable" in {
+    "return nothing when IF is unavailable" in {
       givenIFReturnsServiceUnavailable()
-      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn")))
+      await(ifConnector.deleteAgentRelationship(Vrn("someVrn"), Arn("someArn"))) shouldBe None
     }
   }
 
@@ -623,9 +622,9 @@ class IFConnectorISpec
       result.isEmpty shouldBe true
     }
 
-    "fail when IF is unavailable" in {
+    "return empty Seq when IF is unavailable" in {
       givenIFReturnsServiceUnavailable()
-      an[UpstreamErrorResponse] should be thrownBy await(ifConnector.getInactiveClientRelationships(mtdItId))
+      await(ifConnector.getInactiveClientRelationships(mtdItId)) shouldBe empty
     }
   }
 }
