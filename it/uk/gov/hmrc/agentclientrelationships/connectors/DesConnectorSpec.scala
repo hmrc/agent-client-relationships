@@ -12,7 +12,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, Des
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
@@ -79,31 +79,31 @@ class DesConnectorSpec
     "return some nino when agent's mtdbsa identifier is known to ETMP" in {
       givenNinoIsKnownFor(mtdItId, nino)
       givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId)) shouldBe nino
+      await(desConnector.getNinoFor(mtdItId)) shouldBe Some(nino)
     }
 
     "return nothing when agent's mtdbsa identifier is unknown to ETMP" in {
       givenNinoIsUnknownFor(mtdItId)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
+      await(desConnector.getNinoFor(mtdItId)) shouldBe None
     }
 
-    "fail when agent's mtdbsa identifier is invalid" in {
+    "return nothing when agent's mtdbsa identifier is invalid" in {
       givenMtdbsaIsInvalid(mtdItId)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
+      await(desConnector.getNinoFor(mtdItId)) shouldBe None
     }
 
-    "fail when DES is unavailable" in {
+    "return nothing when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
+      await(desConnector.getNinoFor(mtdItId)) shouldBe None
     }
 
-    "fail when DES is throwing errors" in {
+    "return nothing when DES is throwing errors" in {
       givenDesReturnsServerError()
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getNinoFor(mtdItId))
+      await(desConnector.getNinoFor(mtdItId)) shouldBe None
     }
 
     "record metrics for GetRegistrationBusinessDetailsByMtdbsa" in {
@@ -117,13 +117,13 @@ class DesConnectorSpec
     "return MtdItId when agent's nino is known to ETMP" in {
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenAuditConnector()
-      await(desConnector.getMtdIdFor(nino)) shouldBe mtdItId
+      await(desConnector.getMtdIdFor(nino)) shouldBe Some(mtdItId)
     }
 
     "return nothing when agent's nino identifier is unknown to ETMP" in {
       givenMtdItIdIsUnKnownFor(nino)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getMtdIdFor(nino))
+      await(desConnector.getMtdIdFor(nino)) shouldBe None
     }
   }
 
@@ -169,28 +169,28 @@ class DesConnectorSpec
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
-    "fail when client's nino is invalid" in {
+    "return empty seq when client's nino is invalid" in {
       givenNinoIsInvalid(nino)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
-    "fail when client is unknown" in {
+    "return empty seq when client is unknown" in {
       givenClientIsUnknownInCESAFor(nino)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
-    "fail when DES is unavailable" in {
+    "return empty seq when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
-    "fail when DES is throwing errors" in {
+    "return empty seq when DES is throwing errors" in {
       givenDesReturnsServerError()
       givenAuditConnector()
-      an[Exception] should be thrownBy await(desConnector.getClientSaAgentSaReferences(nino))
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
     "record metrics for GetStatusAgentRelationship Cesa" in {
@@ -207,7 +207,7 @@ class DesConnectorSpec
     "get agentRecord detail should retrieve agent record from DES" in {
       getAgentRecordForClient(agentARN)
 
-      await(desConnector.getAgentRecord(agentARN)) should be (AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty)))))
+      await(desConnector.getAgentRecord(agentARN)) should be (Some(AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty))))))
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
@@ -231,10 +231,11 @@ class DesConnectorSpec
       result shouldBe false
     }
 
-    "fail when DES is unavailable" in {
+    "return false when DES is unavailable" in {
       givenAuditConnector()
       givenDESRespondsWithStatusForVrn(vrn, 503)
-      an[UpstreamErrorResponse] should be thrownBy await(desConnector.vrnIsKnownInEtmp(vrn))
+      val result = await(desConnector.vrnIsKnownInEtmp(vrn))
+      result shouldBe false
     }
   }
 }
