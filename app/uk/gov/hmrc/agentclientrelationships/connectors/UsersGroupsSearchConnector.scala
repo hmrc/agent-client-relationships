@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status
@@ -28,7 +28,7 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HttpClient, _}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -72,7 +72,8 @@ class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics
             logger.warn(s"Group $groupId not found in SCP")
             None
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
+            None
         }
       }
     }
@@ -88,7 +89,8 @@ class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics
             logger.warn(s"Group $groupId not found in SCP")
             None
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            logger.error(s"Error in UGS-getGroupInfo: $other, ${response.body}")
+            None
         }
       }
     }
