@@ -223,7 +223,7 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 404
-      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 403 for a client with a mismatched PptRef" in {
@@ -513,8 +513,8 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenDesReturnsServiceUnavailable()
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -533,8 +533,8 @@ class RelationshipsControllerPPTISpec extends RelationshipsBaseControllerISpec {
         givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {

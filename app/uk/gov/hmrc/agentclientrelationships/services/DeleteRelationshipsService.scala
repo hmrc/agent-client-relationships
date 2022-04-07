@@ -142,8 +142,9 @@ class DeleteRelationshipsService @Inject()(
     }
 
     (for {
-      _ <- updateEtmpSyncStatus(InProgress)
-      _ <- ifConnector.deleteAgentRelationship(taxIdentifier, arn)
+      _             <- updateEtmpSyncStatus(InProgress)
+      maybeResponse <- ifConnector.deleteAgentRelationship(taxIdentifier, arn)
+      if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipDeAuthorised", true)
       _ <- updateEtmpSyncStatus(Success)
     } yield ())

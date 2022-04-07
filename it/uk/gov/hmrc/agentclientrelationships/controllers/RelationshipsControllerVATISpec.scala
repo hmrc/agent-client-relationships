@@ -353,8 +353,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         'clientIdentifier (vrn.value),
         'clientIdentifierType (mtdVatIdType),
         'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
-        'syncToETMPStatus (Some(SyncStatus.Success)),
-        'syncToESStatus (Some(SyncStatus.Success))
+        'syncToETMPStatus (Some(SyncStatus.Failed)),
+        'syncToESStatus (None)
       )
     }
 
@@ -848,8 +848,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenIFReturnsServiceUnavailable()
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -868,8 +868,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1061,7 +1061,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 404
-      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 403 for a client with a mismatched Vrn" in {

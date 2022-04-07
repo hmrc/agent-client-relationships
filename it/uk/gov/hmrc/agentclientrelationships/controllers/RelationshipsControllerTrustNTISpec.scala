@@ -229,7 +229,7 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 404
-      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+      (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
     "return 403 for a client with a mismatched MtdItId" in {
@@ -518,8 +518,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenDesReturnsServiceUnavailable()
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -538,8 +538,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
