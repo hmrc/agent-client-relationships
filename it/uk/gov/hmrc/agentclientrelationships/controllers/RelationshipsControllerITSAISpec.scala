@@ -73,7 +73,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = doRequest
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 404 when agent code is not found in ugs" in {
@@ -86,7 +86,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = doRequest
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "MISSING_GROUP"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 404 when delete is pending" in {
@@ -134,7 +134,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = doRequest
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "NO_ADMIN_USER"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
 
       await(deleteRecordRepository.remove(arn, mtdItId))
     }
@@ -600,7 +600,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
-    "return 502 when mapping service is unavailable" in {
+    "return 404 when mapping service is unavailable" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -610,7 +610,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "any")
 
       val result = doRequest
-      result.status shouldBe 503
+      result.status shouldBe 404
     }
   }
 
@@ -681,7 +681,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 5xx mapping is unavailable" in {
+    "return 404 when mapping is unavailable" in {
       getAgentRecordForClient(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -691,7 +691,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenServiceReturnsServiceUnavailable()
 
       val result = doRequest
-      result.status shouldBe 503
+      result.status shouldBe 404
     }
 
     "return 404 when agent not allocated to client in es and also cesa mapping not found" in {

@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import java.net.URL
-
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Singleton}
+import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
@@ -28,8 +26,10 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
+import java.net.URL
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class SaMappings(mappings: Seq[SaMapping])
@@ -51,7 +51,8 @@ object AgentCodeMappings {
 
 @Singleton
 class MappingConnector @Inject()(httpClient: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
-    extends HttpAPIMonitor {
+    extends HttpAPIMonitor
+    with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getSaAgentReferencesFor(
@@ -62,7 +63,8 @@ class MappingConnector @Inject()(httpClient: HttpClient, metrics: Metrics)(impli
         response.status match {
           case Status.OK => response.json.as[SaMappings].mappings.map(_.saAgentReference)
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            logger.error(s"Error in Digital-Mappings getSaAgentReferences: $other, ${response.body}")
+            Seq.empty
         }
       }
     }
@@ -75,7 +77,8 @@ class MappingConnector @Inject()(httpClient: HttpClient, metrics: Metrics)(impli
         response.status match {
           case Status.OK => response.json.as[AgentCodeMappings].mappings.map(_.agentCode)
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            logger.error(s"Error in Digital-Mappings getAgentCodes: $other, ${response.body}")
+            Seq.empty
         }
       }
     }

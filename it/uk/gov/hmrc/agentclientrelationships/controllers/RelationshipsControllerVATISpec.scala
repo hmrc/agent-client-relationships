@@ -512,7 +512,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
-    "return 502 when mapping service is unavailable" in {
+    "return 404 when mapping service is unavailable" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
@@ -521,7 +521,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "any")
 
       val result = doRequest
-      result.status shouldBe 503
+      result.status shouldBe 404
     }
   }
 
@@ -548,12 +548,12 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 5xx mapping is unavailable" in {
+    "return 404 when mapping is unavailable" in {
       givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, "foo")
       givenServiceReturnsServiceUnavailable()
 
       val result = doRequest
-      result.status shouldBe 503
+      result.status shouldBe 404
     }
 
     "return 200 when agent credentials unknown but relationship exists in mapping" in {

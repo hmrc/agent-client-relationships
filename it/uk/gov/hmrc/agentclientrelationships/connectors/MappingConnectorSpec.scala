@@ -6,13 +6,11 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, MappingStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
-import uk.gov.hmrc.http.HttpClient
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -76,22 +74,22 @@ class MappingConnectorSpec
       await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe references
     }
 
-    "fail when arn is unknown in " in {
+    "return empty sequence when arn is unknown in " in {
       givenArnIsUnknownFor(arn)
       givenAuditConnector()
-      an[Exception] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
+      await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe empty
     }
 
-    "fail when mapping service is unavailable" in {
+    "return empty sequence when mapping service is unavailable" in {
       givenServiceReturnsServiceUnavailable()
       givenAuditConnector()
-      an[UpstreamErrorResponse] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
+      await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe empty
     }
 
-    "fail when mapping service is throwing errors" in {
+    "return empty sequence when mapping service is throwing errors" in {
       givenServiceReturnsServerError()
       givenAuditConnector()
-      an[Exception] should be thrownBy await(mappingConnector.getSaAgentReferencesFor(arn))
+      await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe empty
     }
 
     "record metrics for Mappings" in {
