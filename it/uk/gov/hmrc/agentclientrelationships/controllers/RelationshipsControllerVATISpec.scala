@@ -719,8 +719,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -747,8 +747,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 404" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 404
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -999,7 +999,7 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
     }
 
 
-    "return 502 when ES1 is unavailable" in {
+    "return 404 when ES1 is unavailable" in {
       givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo")
       givenDelegatedGroupIdsExistForMtdVatId(vrn)
@@ -1014,10 +1014,10 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
       givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
+      result.status shouldBe 404
     }
 
-    "return 502 when ES8 is unavailable" in {
+    "return 404 when ES8 is unavailable" in {
       givenUserIsSubscribedClient(vrn)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo("foo", "bar")
@@ -1034,8 +1034,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         agentCode = "bar")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+      result.status shouldBe 404
+      (result.json \ "message").asOpt[String] shouldBe None
     }
 
     "return 404 when DES is unavailable" in {

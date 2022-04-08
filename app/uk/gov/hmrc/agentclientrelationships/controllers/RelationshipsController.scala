@@ -197,7 +197,6 @@ class RelationshipsController @Inject()(
               .createRelationship(arn, taxIdentifier, Set(), false, true)
               .map(_ => Created)
               .recover {
-                case upS: Upstream5xxResponse => throw upS
                 case NonFatal(ex) =>
                   logger.warn("Could not create relationship due to ", ex)
                   NotFound(toJson(ex.getMessage))
