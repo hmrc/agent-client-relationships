@@ -184,15 +184,15 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       result.status shouldBe 201
     }
 
-    "return 404 when ES1 is unavailable" in new StubsForThisScenario {
+    "return 500 when ES1 is unavailable" in new StubsForThisScenario {
       givenUserIsSubscribedClient(urn)
       givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 404
+      result.status shouldBe 500
     }
 
-    "return 404 when ES8 is unavailable" in {
+    "return 500 when ES8 is unavailable" in {
       givenUserIsSubscribedClient(urn)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
@@ -208,27 +208,27 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
       givenAdminUser("foo", "user1")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 404
+      result.status shouldBe 500
       (result.json \ "message").asOpt[String] shouldBe None
     }
 
-    "return 404 when IF is unavailable" in {
+    "return 500 when IF is unavailable" in {
       givenUserIsSubscribedClient(urn)
       givenDelegatedGroupIdsNotExistForTrustNT(urn)
       givenDesReturnsServiceUnavailable()
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 404
+      result.status shouldBe 500
       (result.json \ "message").asOpt[String] shouldBe None
     }
 
-    "return 404 if IF returns 404" in {
+    "return 500 if IF returns 404" in {
       givenUserIsSubscribedClient(urn)
       givenDelegatedGroupIdsNotExistForTrustNT(urn)
       givenAgentCanNotBeAllocatedInIF(status = 404)
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 404
+      result.status shouldBe 500
       (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
@@ -389,8 +389,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenAdminUser("foo", "any")
       }
 
-      "return 404" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -417,8 +417,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenAdminUser("foo", "any")
       }
 
-      "return 404" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -518,8 +518,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenDesReturnsServiceUnavailable()
       }
 
-      "return 404" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -538,8 +538,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
-      "return 404" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -588,8 +588,8 @@ class RelationshipsControllerTrustNTISpec extends RelationshipsBaseControllerISp
         givenDelegatedGroupIdRequestFailsWith(404)
       }
 
-      "return 404" in new StubsForScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {

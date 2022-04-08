@@ -199,7 +199,7 @@ class RelationshipsController @Inject()(
               .recover {
                 case NonFatal(ex) =>
                   logger.warn("Could not create relationship due to ", ex)
-                  NotFound(toJson(ex.getMessage))
+                  InternalServerError(toJson(ex.getMessage))
               }
           }
 
@@ -245,7 +245,7 @@ class RelationshipsController @Inject()(
                 case upS: Upstream5xxResponse => throw upS
                 case NonFatal(ex) =>
                   logger.warn("Could not delete relationship", ex)
-                  NotFound(toJson(ex.getMessage))
+                  InternalServerError(toJson(ex.getMessage))
               }
           }
         case Left(error) => Future.successful(BadRequest(error))
