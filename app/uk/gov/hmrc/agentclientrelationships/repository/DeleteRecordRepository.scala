@@ -90,9 +90,9 @@ trait DeleteRecordRepository {
   def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int]
   def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[DeleteRecord]]
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit]
+    implicit ec: ExecutionContext): Future[Int]
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit]
+    implicit ec: ExecutionContext): Future[Int]
   def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Unit]
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
   def selectNextToRecover(implicit executionContext: ExecutionContext): Future[Option[DeleteRecord]]
@@ -111,6 +111,8 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
     with StrictlyEnsureIndexes[DeleteRecord, BSONObjectID] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
+
+  private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
   override def indexes: Seq[Index] =
     Seq(
@@ -133,7 +135,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       .map(_.headOption)
 
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] =
+    implicit ec: ExecutionContext): Future[Int] =
     findAndUpdate(
       query = Json.obj(
         "arn"                  -> arn.value,
@@ -142,14 +144,14 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       update = Json.obj("$set" -> Json.obj("syncToETMPStatus" -> status.toString)),
       upsert = false
     ).map(
-      _.lastError.foreach { error =>
-        if (!error.updatedExisting)
-          logger.warn(s"Updating ETMP sync status ($status) failed: $error")
+      _.lastError.fold(INDICATE_ERROR_DURING_DB_UPDATE) { updateLastError =>
+        updateLastError.err.foreach(msg => logger.warn(s"Updating ETMP sync status ($status) failed: $msg"))
+        updateLastError.n
       }
     )
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] =
+    implicit ec: ExecutionContext): Future[Int] =
     findAndUpdate(
       query = Json.obj(
         "arn"                  -> arn.value,
@@ -158,9 +160,9 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: ReactiveMongoCompone
       update = Json.obj("$set" -> Json.obj("syncToESStatus" -> status.toString)),
       upsert = false
     ).map(
-      _.lastError.foreach { error =>
-        if (!error.updatedExisting)
-          logger.warn(s"Updating ES sync status ($status) failed: $error")
+      _.lastError.fold(INDICATE_ERROR_DURING_DB_UPDATE) { updateLastError =>
+        updateLastError.err.foreach(msg => logger.warn(s"Updating ES sync status ($status) failed: $msg"))
+        updateLastError.n
       }
     )
 

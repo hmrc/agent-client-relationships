@@ -49,23 +49,25 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
   }
 
   override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] = {
+    implicit ec: ExecutionContext): Future[Int] = {
     val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
     Future.successful(
-      if (maybeValue.isDefined)
+      if (maybeValue.isDefined) {
         data(arn.value + identifier.value) = maybeValue.get.copy(syncToETMPStatus = Some(status))
-      else
+        1
+      } else
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
 
   }
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] = {
+    implicit ec: ExecutionContext): Future[Int] = {
     val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
     Future.successful(
-      if (maybeValue.isDefined)
+      if (maybeValue.isDefined) {
         data(arn.value + identifier.value) = maybeValue.get.copy(syncToESStatus = Some(status))
-      else
+        1
+      } else
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
   }
 

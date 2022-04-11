@@ -495,7 +495,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     def givenETMPDeAuthSucceeds =
       when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
-        .thenReturn(Future.successful(RegistrationRelationshipResponse(LocalDate.now.toString)))
+        .thenReturn(Future.successful(Some(RegistrationRelationshipResponse(LocalDate.now.toString))))
 
     def givenETMPDeAuthFails =
       when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))

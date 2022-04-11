@@ -26,6 +26,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordRepository {
   private val data: mutable.Map[String, RelationshipCopyRecord] = mutable.Map()
+  private val UPDATED_RECORD_COUNT = 1
 
   override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
     findBy(Arn(record.arn), MtdItId(record.clientIdentifier)).map(result => {
@@ -48,10 +49,11 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
   }
 
   override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] = {
+    implicit ec: ExecutionContext): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(if (maybeValue.isDefined) {
       data(arn.value + identifier.value) = maybeValue.get.copy(syncToETMPStatus = Some(status))
+      UPDATED_RECORD_COUNT
     } else {
       throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
     })
@@ -59,10 +61,11 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
   }
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] = {
+    implicit ec: ExecutionContext): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(if (maybeValue.isDefined) {
       data(arn.value + identifier.value) = maybeValue.get.copy(syncToESStatus = Some(status))
+      UPDATED_RECORD_COUNT
     } else {
       throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier")
     })

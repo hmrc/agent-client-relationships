@@ -1465,7 +1465,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   private def relationshipWillBeCreated(identifier: TaxIdentifier): OngoingStubbing[Future[Unit]] = {
     when(ifConnector.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec)))
-      .thenReturn(Future successful RegistrationRelationshipResponse("processing date"))
+      .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(identifier), eqs(agentCodeForAsAgent))(
         eqs(hc),
@@ -1479,16 +1479,16 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   private def metricsStub(): OngoingStubbing[MetricRegistry] =
     when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
 
-  def verifyEtmpRecordCreated(): Future[RegistrationRelationshipResponse] =
+  def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
     verify(ifConnector).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
 
-  def verifyEtmpRecordNotCreated(): Future[RegistrationRelationshipResponse] =
+  def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
     verify(ifConnector, never()).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
 
-  def verifyEtmpRecordCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
+  def verifyEtmpRecordCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
     verify(ifConnector).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
 
-  def verifyEtmpRecordNotCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
+  def verifyEtmpRecordNotCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
     verify(ifConnector, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEsRecordCreated(): Future[Unit] =

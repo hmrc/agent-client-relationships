@@ -28,8 +28,9 @@ import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
+import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, DeleteRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{DbUpdateFailed, DbUpdateStatus, DbUpdateSucceeded, DeleteRecord, DeleteRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound, TaxIdentifierSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AffinityGroup
@@ -71,10 +72,13 @@ class DeleteRelationshipsService @Inject()(
     auditData.set("enrolmentDeAllocated", false)
     auditData.set("etmpRelationshipDeAuthorised", false)
 
-    def createDeleteRecord(record: DeleteRecord): Future[Unit] =
+    def createDeleteRecord(record: DeleteRecord): Future[DbUpdateStatus] =
       deleteRecordRepository
         .create(record)
-        .map(_ => auditData.set("AgentDBRecord", true))
+        .map(count => {
+          auditData.set("AgentDBRecord", true)
+          convertDbUpdateStatus(count)
+        })
         .recoverWith {
           case NonFatal(ex) =>
             logger.warn(
@@ -92,10 +96,14 @@ class DeleteRelationshipsService @Inject()(
         headerCarrier = Some(hc),
         relationshipEndedBy = endedBy)
       for {
-        _ <- createDeleteRecord(record)
-        _ <- deleteEsRecord(arn, taxIdentifier)
-        _ <- deleteEtmpRecord(arn, taxIdentifier)
-        _ <- removeDeleteRecord(arn, taxIdentifier)
+        recordDeletionStatus <- createDeleteRecord(record)
+        if recordDeletionStatus == DbUpdateSucceeded
+        esRecordDeletionStatus <- deleteEsRecord(arn, taxIdentifier)
+        if esRecordDeletionStatus == DbUpdateSucceeded
+        etmpRecordDeletionStatus <- deleteEtmpRecord(arn, taxIdentifier)
+        if etmpRecordDeletionStatus == DbUpdateSucceeded
+        removed <- removeDeleteRecord(arn, taxIdentifier)
+        if removed
         _ <- setRelationshipEnded(arn, taxIdentifier, endedBy.getOrElse("HMRC"))
       } yield ()
     }
@@ -131,8 +139,10 @@ class DeleteRelationshipsService @Inject()(
   def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] = {
-    val updateEtmpSyncStatus = deleteRecordRepository.updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
+    auditData: AuditData): Future[DbUpdateStatus] = {
+    val updateEtmpSyncStatus = deleteRecordRepository
+      .updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
+      .map(convertDbUpdateStatus)
 
     val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
       logger.warn(
@@ -142,11 +152,13 @@ class DeleteRelationshipsService @Inject()(
     }
 
     (for {
-      _ <- updateEtmpSyncStatus(InProgress)
-      _ <- ifConnector.deleteAgentRelationship(taxIdentifier, arn)
+      etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
+      if etmpSyncStatusInProgress == DbUpdateSucceeded
+      maybeResponse <- ifConnector.deleteAgentRelationship(taxIdentifier, arn)
+      if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipDeAuthorised", true)
-      _ <- updateEtmpSyncStatus(Success)
-    } yield ())
+      etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
+    } yield etmpSyncStatusSuccess)
       .recoverWith {
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
           recoverWithException(e, UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_IF", upstreamCode, reportAs))
@@ -160,11 +172,13 @@ class DeleteRelationshipsService @Inject()(
   def deleteEsRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] = {
+    auditData: AuditData): Future[DbUpdateStatus] = {
 
-    val updateEsSyncStatus = deleteRecordRepository.updateEsSyncStatus(arn, taxIdentifier, _: SyncStatus)
+    val updateEsSyncStatus = deleteRecordRepository
+      .updateEsSyncStatus(arn, taxIdentifier, _: SyncStatus)
+      .map(convertDbUpdateStatus)
 
-    def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
+    def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
       logger.warn(
         s"De-allocating ES record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
         origExc)
@@ -172,39 +186,40 @@ class DeleteRelationshipsService @Inject()(
       Future.failed(replacementExc)
     }
 
-    lazy val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
+    lazy val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case RelationshipNotFound(errorCode) =>
         logger.warn(
           s"De-allocating ES record for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}) " +
             s"not possible because of incomplete data: $errorCode")
-        updateEsSyncStatus(IncompleteInputParams)
+        updateEsSyncStatus(IncompleteInputParams).map(_ => DbUpdateFailed)
     }
 
-    lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
+    lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
         logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
     }
 
-    lazy val recoverUnauthorized: PartialFunction[Throwable, Future[Unit]] = {
+    lazy val recoverUnauthorized: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case ex: UpstreamErrorResponse if ex.statusCode == 401 =>
         logAndMaybeFail(ex, ex)
     }
 
-    lazy val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
+    lazy val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case NonFatal(ex) =>
         logAndMaybeFail(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ES"))
     }
 
     (for {
-      _              <- updateEsSyncStatus(InProgress)
+      esSyncStatusInProgress <- updateEsSyncStatus(InProgress)
+      if esSyncStatusInProgress == DbUpdateSucceeded
       maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
       agentUser = maybeAgentUser.fold(error => throw RelationshipNotFound(error), identity)
       _ <- checkService
             .checkForRelationship(taxIdentifier, agentUser)
             .flatMap(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier))
       _ = auditData.set("enrolmentDeAllocated", true)
-      _ <- updateEsSyncStatus(Success)
-    } yield ()).recoverWith(
+      esSyncStatusSuccess <- updateEsSyncStatus(Success)
+    } yield esSyncStatusSuccess).recoverWith(
       recoverAgentUserRelationshipNotFound
         .orElse(recoverUpstream5xx)
         .orElse(recoverUnauthorized)

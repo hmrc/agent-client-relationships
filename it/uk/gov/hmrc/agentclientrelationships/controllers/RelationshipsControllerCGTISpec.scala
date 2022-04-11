@@ -171,17 +171,17 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 201
     }
 
-    "return 503 when ES1 is unavailable" in new StubsForThisScenario {
+    "return 500 when ES1 is unavailable" in new StubsForThisScenario {
       givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
+      result.status shouldBe 500
     }
 
-    "return 502 when ES8 is unavailable" in {
+    "return 500 when ES8 is unavailable" in {
       givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
@@ -197,11 +197,11 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "user1")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+      result.status shouldBe 500
+      (result.json \ "message").asOpt[String] shouldBe None
     }
 
-    "return 502 when DES is unavailable" in {
+    "return 500 when DES is unavailable" in {
       givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -210,11 +210,11 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
+      result.status shouldBe 500
+      (result.json \ "message").asOpt[String] shouldBe None
     }
 
-    "return 404 if DES returns 404" in {
+    "return 500 if DES returns 404" in {
       givenUserIsSubscribedClient(cgtRef)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -223,7 +223,7 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 404
+      result.status shouldBe 500
       (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 
@@ -384,8 +384,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -412,8 +412,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -513,8 +513,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenIFReturnsServiceUnavailable()
       }
 
-      "return 502" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 503
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -533,8 +533,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         givenAgentCanNotBeDeallocatedInIF(status = 404)
       }
 
-      "return 404" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -581,8 +581,8 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
         //givenPrincipalGroupIdNotExistsFor(cgtRef)
       }
 
-      "return 404" in new StubsForScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {

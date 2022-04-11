@@ -73,7 +73,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = doRequest
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 404 when agent code is not found in ugs" in {
@@ -86,7 +86,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = doRequest
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "MISSING_GROUP"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
     "return 404 when delete is pending" in {
@@ -134,7 +134,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
 
       val result = doRequest
       result.status shouldBe 404
-      (result.json \ "code").as[String] shouldBe "NO_ADMIN_USER"
+      (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
 
       await(deleteRecordRepository.remove(arn, mtdItId))
     }
@@ -600,7 +600,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       (result.json \ "code").as[String] shouldBe "UNKNOWN_ARN"
     }
 
-    "return 502 when mapping service is unavailable" in {
+    "return 404 when mapping service is unavailable" in {
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -610,7 +610,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "any")
 
       val result = doRequest
-      result.status shouldBe 503
+      result.status shouldBe 404
     }
   }
 
@@ -681,7 +681,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
     }
 
-    "return 5xx mapping is unavailable" in {
+    "return 404 when mapping is unavailable" in {
       getAgentRecordForClient(arn)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -691,7 +691,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenServiceReturnsServiceUnavailable()
 
       val result = doRequest
-      result.status shouldBe 503
+      result.status shouldBe 404
     }
 
     "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
@@ -952,9 +952,9 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
-        verifyDeleteRecordNotExists
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
+        verifyDeleteRecordHasStatuses(None, Some(SyncStatus.IncompleteInputParams))
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -981,9 +981,9 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
-        verifyDeleteRecordNotExists
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
+        verifyDeleteRecordHasStatuses(None, Some(SyncStatus.IncompleteInputParams))
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1100,8 +1100,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAdminUser("foo", "any")
       }
 
-      "return 503" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 503
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), Some(SyncStatus.Success))
       }
 
@@ -1123,8 +1123,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAdminUser("foo", "any")
       }
 
-      "return 404" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), Some(SyncStatus.Success))
       }
 
@@ -1315,9 +1315,9 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
-        verifyDeleteRecordNotExists
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
+        verifyDeleteRecordHasStatuses(None, Some(SyncStatus.IncompleteInputParams))
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1345,9 +1345,9 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAdminUser("foo", "any")
       }
 
-      "return 204" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 204
-        verifyDeleteRecordNotExists
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
+        verifyDeleteRecordHasStatuses(None, Some(SyncStatus.IncompleteInputParams))
       }
 
       "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
@@ -1477,8 +1477,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenAdminUser("foo", "any")
       }
 
-      "return 404" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 404
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
         verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), Some(SyncStatus.Success))
       }
 
@@ -1631,17 +1631,17 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       result.status shouldBe 201
     }
 
-    "return 502 when ES1 is unavailable" in new StubsForThisScenario {
+    "return 500 when ES1 is unavailable" in new StubsForThisScenario {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
       givenDelegatedGroupIdRequestFailsWith(503)
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
+      result.status shouldBe 500
     }
 
-    "return 502 when ES8 is unavailable" in {
+    "return 500 when ES8 is unavailable" in {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo", userId = "user1")
       givenGroupInfo(groupId = "foo", agentCode = "bar")
@@ -1657,11 +1657,11 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "user1")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_ES")
+      result.status shouldBe 500
+      (result.json \ "message").asOpt[String] shouldBe None
     }
 
-    "return 502 when DES is unavailable" in {
+    "return 500 when DES is unavailable" in {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -1670,11 +1670,11 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 503
-      (result.json \ "message").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
+      result.status shouldBe 500
+      (result.json \ "message").asOpt[String] shouldBe None
     }
 
-    "return 404 if IF returns 404" in {
+    "return 500 if IF returns 404" in {
       givenUserIsSubscribedClient(mtdItId)
       givenPrincipalUser(arn, "foo")
       givenGroupInfo("foo", "bar")
@@ -1683,7 +1683,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
       givenAdminUser("foo", "any")
 
       val result = doAgentPutRequest(requestPath)
-      result.status shouldBe 404
+      result.status shouldBe 500
       (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
     }
 

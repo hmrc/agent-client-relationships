@@ -24,6 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
+import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
@@ -57,7 +58,7 @@ class CreateRelationshipsService @Inject()(
     failIfAllocateAgentInESFails: Boolean)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[Option[Unit]] =
+    auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
       .tryLock(arn, identifier) {
 
@@ -65,33 +66,41 @@ class CreateRelationshipsService @Inject()(
         auditData.set("enrolmentDelegated", false)
         auditData.set("etmpRelationshipCreated", false)
 
-        def createRelationshipRecord: Future[Unit] = {
+        def createRelationshipRecord: Future[DbUpdateStatus] = {
           val identifierType = TypeOfEnrolment(identifier).identifierKey
           val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
           relationshipCopyRepository
             .create(record)
-            .map(_ => auditData.set("AgentDBRecord", true))
+            .map(count => {
+              auditData.set("AgentDBRecord", true)
+              convertDbUpdateStatus(count)
+            })
             .recoverWith {
               case NonFatal(ex) =>
                 logger.warn(
                   s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
                   ex)
                 if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
-                else Future.successful(())
+                else Future.successful(DbUpdateFailed)
             }
         }
 
         for {
-          _ <- createRelationshipRecord
-          _ <- createEtmpRecord(arn, identifier)
-          _ <- createEsRecord(arn, identifier, failIfAllocateAgentInESFails)
-        } yield ()
+          recordCreationStatus <- createRelationshipRecord
+          if recordCreationStatus == DbUpdateSucceeded
+          etmpRecordCreationStatus <- createEtmpRecord(arn, identifier)
+          if etmpRecordCreationStatus == DbUpdateSucceeded
+          esRecordCreationStatus <- createEsRecord(arn, identifier, failIfAllocateAgentInESFails)
+        } yield esRecordCreationStatus
       }
 
-  private def createEtmpRecord(
-    arn: Arn,
-    identifier: TaxIdentifier)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Unit] = {
-    val updateEtmpSyncStatus = relationshipCopyRepository.updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
+  private def createEtmpRecord(arn: Arn, identifier: TaxIdentifier)(
+    implicit ec: ExecutionContext,
+    hc: HeaderCarrier,
+    auditData: AuditData): Future[DbUpdateStatus] = {
+    val updateEtmpSyncStatus = relationshipCopyRepository
+      .updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
+      .map(convertDbUpdateStatus)
 
     val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
       logger.warn(s"Creating ETMP record failed for ${arn.value}, $identifier due to: ${origExc.getMessage}", origExc)
@@ -99,11 +108,13 @@ class CreateRelationshipsService @Inject()(
     }
 
     (for {
-      _ <- updateEtmpSyncStatus(InProgress)
-      _ <- ifConnector.createAgentRelationship(identifier, arn)
+      etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
+      if etmpSyncStatusInProgress == DbUpdateSucceeded
+      maybeResponse <- ifConnector.createAgentRelationship(identifier, arn)
+      if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipCreated", true)
-      _ <- updateEtmpSyncStatus(Success)
-    } yield ())
+      etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
+    } yield etmpSyncStatusSuccess)
       .recoverWith {
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
           recoverWithException(
@@ -118,48 +129,50 @@ class CreateRelationshipsService @Inject()(
   private def createEsRecord(arn: Arn, identifier: TaxIdentifier, failIfAllocateAgentInESFails: Boolean)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[Unit] = {
+    auditData: AuditData): Future[DbUpdateStatus] = {
 
-    val updateEsSyncStatus = relationshipCopyRepository.updateEsSyncStatus(arn, identifier, _: SyncStatus)
+    val updateEsSyncStatus = relationshipCopyRepository
+      .updateEsSyncStatus(arn, identifier, _: SyncStatus)
+      .map(convertDbUpdateStatus)
 
-    def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[Unit] = {
+    def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
       logger.warn(
         s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
         origExc)
       updateEsSyncStatus(Failed).flatMap { _ =>
         if (failIfAllocateAgentInESFails) Future.failed(replacementExc)
-        else Future.successful(())
+        else Future.successful(DbUpdateFailed)
       }
     }
 
-    val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[Unit]] = {
+    val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case RelationshipNotFound(errorCode) =>
         logger.warn(
           s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
             s"not possible because of incomplete data: $errorCode")
-        updateEsSyncStatus(IncompleteInputParams)
+        updateEsSyncStatus(IncompleteInputParams).map(_ => DbUpdateFailed)
     }
 
-    val recoverUpstream5xx: PartialFunction[Throwable, Future[Unit]] = {
+    val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
         logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs, headers))
     }
 
-    val recoverNonFatal: PartialFunction[Throwable, Future[Unit]] = {
+    val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case NonFatal(ex) =>
         logAndMaybeFail(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
     }
 
-    def createDeleteRecord(record: DeleteRecord): Future[Unit] =
+    def createDeleteRecord(record: DeleteRecord): Future[DbUpdateStatus] =
       deleteRecordRepository
         .create(record)
-        .map(_ => ())
+        .map(convertDbUpdateStatus)
         .recover {
           case NonFatal(ex) =>
             logger.warn(
               s"Inserting delete record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
               ex)
-            ()
+            DbUpdateFailed
         }
 
     def removeDeleteRecord(arn: Arn, taxIdentifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Boolean] =
@@ -206,14 +219,15 @@ class CreateRelationshipsService @Inject()(
       } yield ()
 
     (for {
-      _              <- updateEsSyncStatus(InProgress)
+      esSyncStatusInProgress <- updateEsSyncStatus(InProgress)
+      if esSyncStatusInProgress == DbUpdateSucceeded
       maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
       agentUser = maybeAgentUser.right.getOrElse(throw RelationshipNotFound("No admin agent user found"))
       _ <- deallocatePreviousRelationshipIfAny
       _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
-      _ <- updateEsSyncStatus(Success)
-    } yield ())
+      esSyncStatusSuccess <- updateEsSyncStatus(Success)
+    } yield esSyncStatusSuccess)
       .recoverWith(
         recoverAgentUserRelationshipNotFound
           .orElse(recoverUpstream5xx)
@@ -223,7 +237,7 @@ class CreateRelationshipsService @Inject()(
   def resumeRelationshipCreation(relationshipCopyRecord: RelationshipCopyRecord, arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[Option[Unit]] =
+    auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
       .tryLock(arn, identifier) {
         def recoverEtmpRecord() = createEtmpRecord(arn, identifier)
@@ -233,9 +247,10 @@ class CreateRelationshipsService @Inject()(
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
           case (true, true) =>
             for {
-              _ <- recoverEtmpRecord()
-              _ <- recoverEsRecord()
-            } yield ()
+              etmpStatus <- recoverEtmpRecord()
+              if etmpStatus == DbUpdateSucceeded
+              esStatus <- recoverEsRecord()
+            } yield esStatus
           case (false, true) =>
             recoverEsRecord()
           case (true, false) =>
@@ -246,7 +261,7 @@ class CreateRelationshipsService @Inject()(
           case (false, false) =>
             logger.warn(
               s"recoverRelationshipCreation called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
-            Future.successful(())
+            Future.successful(DbUpdateFailed)
         }
       }
 }

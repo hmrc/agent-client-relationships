@@ -62,10 +62,10 @@ trait RelationshipCopyRecordRepository {
   def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int]
   def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit]
+    implicit ec: ExecutionContext): Future[Int]
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit]
+    implicit ec: ExecutionContext): Future[Int]
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
 
@@ -83,6 +83,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
     with StrictlyEnsureIndexes[RelationshipCopyRecord, BSONObjectID] {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
+
+  private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
   import ImplicitBSONHandlers._
 
@@ -119,25 +121,34 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMo
       .map(_.headOption)
 
   def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] =
+    implicit ec: ExecutionContext): Future[Int] =
     findAndUpdate(
       query = Json.obj(
         "arn"                  -> arn.value,
         "clientIdentifier"     -> identifier.value,
         "clientIdentifierType" -> clientIdentifierType(identifier)),
       update = Json.obj("$set" -> Json.obj("syncToETMPStatus" -> status.toString))
-    ).map(
-      _.lastError.flatMap(_.err).foreach(error => logger.warn(s"Updating ETMP sync status ($status) failed: $error")))
+    ).map {
+      _.lastError.fold(INDICATE_ERROR_DURING_DB_UPDATE) { updateLastError =>
+        updateLastError.err.foreach(msg => logger.warn(s"Updating ETMP sync status ($status) failed: $msg"))
+        updateLastError.n
+      }
+    }
 
   def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Unit] =
+    implicit ec: ExecutionContext): Future[Int] =
     findAndUpdate(
       query = Json.obj(
         "arn"                  -> arn.value,
         "clientIdentifier"     -> identifier.value,
         "clientIdentifierType" -> clientIdentifierType(identifier)),
       update = Json.obj("$set" -> Json.obj("syncToESStatus" -> status.toString))
-    ).map(_.lastError.flatMap(_.err).foreach(error => logger.warn(s"Updating ES sync status ($status) failed: $error")))
+    ).map {
+      _.lastError.fold(INDICATE_ERROR_DURING_DB_UPDATE) { updateLastError =>
+        updateLastError.err.foreach(msg => logger.warn(s"Updating ES sync status ($status) failed: $msg"))
+        updateLastError.n
+      }
+    }
 
   def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] =
     remove(
