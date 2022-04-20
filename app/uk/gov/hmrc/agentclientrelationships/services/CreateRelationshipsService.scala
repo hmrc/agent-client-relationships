@@ -102,8 +102,8 @@ class CreateRelationshipsService @Inject()(
       .updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
       .map(convertDbUpdateStatus)
 
-    val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
-      logger.warn(s"Creating ETMP record failed for ${arn.value}, $identifier due to: ${origExc.getMessage}", origExc)
+    val recoverFromException = (origExc: Throwable, replacementExc: Throwable) => {
+      logger.warn(s"Creating ETMP record failed for ${arn.value}, $identifier due to: ${origExc.getMessage}")
       updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
     }
 
@@ -117,11 +117,11 @@ class CreateRelationshipsService @Inject()(
     } yield etmpSyncStatusSuccess)
       .recoverWith {
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
-          recoverWithException(
+          recoverFromException(
             e,
             UpstreamErrorResponse(s"RELATIONSHIP_CREATE_FAILED_IF", upstreamCode, reportAs, headers))
         case NonFatal(ex) =>
-          recoverWithException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_IF"))
+          recoverFromException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_IF"))
       }
   }
 

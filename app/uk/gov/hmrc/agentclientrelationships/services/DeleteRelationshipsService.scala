@@ -82,8 +82,7 @@ class DeleteRelationshipsService @Inject()(
         .recoverWith {
           case NonFatal(ex) =>
             logger.warn(
-              s"Inserting delete record into mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
-              ex)
+              s"Inserting delete record into mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName}): ${ex.getMessage}")
             Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
         }
 
@@ -144,10 +143,8 @@ class DeleteRelationshipsService @Inject()(
       .updateEtmpSyncStatus(arn, taxIdentifier, _: SyncStatus)
       .map(convertDbUpdateStatus)
 
-    val recoverWithException = (origExc: Throwable, replacementExc: Throwable) => {
-      logger.warn(
-        s"De-authorising ETMP record failed for ${arn.value}, $taxIdentifier due to: ${origExc.getMessage}",
-        origExc)
+    val recoverFromException = (origExc: Throwable, replacementExc: Throwable) => {
+      logger.warn(s"De-authorising ETMP record failed for ${arn.value}, $taxIdentifier due to: ${origExc.getMessage}")
       updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
     }
 
@@ -161,9 +158,9 @@ class DeleteRelationshipsService @Inject()(
     } yield etmpSyncStatusSuccess)
       .recoverWith {
         case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
-          recoverWithException(e, UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_IF", upstreamCode, reportAs))
+          recoverFromException(e, UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_IF", upstreamCode, reportAs))
         case NonFatal(ex) =>
-          recoverWithException(ex, new Exception(s"RELATIONSHIP_DELETE_FAILED_IF"))
+          recoverFromException(ex, new Exception(s"RELATIONSHIP_DELETE_FAILED_IF"))
       }
 
   }
@@ -180,8 +177,7 @@ class DeleteRelationshipsService @Inject()(
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
       logger.warn(
-        s"De-allocating ES record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
-        origExc)
+        s"De-allocating ES record failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}): ${origExc.getMessage}")
       updateEsSyncStatus(Failed)
       Future.failed(replacementExc)
     }
@@ -233,8 +229,7 @@ class DeleteRelationshipsService @Inject()(
       .recoverWith {
         case NonFatal(ex) =>
           logger.warn(
-            s"Removing delete record from mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
-            ex)
+            s"Removing delete record from mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName}) : ${ex.getMessage}")
           Future.successful(false)
       }
 
