@@ -92,6 +92,11 @@ class FindRelationshipsService @Inject()(
             case Some(urn) =>
               getActiveRelationshipsForClient(urn).map(_.map(r => (EnrolmentTrustNT.enrolmentService, r.arn)))
             case None => Future.successful(None)
+          },
+          identifiers.get(EnrolmentCgt.enrolmentService).map(_.asCgtRef) match {
+            case Some(cgtRef) =>
+              getActiveRelationshipsForClient(cgtRef).map(_.map(r => (EnrolmentCgt.enrolmentService, r.arn)))
+            case None => Future successful (None)
           }
         ))
       .map(_.collect { case Some(x) => x }.groupBy(_._1).mapValues(_.map(_._2)))
