@@ -150,7 +150,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           }
       }
 
-  //BTA Call
+  //BTA & PTA Call
   def withAuthorisedAsClient[A, T](body: Map[EnrolmentService, EnrolmentIdentifierValue] => Future[Result])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier): Future[Result] =

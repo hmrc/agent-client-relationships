@@ -244,13 +244,14 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
 
     "return 200 with a map of relationships and filter only on active ones" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
       getActiveRelationshipsViaClient(mtdItId, arn)
       getActiveRelationshipsViaClient(vrn, arn2)
       getActiveRelationshipsViaClient(utr, arn)
       getActiveRelationshipsViaClient(urn, arn)
       getActiveRelationshipsViaClient(pptRef, arn)
+      getActiveRelationshipsViaClient(cgtRef, arn)
 
 
       val result = doRequest
@@ -262,10 +263,11 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       response should havePropertyArrayOf[String]("HMRC-TERS-ORG", be(arn.value))
       response should havePropertyArrayOf[String]("HMRC-TERSNT-ORG", be(arn.value))
       response should havePropertyArrayOf[String]("HMRC-PPT-ORG", be(arn.value))
+      response should havePropertyArrayOf[String]("HMRC-CGT-PD", be(arn.value))
     }
 
     "return 200 with empty map of active relationships when they are found inactive" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
       servicesInIF.foreach { notActiveClient =>
         getInactiveRelationshipViaClient(notActiveClient.clientId, arn.value)
@@ -281,7 +283,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
 
     "return 200 with empty map of active relationships when not found" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
       servicesInIF.foreach { notActiveClient =>
         getActiveRelationshipFailsWith(notActiveClient.clientId, 404)
@@ -346,17 +348,20 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
     "return a sequence of inactive relationships" in {
 
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
       getInactiveRelationshipsForClient(mtdItId)
       getInactiveRelationshipsForClient(vrn)
       getInactiveRelationshipsForClient(utr)
       getInactiveRelationshipsForClient(urn)
       getInactiveRelationshipsForClient(pptRef)
+      getInactiveRelationshipsForClient(cgtRef)
 
       val result = doRequest
 
       result.status shouldBe 200
+
+      println(result.body)
 
       (result.json(0) \ "arn").as[String] shouldBe "ABCDE123456"
       (result.json(0) \ "dateTo").as[LocalDate].toString() shouldBe "2018-09-09"
@@ -373,20 +378,24 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       (result.json(3) \ "clientId").as[String] shouldBe "XXTRUST12345678"
       (result.json(3) \ "service").as[String] shouldBe "HMRC-TERSNT-ORG"
 
-      (result.json(4) \ "clientId").as[String] shouldBe "XAPPT0004567890"
-      (result.json(4) \ "service").as[String] shouldBe "HMRC-PPT-ORG"
+      (result.json(4) \ "clientId").as[String] shouldBe "XMCGTP123456789"
+      (result.json(4) \ "service").as[String] shouldBe "HMRC-CGT-PD"
+
+      (result.json(5) \ "clientId").as[String] shouldBe "XAPPT0004567890"
+      (result.json(5) \ "service").as[String] shouldBe "HMRC-PPT-ORG"
 
     }
 
     "return OK with empty body if no inactive relationships found" in {
 
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef)
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
       getNoInactiveRelationshipsForClient(mtdItId)
       getNoInactiveRelationshipsForClient(vrn)
       getNoInactiveRelationshipsForClient(utr)
       getNoInactiveRelationshipsForClient(urn)
       getNoInactiveRelationshipsForClient(pptRef)
+      getNoInactiveRelationshipsForClient(cgtRef)
 
 
       val result = doRequest
