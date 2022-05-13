@@ -1065,8 +1065,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenEsIsUnavailable()
       }
 
-      "return 503" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 503
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
         verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
       }
 
@@ -1084,7 +1084,7 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
               mtdItIdType,
               DateTime.now.minusMinutes(1)
             )))
-        doAgentDeleteRequest(requestPath).status shouldBe 503
+        doAgentDeleteRequest(requestPath).status shouldBe 500
         verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
       }
     }
@@ -1431,8 +1431,8 @@ class RelationshipsControllerITSAISpec extends RelationshipsBaseControllerISpec 
         givenEsIsUnavailable()
       }
 
-      "return 503" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 503
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
         verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
       }
 
