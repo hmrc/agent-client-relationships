@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.implicits._
-import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -160,8 +159,7 @@ class RelationshipsController @Inject()(
           throw upS
         case NonFatal(ex) =>
           logger.warn(
-            s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName})",
-            ex)
+            s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}")
           Left(errorCode)
       }
 
@@ -179,8 +177,8 @@ class RelationshipsController @Inject()(
         case upS: Upstream5xxResponse =>
           throw upS
         case NonFatal(ex) =>
-          Logger(getClass)
-            .warn(s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino", ex)
+          logger.warn(
+            s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}")
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
   }
@@ -197,8 +195,11 @@ class RelationshipsController @Inject()(
               .createRelationship(arn, taxIdentifier, Set(), false, true)
               .map(_ => Created)
               .recover {
+                case upS: Upstream5xxResponse =>
+                  logger.warn(s"Could not create relationship due to ${upS.getMessage}")
+                  InternalServerError(toJson(upS.getMessage))
                 case NonFatal(ex) =>
-                  logger.warn("Could not create relationship due to ", ex)
+                  logger.warn(s"Could not create relationship due to ${ex.getMessage}")
                   InternalServerError(toJson(ex.getMessage))
               }
           }
@@ -242,9 +243,11 @@ class RelationshipsController @Inject()(
                   }
             } yield NoContent)
               .recover {
-                case upS: Upstream5xxResponse => throw upS
+                case upS: Upstream5xxResponse =>
+                  logger.warn(s"Could not delete relationship: ${upS.getMessage}")
+                  InternalServerError(toJson(upS.getMessage))
                 case NonFatal(ex) =>
-                  logger.warn("Could not delete relationship", ex)
+                  logger.warn(s"Could not delete relationship: ${ex.getMessage}")
                   InternalServerError(toJson(ex.getMessage))
               }
           }

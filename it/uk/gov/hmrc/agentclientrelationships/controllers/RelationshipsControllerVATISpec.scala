@@ -828,8 +828,8 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
         givenAgentCanBeDeallocatedInIF(vrn, arn)
       }
 
-      "return 502" in new StubsForThisScenario {
-        doAgentDeleteRequest(requestPath).status shouldBe 503
+      "return 500" in new StubsForThisScenario {
+        doAgentDeleteRequest(requestPath).status shouldBe 500
       }
 
       "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
