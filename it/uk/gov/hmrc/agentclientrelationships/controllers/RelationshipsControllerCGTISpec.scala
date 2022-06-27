@@ -1,8 +1,10 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.joda.time.DateTime
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId}
+import uk.gov.hmrc.lock.LockFormats.Lock
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -169,6 +171,20 @@ class RelationshipsControllerCGTISpec extends RelationshipsBaseControllerISpec {
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 201
+    }
+
+    "return 423 Locked if there is a record in the lock repository" in {
+      givenUserIsSubscribedClient(cgtRef)
+      await(recoveryLockRepository.insert(
+        Lock(
+          id =s"recovery-${arn.value}-${cgtRef.value}",
+          owner="86515a24-1a37-4a40-9117-4a117d8dd42e",
+          expiryTime= DateTime.now().plusSeconds(5),
+          timeCreated= DateTime.now().minusSeconds(5))))
+
+      val result = doAgentPutRequest(requestPath)
+      result.status shouldBe LOCKED
+
     }
 
     "return 500 when ES1 is unavailable" in new StubsForThisScenario {

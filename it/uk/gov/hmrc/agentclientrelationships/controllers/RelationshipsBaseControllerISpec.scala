@@ -6,7 +6,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoLockRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support._
@@ -70,12 +70,14 @@ trait RelationshipsBaseControllerISpec
 
   def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
   def deleteRecordRepository: MongoDeleteRecordRepository = app.injector.instanceOf[MongoDeleteRecordRepository]
+  def recoveryLockRepository = app.injector.instanceOf[MongoLockRepository]
 
   override def beforeEach() {
     super.beforeEach()
     givenAuditConnector()
     await(repo.ensureIndexes)
     await(deleteRecordRepository.ensureIndexes)
+    await(recoveryLockRepository.ensureIndexes)
     ()
   }
 
