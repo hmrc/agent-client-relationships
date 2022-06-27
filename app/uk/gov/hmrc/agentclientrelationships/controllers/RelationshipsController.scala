@@ -193,7 +193,10 @@ class RelationshipsController @Inject()(
 
             createService
               .createRelationship(arn, taxIdentifier, Set(), false, true)
-              .map(_ => Created)
+              .map {
+                case Some(_) => Created
+                case None    => logger.warn(s"create relationship is currently in Locked state"); Locked
+              }
               .recover {
                 case upS: Upstream5xxResponse =>
                   logger.warn(s"Could not create relationship due to ${upS.getMessage}")

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import org.joda.time.LocalDate
+import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json.JodaReads._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -25,6 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.Vat
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.lock.LockFormats.Lock
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -996,6 +997,20 @@ class RelationshipsControllerVATISpec extends RelationshipsBaseControllerISpec {
 
       val result = doAgentPutRequest(requestPath)
       result.status shouldBe 201
+    }
+
+    "return 423 Locked if there is a record in the lock repository" in {
+      givenUserIsSubscribedClient(vrn)
+      await(recoveryLockRepository.insert(
+        Lock(
+          id =s"recovery-${arn.value}-${vrn.value}",
+          owner="86515a24-1a37-4a40-9117-4a117d8dd42e",
+          expiryTime= DateTime.now().plusSeconds(5),
+          timeCreated= DateTime.now().minusSeconds(5))))
+
+      val result = doAgentPutRequest(requestPath)
+      result.status shouldBe LOCKED
+
     }
 
 
