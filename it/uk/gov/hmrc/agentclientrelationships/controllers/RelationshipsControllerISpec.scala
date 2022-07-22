@@ -361,8 +361,6 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       result.status shouldBe 200
 
-      println(result.body)
-
       (result.json(0) \ "arn").as[String] shouldBe "ABCDE123456"
       (result.json(0) \ "dateTo").as[LocalDate].toString() shouldBe "2018-09-09"
       (result.json(0) \ "clientId").as[String] shouldBe "ABCDEF123456789"

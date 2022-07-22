@@ -17,30 +17,52 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Singleton}
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.{raiseError, returnValue}
-import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, TaxIdentifierSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class CheckRelationshipsService @Inject()(
   es: EnrolmentStoreProxyConnector,
-  repository: DeleteRecordRepository,
+  ap: AgentPermissionsConnector,
+  appConfig: AppConfig,
   val metrics: Metrics)
-    extends Monitoring {
+    extends Monitoring
+    with TaxIdentifierSupport {
 
   def checkForRelationship(taxIdentifier: TaxIdentifier, agentUser: AgentUser)(
     implicit ec: ExecutionContext,
-    hc: HeaderCarrier): Future[Either[String, Boolean]] =
-    for {
-      allocatedGroupIds <- es.getDelegatedGroupIdsFor(taxIdentifier)
-      result <- if (allocatedGroupIds.contains(agentUser.groupId)) returnValue(Right(true))
-               else raiseError(RelationshipNotFound("RELATIONSHIP_NOT_FOUND"))
-    } yield result
-
+    hc: HeaderCarrier): Future[Boolean] =
+    es.getDelegatedGroupIdsFor(taxIdentifier).flatMap { allocatedGroupIds =>
+      val userBelongsToGroup = allocatedGroupIds.contains(agentUser.groupId)
+      if (!userBelongsToGroup) Future.successful(false)
+      else {
+        val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+        val (serviceId, _) = EnrolmentKey.deconstruct(enrolmentKey)
+        for {
+          // if Granular Permissions are disabled or opted-out then the user can act for the client as long as an agent/client relationship exists
+          granPermsEnabled <- if (!appConfig.enableGranularPermissions) Future.successful(false)
+                             else ap.granularPermissionsOptinRecordExists(agentUser.arn)
+          // if Granular Permissions are enabled and opted-in then we must check if the client is assigned to the user
+          mGroupsSummaries <- if (!granPermsEnabled) Future.successful(None) else ap.getGroupsSummaries(agentUser.arn)
+          // if the client is unassigned (not yet put into any access groups), behave as if granular permissions were disabled for that client
+          isClientUnassigned = mGroupsSummaries.exists(_.unassignedClients.exists(_.enrolmentKey == enrolmentKey))
+          isEnrolmentAssignedToUser <- if (!granPermsEnabled || isClientUnassigned) Future.successful(false)
+                                      else
+                                        es.getEnrolmentsAssignedToUser(agentUser.userId, Some(serviceId)).map {
+                                          usersAssignedEnrolments =>
+                                            usersAssignedEnrolments.exists(enrolment =>
+                                              EnrolmentKey.enrolmentKeys(enrolment).contains(enrolmentKey))
+                                        }
+        } yield {
+          (!granPermsEnabled) || isClientUnassigned || isEnrolmentAssignedToUser
+        }
+      }
+    }
 }

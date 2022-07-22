@@ -20,13 +20,14 @@ import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.services.AgentUser
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
 import java.nio.charset.StandardCharsets.UTF_8
@@ -59,6 +60,27 @@ trait AuthActions extends AuthorisedFunctions with Logging {
             body(CurrentUser(creds, affinity))
           }
           .getOrElse(Future successful NoPermissionToPerformOperation)
+    }
+
+  def withAuthorisedAgentUser(arn: Arn)(
+    body: AgentUser => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised().retrieve(allEnrolments and credentials and groupIdentifier and agentCode) {
+      case enrolments ~ mCreds ~ mGroupId ~ mAgentCode =>
+        mCreds match {
+          case None => Future.successful(NoPermissionToPerformOperation)
+          case Some(creds)
+              if creds.providerType == "GovernmentGateway" &&
+                EnrolmentAsAgent.extractIdentifierFrom(enrolments.enrolments).contains(arn) =>
+            val mAgentUser = for {
+              groupId   <- mGroupId
+              agentCode <- mAgentCode
+            } yield {
+              AgentUser(creds.providerId, groupId, AgentCode(agentCode), arn)
+            }
+            mAgentUser.fold(Future.successful(NoPermissionToPerformOperation)) { agentUser =>
+              body(agentUser)
+            }
+        }
     }
 
   def authorisedClientOrStrideUserOrAgent(clientId: TaxIdentifier, strideRoles: Seq[String])(

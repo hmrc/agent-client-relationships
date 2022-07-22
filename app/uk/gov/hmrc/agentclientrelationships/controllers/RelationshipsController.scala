@@ -105,41 +105,35 @@ class RelationshipsController @Inject()(
       case "HMRC-PPT-ORG"                      => "PPT"
     }
 
-  private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier)(implicit request: Request[_]) = {
-    implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
+  private def checkWithTaxIdentifier(arn: Arn, taxIdentifier: TaxIdentifier)(implicit request: Request[_]) =
+    withAuthorisedAgentUser(arn) { agentUser =>
+      implicit val auditData: AuditData = new AuditData()
+      auditData.set("arn", arn)
 
-    val result = for {
-      agentUser <- agentUserService.getAgentAdminUserFor(arn)
-      isClear   <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
-      result <- agentUser
-                 .fold(
-                   error => Future.failed(AdminNotFound(error)),
-                   user =>
-                     if (isClear) {
-                       checkService.checkForRelationship(taxIdentifier, user)
-                     } else {
-                       raiseError(RelationshipDeletePending())
-                   }
-                 )
-    } yield result
+      val result = for {
+        isClear <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
+        result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
+                 else Future.failed(RelationshipDeletePending())
+      } yield {
+        if (result) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+      }
 
-    result
-      .recoverWith {
-        case RelationshipNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, errorCode)
-        case AdminNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, errorCode)
-        case e @ RelationshipDeletePending() =>
-          logger.warn("Denied access because relationship removal is pending.")
-          Future.successful(Left(e.getMessage))
-      }
-      .map {
-        case Left(errorCode) => NotFound(toJson(errorCode)) // no access (due to error)
-        case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND")) // do not grant access
-        case Right(true)     => Ok // grant access
-      }
-  }
+      result
+        .recoverWith {
+          case RelationshipNotFound(errorCode) =>
+            checkOldRelationship(arn, taxIdentifier, errorCode)
+          case AdminNotFound(errorCode) =>
+            checkOldRelationship(arn, taxIdentifier, errorCode)
+          case e @ RelationshipDeletePending() =>
+            logger.warn("Denied access because relationship removal is pending.")
+            Future.successful(Left(e.getMessage))
+        }
+        .map {
+          case Left(errorCode) => NotFound(toJson(errorCode)) // no access (due to error)
+          case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND")) // do not grant access
+          case Right(true)     => Ok // grant access
+        }
+    }
 
   private def checkOldRelationship(arn: Arn, taxIdentifier: TaxIdentifier, errorCode: String)(
     implicit ec: ExecutionContext,

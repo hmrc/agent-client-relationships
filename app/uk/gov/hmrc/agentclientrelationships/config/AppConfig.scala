@@ -50,6 +50,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val userGroupsSearchUrl = servicesConfig.baseUrl("users-groups-search")
 
+  val agentPermissionsUrl = servicesConfig.baseUrl("agent-permissions")
+
   val desUrl = servicesConfig.baseUrl("des")
   val desEnv = getConfigString("des.environment")
   val desToken = getConfigString("des.authorization-token")
@@ -75,6 +77,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val copyMtdVatRelationshipFlag = servicesConfig.getBoolean("features.copy-relationship.mtd-vat")
 
   val recoveryEnabled = servicesConfig.getBoolean("features.recovery-enable")
+
+  val enableGranularPermissions = servicesConfig.getBoolean("features.enable-granular-permissions")
 
   val recoveryInterval = servicesConfig.getInt("recovery-interval")
 

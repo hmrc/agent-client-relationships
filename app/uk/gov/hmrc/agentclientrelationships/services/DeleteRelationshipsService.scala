@@ -212,7 +212,10 @@ class DeleteRelationshipsService @Inject()(
       agentUser = maybeAgentUser.fold(error => throw RelationshipNotFound(error), identity)
       _ <- checkService
             .checkForRelationship(taxIdentifier, agentUser)
-            .flatMap(_ => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier))
+            .flatMap {
+              case true  => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier)
+              case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+            }
       _ = auditData.set("enrolmentDeAllocated", true)
       esSyncStatusSuccess <- updateEsSyncStatus(Success)
     } yield esSyncStatusSuccess).recoverWith(

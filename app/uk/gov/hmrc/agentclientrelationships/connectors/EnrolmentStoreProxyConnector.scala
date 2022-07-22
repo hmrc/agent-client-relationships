@@ -17,17 +17,17 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{Format, JsObject, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
@@ -37,6 +37,11 @@ import scala.concurrent.{ExecutionContext, Future}
 case class ES8Request(userId: String, `type`: String)
 object ES8Request {
   implicit val writes = Json.writes[ES8Request]
+}
+
+case class ES2Response(enrolments: Seq[Enrolment])
+object ES2Response {
+  implicit val format: Format[ES2Response] = Json.format[ES2Response]
 }
 
 @Singleton
@@ -98,6 +103,31 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
           case Status.NO_CONTENT => Set.empty
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
+  }
+
+  //ES2 - delegated
+  def getEnrolmentsAssignedToUser(userId: String, service: Option[String])(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Seq[Enrolment]] = {
+
+    val url: String =
+      s"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated" + service.fold("")(
+        svc => s"&service=$svc")
+    monitor(s"ConsumedAPI-ES-getEnrolmentsAssignedToUser-GET") {
+      http.GET[HttpResponse](url).map { response =>
+        response.status match {
+          case Status.OK =>
+            response.json
+              .as[ES2Response]
+              .enrolments
+              .filter(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
+          // Note: Checking for activation may be redundant as EACD API documentation claims:
+          // "A delegated enrolment is always activated, it can never be non-activated."
+          case Status.NO_CONTENT => Seq.empty
+          case other             => throw UpstreamErrorResponse(response.body, other, other)
         }
       }
     }
