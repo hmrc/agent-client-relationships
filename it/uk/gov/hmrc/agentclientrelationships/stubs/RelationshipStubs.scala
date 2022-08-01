@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Vrn}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
@@ -31,41 +31,14 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, agentCode)
 
-  def givenDelegatedGroupIdsExistForTrust(utr: Utr, ids: String*) =
-    givenDelegatedGroupIdsExistFor(utr, Set("bar", "foo") ++ ids.toSet)
+  def givenDelegatedGroupIdsExistForService(clientId: TaxIdentifier, ids: String*) =
+    givenDelegatedGroupIdsExistFor(clientId, Set("bar", "foo") ++ ids.toSet)
 
-  def givenDelegatedGroupIdsExistForTrustNT(urn: Urn, ids: String*) =
-    givenDelegatedGroupIdsExistFor(urn, Set("bar", "foo") ++ ids.toSet)
+  def givenDelegatedGroupIdsNotExistForService(clientId: TaxIdentifier) =
+    givenDelegatedGroupIdsNotExistFor(clientId)
 
-  def givenDelegatedGroupIdsExistForCgt(cgtRef: CgtRef, ids: String*) =
-    givenDelegatedGroupIdsExistFor(cgtRef, Set("bar", "foo") ++ ids.toSet)
-
-  def givenDelegatedGroupIdsExistForPpt(pptRef: PptRef, ids: String*) =
-    givenDelegatedGroupIdsExistFor(pptRef, Set("bar", "foo") ++ ids.toSet)
-
-  def givenDelegatedGroupIdsNotExistForTrust(utr: Utr) =
-    givenDelegatedGroupIdsNotExistFor(utr)
-
-  def givenDelegatedGroupIdsNotExistForTrustNT(urn: Urn) =
-    givenDelegatedGroupIdsNotExistFor(urn)
-
-  def givenDelegatedGroupIdsNotExistForCgt(cgtRef: CgtRef) =
-    givenDelegatedGroupIdsNotExistFor(cgtRef)
-
-  def givenDelegatedGroupIdsNotExistForPpt(pptRef: PptRef) =
-    givenDelegatedGroupIdsNotExistFor(pptRef)
-
-  def givenTrustEnrolmentAllocationSucceeds(utr: Utr, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-TERS-ORG", "SAUTR", utr.value, agentCode)
-
-  def givenTrustNTEnrolmentAllocationSucceeds(urn: Urn, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-TERSNT-ORG", "URN", urn.value, agentCode)
-
-  def givenCGTEnrolmentAllocationSucceeds(cgtRef: CgtRef, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-CGT-PD", "CGTPDRef", cgtRef.value, agentCode)
-
-  def givenPptEnrolmentAllocationSucceeds(pptRef: PptRef, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-PPT-ORG", "EtmpRegistrationNumber", pptRef.value, agentCode)
+  def givenServiceEnrolmentAllocationSucceeds(serviceId: String, clientId: TaxIdentifier, clientIdType: String, agentCode: String) =
+    givenEnrolmentAllocationSucceeds("foo", "any", serviceId, clientIdType, clientId.value, agentCode)
 
   def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) =
     givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))

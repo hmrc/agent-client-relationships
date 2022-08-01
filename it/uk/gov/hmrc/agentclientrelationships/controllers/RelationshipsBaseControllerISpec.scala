@@ -24,7 +24,7 @@ trait RelationshipsBaseControllerISpec
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
-      with IFStubs
+    with IFStubs
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
@@ -50,11 +50,13 @@ trait RelationshipsBaseControllerISpec
         "microservice.services.auth.port"                  -> wireMockPort,
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "microservice.services.agent-client-authorisation.port" -> wireMockPort,
+        "microservice.services.agent-permissions.port"     -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
         "features.copy-relationship.mtd-it"                -> true,
         "features.copy-relationship.mtd-vat"               -> true,
         "features.recovery-enable"                         -> false,
+        "features.enable-granular-permissions"             -> false,
         "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
         "agent.cache.enabled"                              -> true,

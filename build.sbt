@@ -49,7 +49,7 @@ lazy val root = (project in file("."))
     scalaVersion := "2.12.15",
     scalacOptions ++= Seq(
       "-Yrangepos",
-      "-Xfatal-warnings",
+//      "-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
       "-Yno-adapted-args",
       "-Ywarn-value-discard",

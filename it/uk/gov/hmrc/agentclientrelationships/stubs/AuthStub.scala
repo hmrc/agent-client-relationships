@@ -161,7 +161,7 @@ trait AuthStub {
 
   //VIA Agent
   //Applies to Endpoints that allow more than one different kind of user
-  def givenUserIsSubscribedAgent(withThisArn: Arn, withThisGgUserId: String = "12345-credId"): AuthStub = {
+  def givenUserIsSubscribedAgent(withThisArn: Arn, withThisGgUserId: String = "12345-credId", withThisGroupId: String = "foo", withThisAgentCode: String = "12345"): AuthStub = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
@@ -181,7 +181,9 @@ trait AuthStub {
                          |  "optionalCredentials": {
                          |    "providerId": "$withThisGgUserId",
                          |    "providerType": "GovernmentGateway"
-                         |  }
+                         |  },
+                         |  "agentCode": "$withThisAgentCode",
+                         |  "groupIdentifier": "$withThisGroupId"
                          |}
        """.stripMargin)))
     this

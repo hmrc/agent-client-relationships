@@ -109,13 +109,15 @@ class RelationshipsController @Inject()(
     withAuthorisedAgentUser(arn) { agentUser =>
       implicit val auditData: AuditData = new AuditData()
       auditData.set("arn", arn)
+      auditData.set("agentCode", agentUser.agentCode)
+      auditData.set("credId", agentUser.userId)
 
       val result = for {
         isClear <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
-        result <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
-                 else Future.failed(RelationshipDeletePending())
+        res <- if (isClear) checkService.checkForRelationship(taxIdentifier, agentUser)
+              else Future.failed(RelationshipDeletePending())
       } yield {
-        if (result) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+        if (res) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
       }
 
       result

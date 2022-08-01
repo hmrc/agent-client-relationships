@@ -42,6 +42,7 @@ class RecoverySchedulerISpec
         "features.copy-relationship.mtd-it"                -> true,
         "features.copy-relationship.mtd-vat"               -> true,
         "features.recovery-enable"                         -> true,
+        "features.enable-granular-permissions"             -> false,
         "recovery-interval"                                -> 1
       )
       .configure(mongoConfiguration)
