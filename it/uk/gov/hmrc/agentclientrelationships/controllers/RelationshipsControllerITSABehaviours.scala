@@ -4,10 +4,10 @@ import org.joda.time.DateTime
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
+import uk.gov.hmrc.domain.SaAgentReference
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -487,49 +487,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       val requestPath: String =
         s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
-
-      def verifyClientRemovedAgentServiceAuthorisationAuditSent(
-                                                                 arn: String,
-                                                                 clientId: String,
-                                                                 clientIdType: String,
-                                                                 service: String,
-                                                                 currentUserAffinityGroup: String,
-                                                                 authProviderId: String,
-                                                                 authProviderIdType: String) =
-        verifyAuditRequestSent(
-          1,
-          event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
-          detail = Map(
-            "agentReferenceNumber" -> arn,
-            "clientId" -> clientId,
-            "clientIdType" -> clientIdType,
-            "service" -> service,
-            "currentUserAffinityGroup" -> currentUserAffinityGroup,
-            "authProviderId" -> authProviderId,
-            "authProviderIdType" -> authProviderIdType
-          ),
-          tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
-        )
-
-      def verifyHmrcRemovedAgentServiceAuthorisation(
-                                                      arn: String,
-                                                      clientId: String,
-                                                      service: String,
-                                                      authProviderId: String,
-                                                      authProviderIdType: String) =
-        verifyAuditRequestSent(
-          1,
-          event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
-          detail = Map(
-            "authProviderId" -> authProviderId,
-            "authProviderIdType" -> authProviderIdType,
-            "agentReferenceNumber" -> arn,
-            "clientId" -> clientId,
-            "service" -> service
-          ),
-          tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
-        )
-
+      
       "the relationship exists and the Arn matches that of current Agent user" should {
 
         trait StubsForThisScenario {
