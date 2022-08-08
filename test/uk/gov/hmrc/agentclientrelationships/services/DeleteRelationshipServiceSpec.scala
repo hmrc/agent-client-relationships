@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
+import uk.gov.hmrc.agentclientrelationships.model.{RegistrationRelationshipResponse, UserId}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, FakeDeleteRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.support.{NoRequest, UnitSpec}
@@ -490,7 +490,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     def givenRelationshipBetweenAgentAndClientExists =
       when(
         checkService
-          .checkForRelationship(eqs(mtdItId), eqs(agentUser))(any[ExecutionContext], any[HeaderCarrier]))
+          .checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItId))(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(Future.successful(true))
 
     def givenETMPDeAuthSucceeds =

@@ -252,7 +252,6 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
         getVrnIsNotKnownInETMPFor(vrn)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         def query() =
           repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
@@ -269,8 +268,6 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
             "arn"                     -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
             "service"                 -> "mtd-vat",
             "vrn"                     -> vrn.value,
             "oldAgentCodes"           -> oldAgentCode,

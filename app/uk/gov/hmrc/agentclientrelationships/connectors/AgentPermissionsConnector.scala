@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.{AccessGroupSummaries, Arn}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -39,22 +39,6 @@ class AgentPermissionsConnector @Inject()(http: HttpClient, metrics: Metrics)(im
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val agentPermissionsBaseUrl = new URL(appConfig.agentPermissionsUrl)
-
-  def granularPermissionsOptinRecordExists(
-    arn: Arn)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Boolean] = {
-    val url =
-      new URL(agentPermissionsBaseUrl, s"/agent-permissions/arn/${arn.value}/optin-record-exists")
-    monitor(s"ConsumedAPI-AP-granularPermissionsOptinRecordExists-$arn-GET") {
-      http.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case Status.NO_CONTENT => true
-          case Status.NOT_FOUND  => false
-          case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
-        }
-      }
-    }
-  }
 
   def getGroupsSummaries(
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AccessGroupSummaries]] = {

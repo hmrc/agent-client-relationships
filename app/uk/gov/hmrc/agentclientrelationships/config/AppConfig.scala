@@ -78,8 +78,6 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val recoveryEnabled = servicesConfig.getBoolean("features.recovery-enable")
 
-  val enableGranularPermissions = servicesConfig.getBoolean("features.enable-granular-permissions")
-
   val recoveryInterval = servicesConfig.getInt("recovery-interval")
 
   val recoveryTimeout = servicesConfig.getInt("recovery-timeout")

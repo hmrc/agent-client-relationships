@@ -211,7 +211,7 @@ class DeleteRelationshipsService @Inject()(
       maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
       agentUser = maybeAgentUser.fold(error => throw RelationshipNotFound(error), identity)
       _ <- checkService
-            .checkForRelationship(taxIdentifier, agentUser)
+            .checkForRelationship(arn, None, taxIdentifier)
             .flatMap {
               case true  => es.deallocateEnrolmentFromAgent(agentUser.groupId, taxIdentifier)
               case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")

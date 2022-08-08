@@ -123,7 +123,6 @@ class RelationshipsControllerWithoutMongoISpec
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
       givenAdminUser("foo", "any")
-      givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
       def query =
         repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
@@ -140,8 +139,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn"                     -> arn.value,
-          "credId"                  -> "any",
-          "agentCode"               -> "bar",
           "nino"                    -> nino.value,
           "saAgentRef"              -> "foo",
           "service"                 -> "mtd-it",
@@ -161,8 +158,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn"                      -> arn.value,
-          "credId"                   -> "any",
-          "agentCode"                -> "bar",
           "nino"                     -> nino.value,
           "saAgentRef"               -> "foo",
           "CESARelationship"         -> "true"),
@@ -186,7 +181,6 @@ class RelationshipsControllerWithoutMongoISpec
       givenAuditConnector()
       givenAdminUser("foo", "any")
       getVrnIsKnownInETMPFor(vrn)
-      givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
       def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
 
@@ -202,8 +196,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn"                     -> arn.value,
-          "credId"                  -> "any",
-          "agentCode"               -> "bar",
           "service"                 -> "mtd-vat",
           "vrn"                     -> vrn.value,
           "oldAgentCodes"           -> oldAgentCode,
@@ -222,8 +214,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn"                      -> arn.value,
-          "credId"                   -> "any",
-          "agentCode"                -> "bar",
           "ESRelationship"           -> "true",
           "vrn"                      -> vrn.value,
           "oldAgentCodes"            -> oldAgentCode),
