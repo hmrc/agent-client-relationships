@@ -314,8 +314,8 @@ class CheckAndCopyRelationshipsService @Inject()(
                  }
       _ = auditData.set("oldAgentCodes", matching.map(_.value).mkString(","))
       _ = auditData.set("ESRelationship", matching.nonEmpty)
+      _ <- auditService.sendCheckESAuditEvent
     } yield {
-      auditService.sendCheckESAuditEvent
       matching
     }
   }

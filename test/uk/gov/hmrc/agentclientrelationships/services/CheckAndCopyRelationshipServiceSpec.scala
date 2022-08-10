@@ -418,6 +418,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItId)
         metricsStub()
+        auditStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
@@ -677,6 +678,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       oldESRelationshipExists()
       vrnIsKnownInETMP(vrn, true)
       metricsStub()
+      auditStub()
 
       val check = await(lockService.tryLock(arn, vrn) {
         relationshipsService
@@ -762,6 +764,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         vrnIsKnownInETMP(vrn, true)
         relationshipWillBeCreated(vrn)
         metricsStub()
+        auditStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -810,6 +813,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         vrnIsKnownInETMP(vrn, true)
         relationshipWillBeCreated(vrn)
         metricsStub()
+        auditStub()
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vrn) {
           relationshipsService
@@ -856,6 +860,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         oldESRelationshipDoesNotExist()
+        auditStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -894,6 +899,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
       oldESRelationshipExists()
       vrnIsKnownInETMP(vrn, false)
+      auditStub()
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -944,6 +950,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         previousRelationshipWillBeRemoved(vrn)
         relationshipWillBeCreated(vrn)
         metricsStub()
+        auditStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -992,6 +999,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipWillBeCreated(vrn)
         vrnIsKnownInETMP(vrn, true)
         metricsStub()
+        auditStub()
 
         val maybeCheck = await(lockService.tryLock(arn, vrn) {
           relationshipsService
@@ -1039,6 +1047,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         oldESRelationshipDoesNotExist()
+        auditStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -1082,6 +1091,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         metricsStub()
+        auditStub()
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
         relationshipWillBeCreated(vrn)
@@ -1134,6 +1144,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         oldESRelationshipDoesNotExist()
+        auditStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -1478,6 +1489,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   private def metricsStub(): OngoingStubbing[MetricRegistry] =
     when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
+
+  private def auditStub(): OngoingStubbing[Future[Unit]] =
+    when(
+      auditService
+        .sendCheckESAuditEvent(any[HeaderCarrier], any[Request[Any]], any[AuditData], any[ExecutionContext]))
+      .thenReturn(Future.successful(()))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
     verify(ifConnector).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))

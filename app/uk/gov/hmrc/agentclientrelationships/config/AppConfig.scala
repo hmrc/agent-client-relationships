@@ -50,6 +50,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val userGroupsSearchUrl = servicesConfig.baseUrl("users-groups-search")
 
+  val agentPermissionsUrl = servicesConfig.baseUrl("agent-permissions")
+
   val desUrl = servicesConfig.baseUrl("des")
   val desEnv = getConfigString("des.environment")
   val desToken = getConfigString("des.authorization-token")

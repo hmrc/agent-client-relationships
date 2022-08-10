@@ -28,7 +28,7 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -61,23 +61,32 @@ class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  def getFirstGroupAdminUser(
-    groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UserDetails]] = {
+  def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]] = {
     val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
       httpGet.GET[HttpResponse](url.toString).map { response =>
         response.status match {
-          case status if is2xx(status) => response.json.as[Seq[UserDetails]].find(_.credentialRole.exists(_ == "Admin"))
+          case status if is2xx(status) => response.json.as[Seq[UserDetails]]
           case Status.NOT_FOUND =>
             logger.warn(s"Group $groupId not found in SCP")
-            None
+            throw UpstreamErrorResponse(s"Group $groupId not found in SCP", Status.NOT_FOUND)
           case other =>
             logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
-            None
+            throw UpstreamErrorResponse(s"Error in UGS-getGroupUsers: $other, ${response.body}", other)
         }
       }
     }
   }
+
+  def getFirstGroupAdminUser(
+    groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UserDetails]] =
+    getGroupUsers(groupId)
+      .map(_.find(_.credentialRole.exists(_ == "Admin")))
+      .recover {
+        case e =>
+          logger.error(s"Could not find admin user for groupId $groupId due to: $e")
+          None
+      }
 
   def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[GroupInfo]] = {
     val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")

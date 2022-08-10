@@ -20,7 +20,7 @@ import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment => _, _}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._

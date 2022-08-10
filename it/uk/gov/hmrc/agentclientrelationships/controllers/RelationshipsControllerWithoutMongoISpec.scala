@@ -28,7 +28,7 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentclientrelationships.stubs.{ACAStubs, DataStreamStub, DesStubs, DesStubsGet, IFStubs, MappingStubs, RelationshipStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs.{ACAStubs, AuthStub, DataStreamStub, DesStubs, DesStubsGet, IFStubs, MappingStubs, RelationshipStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -54,7 +54,8 @@ class RelationshipsControllerWithoutMongoISpec
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
-    with ACAStubs {
+    with ACAStubs
+    with AuthStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -138,8 +139,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn"                     -> arn.value,
-          "credId"                  -> "any",
-          "agentCode"               -> "bar",
           "nino"                    -> nino.value,
           "saAgentRef"              -> "foo",
           "service"                 -> "mtd-it",
@@ -159,8 +158,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "arn"                      -> arn.value,
-          "credId"                   -> "any",
-          "agentCode"                -> "bar",
           "nino"                     -> nino.value,
           "saAgentRef"               -> "foo",
           "CESARelationship"         -> "true"),
@@ -199,8 +196,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
           "arn"                     -> arn.value,
-          "credId"                  -> "any",
-          "agentCode"               -> "bar",
           "service"                 -> "mtd-vat",
           "vrn"                     -> vrn.value,
           "oldAgentCodes"           -> oldAgentCode,
@@ -219,8 +214,6 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "arn"                      -> arn.value,
-          "credId"                   -> "any",
-          "agentCode"                -> "bar",
           "ESRelationship"           -> "true",
           "vrn"                      -> vrn.value,
           "oldAgentCodes"            -> oldAgentCode),
