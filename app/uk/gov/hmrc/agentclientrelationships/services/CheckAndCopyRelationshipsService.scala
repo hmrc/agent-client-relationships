@@ -182,19 +182,17 @@ class CheckAndCopyRelationshipsService @Inject()(
     arn: Arn,
     identifier: TaxIdentifier
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData) =
-    maybeRelationshipCopyRecord
-      .map(
-        relationshipCopyRecord =>
-          createRelationshipsService
-            .resumeRelationshipCreation(relationshipCopyRecord, arn, identifier))
-      .getOrElse(
-        createRelationshipsService
-          .createRelationship(
-            arn,
-            identifier,
-            references,
-            failIfCreateRecordFails = true,
-            failIfAllocateAgentInESFails = false))
+    maybeRelationshipCopyRecord match {
+      case Some(relationshipCopyRecord) =>
+        createRelationshipsService.resumeRelationshipCreation(relationshipCopyRecord, arn, identifier)
+      case None =>
+        createRelationshipsService.createRelationship(
+          arn,
+          identifier,
+          references,
+          failIfCreateRecordFails = true,
+          failIfAllocateAgentInESFails = false)
+    }
 
   private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn)(
     implicit ec: ExecutionContext,

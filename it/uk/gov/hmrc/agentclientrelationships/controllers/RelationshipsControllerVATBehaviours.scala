@@ -110,32 +110,8 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         val result = doRequest
         result.status shouldBe 200
 
-        await(query()).head should have(
-          'arn (arn.value),
-          'clientIdentifier (vrn.value),
-          'clientIdentifierType (mtdVatIdType),
-          'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
-          'syncToETMPStatus (Some(SyncStatus.Success)),
-          'syncToESStatus (Some(SyncStatus.IncompleteInputParams))
-        )
-
-        verifyAuditRequestSent(
-          1,
-          event = AgentClientRelationshipEvent.CreateRelationship,
-          detail = Map(
-            "arn"                     -> arn.value,
-            "service"                 -> "mtd-vat",
-            "vrn"                     -> vrn.value,
-            "oldAgentCodes"           -> oldAgentCode,
-            "ESRelationship"          -> "true",
-            "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "false",
-            "AgentDBRecord"           -> "true",
-            "Journey"                 -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"         -> "true"
-          ),
-          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
-        )
+        // the status is 200 but the relationship copy cannot have succeeded with an unknown agent
+        await(query()) shouldBe empty
 
         verifyAuditRequestSent(
           1,

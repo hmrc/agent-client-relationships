@@ -162,7 +162,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "return 201 when an agent tries to create a relationship" in {
         givenUserIsSubscribedAgent(arn)
         givenAgentCanBeAllocatedInIF(clientId, arn)
+        givenAgentGroupExistsFor("foo")
         givenPrincipalGroupIdExistsFor(arn, "foo")
+        givenAdminUser("foo", "any")
+        givenDelegatedGroupIdsNotExistFor(clientId) // no previous relationships to deallocate
+        givenEnrolmentAllocationSucceeds("foo", "any", serviceId, clientIdType, clientId.value, "NQJUEJCWT14")
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
@@ -275,7 +279,6 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 403
       }
-
     }
   }
 

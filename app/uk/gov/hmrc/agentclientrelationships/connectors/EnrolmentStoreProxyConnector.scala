@@ -84,7 +84,6 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
   // ES1 - delegated
   def getDelegatedGroupIdsFor(
     taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] = {
-
     val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
     getDelegatedGroupIdsFor(enrolmentKey)
   }
