@@ -115,13 +115,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -131,6 +129,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         cesaRelationshipExists()
+        adminUserExistsForArn()
         relationshipWillBeCreated(mtdItId)
         metricsStub()
 
@@ -161,13 +160,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -209,13 +206,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -258,13 +253,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -307,13 +300,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -356,13 +347,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -400,13 +389,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -452,13 +439,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -491,13 +476,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -528,13 +511,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -574,13 +555,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -616,13 +595,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -660,13 +637,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -706,13 +681,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -745,13 +718,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -762,6 +733,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
+        adminUserExistsForArn()
         relationshipWillBeCreated(vrn)
         metricsStub()
         auditStub()
@@ -794,13 +766,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -844,13 +814,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -882,13 +850,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -929,13 +895,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -980,13 +944,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -1031,13 +993,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -1075,13 +1035,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -1128,13 +1086,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            des,
             ifConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
             agentUserService,
-            appConfig1,
             metrics),
           auditService,
           metrics
@@ -1167,13 +1123,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1204,13 +1158,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1250,13 +1202,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1293,13 +1243,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1329,13 +1277,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          des,
           ifConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
           agentUserService,
-          appConfig1,
           metrics),
         auditService,
         metrics
@@ -1383,13 +1329,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              des,
               ifConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
               agentUserService,
-              appConfig1,
               metrics),
             auditService,
             metrics
@@ -1456,6 +1400,10 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
       .thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
+
+  private def adminUserExistsForArn(): OngoingStubbing[Future[Either[String, AgentUser]]] =
+    when(agentUserService.getAgentAdminUserFor(eqs(arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+      .thenReturn(Future.successful(agentUserForAsAgent))
 
   private def arnExistsForGroupId(): OngoingStubbing[Future[Option[Arn]]] = {
     when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("fooArn"))))
