@@ -404,7 +404,6 @@ class IFConnectorISpec
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
 
       val result = await(ifConnector.getInactiveRelationships(agentARN))
-      println(s"result >>>> $result")
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
