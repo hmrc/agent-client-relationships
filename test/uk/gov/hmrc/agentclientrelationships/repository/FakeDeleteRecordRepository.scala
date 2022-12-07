@@ -16,30 +16,30 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.joda.time.{DateTime, DateTimeZone}
-import reactivemongo.core.errors.GenericDatabaseException
+import org.mongodb.scala.MongoException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.TaxIdentifier
 
+import java.time.{Instant, ZoneOffset}
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class FakeDeleteRecordRepository extends DeleteRecordRepository {
   private val data: mutable.Map[String, DeleteRecord] = mutable.Map()
 
-  override def create(record: DeleteRecord)(implicit ec: ExecutionContext): Future[Int] =
+  override def create(record: DeleteRecord): Future[Int] =
     findBy(Arn(record.arn), MtdItId(record.clientIdentifier)).map(
       result =>
         if (result.isDefined)
-          throw GenericDatabaseException("duplicate key error collection", code = Some(2))
+          throw new MongoException("duplicate key error collection")
         else {
           data += ((record.arn + record.clientIdentifier) → record)
           1
       })
 
-  override def findBy(arn: Arn, identifier: TaxIdentifier)(
-    implicit ec: ExecutionContext): Future[Option[DeleteRecord]] = {
+  override def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[DeleteRecord]] = {
     val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined)
@@ -48,8 +48,7 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         None)
   }
 
-  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int] = {
+  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] = {
     val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
@@ -60,8 +59,7 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
 
   }
 
-  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int] = {
+  override def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] = {
     val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined) {
@@ -71,29 +69,36 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
   }
 
-  def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] = {
+  override def remove(arn: Arn, identifier: TaxIdentifier): Future[Int] = {
     val maybeRemove = data.remove(arn.value + identifier.value)
     if (maybeRemove.isDefined) Future.successful(1)
     else Future.successful(0)
   }
 
-  def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Unit] = {
+  override def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier): Future[Unit] = {
     val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
     Future.successful(
       if (maybeValue.isDefined)
         data(arn.value + identifier.value) =
-          maybeValue.get.copy(lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC)))
+          maybeValue.get.copy(lastRecoveryAttempt = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       else
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
   }
 
-  override def selectNextToRecover(implicit executionContext: ExecutionContext): Future[Option[DeleteRecord]] =
-    Future.successful(data.toSeq.map(_._2).sortBy(_.lastRecoveryAttempt.map(_.getMillis).getOrElse(0L)).headOption)
+  override def selectNextToRecover: Future[Option[DeleteRecord]] =
+    Future.successful(
+      data.toSeq
+        .map(_._2)
+        .sortBy(
+          _.lastRecoveryAttempt
+            .map(_.toEpochSecond(ZoneOffset.UTC))
+            .getOrElse(0L))
+        .headOption)
 
   def reset() =
     data.clear()
 
-  override def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]] =
+  override def terminateAgent(arn: Arn): Future[Either[String, Int]] =
     Future.successful(
       data
         .remove(arn.value)

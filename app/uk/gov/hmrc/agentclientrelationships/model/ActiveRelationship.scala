@@ -16,18 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import org.joda.time.LocalDate
 import play.api.libs.functional.syntax._
-import play.api.libs.json.JodaReads._
 import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import play.api.libs.functional.syntax._
-import play.api.libs.json.JodaWrites._
-import play.api.libs.json.JodaReads._
+
+import java.time.LocalDate
 
 case class ActiveRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate])
 
 object ActiveRelationship {
+  implicit val localDateFormat = MongoLocalDateTimeFormat.localDateTimeFormat
   implicit val activeRelationshipWrites: OWrites[ActiveRelationship] = Json.writes[ActiveRelationship]
 
   implicit val reads: Reads[ActiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and

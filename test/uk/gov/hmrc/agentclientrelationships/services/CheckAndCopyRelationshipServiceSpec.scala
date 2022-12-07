@@ -236,8 +236,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
-        when(deleteRecordRepository.create(any[DeleteRecord])(any[ExecutionContext])).thenReturn(Future.successful(1))
-        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier])(any[ExecutionContext]))
+        when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
+        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier]))
           .thenReturn(Future.successful(1))
         when(agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
           .thenReturn(Future.successful(agentUserForAsAgent))
@@ -880,8 +880,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
-        when(deleteRecordRepository.create(any[DeleteRecord])(any[ExecutionContext])).thenReturn(Future.successful(1))
-        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier])(any[ExecutionContext]))
+        when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
+        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier]))
           .thenReturn(Future.successful(1))
         when(agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
           .thenReturn(Future.successful(agentUserForAsAgent))

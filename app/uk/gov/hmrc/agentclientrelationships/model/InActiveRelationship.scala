@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import org.joda.time.LocalDate
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
-import play.api.libs.json.JodaWrites._
-import play.api.libs.json.JodaReads._
+import uk.gov.hmrc.agentmtdidentifiers.model._
+
+import java.time.LocalDate
 
 case class InactiveRelationship(
   arn: Arn,
@@ -31,6 +30,7 @@ case class InactiveRelationship(
   service: String)
 
 object InactiveRelationship {
+  implicit val localDateFormat = MongoLocalDateTimeFormat.localDateFormat
   implicit val inActiveRelationshipWrites: OWrites[InactiveRelationship] = Json.writes[InactiveRelationship]
 
   implicit val reads: Reads[InactiveRelationship] = new Reads[InactiveRelationship] {

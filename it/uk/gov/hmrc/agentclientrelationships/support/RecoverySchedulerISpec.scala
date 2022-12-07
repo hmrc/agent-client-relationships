@@ -1,6 +1,5 @@
 package uk.gov.hmrc.agentclientrelationships.support
 
-import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -9,11 +8,11 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.Nino
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 
 class RecoverySchedulerISpec
     extends UnitSpec
@@ -58,6 +57,8 @@ class RecoverySchedulerISpec
   val nino = Nino("AB123456C")
   val mtdItIdType = "MTDITID"
 
+  def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+
   "Recovery Scheduler" should {
     "attempt to recover if DeleteRecord exists but RecoveryRecord not" in {
       givenPrincipalGroupIdExistsFor(arn, "foo")
@@ -67,13 +68,13 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenAuditConnector()
 
-      await(recoveryRepo.findAll()) shouldBe empty
+      await(recoveryRepo.collection.find().toFuture()) shouldBe empty
 
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItId.value,
         mtdItIdType,
-        DateTime.parse("2017-10-31T23:22:50.971Z"),
+        LocalDateTime.parse("2017-10-31T23:22:50.971"),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Success)
       )
@@ -83,9 +84,9 @@ class RecoverySchedulerISpec
       await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
 
       eventually {
-        await(recoveryRepo.findAll()).length shouldBe 1
+        await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
-        await(deleteRepo.findAll()).length shouldBe 0
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
       }
 
     }
@@ -98,14 +99,14 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenAuditConnector()
 
-      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).plusSeconds(2)))
-      await(recoveryRepo.findAll()).length shouldBe 1
+      await(recoveryRepo.write("1", now.plusSeconds(2)))
+      await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItId.value,
         mtdItIdType,
-        DateTime.parse("2017-10-31T23:22:50.971Z"),
+        LocalDateTime.parse("2017-10-31T23:22:50.971"),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Success)
       )
@@ -114,9 +115,9 @@ class RecoverySchedulerISpec
       await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
 
       eventually {
-        await(recoveryRepo.findAll()).length shouldBe 1
+        await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
-        await(deleteRepo.findAll()).length shouldBe 0
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
       }
 
     }
@@ -129,14 +130,14 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenAuditConnector()
 
-      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).minusDays(2)))
-      await(recoveryRepo.findAll()).length shouldBe 1
+      await(recoveryRepo.write("1", now.minusDays(2)))
+      await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItId.value,
         mtdItIdType,
-        DateTime.parse("2017-10-31T23:22:50.971Z"),
+        LocalDateTime.parse("2017-10-31T23:22:50.971"),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Success)
       )
@@ -145,9 +146,9 @@ class RecoverySchedulerISpec
       await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
 
       eventually {
-        await(recoveryRepo.findAll()).length shouldBe 1
+        await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
-        await(deleteRepo.findAll()).length shouldBe 0
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
       }
 
     }
@@ -158,15 +159,15 @@ class RecoverySchedulerISpec
       givenPrincipalUserIdExistFor(arn, "userId")
       givenPrincipalGroupIdExistsFor(arn, "foo")
 
-      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).minusDays(2)))
-      await(recoveryRepo.findAll()).length shouldBe 1
+      await(recoveryRepo.write("1", now.minusDays(2)))
+      await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       (0 to 10) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
           mtdItId.value + index,
           mtdItIdType,
-          DateTime.parse("2017-10-31T23:22:50.971Z"),
+          LocalDateTime.parse("2017-10-31T23:22:50.971"),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Success)
         )
@@ -177,10 +178,10 @@ class RecoverySchedulerISpec
         await(deleteRepo.create(deleteRecord))
       }
 
-      await(deleteRepo.findAll()).length shouldBe 11
+      await(deleteRepo.collection.find().toFuture()).length shouldBe 11
 
       eventually {
-        await(deleteRepo.findAll()).length shouldBe 0
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
       }
 
     }
@@ -192,17 +193,17 @@ class RecoverySchedulerISpec
       givenPrincipalGroupIdExistsFor(arn, "foo")
       givenAdminUser("foo", "any")
 
-      await(recoveryRepo.removeAll())
+      await(recoveryRepo.collection.drop().toFuture())
 
-      await(recoveryRepo.write("1", DateTime.now(DateTimeZone.UTC).minusDays(2)))
-      await(recoveryRepo.findAll()).length shouldBe 1
+      await(recoveryRepo.write("1", now.minusDays(2)))
+      await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       (0 to 10) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
           mtdItId.value + index,
           mtdItIdType,
-          DateTime.now(DateTimeZone.UTC).minusDays(index),
+          now.minusDays(index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Success)
         )
@@ -228,13 +229,13 @@ class RecoverySchedulerISpec
 
 
       eventually {
-        await(deleteRepo.findAll()).length shouldBe 1
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 1
       }
 
       //Thread.sleep(3000)
 
       eventually {
-        val deleteRecords = await(deleteRepo.findAll())
+        val deleteRecords = await(deleteRepo.collection.find().toFuture())
         deleteRecords.length shouldBe 1
         deleteRecords.head.numberOfAttempts should (be > 1)
       }

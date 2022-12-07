@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import org.joda.time.DateTime
+import org.mongodb.scala.model.Filters
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
@@ -9,7 +9,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, Relationsh
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.SaAgentReference
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.time.LocalDateTime
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
@@ -93,7 +93,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+          repo.collection
+            .find(Filters.and(Filters.equal("arn", arn.value),
+              Filters.equal( "clientIdentifier", mtdItId.value), Filters.equal("clientIdentifierType", mtdItIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -194,7 +196,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+          repo.collection.find(Filters.and(
+            Filters.equal("arn",arn.value),
+            Filters.equal( "clientIdentifier" ,mtdItId.value),
+            Filters.equal("clientIdentifierType" , mtdItIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -226,7 +231,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> mtdItId.value, "clientIdentifierType" -> mtdItIdType)
+          repo.collection.find(
+            Filters.and(
+              Filters.equal("arn", arn.value),
+              Filters.equal( "clientIdentifier" , mtdItId.value),
+              Filters.equal( "clientIdentifierType", mtdItIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -284,7 +293,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        await(repo.insert(relationshipCopiedSuccessfully))
+        await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
         val result = doRequest
         result.status shouldBe 404
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -307,7 +316,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        await(repo.insert(relationshipCopiedSuccessfully))
+        await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
         val result = doRequest
         result.status shouldBe 404
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -461,7 +470,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenMtdItIdIsUnKnownFor(nino)
 
-        def query() = repo.find("arn" -> arn.value, "clientIdentifier" -> nino.value, "clientIdentifierType" -> "NINO")
+        def query() = repo.collection.find(
+          Filters.and(
+            Filters.equal("arn" , arn.value),
+              Filters.equal( "clientIdentifier", nino.value),
+              Filters.equal("clientIdentifierType" , "NINO"))).toFuture()
 
         await(query()) shouldBe empty
         val result = doRequest
@@ -507,7 +520,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 arn.value,
                 mtdItId.value,
                 mtdItIdType,
-                DateTime.now.minusMinutes(1),
+                LocalDateTime.now.minusMinutes(1),
                 Some(SyncStatus.Success),
                 Some(SyncStatus.Failed))))
           doAgentDeleteRequest(requestPath).status shouldBe 204
@@ -521,7 +534,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 arn.value,
                 mtdItId.value,
                 mtdItIdType,
-                DateTime.now.minusMinutes(1),
+                LocalDateTime.now.minusMinutes(1),
                 Some(SyncStatus.Failed)
               )))
           doAgentDeleteRequest(requestPath).status shouldBe 204
@@ -535,7 +548,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 arn.value,
                 mtdItId.value,
                 mtdItIdType,
-                DateTime.now.minusMinutes(1)
+                LocalDateTime.now.minusMinutes(1)
               )))
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
@@ -565,7 +578,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 arn.value,
                 mtdItId.value,
                 mtdItIdType,
-                DateTime.now.minusMinutes(1)
+                LocalDateTime.now.minusMinutes(1)
               )))
           doAgentDeleteRequest(requestPath).status shouldBe 500
           verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))

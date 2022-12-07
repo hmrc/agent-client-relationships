@@ -17,25 +17,23 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import com.google.inject.ImplementedBy
+
 import javax.inject.{Inject, Singleton}
-import org.joda.time.DateTime
-import org.joda.time.DateTime.now
-import org.joda.time.DateTimeZone.UTC
+import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.model.{Filters, FindOneAndReplaceOptions, IndexModel, IndexOptions, Updates}
+import org.mongodb.scala.model.Indexes.ascending
+import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.indexes.Index
-import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers
 import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class RelationshipCopyRecord(
@@ -43,7 +41,7 @@ case class RelationshipCopyRecord(
   clientIdentifier: String,
   clientIdentifierType: String,
   references: Option[Set[RelationshipReference]] = None,
-  dateTime: DateTime = now(UTC),
+  dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None) {
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
@@ -53,116 +51,114 @@ case class RelationshipCopyRecord(
   def needToCreateEsRecord: Boolean = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
 }
 
-object RelationshipCopyRecord extends ReactiveMongoFormats {
+object RelationshipCopyRecord {
   implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 
 @ImplementedBy(classOf[MongoRelationshipCopyRecordRepository])
 trait RelationshipCopyRecordRepository {
-  def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int]
-  def findBy(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]]
-  def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int]
-
-  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int]
-
-  def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int]
-
-  def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]]
+  def create(record: RelationshipCopyRecord): Future[Int]
+  def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[RelationshipCopyRecord]]
+  def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int]
+  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int]
+  def remove(arn: Arn, identifier: TaxIdentifier): Future[Int]
+  def terminateAgent(arn: Arn): Future[Either[String, Int]]
 }
 
 @Singleton
-class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: ReactiveMongoComponent)
-    extends ReactiveRepository[RelationshipCopyRecord, BSONObjectID](
-      "relationship-copy-record",
-      mongoComponent.mongoConnector.db,
-      formats,
-      ReactiveMongoFormats.objectIdFormats)
+class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[RelationshipCopyRecord](
+      mongoComponent = mongoComponent,
+      collectionName = "relationship-copy-record",
+      domainFormat = formats,
+      indexes = Seq(
+        IndexModel(
+          ascending("arn", "clientIdentifier", "clientIdentifierType"),
+          IndexOptions().name("arnAndAgentReference").unique(true))
+      )
+    )
     with RelationshipCopyRecordRepository
-    with StrictlyEnsureIndexes[RelationshipCopyRecord, BSONObjectID] {
+    with Logging {
 
   private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
-  import ImplicitBSONHandlers._
-
-  override def indexes: Seq[Index] =
-    Seq(
-      Index(
-        Seq("arn" -> Ascending, "clientIdentifier" -> Ascending, "clientIdentifierType" -> Ascending),
-        Some("arnAndAgentReference"),
-        unique = true))
-
-  def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
+  override def create(record: RelationshipCopyRecord): Future[Int] =
     collection
-      .update(ordered = false)
-      .one[JsObject, RelationshipCopyRecord](
-        JsObject(
-          Seq(
-            "arn"                  -> JsString(record.arn),
-            "clientIdentifier"     -> JsString(record.clientIdentifier),
-            "clientIdentifierType" -> JsString(record.clientIdentifierType))),
+      .findOneAndReplace(
+        Filters.and(
+          Filters.equal("arn", record.arn),
+          Filters.equal("clientIdentifier", record.clientIdentifier),
+          Filters.equal("clientIdentifierType", record.clientIdentifierType)
+        ),
         record,
-        upsert = true
+        FindOneAndReplaceOptions().upsert(true)
       )
-      .map { result =>
-        result.writeErrors.foreach(error => logger.warn(s"Creating RelationshipCopyRecord failed: ${error.errmsg}"))
-        result.n
-      }
+      .toFuture()
+      .map(_ => 1)
 
-  def findBy(arn: Arn, identifier: TaxIdentifier)(
-    implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] =
-    find(
-      "arn"                  -> arn.value,
-      "clientIdentifier"     -> identifier.value,
-      "clientIdentifierType" -> clientIdentifierType(identifier))
-      .map(_.headOption)
-
-  def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int] =
-    findAndUpdate(
-      query = Json.obj(
-        "arn"                  -> arn.value,
-        "clientIdentifier"     -> identifier.value,
-        "clientIdentifierType" -> clientIdentifierType(identifier)),
-      update = Json.obj("$set" -> Json.obj("syncToETMPStatus" -> status.toString))
-    ).map {
-      _.lastError.fold(INDICATE_ERROR_DURING_DB_UPDATE) { updateLastError =>
-        updateLastError.err.foreach(msg => logger.warn(s"Updating ETMP sync status ($status) failed: $msg"))
-        updateLastError.n
-      }
-    }
-
-  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int] =
-    findAndUpdate(
-      query = Json.obj(
-        "arn"                  -> arn.value,
-        "clientIdentifier"     -> identifier.value,
-        "clientIdentifierType" -> clientIdentifierType(identifier)),
-      update = Json.obj("$set" -> Json.obj("syncToESStatus" -> status.toString))
-    ).map {
-      _.lastError.fold(INDICATE_ERROR_DURING_DB_UPDATE) { updateLastError =>
-        updateLastError.err.foreach(msg => logger.warn(s"Updating ES sync status ($status) failed: $msg"))
-        updateLastError.n
-      }
-    }
-
-  def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] =
-    remove(
-      "arn"                  -> arn.value,
-      "clientIdentifier"     -> identifier.value,
-      "clientIdentifierType" -> clientIdentifierType(identifier))
-      .map(_.n)
-
-  override def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]] =
+  override def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[RelationshipCopyRecord]] =
     collection
-      .delete()
-      .one(Json.obj("arn" -> arn.value))
-      .map(wr => Right(wr.n))
+      .find(
+        Filters.and(
+          Filters.equal("arn", arn.value),
+          Filters.equal("clientIdentifier", identifier.value),
+          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+        ))
+      .headOption()
+
+  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] =
+    collection
+      .updateMany(
+        Filters.and(
+          Filters.equal("arn", arn.value),
+          Filters.equal("clientIdentifier", identifier.value),
+          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+        ),
+        Updates.set("syncToETMPStatus", status.toString)
+      )
+      .toFuture()
+      .map(res => res.getModifiedCount.toInt)
       .recover {
-        case e => Left(e.getMessage)
+        case e: MongoWriteException =>
+          logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
+      }
+
+  override def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] =
+    collection
+      .updateMany(
+        Filters.and(
+          Filters.equal("arn", arn.value),
+          Filters.equal("clientIdentifier", identifier.value),
+          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+        ),
+        Updates.set("syncToESStatus", status.toString)
+      )
+      .toFuture()
+      .map(res => res.getModifiedCount.toInt)
+      .recover {
+        case e: MongoWriteException =>
+          logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
+      }
+
+  override def remove(arn: Arn, identifier: TaxIdentifier): Future[Int] =
+    collection
+      .deleteMany(
+        Filters.and(
+          Filters.equal("arn", arn.value),
+          Filters.equal("clientIdentifier", identifier.value),
+          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+        ))
+      .toFuture()
+      .map(res => res.getDeletedCount.toInt)
+
+  override def terminateAgent(arn: Arn): Future[Either[String, Int]] =
+    collection
+      .deleteMany(Filters.equal("arn", arn.value))
+      .toFuture()
+      .map(res => Right(res.getDeletedCount.toInt))
+      .recover {
+        case ex: MongoWriteException => Left(ex.getMessage)
       }
 }

@@ -1,16 +1,15 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import org.joda.time.{DateTime, DateTimeZone, LocalDate}
-import play.api.libs.json.JodaReads._
+import org.mongodb.scala.model.Filters
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.lock.LockFormats.Lock
+import uk.gov.hmrc.mongo.lock.Lock
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.time.{Instant, LocalDate, ZoneOffset}
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
@@ -26,6 +25,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     relationshipsControllerDeleteISpec(serviceId, clientId, clientIdType)
     strideEndpointISpec(serviceId, clientId, clientIdType)
   }
+
+  def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
   def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     s"GET  /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" should {
@@ -45,7 +46,10 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> clientId.value, "clientIdentifierType" -> clientIdType)
+          repo.collection.find(Filters.and(
+            Filters.equal("arn", arn.value),
+            Filters.equal( "clientIdentifier",clientId.value),
+            Filters.equal("clientIdentifierType", clientIdType))).toFuture()
 
         await(query()) shouldBe empty
         val result = doRequest
@@ -81,7 +85,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
               arn.value,
               clientId.value,
               clientIdType,
-              DateTime.now(DateTimeZone.UTC),
+              now,
               Some(SyncStatus.Success),
               Some(SyncStatus.Failed))))
 
@@ -174,12 +178,13 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 423 Locked if there is a record in the lock repository" in {
         givenUserIsSubscribedClient(clientId)
-        await(recoveryLockRepository.insert(
+
+        await(mongoLockRepository.collection.insertOne(
           Lock(
             id = s"recovery-${arn.value}-${clientId.value}",
             owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
-            expiryTime = DateTime.now().plusSeconds(5),
-            timeCreated = DateTime.now().minusSeconds(5))))
+            expiryTime = Instant.now().plusSeconds(2),
+            timeCreated = Instant.now().minusMillis(500))).toFuture())
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe LOCKED

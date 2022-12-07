@@ -23,11 +23,8 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentclientrelationships.support.{Http, MongoApp, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{Http, MongoApp, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class RelationshipsControllerTestOnlyISpec
     extends UnitSpec

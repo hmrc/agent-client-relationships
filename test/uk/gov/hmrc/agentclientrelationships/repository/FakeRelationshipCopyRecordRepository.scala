@@ -16,30 +16,30 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import reactivemongo.core.errors.GenericDatabaseException
+import org.mongodb.scala.MongoException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordRepository {
   private val data: mutable.Map[String, RelationshipCopyRecord] = mutable.Map()
   private val UPDATED_RECORD_COUNT = 1
 
-  override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
+  override def create(record: RelationshipCopyRecord): Future[Int] =
     findBy(Arn(record.arn), MtdItId(record.clientIdentifier)).map(result => {
       if (result.isDefined) {
-        throw GenericDatabaseException("duplicate key error collection", code = Some(2))
+        throw new MongoException("duplicate key error collection")
       } else {
         data += ((record.arn + record.clientIdentifier) → record)
         1
       }
     })
 
-  override def findBy(arn: Arn, identifier: TaxIdentifier)(
-    implicit ec: ExecutionContext): Future[Option[RelationshipCopyRecord]] = {
+  override def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[RelationshipCopyRecord]] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(if (maybeValue.isDefined) {
       maybeValue
@@ -48,8 +48,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
     })
   }
 
-  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int] = {
+  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(if (maybeValue.isDefined) {
       data(arn.value + identifier.value) = maybeValue.get.copy(syncToETMPStatus = Some(status))
@@ -60,8 +59,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
 
   }
 
-  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus)(
-    implicit ec: ExecutionContext): Future[Int] = {
+  override def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get(arn.value + identifier.value)
     Future.successful(if (maybeValue.isDefined) {
       data(arn.value + identifier.value) = maybeValue.get.copy(syncToESStatus = Some(status))
@@ -71,7 +69,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
     })
   }
 
-  def remove(arn: Arn, identifier: TaxIdentifier)(implicit ec: ExecutionContext): Future[Int] = {
+  override def remove(arn: Arn, identifier: TaxIdentifier): Future[Int] = {
     val maybeRemove = data.remove(arn.value + identifier.value)
     if (maybeRemove.isDefined) Future.successful(1)
     else Future.successful(0)
@@ -80,7 +78,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
   def reset() =
     data.clear()
 
-  override def terminateAgent(arn: Arn)(implicit executionContext: ExecutionContext): Future[Either[String, Int]] =
+  override def terminateAgent(arn: Arn): Future[Either[String, Int]] =
     Future.successful(
       data
         .remove(arn.value)
