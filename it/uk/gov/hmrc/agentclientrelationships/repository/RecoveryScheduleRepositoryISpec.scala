@@ -1,16 +1,13 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import java.util.UUID
-
-import org.joda.time.DateTime
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, UnitSpec}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.util.UUID
 
 class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
 
@@ -32,28 +29,28 @@ class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with GuiceO
   }
 
   val uid: UUID = UUID.randomUUID()
-  val newDate: DateTime = DateTime.now()
+  val newDate: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
   "RecoveryRepository" should {
     "read and write" in {
-      val recoveryRecord = RecoveryRecord("foo", DateTime.parse("2017-10-31T23:22:50.971Z"))
-      val newRecoveryRecord = RecoveryRecord("foo", DateTime.parse("2019-10-31T23:22:50.971Z"))
+      val recoveryRecord = RecoveryRecord("foo", LocalDateTime.parse("2017-10-31T23:22:50.971"))
+      val newRecoveryRecord = RecoveryRecord("foo", LocalDateTime.parse("2019-10-31T23:22:50.971"))
 
-      await(repo.insert(recoveryRecord))
+      await(repo.collection.insertOne(recoveryRecord).toFuture())
 
       await(repo.read) shouldBe recoveryRecord
 
-      await(repo.removeAll())
+      await(repo.collection.drop().toFuture())
 
       await(repo.read)
 
-      await(repo.findAll()).length shouldBe 1
+      await(repo.collection.find().toFuture()).length shouldBe 1
 
-      await(repo.write("foo", DateTime.parse("2019-10-31T23:22:50.971Z")))
+      await(repo.write("foo", LocalDateTime.parse("2019-10-31T23:22:50.971")))
 
-      await(repo.findAll()).head shouldBe newRecoveryRecord
+      await(repo.collection.find().toFuture()).head shouldBe newRecoveryRecord
 
-      await(repo.findAll()).length shouldBe 1
+      await(repo.collection.find().toFuture()).length shouldBe 1
 
     }
   }

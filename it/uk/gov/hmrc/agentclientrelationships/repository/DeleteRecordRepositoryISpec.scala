@@ -1,17 +1,15 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.joda.time.{DateTime, DateTimeZone}
+import org.mongodb.scala.MongoException
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
-import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.{Failed, Success}
+import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.time.{Instant, ZoneOffset}
 
 class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAppPerSuite {
 
@@ -26,6 +24,8 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
 
   private lazy val repo = app.injector.instanceOf[MongoDeleteRecordRepository]
 
+  def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+
   override def beforeEach() {
     super.beforeEach()
     await(repo.ensureIndexes)
@@ -38,7 +38,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000001",
         "101747696",
         "VRN",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -70,7 +70,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000001",
         "101747696",
         "VRN",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -81,7 +81,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000001",
         "101747697",
         "VRN",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -99,7 +99,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000001",
         "101747696",
         "VRN",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -110,7 +110,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000001",
         "101747696",
         "VRN",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(SyncStatus.Success),
         Some(SyncStatus.Success),
         numberOfAttempts = 5,
@@ -119,7 +119,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val createResultOld = await(repo.create(deleteRecordOld))
       createResultOld shouldBe 1
-      an[DatabaseException] shouldBe thrownBy {
+      an[MongoException] shouldBe thrownBy {
         await(repo.create(deleteRecordNew))
       }
     }
@@ -129,16 +129,16 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000001",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(1))
+        lastRecoveryAttempt = Some(now.minusMinutes(1))
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         "ABCDEF0000000002",
         "MTDITID",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(Success),
         Some(Failed),
         lastRecoveryAttempt = None)
@@ -146,10 +146,10 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000003",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(5))
+        lastRecoveryAttempt = Some(now.minusMinutes(5))
       )
 
       val createResult1 = await(repo.create(deleteRecord1))
@@ -168,28 +168,28 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         "TARN0000001",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(1))
+        lastRecoveryAttempt = Some(now.minusMinutes(1))
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         "ABCDEF0000000002",
         "MTDITID",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(13))
+        lastRecoveryAttempt = Some(now.minusMinutes(13))
       )
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
         "ABCDEF0000000001",
         "MTDITID",
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(Success),
         Some(Failed),
-        lastRecoveryAttempt = Some(DateTime.now(DateTimeZone.UTC).minusMinutes(5))
+        lastRecoveryAttempt = Some(now.minusMinutes(5))
       )
 
       val createResult1 = await(repo.create(deleteRecord1))

@@ -1,15 +1,14 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.joda.time.{DateTime, DateTimeZone}
+import org.mongodb.scala.model.Filters
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
+import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.time.{Instant, ZoneOffset}
 
 class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
 
@@ -30,6 +29,8 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
     ()
   }
 
+  def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+
   "RelationshipCopyRecordRepository" should {
     "create, find and update and remove a record" in {
       val relationshipCopyRecord = RelationshipCopyRecord(
@@ -37,7 +38,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
         "101747696",
         "VRN",
         None,
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed))
       val createResult = await(repo.create(relationshipCopyRecord))
@@ -65,7 +66,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
         "101747696",
         "VRN",
         None,
-        DateTime.now(DateTimeZone.UTC),
+        now,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed))
       val createResult1 = await(repo.create(relationshipCopyRecord1))
@@ -75,18 +76,18 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
         "101747696",
         "VRN",
         None,
-        DateTime.now(DateTimeZone.UTC).plusDays(1),
+        now.plusDays(1),
         None,
         None)
       val createResult2 = await(repo.create(relationshipCopyRecord2))
       createResult2 shouldBe 1
 
       val result = await(
-        repo.find(
-          "arn"                  -> relationshipCopyRecord1.arn,
-          "clientIdentifier"     -> relationshipCopyRecord1.clientIdentifier,
-          "clientIdentifierType" -> relationshipCopyRecord1.clientIdentifierType
-        ))
+        repo.collection.find(Filters.and(
+          Filters.equal("arn"                  , relationshipCopyRecord1.arn),
+          Filters.equal("clientIdentifier"     , relationshipCopyRecord1.clientIdentifier),
+          Filters.equal("clientIdentifierType" , relationshipCopyRecord1.clientIdentifierType)
+        )).toFuture())
       result.length shouldBe 1
     }
   }

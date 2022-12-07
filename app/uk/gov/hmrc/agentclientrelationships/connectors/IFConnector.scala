@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import javax.inject.{Inject, Singleton}
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.{DateTimeZone, LocalDate}
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
@@ -34,6 +33,7 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
 
 import java.net.URL
+import java.time.{Instant, LocalDate, ZoneOffset}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -54,12 +54,14 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
-    case Some(d) => d.isAfter(LocalDate.now(DateTimeZone.UTC))
+    case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
   }
 
   def isNotActive(r: InactiveRelationship): Boolean = r.dateTo match {
-    case None    => false
-    case Some(d) => d.isBefore(LocalDate.now(DateTimeZone.UTC)) || d.equals(LocalDate.now(DateTimeZone.UTC))
+    case None => false
+    case Some(d) =>
+      d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) || d.equals(
+        Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
   }
 
   private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {

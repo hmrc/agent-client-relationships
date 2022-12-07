@@ -17,35 +17,35 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import com.google.inject.AbstractModule
-
-import javax.inject.Inject
+import org.mongodb.scala.model.Filters
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
-import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.agentclientrelationships.stubs.{ACAStubs, AuthStub, DataStreamStub, DesStubs, DesStubsGet, IFStubs, MappingStubs, RelationshipStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.test.MongoSupport
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
-class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: ReactiveMongoComponent)
+class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: MongoComponent)
     extends MongoRelationshipCopyRecordRepository(moduleComponent) {
-  override def create(record: RelationshipCopyRecord)(implicit ec: ExecutionContext): Future[Int] =
+  override def create(record: RelationshipCopyRecord): Future[Int] =
     Future.failed(new Exception("Could not connect the mongo db."))
 }
 
 class RelationshipsControllerWithoutMongoISpec
     extends UnitSpec
-    with MongoApp
+    with MongoSupport
     with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
@@ -75,9 +75,9 @@ class RelationshipsControllerWithoutMongoISpec
         "features.recovery-enable"                         -> false,
         "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> true
+        "agent.cache.enabled"                              -> true,
+        "mongodb.uri"                                      -> mongoUri
       )
-      .configure(mongoConfiguration)
       .overrides(new AbstractModule {
         override def configure(): Unit = {
           bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
@@ -92,7 +92,7 @@ class RelationshipsControllerWithoutMongoISpec
 
   override def beforeEach() {
     super.beforeEach()
-    await(repo.ensureIndexes)
+    prepareDatabase()
     ()
   }
 
@@ -125,7 +125,11 @@ class RelationshipsControllerWithoutMongoISpec
       givenAdminUser("foo", "any")
 
       def query =
-        repo.find("arn" -> arn.value, "clientIdentifier" -> mtditid.value, "clientIdentifierType" -> identifierType)
+        repo.collection.find(
+          Filters.and(
+            Filters.equal("arn" , arn.value),
+            Filters.equal("clientIdentifier" , mtditid.value),
+            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
 
       await(query) shouldBe empty
 
@@ -182,7 +186,13 @@ class RelationshipsControllerWithoutMongoISpec
       givenAdminUser("foo", "any")
       getVrnIsKnownInETMPFor(vrn)
 
-      def query = repo.find("arn" -> arn.value, "clientIdentifier" -> vrn, "clientIdentifierType" -> mtdVatIdType)
+      def query =
+        repo.collection.find(
+          Filters.and(
+            Filters.equal("arn" , arn.value),
+            Filters.equal("clientIdentifier" , vrn.value),
+            Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
+
 
       await(query) shouldBe empty
 
@@ -236,7 +246,11 @@ class RelationshipsControllerWithoutMongoISpec
       givenAuditConnector()
 
       def query =
-        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+        repo.collection.find(
+          Filters.and(
+            Filters.equal("arn" , arn.value),
+            Filters.equal("clientIdentifier" , identifier.value),
+            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
 
       await(query) shouldBe empty
 
@@ -262,7 +276,12 @@ class RelationshipsControllerWithoutMongoISpec
       givenAuditConnector()
 
       def query =
-        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+        repo.collection.find(
+          Filters.and(
+            Filters.equal("arn" , arn.value),
+            Filters.equal("clientIdentifier" , identifier.value),
+            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
+
 
       await(query) shouldBe empty
 
@@ -288,7 +307,11 @@ class RelationshipsControllerWithoutMongoISpec
       givenAuditConnector()
 
       def query =
-        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+        repo.collection.find(
+          Filters.and(
+            Filters.equal("arn" , arn.value),
+            Filters.equal("clientIdentifier" , identifier.value),
+            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
 
       await(query) shouldBe empty
 
@@ -314,7 +337,11 @@ class RelationshipsControllerWithoutMongoISpec
       givenAuditConnector()
 
       def query =
-        repo.find("arn" -> arn.value, "clientIdentifier" -> identifier.value, "clientIdentifierType" -> identifierType)
+        repo.collection.find(
+          Filters.and(
+            Filters.equal("arn" , arn.value),
+            Filters.equal("clientIdentifier" , identifier.value),
+            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
 
       await(query) shouldBe empty
 

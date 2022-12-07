@@ -20,7 +20,6 @@ import akka.Done
 import com.kenshoo.play.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
-import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -37,6 +36,7 @@ import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
 
+import java.time.{Instant, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -267,7 +267,9 @@ class DeleteRelationshipsService @Inject()(
                      case Some(record) =>
                        auditData.set("initialDeleteDateTime", record.dateTime)
                        auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
-                       if (record.dateTime.plusSeconds(recoveryTimeout).isAfter(DateTime.now(DateTimeZone.UTC))) {
+                       if (record.dateTime
+                             .plusSeconds(recoveryTimeout)
+                             .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)) {
                          for {
                            isDone <- resumeRelationshipRemoval(record)
                            _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)

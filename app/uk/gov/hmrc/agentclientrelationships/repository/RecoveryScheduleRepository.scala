@@ -16,72 +16,70 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import java.util.UUID
-
 import com.google.inject.ImplementedBy
-import javax.inject.{Inject, Singleton}
-import org.joda.time.DateTime
+import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.Updates.set
+import org.mongodb.scala.model._
+import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.indexes.Index
-import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.LocalDateTime
+import java.util.UUID
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class RecoveryRecord(uid: String, runAt: DateTime)
+case class RecoveryRecord(uid: String, runAt: LocalDateTime)
 
-object RecoveryRecord extends ReactiveMongoFormats {
+object RecoveryRecord {
+
+  implicit val localDateTimeFormat = MongoJavatimeFormats.localDateTimeFormat
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 
 @ImplementedBy(classOf[MongoRecoveryScheduleRepository])
 trait RecoveryScheduleRepository {
-  def read(implicit ec: ExecutionContext): Future[RecoveryRecord]
-  def write(nextUid: String, nextRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit]
+  def read: Future[RecoveryRecord]
+  def write(nextUid: String, nextRunAt: LocalDateTime): Future[Unit]
 }
 
 @Singleton
-class MongoRecoveryScheduleRepository @Inject()(mongoComponent: ReactiveMongoComponent)
-    extends ReactiveRepository[RecoveryRecord, BSONObjectID](
-      "recovery-schedule",
-      mongoComponent.mongoConnector.db,
-      RecoveryRecord.formats,
-      ReactiveMongoFormats.objectIdFormats)
+class MongoRecoveryScheduleRepository @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[RecoveryRecord](
+      mongoComponent = mongoComponent,
+      collectionName = "recovery-schedule",
+      domainFormat = RecoveryRecord.formats,
+      indexes = Seq(
+        IndexModel(ascending("uid", "runAt"), IndexOptions().unique(true))
+      )
+    )
     with RecoveryScheduleRepository
-    with StrictlyEnsureIndexes[RecoveryRecord, BSONObjectID] {
+    with Logging {
 
-  import ImplicitBSONHandlers._
+  override def read: Future[RecoveryRecord] =
+    collection.find().headOption().flatMap {
+      case Some(record) => Future successful record
+      case None => {
+        val record = RecoveryRecord(UUID.randomUUID().toString, LocalDateTime.now())
+        collection.insertOne(record).toFuture.map(_ => record)
+      }.recoverWith {
+        case NonFatal(error) =>
+          logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
+          Future.failed(error)
+      }
+    }
 
-  override def indexes =
-    Seq(Index(Seq("uid" -> Ascending, "runAt" -> Ascending), unique = true))
-
-  def read(implicit ec: ExecutionContext): Future[RecoveryRecord] =
-    findAll().flatMap(_.headOption match {
-      case Some(record) => Future.successful(record)
-      case None =>
-        val record = RecoveryRecord(UUID.randomUUID().toString, DateTime.now())
-        insert(record).map(_ => record).recoverWith {
-          case NonFatal(error) =>
-            logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
-            Future.failed(error)
-        }
-    })
-
-  def write(newUid: String, newRunAt: DateTime)(implicit ec: ExecutionContext): Future[Unit] =
-    findAndUpdate(
-      query = Json.obj(),
-      update =
-        Json.obj("$set" -> Json.obj("uid" -> newUid, "runAt" -> ReactiveMongoFormats.dateTimeWrite.writes(newRunAt))),
-      upsert = true
-    ).map(_.lastError.foreach { error =>
-      if (!error.updatedExisting)
-        logger.warn(s"Updating uid and runAt failed with error: $error")
-    })
+  override def write(newUid: String, newRunAt: LocalDateTime): Future[Unit] =
+    collection
+      .findOneAndUpdate(
+        Filters.exists("uid"),
+        Updates.combine(set("uid", newUid), set("runAt", newRunAt)),
+        FindOneAndUpdateOptions().upsert(true))
+      .toFuture()
+      .map(_ => ())
 
 }

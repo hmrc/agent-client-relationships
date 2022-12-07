@@ -1,12 +1,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.model.Filters
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.domain.AgentCode
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
@@ -43,7 +42,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+          repo.collection.find(
+            Filters.and(
+              Filters.equal("arn" , arn.value),
+              Filters.equal( "clientIdentifier" , vrn.value),
+              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -103,7 +106,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+          repo.collection.find(
+            Filters.and(
+              Filters.equal("arn", arn.value),
+              Filters.equal( "clientIdentifier", vrn.value),
+              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -140,7 +147,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+          repo.collection.find(
+            Filters.and(
+              Filters.equal("arn", arn.value),
+              Filters.equal("clientIdentifier" , vrn.value),
+              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -170,7 +181,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+          repo.collection.find(
+            Filters.and(
+              Filters.equal("arn", arn.value),
+              Filters.equal("clientIdentifier" , vrn.value),
+              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -230,7 +245,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenAdminUser("foo", "any")
 
         def query() =
-          repo.find("arn" -> arn.value, "clientIdentifier" -> vrn.value, "clientIdentifierType" -> mtdVatIdType)
+          repo.collection.find(
+            Filters.and(
+              Filters.equal("arn", arn.value),
+              Filters.equal("clientIdentifier" , vrn.value),
+              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
 
         await(query()) shouldBe empty
 
@@ -279,7 +298,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
+        await(repo.collection.insertOne(relationshipCopiedSuccessfullyForMtdVat).toFuture())
         val result = doRequest
         result.status shouldBe 404
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -297,7 +316,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
+        await(repo.collection.insertOne(relationshipCopiedSuccessfullyForMtdVat).toFuture())
         val result = doRequest
         result.status shouldBe 404
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -307,7 +326,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenPrincipalGroupIdNotExistsFor(arn)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        await(repo.insert(relationshipCopiedSuccessfullyForMtdVat))
+        await(repo.collection.insertOne(relationshipCopiedSuccessfullyForMtdVat).toFuture())
         val result = doRequest
         result.status shouldBe 404
       }

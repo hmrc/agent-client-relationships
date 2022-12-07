@@ -17,10 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.support
 
 import java.util.UUID
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+
 import javax.inject.{Inject, Singleton}
-import org.joda.time.{DateTime, Interval, PeriodType}
 import play.api.Logging
 import play.api.libs.concurrent.ExecutionContextProvider
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -28,6 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord}
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 
+import java.time.{Instant, ZoneOffset}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
@@ -71,24 +71,24 @@ class TaskActor(
     case uid: String =>
       mongoRecoveryScheduleRepository.read.foreach {
         case RecoveryRecord(recordUid, runAt) =>
-          val now = DateTime.now()
+          val now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
           if (uid == recordUid) {
             val newUid = UUID.randomUUID().toString
             val nextRunAt = (if (runAt.isBefore(now)) now else runAt)
               .plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
-            val delay = new Interval(now, nextRunAt).toPeriod(PeriodType.seconds()).getValue(0).seconds
+            val delay = nextRunAt.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)
             mongoRecoveryScheduleRepository
               .write(newUid, nextRunAt)
               .map(_ => {
-                context.system.scheduler.scheduleOnce(delay, self, newUid)
+                context.system.scheduler.scheduleOnce(delay.seconds, self, newUid)
                 logger.info("About to start recovery job.")
                 recover
               })
           } else {
             val dateTime = if (runAt.isBefore(now)) now else runAt
-            val delay = (new Interval(now, dateTime).toPeriod(PeriodType.seconds()).getValue(0) + Random.nextInt(
-              Math.min(60, recoveryInterval))).seconds
-            context.system.scheduler.scheduleOnce(delay, self, recordUid)
+            val delay = (dateTime.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)) + Random.nextInt(
+              Math.min(60, recoveryInterval))
+            context.system.scheduler.scheduleOnce(delay.seconds, self, recordUid)
             Future.successful(())
           }
       }

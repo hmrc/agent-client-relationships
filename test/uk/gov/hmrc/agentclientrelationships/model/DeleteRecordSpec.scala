@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.Inside
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, SyncStatus}
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
+
+import java.time.{Instant, ZoneOffset}
 
 class DeleteRecordSpec extends UnitSpec with Inside {
 
@@ -31,7 +32,7 @@ class DeleteRecordSpec extends UnitSpec with Inside {
         "TARN0000001",
         "101747696",
         "VRN",
-        DateTime.now(DateTimeZone.UTC),
+        Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
         headerCarrier = Some(

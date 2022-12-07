@@ -40,8 +40,8 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
 
   "AgentTerminationService" should "return result as expected" in {
 
-    (drrMock.terminateAgent(_: Arn)(_: ExecutionContext)).expects(arn, *).returning(Future.successful(Right(1)))
-    (rcrrMock.terminateAgent(_: Arn)(_: ExecutionContext)).expects(arn, *).returning(Future.successful(Right(1)))
+    (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
+    (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
 
     service.terminateAgent(arn).value.futureValue shouldBe Right(
       TerminationResponse(
@@ -52,19 +52,19 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
 
   it should "handle error from DeleteRecordRepository" in {
     (drrMock
-      .terminateAgent(_: Arn)(_: ExecutionContext))
-      .expects(arn, *)
+      .terminateAgent(_: Arn))
+      .expects(arn)
       .returning(Future.successful(Left("some error")))
-    (rcrrMock.terminateAgent(_: Arn)(_: ExecutionContext)).expects(arn, *).returning(Future.successful(Right(1)))
+    (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")
   }
 
   it should "handle error from RelationshipCopyRecordRepository" in {
-    (drrMock.terminateAgent(_: Arn)(_: ExecutionContext)).expects(arn, *).returning(Future.successful(Right(1)))
+    (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
     (rcrrMock
-      .terminateAgent(_: Arn)(_: ExecutionContext))
-      .expects(arn, *)
+      .terminateAgent(_: Arn))
+      .expects(arn)
       .returning(Future.successful(Left("some error")))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")

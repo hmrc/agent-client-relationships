@@ -1,4 +1,5 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
+import com.google.inject.AbstractModule
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -6,20 +7,21 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoLockRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.services.MongoRecoveryLockService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support._
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.{AuthConnector, PlayAuthConnector}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
+import uk.gov.hmrc.mongo.test.MongoSupport
+import uk.gov.hmrc.mongo.{CurrentTimestampSupport, MongoComponent}
 
 trait RelationshipsBaseControllerISpec
     extends UnitSpec
-    with MongoApp
+    with MongoSupport
     with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
@@ -37,7 +39,19 @@ trait RelationshipsBaseControllerISpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val additionalConfig: Map[String, Any] = Map.empty
+
+  val mongoRecoveryLockService = new MongoRecoveryLockService(mongoLockRepository)
+  def mongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport)
+
+  val moduleWithOverrides = new AbstractModule{
+    override def configure(): Unit = {
+      bind(classOf[MongoComponent]).toInstance(mongoComponent)
+      bind(classOf[MongoRecoveryLockService]).toInstance(mongoRecoveryLockService)
+    }
+  }
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -62,23 +76,22 @@ trait RelationshipsBaseControllerISpec
         "agent.trackPage.cache.size"                                 -> 1,
         "agent.trackPage.cache.expires"                              -> "1 millis",
         "agent.trackPage.cache.enabled"                              -> true,
-        "alt-itsa.enabled"                                      -> true
+        "alt-itsa.enabled"                                      -> true,
+        "mongodb.uri" -> mongoUri
       )
-      .configure(mongoConfiguration ++ additionalConfig)
+      .overrides(moduleWithOverrides)
+      .configure(additionalConfig)
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
-  def deleteRecordRepository: MongoDeleteRecordRepository = app.injector.instanceOf[MongoDeleteRecordRepository]
-  def recoveryLockRepository = app.injector.instanceOf[MongoLockRepository]
+  def repo: MongoRelationshipCopyRecordRepository = new MongoRelationshipCopyRecordRepository(mongoComponent)
+  def deleteRecordRepository: MongoDeleteRecordRepository = new MongoDeleteRecordRepository(mongoComponent)
 
   override def beforeEach() {
     super.beforeEach()
     givenAuditConnector()
-    await(repo.ensureIndexes)
-    await(deleteRecordRepository.ensureIndexes)
-    await(recoveryLockRepository.ensureIndexes)
+    await(mongoComponent.database.drop().toFuture())
     ()
   }
 

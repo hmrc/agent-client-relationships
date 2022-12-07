@@ -2,7 +2,6 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.{DateTimeZone, LocalDate}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -17,6 +16,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
+import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class IFConnectorISpec
@@ -404,6 +404,7 @@ class IFConnectorISpec
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
 
       val result = await(ifConnector.getInactiveRelationships(agentARN))
+      println(s"result >>>> $result")
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
@@ -496,7 +497,7 @@ class IFConnectorISpec
     val endsAtCurrentDateRelationship =
       InactiveRelationship(
         Arn("foo"),
-        Some(LocalDate.now(DateTimeZone.UTC)),
+        Some(LocalDate.now()),
         Some(LocalDate.parse("1111-11-11")),
         "123456789",
         "personal",

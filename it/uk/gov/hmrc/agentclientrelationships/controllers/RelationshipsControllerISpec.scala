@@ -1,19 +1,18 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.Base64
-import org.joda.time.{DateTime, LocalDate}
-import play.api.libs.json.JodaReads._
+import org.mongodb.scala.model.Filters
 import play.api.libs.json.JsObject
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
+import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.nio.charset.StandardCharsets.UTF_8
+import java.time.{LocalDate, LocalDateTime}
+import java.util.Base64
 
 class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
@@ -167,6 +166,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       val result = doRequest
       result.status shouldBe 200
 
+      implicit val localDateFormat = MongoLocalDateTimeFormat.localDateFormat
+
       (result.json \\ "arn").head.as[String] shouldBe arn.value
       (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
       (result.json \\ "clientId").head.as[String] shouldBe otherId.value
@@ -316,12 +317,12 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
             arn.value,
             mtdItId.value,
             mtdItIdType,
-            DateTime.now.minusMinutes(1),
+            LocalDateTime.now.minusMinutes(1),
             Some(SyncStatus.Success),
             Some(SyncStatus.Failed))))
 
       //insert copy-relationship document
-       await(repo.insert(relationshipCopiedSuccessfully))
+       await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
 
       val result = await(doRequest)
       result.status shouldBe 200
@@ -333,8 +334,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
           DeletionCount("agent-client-relationships", "relationship-copy-record", 1)))
 
       //verify termination has deleted all record for that agent
-      await(deleteRecordRepository.find("arn" -> arn.value)) shouldBe empty
-      await(repo.find("arn" -> arn.value)) shouldBe empty
+      await(deleteRecordRepository.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
+      await(repo.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
     }
   }
 
@@ -360,6 +361,8 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       val result = doRequest
 
       result.status shouldBe 200
+
+      implicit val localDateFormat = MongoLocalDateTimeFormat.localDateFormat
 
       (result.json(0) \ "arn").as[String] shouldBe "ABCDE123456"
       (result.json(0) \ "dateTo").as[LocalDate].toString() shouldBe "2018-09-09"
