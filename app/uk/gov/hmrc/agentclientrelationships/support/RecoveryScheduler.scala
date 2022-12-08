@@ -16,18 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import java.util.UUID
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-
-import javax.inject.{Inject, Singleton}
 import play.api.Logging
-import play.api.libs.concurrent.ExecutionContextProvider
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord}
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 
 import java.time.{Instant, ZoneOffset}
+import java.util.UUID
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
@@ -36,18 +34,15 @@ import scala.util.Random
 class RecoveryScheduler @Inject()(
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
   deleteRelationshipsService: DeleteRelationshipsService,
-  actorSystem: ActorSystem,
-  executionContextProvider: ExecutionContextProvider)(implicit val appConfig: AppConfig)
+  actorSystem: ActorSystem)(implicit appConfig: AppConfig, ec: ExecutionContext)
     extends Logging {
-
-  implicit val ec: ExecutionContext = executionContextProvider.get()
 
   val recoveryInterval = appConfig.recoveryInterval
   val recoveryEnable = appConfig.recoveryEnabled
 
   if (recoveryEnable) {
     val taskActor: ActorRef = actorSystem.actorOf(Props {
-      new TaskActor(mongoRecoveryScheduleRepository, executionContextProvider, recoveryInterval, recover)
+      new TaskActor(mongoRecoveryScheduleRepository, recoveryInterval, recover)
     })
     actorSystem.scheduler.scheduleOnce(5.seconds, taskActor, "<start>")
   } else
@@ -59,13 +54,10 @@ class RecoveryScheduler @Inject()(
 
 class TaskActor(
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
-  executionContextProvider: ExecutionContextProvider,
   recoveryInterval: Int,
-  recover: => Future[Unit])
+  recover: => Future[Unit])(implicit ec: ExecutionContext)
     extends Actor
     with Logging {
-
-  implicit val ec: ExecutionContext = executionContextProvider.get()
 
   def receive: PartialFunction[Any, Unit] = {
     case uid: String =>
