@@ -30,7 +30,8 @@ def testDeps(scope: String) = Seq(
   "org.scalatestplus" %% "mockito-3-12" % "3.2.10.0" % scope,
   "com.github.tomakehurst" % "wiremock-jre8" % "2.26.1" % scope,
   "org.scalamock" %% "scalamock" % "4.4.0" % scope,
-  "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" % scope
+  "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" % scope,
+  "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.6.20" % scope
 )
 
 
