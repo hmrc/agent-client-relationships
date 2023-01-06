@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import java.time.LocalDate
 case class ActiveRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate])
 
 object ActiveRelationship {
-  implicit val localDateFormat = MongoLocalDateTimeFormat.localDateTimeFormat
+
   implicit val activeRelationshipWrites: OWrites[ActiveRelationship] = Json.writes[ActiveRelationship]
 
   implicit val reads: Reads[ActiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
