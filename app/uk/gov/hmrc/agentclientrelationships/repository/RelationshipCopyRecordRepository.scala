@@ -25,7 +25,7 @@ import org.mongodb.scala.model.Indexes.ascending
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
+import uk.gov.hmrc.agentclientrelationships.model.{MongoLocalDateTimeFormat, TypeOfEnrolment}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -52,6 +52,7 @@ case class RelationshipCopyRecord(
 }
 
 object RelationshipCopyRecord {
+  implicit val localDateTimeFormat = MongoLocalDateTimeFormat.localDateTimeFormat
   implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 
