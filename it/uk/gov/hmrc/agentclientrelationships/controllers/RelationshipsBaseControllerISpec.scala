@@ -33,7 +33,8 @@ trait RelationshipsBaseControllerISpec
     with AuthStub
     with MockitoSugar
     with JsonMatchers
-    with ACAStubs {
+    with ACAStubs
+    with AUCDStubs {
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder

@@ -42,6 +42,7 @@ class CreateRelationshipsService @Inject()(
   lockService: RecoveryLockService,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
+  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   val metrics: Metrics)
     extends Monitoring
     with Logging {
@@ -170,6 +171,7 @@ class CreateRelationshipsService @Inject()(
       _ <- deallocatePreviousRelationship(arn, identifier)
       _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
+      _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)
       esSyncStatusSuccess <- updateEsSyncStatus(Success)
     } yield esSyncStatusSuccess)
       .recoverWith(

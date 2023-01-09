@@ -64,6 +64,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenETMPDeAuthSucceeds
       givenESDeAllocationSucceeds
       givenSetRelationshipEndedSucceeds
+      givenAucdCacheRefresh
 
       implicit val request = FakeRequest()
       implicit val currentUser =
@@ -101,6 +102,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenRelationshipBetweenAgentAndClientExists
       givenESDeAllocationSucceeds
       givenETMPDeAuthFails
+      givenAucdCacheRefresh
 
       implicit val request = FakeRequest()
       implicit val currentUser =
@@ -127,6 +129,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenESDeAllocationSucceeds
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
+      givenAucdCacheRefresh
 
       implicit val request = FakeRequest()
       implicit val currentUser =
@@ -145,6 +148,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenETMPDeAuthSucceeds
       givenESDeAllocationSucceeds
       givenSetRelationshipEndedFails
+      givenAucdCacheRefresh
 
       implicit val request = FakeRequest()
       implicit val currentUser =
@@ -217,6 +221,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenRelationshipBetweenAgentAndClientExists
       givenESDeAllocationSucceeds
       givenSetRelationshipEndedSucceeds
+      givenAucdCacheRefresh
 
       val result =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
@@ -258,6 +263,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenETMPDeAuthSucceeds
       givenESDeAllocationSucceeds
       givenSetRelationshipEndedSucceeds
+      givenAucdCacheRefresh
 
       val result =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
@@ -325,6 +331,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAgentExists
       givenESDeAllocationSucceeds
       givenSetRelationshipEndedSucceeds
+      givenAucdCacheRefresh
 
       val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
@@ -441,6 +448,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAgentExists
       givenESDeAllocationSucceeds
       givenSetRelationshipEndedSucceeds
+      givenAucdCacheRefresh
 
       val result = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
 
@@ -460,6 +468,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     val metrics = mock[Metrics]
     val ifConnector = mock[IFConnector]
     val aca = mock[AgentClientAuthorisationConnector]
+    val aucdConnector = mock[AgentUserClientDetailsConnector]
 
     val repo = new FakeDeleteRecordRepository
     val lockService = new FakeLockService
@@ -478,6 +487,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       ugs,
       aca,
       repo,
+      aucdConnector,
       lockService,
       checkService,
       agentUserService,
@@ -528,6 +538,11 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           any[HeaderCarrier],
           any[ExecutionContext]))
         .thenReturn(Future.successful(false))
+
+    def givenAucdCacheRefresh =
+      when(
+        aucdConnector.cacheRefresh(eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
+      ).thenReturn(Future.successful(()))
 
     def verifyESDeAllocateHasBeenPerformed =
       verify(es, times(1))
