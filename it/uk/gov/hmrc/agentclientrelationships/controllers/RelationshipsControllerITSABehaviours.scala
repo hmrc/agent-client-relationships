@@ -511,6 +511,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "resume an ongoing de-auth if unfinished ES delete record found" in new StubsForThisScenario {
@@ -644,6 +645,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -674,6 +676,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -704,6 +707,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -792,6 +796,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentHasNoActiveRelationshipInIF(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -870,6 +875,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
           givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
           givenDesReturnsServiceUnavailable()
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -894,6 +900,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenEnrolmentDeallocationSucceeds("foo", mtdItId)
           givenAgentCanNotBeDeallocatedInIF(status = 404)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 500" in new StubsForThisScenario {

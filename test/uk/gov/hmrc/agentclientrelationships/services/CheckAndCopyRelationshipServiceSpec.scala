@@ -86,6 +86,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val servicesConfig = resettingMock[ServicesConfig]
   val configuration = resettingMock[Configuration]
   val agentCacheProvider = resettingMock[AgentCacheProvider]
+  val aucdConnector = resettingMock[AgentUserClientDetailsConnector]
 
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
@@ -120,6 +121,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -165,6 +167,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -211,6 +214,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -258,6 +262,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -305,6 +310,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -352,6 +358,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -394,6 +401,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -444,6 +452,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -481,6 +490,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -516,6 +526,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -560,6 +571,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -600,6 +612,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -642,6 +655,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -686,6 +700,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -723,6 +738,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -771,6 +787,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -819,6 +836,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -855,6 +873,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -900,6 +919,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -949,6 +969,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -998,6 +1019,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -1040,6 +1062,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -1091,6 +1114,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
+            aucdConnector,
             metrics),
           auditService,
           metrics
@@ -1128,6 +1152,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -1163,6 +1188,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -1207,6 +1233,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -1248,6 +1275,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -1282,6 +1310,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
+          aucdConnector,
           metrics),
         auditService,
         metrics
@@ -1334,6 +1363,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               lockService,
               deleteRecordRepository,
               agentUserService,
+              aucdConnector,
               metrics),
             auditService,
             metrics
@@ -1430,6 +1460,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         eqs(hc),
         eqs(ec)))
       .thenReturn(Future.successful(()))
+    when(
+      aucdConnector.cacheRefresh(eqs(arn))(eqs(hc), eqs(ec))
+    ).thenReturn(Future successful (()))
   }
 
   private def tryCreateRelationshipFromAltItsa(created: Boolean = false): OngoingStubbing[Future[Boolean]] =

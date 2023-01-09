@@ -33,7 +33,8 @@ trait RelationshipsBaseControllerISpec
     with AuthStub
     with MockitoSugar
     with JsonMatchers
-    with ACAStubs {
+    with ACAStubs
+    with AUCDStubs {
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
@@ -67,6 +68,7 @@ trait RelationshipsBaseControllerISpec
         "microservice.services.agent-permissions.port"     -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
+        "microservice.services.agent-user-client-details.port" -> wireMockPort,
         "features.copy-relationship.mtd-it"                -> true,
         "features.copy-relationship.mtd-vat"               -> true,
         "features.recovery-enable"                         -> false,

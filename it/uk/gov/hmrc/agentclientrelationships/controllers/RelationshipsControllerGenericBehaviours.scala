@@ -137,6 +137,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenEnrolmentDeallocationSucceeds("bar", clientId)
         givenServiceEnrolmentAllocationSucceeds(serviceId, clientId, clientIdType, "bar")
         givenAdminUser("foo", "any")
+        givenCacheRefresh(arn)
       }
 
       "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
@@ -171,6 +172,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenAdminUser("foo", "any")
         givenDelegatedGroupIdsNotExistFor(clientId) // no previous relationships to deallocate
         givenEnrolmentAllocationSucceeds("foo", "any", serviceId, clientIdType, clientId.value, "NQJUEJCWT14")
+        givenCacheRefresh(arn)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
@@ -208,6 +210,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenAgentCanBeAllocatedInIF(clientId, arn)
         givenServiceEnrolmentAllocationSucceeds(serviceId, clientId, clientIdType, "bar")
         givenAdminUser("foo", "any")
+        givenCacheRefresh(arn)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
@@ -342,6 +345,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenAgentCanBeDeallocatedInIF(clientId, arn)
           givenEnrolmentDeallocationSucceeds("foo", clientId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -368,6 +372,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenAgentCanBeDeallocatedInIF(clientId, arn)
           givenEnrolmentDeallocationSucceeds("foo", clientId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -472,6 +477,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenAgentHasNoActiveRelationshipInIF(clientId, arn)
           givenEnrolmentDeallocationSucceeds("foo", clientId)
           givenAdminUser("foo", "any")
+          givenCacheRefresh(arn)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -542,7 +548,6 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenGroupInfo("foo", "bar")
           givenPrincipalGroupIdExistsFor(clientId, "clientGroupId")
           givenAgentIsAllocatedAndAssignedToClient(clientId, "bar")
-          givenDesReturnsServiceUnavailable()
           givenIFReturnsServiceUnavailable()
         }
 

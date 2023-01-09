@@ -66,6 +66,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val agentClientAuthorisationUrl = servicesConfig.baseUrl("agent-client-authorisation")
 
+  val agentUserClientDetailsUrl = servicesConfig.baseUrl("agent-user-client-details")
+
   val inactiveRelationshipShowLastDays = servicesConfig.getInt("inactive-relationships.show-last-days")
 
   val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "utf-8")

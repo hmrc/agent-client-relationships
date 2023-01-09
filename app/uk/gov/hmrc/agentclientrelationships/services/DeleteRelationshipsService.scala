@@ -47,6 +47,7 @@ class DeleteRelationshipsService @Inject()(
   ugs: UsersGroupsSearchConnector,
   aca: AgentClientAuthorisationConnector,
   deleteRecordRepository: DeleteRecordRepository,
+  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: RecoveryLockService,
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
@@ -216,6 +217,7 @@ class DeleteRelationshipsService @Inject()(
               case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
             }
       _ = auditData.set("enrolmentDeAllocated", true)
+      _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)
       esSyncStatusSuccess <- updateEsSyncStatus(Success)
     } yield esSyncStatusSuccess).recoverWith(
       recoverAgentUserRelationshipNotFound
