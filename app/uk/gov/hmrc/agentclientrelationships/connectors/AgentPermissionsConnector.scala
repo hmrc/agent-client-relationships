@@ -23,9 +23,9 @@ import play.api.http.Status
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
-import uk.gov.hmrc.agentmtdidentifiers.model.{AccessGroupSummaries, Arn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -40,14 +40,16 @@ class AgentPermissionsConnector @Inject()(http: HttpClient, metrics: Metrics)(im
 
   val agentPermissionsBaseUrl = new URL(appConfig.agentPermissionsUrl)
 
-  def getGroupsSummaries(
-    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AccessGroupSummaries]] = {
-    val url = s"$agentPermissionsBaseUrl/agent-permissions/arn/${arn.value}/groups"
-    monitor("ConsumedAPI-GetGroupsSummaries-GET") {
+  def clientIsUnassigned(arn: Arn, enrolmentKey: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Boolean] = {
+    val url = s"$agentPermissionsBaseUrl/agent-permissions/arn/${arn.value}/client/$enrolmentKey/groups"
+    monitor("ConsumedAPI-GetGroupSummariesForClient-GET") {
       http.GET[HttpResponse](url).map { response =>
         response.status match {
-          case Status.OK => response.json.asOpt[AccessGroupSummaries]
-          case e         => logger.warn(s"GetGroupsSummaries returned status $e ${response.body}"); None
+          case Status.OK        => false
+          case Status.NOT_FOUND => true
+          case e                => throw UpstreamErrorResponse(response.body, e)
         }
       }
     }

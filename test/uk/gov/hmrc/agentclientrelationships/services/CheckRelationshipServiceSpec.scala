@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.{AccessGroupSummaries, AccessGroupSummary, Arn, Client, Enrolment, EnrolmentKey, Identifier, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Vrn}
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -43,9 +43,10 @@ class CheckRelationshipServiceSpec
 
   val arn: Arn = Arn("AARN0000002")
   private val taxIdentifier: TaxIdentifier = Vrn("101747641")
-  private val client: Client = Client(EnrolmentKey.enrolmentKey("HMRC-MTD-VAT", taxIdentifier.value), "Friendly Client")
-  private val enrolment: Enrolment =
+  private val enrolment: Enrolment = {
     Enrolment("HMRC-MTD-VAT", "activated", "Edward Stone", Seq(Identifier("VRN", taxIdentifier.value)))
+  }
+  private val enrolmentKey: String = "HMRC-MTD-VAT~VRN~101747641"
   val userId = UserId("testUserId")
   val groupId = "testGroupId"
   val agentCode: AgentCode = AgentCode("ABC1234")
@@ -66,8 +67,8 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.getGroupsSummaries(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
-          .thenReturn(Future.successful(Some(AccessGroupSummaries(Seq.empty, Set(client)))))
+        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+          .thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
@@ -85,9 +86,8 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.getGroupsSummaries(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
-          .thenReturn(
-            Future.successful(Some(AccessGroupSummaries(Seq(AccessGroupSummary("MyAG-id", "MyAG", 15, 5)), Set.empty))))
+        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+          .thenReturn(Future.successful(false))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
@@ -105,9 +105,8 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.getGroupsSummaries(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
-          .thenReturn(
-            Future.successful(Some(AccessGroupSummaries(Seq(AccessGroupSummary("MyAG-id", "MyAG", 15, 5)), Set.empty))))
+        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+          .thenReturn(Future.successful(false))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
@@ -143,8 +142,8 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.getGroupsSummaries(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
-          .thenReturn(Future.successful(Some(AccessGroupSummaries(Seq.empty, Set(client)))))
+        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+          .thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some("someOtherUserId")))))

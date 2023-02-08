@@ -76,9 +76,8 @@ class CheckRelationshipsService @Inject()(
             val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
             val (serviceId, _) = EnrolmentKey.deconstruct(enrolmentKey)
             for {
-              mGroupsSummaries <- ap.getGroupsSummaries(arn)
               // if the client is unassigned (not yet put into any access groups), behave as if granular permissions were disabled for that client
-              isClientUnassigned = mGroupsSummaries.exists(_.unassignedClients.exists(_.enrolmentKey == enrolmentKey))
+              isClientUnassigned <- ap.clientIsUnassigned(arn, enrolmentKey)
               isEnrolmentAssignedToUser <- es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId)).map {
                                             usersAssignedEnrolments =>
                                               usersAssignedEnrolments.exists(enrolment =>
