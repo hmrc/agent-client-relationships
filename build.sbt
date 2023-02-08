@@ -15,8 +15,8 @@ lazy val scoverageSettings = {
 }
 
 lazy val compileDeps = Seq(
-  "uk.gov.hmrc" %% "bootstrap-backend-play-28" % "7.12.0",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.49.0-play-28",
+  "uk.gov.hmrc" %% "bootstrap-backend-play-28" % "7.13.0",
+  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.59.0-play-28",
   "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.8.0-play-28",
   "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28" % "0.74.0",
   "com.kenshoo" %% "metrics-play" % "2.7.3_0.8.2",
@@ -62,7 +62,6 @@ lazy val root = (project in file("."))
       compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.8" cross CrossVersion.full),
       "com.github.ghik" % "silencer-lib" % "1.7.8" % Provided cross CrossVersion.full
     ),
-    publishingSettings,
     scoverageSettings,
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     routesImport ++= Seq("uk.gov.hmrc.agentclientrelationships.binders.PathBinders._"),
