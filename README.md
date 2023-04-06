@@ -10,16 +10,13 @@ It is used to manage relationships between agents and clients for the following 
  - IR-SA 
  - HMCE-VATDEC-ORG
 
-## Running the tests
+### Agent access groups (new)
 
-    sbt test it:test
+The relationships between a client and agent can be checked at agency level (default, if access groups turned off).
 
-## Running the app locally
+If an agency has turned on access groups then the relationship will be checked at the agent user level.
+* the client has a relationship with the agency AND the client and the agent user belong to the same access group or the client does not belong to any access group.
 
-    sm --start AGENT_AUTHORISATION -r
-    sm --stop AGENT_CLIENT_RELATIONSHIPS
-    ./run-local
-    
 ## Design Documentation
 
 [Recovery from Failures whilst Creating Relationships](docs/recovery.md).
@@ -27,6 +24,9 @@ It is used to manage relationships between agents and clients for the following 
 ## API
 
 ### Check whether a relationship exists between an Agent and a client
+
+Note: now includes optional :userId to check the relationship at the user level, rather than agency level.
+
 `GET              /agent/:arn/service/:service/client/:clientIdType/:clientId`
 
 Possible responses:
@@ -75,7 +75,18 @@ The provided error code is to help diagnose potential issues in production and w
  | HMRC-TERS-ORG   | SAUTR        |
  | IR-SA           | ni           |
  | HMCE-VATDEC-ORG | vrn          |
- 
+
+
+## Running the tests
+
+    sbt test it:test
+
+## Running the app locally
+
+    sm --start AGENT_AUTHORISATION -r
+    sm --stop AGENT_CLIENT_RELATIONSHIPS
+    ./run-local
+
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")
