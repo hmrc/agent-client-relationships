@@ -13,6 +13,8 @@ object AppDependencies {
   )
 
   val test = Seq(
+    // version needs to be kept in sync with bootstrap in agent-kenshoo-monitoring, not sure I like this
+    "uk.gov.hmrc"            %% "bootstrap-test-play-28"   % "7.15.0"     % "test, it",
     "org.scalatestplus.play" %% "scalatestplus-play"       % "5.1.0"      % "test, it",
     "uk.gov.hmrc.mongo"      %% "hmrc-mongo-test-play-28"  % mongoVer     % "test, it",
     "org.scalatestplus"      %% "mockito-3-12"             % "3.2.10.0"   % "test, it",
