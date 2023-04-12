@@ -106,8 +106,7 @@ class RecoverySchedulerISpec
 
       eventually {
         await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
-       // await(deleteRepo.collection.find().toFuture()) shouldBe None
-        await(deleteRepo.collection.find().toFuture()).length shouldBe 0 //TODO fails here?
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
       }
       testKit.shutdownTestKit()
     }
@@ -148,7 +147,7 @@ class RecoverySchedulerISpec
 
       eventually {
         await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
-        await(deleteRepo.collection.find().toFuture()).length shouldBe 0  //TODO fails here?
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
       }
 
       testKit.shutdownTestKit()
