@@ -15,7 +15,6 @@ import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
-
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -62,12 +61,12 @@ class RecoverySchedulerISpec
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
 
-  val arn = Arn("AARN0000002")
-  val mtdItId = MtdItId("ABCDEF123456789")
-  val nino = Nino("AB123456C")
+  val arn: Arn = Arn("AARN0000002")
+  val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
+  val nino: Nino = Nino("AB123456C")
   val mtdItIdType = "MTDITID"
 
-  val localDateTimeNow = LocalDateTime.now
+  val localDateTimeNow: LocalDateTime = LocalDateTime.now
 
 
   "Recovery Scheduler" should {
@@ -79,12 +78,11 @@ class RecoverySchedulerISpec
           new TaskActor(recoveryRepo, 5,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
-
-                  givenPrincipalGroupIdExistsFor(arn, "foo")
-                  givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
-                  givenPrincipalUserIdExistFor(arn, "userId")
-                  givenEnrolmentDeallocationSucceeds("foo", mtdItId)
-                  givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(arn, "foo")
+      givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
+      givenPrincipalUserIdExistFor(arn, "userId")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+      givenGroupInfo("foo", "bar")
 
       await(recoveryRepo.collection.find().toFuture()) shouldBe empty
 
@@ -108,23 +106,24 @@ class RecoverySchedulerISpec
 
       eventually {
         await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
-        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
+       // await(deleteRepo.collection.find().toFuture()) shouldBe None
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0 //TODO fails here?
       }
       testKit.shutdownTestKit()
     }
 
     "attempt to recover if both DeleteRecord and RecoveryRecord exist and nextRunAt is in the future" in {
-            givenPrincipalGroupIdExistsFor(arn, "foo")
-            givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
-            givenPrincipalUserIdExistFor(arn, "userId")
-            givenEnrolmentDeallocationSucceeds("foo", mtdItId)
-            givenGroupInfo("foo", "bar")
-
       val testKit = ActorTestKit()
       val actorRef = system.actorOf(
         Props(
           new TaskActor(recoveryRepo, 5,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
+
+      givenPrincipalGroupIdExistsFor(arn, "foo")
+      givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
+      givenPrincipalUserIdExistFor(arn, "userId")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+      givenGroupInfo("foo", "bar")
 
       await(recoveryRepo.write("1", localDateTimeNow.plusSeconds(2)))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
@@ -137,8 +136,8 @@ class RecoverySchedulerISpec
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Success)
       )
-      await(deleteRepo.create(deleteRecord))
 
+      await(deleteRepo.create(deleteRecord))
       await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
 
       testKit.scheduler.scheduleOnce(0.seconds, new Runnable {
@@ -147,11 +146,9 @@ class RecoverySchedulerISpec
         }
       })
 
-
       eventually {
         await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
-
-        await(deleteRepo.collection.find().toFuture()).length shouldBe 0
+        await(deleteRepo.collection.find().toFuture()).length shouldBe 0  //TODO fails here?
       }
 
       testKit.shutdownTestKit()
@@ -160,19 +157,17 @@ class RecoverySchedulerISpec
 
 
     "attempt to recover if both DeleteRecord and RecoveryRecord exist and nextRunAt is in the past" in {
-
-
       val testKit = ActorTestKit()
       val actorRef = system.actorOf(
         Props(
           new TaskActor(recoveryRepo, 5,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
-            givenPrincipalGroupIdExistsFor(arn, "foo")
-            givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
-            givenPrincipalUserIdExistFor(arn, "userId")
-            givenEnrolmentDeallocationSucceeds("foo", mtdItId)
-            givenGroupInfo("foo", "bar")
+      givenPrincipalGroupIdExistsFor(arn, "foo")
+      givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
+      givenPrincipalUserIdExistFor(arn, "userId")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+      givenGroupInfo("foo", "bar")
 
       await(recoveryRepo.write("1", localDateTimeNow.minusDays(2)))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
@@ -202,17 +197,15 @@ class RecoverySchedulerISpec
     }
 
     "attempt to recover multiple DeleteRecords" in {
-
-
       val testKit = ActorTestKit()
       val actorRef = system.actorOf(
         Props(
           new TaskActor(recoveryRepo, 1,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
-            givenGroupInfo("foo", "bar")
-            givenPrincipalUserIdExistFor(arn, "userId")
-            givenPrincipalGroupIdExistsFor(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenPrincipalUserIdExistFor(arn, "userId")
+      givenPrincipalGroupIdExistsFor(arn, "foo")
 
       await(recoveryRepo.write("1", localDateTimeNow.minusDays(2)))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
