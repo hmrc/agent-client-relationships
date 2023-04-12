@@ -1,6 +1,3 @@
-import play.core.PlayVersion
-import uk.gov.hmrc.SbtAutoBuildPlugin
-import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
@@ -13,27 +10,6 @@ lazy val scoverageSettings = {
     Test / parallelExecution := false
   )
 }
-
-lazy val compileDeps = Seq(
-  "uk.gov.hmrc" %% "bootstrap-backend-play-28" % "7.13.0",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.59.0-play-28",
-  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.8.0-play-28",
-  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28" % "0.74.0",
-  "com.kenshoo" %% "metrics-play" % "2.7.3_0.8.2",
-  "com.github.blemale" %% "scaffeine" % "4.0.1",
-  "org.typelevel" %% "cats-core" % "2.6.1"
-)
-
-def testDeps(scope: String) = Seq(
-  "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % scope,
-  "uk.gov.hmrc.mongo" %% "hmrc-mongo-test-play-28" % "0.74.0" % scope,
-  "org.scalatestplus" %% "mockito-3-12" % "3.2.10.0" % scope,
-  "com.github.tomakehurst" % "wiremock-jre8" % "2.26.1" % scope,
-  "org.scalamock" %% "scalamock" % "4.4.0" % scope,
-  "com.vladsch.flexmark" % "flexmark-all" % "0.35.10" % scope,
-  "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.6.20" % scope
-)
-
 
 lazy val root = (project in file("."))
   .settings(
@@ -57,7 +33,7 @@ lazy val root = (project in file("."))
     resolvers ++= Seq(
       Resolver.typesafeRepo("releases"),
     ),
-    libraryDependencies ++=  compileDeps ++ testDeps("test") ++ testDeps("it"),
+    libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     libraryDependencies ++= Seq(
       compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.8" cross CrossVersion.full),
       "com.github.ghik" % "silencer-lib" % "1.7.8" % Provided cross CrossVersion.full

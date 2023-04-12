@@ -9,7 +9,8 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.{Failed, Succe
 import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
 
-import java.time.{Instant, ZoneOffset}
+import java.time.temporal.ChronoUnit.MILLIS
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 
 class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAppPerSuite {
 
@@ -24,9 +25,9 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
 
   private lazy val repo = app.injector.instanceOf[MongoDeleteRecordRepository]
 
-  def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+  def now: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS)
 
-  override def beforeEach() {
+  override def beforeEach(): Unit = {
     super.beforeEach()
     await(repo.ensureIndexes)
     ()
