@@ -16,7 +16,7 @@ lazy val root = (project in file("."))
     name := "agent-client-relationships",
     organization := "uk.gov.hmrc",
     PlayKeys.playDefaultPort := 9434,
-    majorVersion := 0,
+    majorVersion := 1,
     scalaVersion := "2.12.15",
     scalacOptions ++= Seq(
       "-Yrangepos",
@@ -29,15 +29,13 @@ lazy val root = (project in file("."))
       "-feature",
       "-unchecked",
       "-language:implicitConversions",
-      "-P:silencer:pathFilters=views;routes"),
+      "-Wconf:src=target/.*:s", // silence warnings from compiled files
+      "-Wconf:src=Routes/.*:s"  // silence warnings from routes files
+    ),
     resolvers ++= Seq(
       Resolver.typesafeRepo("releases"),
     ),
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
-    libraryDependencies ++= Seq(
-      compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.8" cross CrossVersion.full),
-      "com.github.ghik" % "silencer-lib" % "1.7.8" % Provided cross CrossVersion.full
-    ),
     scoverageSettings,
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     routesImport ++= Seq("uk.gov.hmrc.agentclientrelationships.binders.PathBinders._"),
