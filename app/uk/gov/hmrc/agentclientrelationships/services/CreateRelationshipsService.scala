@@ -85,6 +85,7 @@ class CreateRelationshipsService @Inject()(
                 else Future.successful(DbUpdateFailed)
             }
         }
+
         for {
           agentUser            <- retrieveAgentUser(arn)
           recordCreationStatus <- createRelationshipRecord

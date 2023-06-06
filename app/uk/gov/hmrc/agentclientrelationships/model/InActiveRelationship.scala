@@ -42,13 +42,13 @@ object InactiveRelationship {
       val clientType =
         if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
       val service = clientId match {
-        case _ if clientId.matches(CgtRef.cgtRegex)                => "HMRC-CGT-PD"
-        case _ if PptRef.isValid(clientId)                         => "HMRC-PPT-ORG"
-        case _ if Vrn.isValid(clientId)                            => "HMRC-MTD-VAT"
-        case _ if Utr.isValid(clientId)                            => "HMRC-TERS-ORG"
-        case _ if clientType == "business" & Urn.isValid(clientId) => "HMRC-TERSNT-ORG"
-        case _ if MtdItId.isValid(clientId)                        => "HMRC-MTD-IT"
-        case _ if CbcId.isValid(clientId)                          => "HMRC-CBC-ORG"
+        case _ if clientId.matches(CgtRef.cgtRegex)                => Service.CapitalGains.id
+        case _ if PptRef.isValid(clientId)                         => Service.Ppt.id
+        case _ if CbcId.isValid(clientId)                          => Service.Cbc.id
+        case _ if Vrn.isValid(clientId)                            => Service.Vat.id
+        case _ if Utr.isValid(clientId)                            => Service.Trust.id
+        case _ if clientType == "business" & Urn.isValid(clientId) => Service.TrustNT.id
+        case _ if MtdItId.isValid(clientId)                        => Service.MtdIt.id
       }
       JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
     }

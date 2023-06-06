@@ -78,17 +78,17 @@ trait AuthStub {
        |}
        """.stripMargin
 
-  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef,  withThisGgUserId: String = "12345-credId") = {
+  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, withThisGgUserId: String = "12345-credId") = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, withThisGgUserId))))
+            .withBody(givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, cbcId, withThisGgUserId))))
     this
   }
 
-  private def givenLoginClientBusinessAllJsonResponseBody(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef,  withThisGgUserId: String) =
+  private def givenLoginClientBusinessAllJsonResponseBody(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, withThisGgUserId: String) =
     s"""
        |{
        |"affinityGroup": "Organisation",
@@ -126,6 +126,22 @@ trait AuthStub {
        |		"identifiers": [{
        |			"key": "CGTPDRef",
        |			"value": "${cgtRef.value}"
+       |		}],
+       |		"state": "Activated"
+       |	},
+       | {
+       |		"key": "HMRC-CBC-ORG",
+       |		"identifiers": [{
+       |			"key": "cbcId",
+       |			"value": "${cbcId.value}"
+       |		}],
+       |		"state": "Activated"
+       |	},
+       | {
+       |		"key": "HMRC-CBC-NONUK-ORG",
+       |		"identifiers": [{
+       |			"key": "cbcId",
+       |			"value": "${cbcId.value}"
        |		}],
        |		"state": "Activated"
        |	}],

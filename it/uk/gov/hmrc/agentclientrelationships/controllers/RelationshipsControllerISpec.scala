@@ -29,15 +29,17 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
                          regime: String,
                          clientId: TaxIdentifier)
 
-  val itsaClient = TestClient(HMRCMTDIT, "ITSA", mtdItId)
-  val vatClient = TestClient(HMRCMTDVAT, "VATC", vrn)
-  val trustClient = TestClient(HMRCTERSORG, "TRS", utr)
-  val trustNTClient = TestClient(HMRCTERSNTORG, "TRS", urn)
-  val cgtClient = TestClient(HMRCCGTPD, "CGT", cgtRef)
-  val pptClient = TestClient(HMRCPPTORG, "PPT", pptRef)
+  val itsaClient = TestClient(Service.MtdIt.id, "ITSA", mtdItId)
+  val vatClient = TestClient(Service.Vat.id, "VATC", vrn)
+  val trustClient = TestClient(Service.Trust.id, "TRS", utr)
+  val trustNTClient = TestClient(Service.TrustNT.id, "TRS", urn)
+  val cgtClient = TestClient(Service.CapitalGains.id, "CGT", cgtRef)
+  val pptClient = TestClient(Service.Ppt.id, "PPT", pptRef)
+  val cbcClient = TestClient(Service.Cbc.id, "CBC", cbcId)
+  val cbcNonUkClient = TestClient(Service.CbcNonUk.id, "CBC", cbcId)
 
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
-  val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient)
+  val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient)
 
   val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient)
 
@@ -49,7 +51,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE,"strideId-1234456")
     }
     else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
-    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef)
+    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId)
     else requestIsNotAuthenticated()
   }
 
