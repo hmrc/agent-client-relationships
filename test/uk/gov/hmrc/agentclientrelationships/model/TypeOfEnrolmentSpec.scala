@@ -20,6 +20,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Eori, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.IdentifierKeys.{mtdItId, vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRC_AS_AGENT, HMRC_MTD_IT, HMRC_MTD_VAT}
 
 class TypeOfEnrolmentSpec extends UnitSpec {
 
@@ -52,19 +54,19 @@ class TypeOfEnrolmentSpec extends UnitSpec {
 
     "return Arn for EnrolmentAsAgent if the HMRC-AS-AGENT enrolment exists with an AgentReferenceNumber identifier" in {
       val enrolments =
-        Set(Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("AgentReferenceNumber", "arn123")), "activated"))
+        Set(Enrolment(HMRC_AS_AGENT, Seq(EnrolmentIdentifier("AgentReferenceNumber", "arn123")), "activated"))
 
       EnrolmentAsAgent.extractIdentifierFrom(enrolments) shouldBe Some(Arn("arn123"))
     }
 
     "return Vrn for EnrolmentMtdVat if the HMRC-MTD-VAT enrolment exists with an VRN identifier" in {
-      val enrolments = Set(Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", "101747696")), "activated"))
+      val enrolments = Set(Enrolment(HMRC_MTD_VAT, Seq(EnrolmentIdentifier(vrn, "101747696")), "activated"))
 
       EnrolmentMtdVat.extractIdentifierFrom(enrolments) shouldBe Some(Vrn("101747696"))
     }
 
     "return MtdItId for EnrolmentMtdIt if the HMRC-MTD-IT enrolment exists with an MTDITID identifier" in {
-      val enrolments = Set(Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", "123456789")), "activated"))
+      val enrolments = Set(Enrolment(HMRC_MTD_IT, Seq(EnrolmentIdentifier(mtdItId, "123456789")), "activated"))
 
       EnrolmentMtdIt.extractIdentifierFrom(enrolments) shouldBe Some(MtdItId("123456789"))
     }
@@ -77,9 +79,9 @@ class TypeOfEnrolmentSpec extends UnitSpec {
 
     "return None if the required enrolment exists but the required identifier does not exist" in {
       val enrolments = Set(
-        Enrolment("HMRC-AS-AGENT", Seq(EnrolmentIdentifier("NotAgentReferenceNumber", "arn123")), "activated"),
-        Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("NotMTDITID", "123")), "activated"),
-        Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("NotVRN", "123")), "activated")
+        Enrolment(HMRC_AS_AGENT, Seq(EnrolmentIdentifier("NotAgentReferenceNumber", "arn123")), "activated"),
+        Enrolment(HMRC_MTD_IT, Seq(EnrolmentIdentifier("NotMTDITID", "123")), "activated"),
+        Enrolment(HMRC_MTD_VAT, Seq(EnrolmentIdentifier("NotVRN", "123")), "activated")
       )
 
       allEnrolmentTypes.foreach(_.extractIdentifierFrom(enrolments) shouldBe None)
