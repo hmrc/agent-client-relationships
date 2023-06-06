@@ -34,6 +34,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import uk.gov.hmrc.agentclientrelationships.util._
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRC_MTD_IT
 sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
 }
@@ -280,7 +281,7 @@ class CheckAndCopyRelationshipsService @Inject()(
     auditData: AuditData): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
-        aca.getPartialAuthExistsFor(nino, arn, "HMRC-MTD-IT").map { hasPartialAuth =>
+        aca.getPartialAuthExistsFor(nino, arn, HMRC_MTD_IT).map { hasPartialAuth =>
           auditData.set("partialAuth", hasPartialAuth)
           auditService.sendCheckCESAAuditEvent
           hasPartialAuth

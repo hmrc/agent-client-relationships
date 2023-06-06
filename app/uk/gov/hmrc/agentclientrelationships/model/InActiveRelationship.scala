@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json._
+import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 
 import java.time.LocalDate
@@ -42,12 +43,12 @@ object InactiveRelationship {
       val clientType =
         if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
       val service = clientId match {
-        case _ if clientId.matches(CgtRef.cgtRegex)                => "HMRC-CGT-PD"
-        case _ if PptRef.isValid(clientId)                         => "HMRC-PPT-ORG"
-        case _ if Vrn.isValid(clientId)                            => "HMRC-MTD-VAT"
-        case _ if Utr.isValid(clientId)                            => "HMRC-TERS-ORG"
-        case _ if clientType == "business" & Urn.isValid(clientId) => "HMRC-TERSNT-ORG"
-        case _ if MtdItId.isValid(clientId)                        => "HMRC-MTD-IT"
+        case _ if clientId.matches(CgtRef.cgtRegex)                => HMRC_CGT_PD
+        case _ if PptRef.isValid(clientId)                         => HMRC_PPT_ORG
+        case _ if Vrn.isValid(clientId)                            => HMRC_MTD_VAT
+        case _ if Utr.isValid(clientId)                            => HMRC_TERS_ORG
+        case _ if clientType == "business" & Urn.isValid(clientId) => HMRC_TERSNT_ORG
+        case _ if MtdItId.isValid(clientId)                        => HMRC_MTD_IT
       }
       JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
     }

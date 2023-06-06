@@ -20,6 +20,7 @@ import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRC_AS_AGENT
 import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment => _, _}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
@@ -41,10 +42,8 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   override def authConnector: AuthConnector
 
-  protected type RequestAndCurrentUser = CurrentUser => Future[Result]
-
   def authorisedUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(
-    body: RequestAndCurrentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    body: CurrentUser => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) {
       case enrolments ~ affinity ~ optCreds =>
         optCreds
@@ -62,7 +61,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     }
 
   def authorisedClientOrStrideUserOrAgent(clientId: TaxIdentifier, strideRoles: Seq[String])(
-    body: RequestAndCurrentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    body: CurrentUser => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) {
       case enrolments ~ affinity ~ optCreds =>
         optCreds
@@ -79,10 +78,10 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
-  def hasRequiredEnrolmentMatchingIdentifier(
+  private def hasRequiredEnrolmentMatchingIdentifier(
     enrolments: Enrolments,
     affinity: Option[AffinityGroup],
-    arn: Option[Arn] = None,
+    arn: Option[Arn],
     clientId: TaxIdentifier): Boolean =
     affinity
       .flatMap {
@@ -95,7 +94,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
             .extractIdentifierFrom(enrolments.enrolments)
             .contains(requiredIdentifier))
 
-  def isAgent(affinity: Option[AffinityGroup]): Boolean =
+  private def isAgent(affinity: Option[AffinityGroup]): Boolean =
     affinity.contains(AffinityGroup.Agent)
 
   def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean =
@@ -121,12 +120,12 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   private def extractIdentifier(enrolment: Enrolment, service: String) =
     enrolment.getIdentifier(supportedIdentifierKeys(service)).map { i =>
       i.key match {
-        case "MTDITID"                => MtdItId(i.value)
-        case "VRN"                    => Vrn(i.value)
-        case "SAUTR"                  => Utr(i.value)
-        case "URN"                    => Urn(i.value)
-        case "CGTPDRef"               => CgtRef(i.value)
-        case "EtmpRegistrationNumber" => PptRef(i.value)
+        case IdentifierKeys.mtdItId    => MtdItId(i.value)
+        case IdentifierKeys.vrn        => Vrn(i.value)
+        case IdentifierKeys.sautr      => Utr(i.value)
+        case IdentifierKeys.urn        => Urn(i.value)
+        case IdentifierKeys.cgtPdRef   => CgtRef(i.value)
+        case IdentifierKeys.etmpRegNum => PptRef(i.value)
       }
     }
 
@@ -173,22 +172,6 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           case _              => body(identifiers)
         }
       }
-
-  def withTerminationAuth(strideRole: String)(
-    action: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
-    authorised(AuthProviders(PrivilegedApplication) and Enrolment(strideRole)) {
-      action
-    }.recover {
-      case _: NoActiveSession =>
-        logger.warn(s"user not logged in")
-        Unauthorized
-      case _: InsufficientEnrolments =>
-        logger.warn(s"stride user doesn't have permission to terminate an agent")
-        Forbidden
-      case _: UnsupportedAuthProvider =>
-        logger.warn(s"user logged in with unsupported auth provider")
-        Forbidden
-    }
 
   protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
     body: String => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
@@ -237,10 +220,10 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   protected def withEnrolledAsAgent[A](
     body: Option[String] => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     authorised(
-      Enrolment("HMRC-AS-AGENT")
+      Enrolment(HMRC_AS_AGENT)
         and AuthProviders(GovernmentGateway))
       .retrieve(authorisedEnrolments) { enrolments =>
-        val id = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
+        val id = getEnrolmentValue(enrolments, HMRC_AS_AGENT, "AgentReferenceNumber")
         body(id)
       }
 

@@ -27,6 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService, UserId}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -68,25 +69,25 @@ class RelationshipsController @Inject()(
     userId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val tUserId = userId.map(UserId)
     (service, clientIdType, clientId) match {
-      case ("HMRC-MTD-IT", "MTDITID", _) if MtdItId.isValid(clientId) =>
+      case (HMRC_MTD_IT, IdentifierKeys.mtdItId, _) if MtdItId.isValid(clientId) =>
         checkWithTaxIdentifier(arn, tUserId, MtdItId(clientId))
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
-      case ("HMRC-MTD-VAT", _, _) if Vrn.isValid(clientId)        => checkWithTaxIdentifier(arn, tUserId, Vrn(clientId))
-      case ("HMRC-MTD-IT", "NI", _) if Nino.isValid(clientId) =>
+      case (HMRC_MTD_VAT, _, _) if Vrn.isValid(clientId)          => checkWithTaxIdentifier(arn, tUserId, Vrn(clientId))
+      case (HMRC_MTD_IT, "NI", _) if Nino.isValid(clientId) =>
         des
           .getMtdIdFor(Nino(clientId))
           .flatMap(_.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(
             checkWithTaxIdentifier(arn, tUserId, _)))
-      case ("IR-SA", _, _) if Nino.isValid(clientId) =>
+      case (IR_SA, _, _) if Nino.isValid(clientId) =>
         withSuspensionCheck(arn, service) {
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
-      case ("HMRC-TERS-ORG", _, _) if Utr.isValid(clientId) => checkWithTaxIdentifier(arn, tUserId, Utr(clientId))
-      case ("HMRC-TERSNT-ORG", _, _) if Urn.isValid(clientId) =>
+      case (HMRC_TERS_ORG, _, _) if Utr.isValid(clientId) => checkWithTaxIdentifier(arn, tUserId, Utr(clientId))
+      case (HMRC_TERSNT_ORG, _, _) if Urn.isValid(clientId) =>
         checkWithTaxIdentifier(arn, tUserId, Urn(clientId))
-      case ("HMRC-CGT-PD", "CGTPDRef", _) if CgtRef.isValid(clientId) =>
+      case (HMRC_CGT_PD, IdentifierKeys.cgtPdRef, _) if CgtRef.isValid(clientId) =>
         checkWithTaxIdentifier(arn, tUserId, CgtRef(clientId))
-      case ("HMRC-PPT-ORG", "EtmpRegistrationNumber", _) if PptRef.isValid(clientId) =>
+      case (HMRC_PPT_ORG, IdentifierKeys.etmpRegNum, _) if PptRef.isValid(clientId) =>
         checkWithTaxIdentifier(arn, tUserId, PptRef(clientId))
       case _ =>
         logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
@@ -107,11 +108,11 @@ class RelationshipsController @Inject()(
 
   private def getDesRegimeFor(regime: String) =
     regime match {
-      case "HMRC-MTD-IT" | "IR-SA"             => "ITSA"
-      case "HMRC-MTD-VAT"                      => "VATC"
-      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" => "TRS"
-      case "HMRC-CGT-PD"                       => "CGT"
-      case "HMRC-PPT-ORG"                      => "PPT"
+      case HMRC_MTD_IT | IR_SA               => "ITSA"
+      case HMRC_MTD_VAT                      => "VATC"
+      case HMRC_TERS_ORG | "HMRC-TERSNT-ORG" => "TRS"
+      case "HMRC-CGT-PD"                     => "CGT"
+      case "HMRC-PPT-ORG"                    => "PPT"
     }
 
   private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], taxIdentifier: TaxIdentifier)(
@@ -226,16 +227,19 @@ class RelationshipsController @Inject()(
     clientType: String,
     clientId: String): Either[String, (String, TaxIdentifier)] =
     (service, clientType) match {
-      case ("HMRC-MTD-IT", "MTDITID") if MtdItId.isValid(clientId) => Right(("HMRC-MTD-IT", MtdItId(clientId)))
-      case ("HMRC-MTD-IT", "NI") if Nino.isValid(clientId)         => Right(("HMRC-MTD-IT", Nino(clientId)))
-      case ("HMRC-MTD-VAT", "VRN") if Vrn.isValid(clientId)        => Right(("HMRC-MTD-VAT", Vrn(clientId)))
-      case ("IR-SA", "ni") if Nino.isValid(clientId)               => Right(("IR-SA", Nino(clientId)))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)     => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
-      case ("HMRC-TERS-ORG", "SAUTR") if Utr.isValid(clientId)     => Right(("HMRC-TERS-ORG", Utr(clientId)))
-      case ("HMRC-TERSNT-ORG", "URN") if Urn.isValid(clientId)     => Right(("HMRC-TERSNT-ORG", Urn(clientId)))
-      case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId) => Right(("HMRC-CGT-PD", CgtRef(clientId)))
-      case ("HMRC-PPT-ORG", "EtmpRegistrationNumber") if PptRef.isValid(clientId) =>
-        Right(("HMRC-PPT-ORG", PptRef(clientId)))
+      case (HMRC_MTD_IT, IdentifierKeys.mtdItId) if MtdItId.isValid(clientId) => Right((HMRC_MTD_IT, MtdItId(clientId)))
+      case (HMRC_MTD_IT, "NI") if Nino.isValid(clientId)                      => Right((HMRC_MTD_IT, Nino(clientId)))
+      case (HMRC_MTD_VAT, IdentifierKeys.vrn) if Vrn.isValid(clientId)        => Right((HMRC_MTD_VAT, Vrn(clientId)))
+      case (IR_SA, "ni") if Nino.isValid(clientId)                            => Right((IR_SA, Nino(clientId)))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)                => Right((HMRC_VAT_DEC_ORG, Vrn(clientId)))
+      case (HMRC_TERS_ORG, IdentifierKeys.sautr) if Utr.isValid(clientId)     => Right((HMRC_TERS_ORG, Utr(clientId)))
+      case (HMRC_TERSNT_ORG, IdentifierKeys.urn) if Urn.isValid(clientId)     => Right((HMRC_TERSNT_ORG, Urn(clientId)))
+      case (HMRC_CGT_PD, IdentifierKeys.cgtPdRef) if CgtRef.isValid(clientId) => Right((HMRC_CGT_PD, CgtRef(clientId)))
+      case (HMRC_CBC_ORG, IdentifierKeys.cbcId) if CbcId.isValid(clientId)    => Right((HMRC_CBC_ORG, CbcId(clientId)))
+      case (HMRC_CBC_NON_UK_ORG, IdentifierKeys.cbcId) if CbcId.isValid(clientId) =>
+        Right((HMRC_CBC_NON_UK_ORG, CbcId(clientId)))
+      case (HMRC_PPT_ORG, IdentifierKeys.etmpRegNum) if PptRef.isValid(clientId) =>
+        Right((HMRC_PPT_ORG, PptRef(clientId)))
       case (a, b) => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }
 
@@ -318,7 +322,7 @@ class RelationshipsController @Inject()(
       validateParams(service, clientIdType, clientId) match {
         case Right((service, taxIdentifier)) =>
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
-            val relationships = if (service == "HMRC-MTD-IT") {
+            val relationships = if (service == HMRC_MTD_IT) {
               findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
             } else {
               findService.getActiveRelationshipsForClient(taxIdentifier)
