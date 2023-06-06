@@ -97,6 +97,16 @@ class FindRelationshipsService @Inject()(
             case Some(cgtRef) =>
               getActiveRelationshipsForClient(cgtRef).map(_.map(r => (EnrolmentCgt.enrolmentService, r.arn)))
             case None => Future successful (None)
+          },
+          identifiers.get(EnrolmentCbc.enrolmentService).map(_.asCbcId) match {
+            case Some(cbcId) =>
+              getActiveRelationshipsForClient(cbcId).map(_.map(r => (EnrolmentCbc.enrolmentService, r.arn)))
+            case None => Future successful (None)
+          },
+          identifiers.get(EnrolmentCbcNonUk.enrolmentService).map(_.asCbcNonUkId) match {
+            case Some(cbcNonUkId: CbcNonUkId) =>
+              getActiveRelationshipsForClient(cbcNonUkId).map(_.map(r => (EnrolmentCbcNonUk.enrolmentService, r.arn)))
+            case None => Future successful (None)
           }
         ))
       .map(_.collect { case Some(x) => x }.groupBy(_._1).mapValues(_.map(_._2)))
@@ -108,42 +118,45 @@ class FindRelationshipsService @Inject()(
       .sequence(
         Seq(
           identifiers.get(EnrolmentMtdIt.enrolmentService).map(_.asMtdItId) match {
-            case Some(mtdItId) =>
-              getInactiveRelationshipsForClient(mtdItId)
-            case None => Future successful (Seq.empty)
+            case Some(mtdItId) => getInactiveRelationshipsForClient(mtdItId)
+            case None          => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentMtdVat.enrolmentService).map(_.asVrn) match {
-            case Some(vrn) =>
-              getInactiveRelationshipsForClient(vrn)
-            case None => Future successful (Seq.empty)
+            case Some(vrn) => getInactiveRelationshipsForClient(vrn)
+            case None      => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentTrust.enrolmentService).map(_.asUtr) match {
-            case Some(utr) =>
-              getInactiveRelationshipsForClient(utr)
-            case None => Future successful (Seq.empty)
+            case Some(utr) => getInactiveRelationshipsForClient(utr)
+            case None      => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentTrustNT.enrolmentService).map(_.asUrn) match {
-            case Some(urn) =>
-              getInactiveRelationshipsForClient(urn)
-            case None => Future successful (Seq.empty)
+            case Some(urn) => getInactiveRelationshipsForClient(urn)
+            case None      => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentCgt.enrolmentService).map(_.asCgtRef) match {
-            case Some(cgtRef) =>
-              getInactiveRelationshipsForClient(cgtRef)
-            case None => Future successful (Seq.empty)
+            case Some(cgtRef) => getInactiveRelationshipsForClient(cgtRef)
+            case None         => Future successful (Seq.empty)
           },
           identifiers.get(EnrolmentPpt.enrolmentService).map(_.asPptRef) match {
-            case Some(pptRef) =>
-              getInactiveRelationshipsForClient(pptRef)
-            case None => Future successful (Seq.empty)
+            case Some(pptRef) => getInactiveRelationshipsForClient(pptRef)
+            case None         => Future successful (Seq.empty)
+          },
+          identifiers.get(EnrolmentCbc.enrolmentService).map(_.asCbcId) match {
+            case Some(cbcId) => getInactiveRelationshipsForClient(cbcId)
+            case None        => Future successful (Seq.empty)
+          },
+          identifiers.get(EnrolmentCbcNonUk.enrolmentService).map(_.asCbcNonUkId) match {
+            case Some(cbcNonUkId: CbcNonUkId) => getInactiveRelationshipsForClient(cbcNonUkId)
+            case None                         => Future successful (Seq.empty)
           }
-        ))
+        )
+      )
       .map(_.flatten)
 
   def getInactiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     taxIdentifier match {
-      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) | PptRef(_) =>
+      case MtdItId(_) | Vrn(_) | Utr(_) | Urn(_) | CgtRef(_) | PptRef(_) | CbcId(_) | CbcNonUkId(_) =>
         ifConnector.getInactiveClientRelationships(taxIdentifier)
       case e =>
         logger.warn(s"Unsupported Identifier ${e.getClass.getSimpleName}")

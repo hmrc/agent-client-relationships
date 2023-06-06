@@ -38,16 +38,17 @@ trait TaxIdentifierSupport {
   }
 
   protected def identifierNickname(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
-    case _: Arn     => "ARN"
-    case _: MtdItId => mtdItId
-    case _: Vrn     => vrn
-    case _: Nino    => nino
-    case _: Utr     => sautr
-    case _: Urn     => urn
-    case _: CgtRef  => cgtPdRef
-    case _: PptRef  => etmpRegNum
-    case _: CbcId   => cbcId
-    case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
+    case _: Arn        => "ARN"
+    case _: MtdItId    => mtdItId
+    case _: Vrn        => vrn
+    case _: Nino       => nino
+    case _: Utr        => sautr
+    case _: Urn        => urn
+    case _: CgtRef     => cgtPdRef
+    case _: PptRef     => etmpRegNum
+    case _: CbcId      => cbcId
+    case _: CbcNonUkId => cbcId
+    case _             => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
   }
 
 }
