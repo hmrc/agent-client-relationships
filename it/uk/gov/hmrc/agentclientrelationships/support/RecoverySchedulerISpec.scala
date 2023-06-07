@@ -70,6 +70,7 @@ class RecoverySchedulerISpec
 
 
   "Recovery Scheduler" should {
+
     "attempt to recover if DeleteRecord exists but RecoveryRecord not" in {
 
       val testKit = ActorTestKit()
@@ -153,7 +154,6 @@ class RecoverySchedulerISpec
       testKit.shutdownTestKit()
 
     }
-
 
     "attempt to recover if both DeleteRecord and RecoveryRecord exist and nextRunAt is in the past" in {
       val testKit = ActorTestKit()

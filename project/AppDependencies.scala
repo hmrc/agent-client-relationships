@@ -5,7 +5,7 @@ object AppDependencies {
   private val bootstrapVer = "7.15.0"
 
   val compile = Seq(
-    "uk.gov.hmrc"        %% "agent-mtd-identifiers"     % "1.5.0",
+    "uk.gov.hmrc"        %% "agent-mtd-identifiers"     % "1.7.0",
     "uk.gov.hmrc"        %% "bootstrap-backend-play-28" % bootstrapVer,
     "uk.gov.hmrc"        %% "agent-kenshoo-monitoring"  % "5.3.0" exclude("uk.gov.hmrc", "bootstrap-backend-play-28"),
     "uk.gov.hmrc.mongo"  %% "hmrc-mongo-play-28"        % mongoVer,

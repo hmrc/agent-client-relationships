@@ -149,29 +149,41 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           }
       }
 
+  private val supportedEnrolmentTypes: Set[TypeOfEnrolment] = Set(
+    EnrolmentMtdIt,
+    EnrolmentMtdVat,
+    EnrolmentTrust,
+    EnrolmentTrustNT,
+    EnrolmentCgt,
+    EnrolmentPpt,
+    EnrolmentCbc,
+    EnrolmentCbcNonUk
+  )
+
   //BTA & PTA Call
   def withAuthorisedAsClient[A, T](body: Map[EnrolmentService, EnrolmentIdentifierValue] => Future[Result])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
-        val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = (for {
-          supportedEnrolments <- Seq(
-                                  EnrolmentMtdIt,
-                                  EnrolmentMtdVat,
-                                  EnrolmentTrust,
-                                  EnrolmentTrustNT,
-                                  EnrolmentCgt,
-                                  EnrolmentPpt)
-          enrolment <- enrolments.getEnrolment(supportedEnrolments.enrolmentKey)
-          clientId  <- enrolment.identifiers.headOption
-        } yield (EnrolmentService(enrolment.key), EnrolmentIdentifierValue(clientId.value))).toMap
-
-        identifiers match {
-          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _              => body(identifiers)
-        }
+        renderForSupportedEnrolmentTypes(body, enrolments)
       }
+
+  private def renderForSupportedEnrolmentTypes[T, A](
+    body: Map[EnrolmentService, EnrolmentIdentifierValue] => Future[Result],
+    enrolments: Enrolments) = {
+    val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = (for {
+      supportedType <- supportedEnrolmentTypes
+      enrolment     <- enrolments.getEnrolment(supportedType.enrolmentKey)
+      clientId      <- enrolment.identifiers.headOption
+    } yield (EnrolmentService(enrolment.key), EnrolmentIdentifierValue(clientId.value))).toMap
+
+    if (identifiers.isEmpty) {
+      Future.successful(NoPermissionToPerformOperation)
+    } else {
+      body(identifiers)
+    }
+  }
 
   protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
     body: String => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
@@ -187,7 +199,9 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   private def decodeFromBase64(encodedString: String): String =
     try {
       new String(Base64.getDecoder.decode(encodedString), UTF_8)
-    } catch { case _: Throwable => "" }
+    } catch {
+      case _: Throwable => ""
+    }
 
   def withBasicAuth(expectedAuth: BasicAuthentication)(body: => Future[Result])(
     implicit request: Request[_]): Future[Result] =
@@ -195,7 +209,9 @@ trait AuthActions extends AuthorisedFunctions with Logging {
       case Some(basicAuthHeader(encodedAuthHeader)) =>
         decodeFromBase64(encodedAuthHeader) match {
           case decodedAuth(username, password) =>
-            if (BasicAuthentication(username, password) == expectedAuth) { body } else {
+            if (BasicAuthentication(username, password) == expectedAuth) {
+              body
+            } else {
               logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
             }

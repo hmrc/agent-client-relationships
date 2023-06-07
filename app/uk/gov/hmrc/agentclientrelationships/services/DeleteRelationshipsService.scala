@@ -248,6 +248,7 @@ class DeleteRelationshipsService @Inject()(
           case IdentifierKeys.urn        => Urn(record.clientIdentifier)
           case IdentifierKeys.cgtPdRef   => CgtRef(record.clientIdentifier)
           case IdentifierKeys.etmpRegNum => PptRef(record.clientIdentifier)
+          case IdentifierKeys.cbcId      => CbcId(record.clientIdentifier) //doesn't matter whether uk or non uk here
           case _                         => throw new RuntimeException("unsupported client identifier type found in Delete record")
         }
         checkDeleteRecordAndEventuallyResume(taxIdentifier, Arn(record.arn))(ec, headerCarrier, auditData, NoRequest)
