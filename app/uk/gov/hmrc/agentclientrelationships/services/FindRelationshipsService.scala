@@ -62,7 +62,7 @@ class FindRelationshipsService @Inject()(
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     ifConnector.getInactiveRelationships(arn)
 
-  def getActiveRelationshipsForClient(identifiers: Map[Service, EnrolmentIdentifierValue])(
+  def getActiveRelationshipsForClient(identifiers: Map[Service, TaxIdentifier])(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Map[Service, Seq[Arn]]] =
     Future
@@ -75,12 +75,12 @@ class FindRelationshipsService @Inject()(
       }
       .map(_.collect { case Some(x) => x }.groupBy(_._1).mapValues(_.map(_._2)))
 
-  def getInactiveRelationshipsForClient(identifiers: Map[Service, EnrolmentIdentifierValue])(
+  def getInactiveRelationshipsForClient(identifiers: Map[Service, TaxIdentifier])(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     Future
       .traverse(appConfig.supportedServices) { service =>
-        identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
+        identifiers.get(service) match {
           case Some(taxId) => getInactiveRelationshipsForClient(taxId) // TODO DG should we include service?
           case None        => Future.successful(Seq.empty)
         }

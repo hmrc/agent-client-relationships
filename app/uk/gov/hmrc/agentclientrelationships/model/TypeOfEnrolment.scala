@@ -57,13 +57,3 @@ object TypeOfEnrolment {
     case _          => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
 }
-
-case class EnrolmentIdentifierValue(value: String) {
-
-  def asMtdItId: MtdItId = MtdItId(value)
-  def asVrn: Vrn = Vrn(value)
-  def asUtr: Utr = Utr(value)
-  def asUrn: Urn = Urn(value)
-  def asCgtRef: CgtRef = CgtRef(value)
-  def asPptRef: PptRef = PptRef(value)
-}

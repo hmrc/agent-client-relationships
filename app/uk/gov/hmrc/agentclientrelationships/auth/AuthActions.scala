@@ -153,16 +153,16 @@ trait AuthActions extends AuthorisedFunctions with Logging {
       }
 
   //BTA & PTA Call
-  def withAuthorisedAsClient[A, T](body: Map[Service, EnrolmentIdentifierValue] => Future[Result])(
+  def withAuthorisedAsClient[A, T](body: Map[Service, TaxIdentifier] => Future[Result])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
-        val identifiers: Map[Service, EnrolmentIdentifierValue] = (for {
+        val identifiers: Map[Service, TaxIdentifier] = (for {
           supportedService <- supportedServices // TODO DG PIR was not here.
           enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
           clientId         <- enrolment.identifiers.headOption
-        } yield (supportedService, EnrolmentIdentifierValue(clientId.value))).toMap
+        } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))).toMap
 
         identifiers match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)

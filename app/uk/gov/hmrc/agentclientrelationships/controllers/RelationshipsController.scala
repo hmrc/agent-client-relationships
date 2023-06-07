@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -291,7 +291,7 @@ class RelationshipsController @Inject()(
   }
 
   def getActiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClient { identifiers: Map[Service, EnrolmentIdentifierValue] =>
+    withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
       findService
         .getActiveRelationshipsForClient(identifiers)
         .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.id, v) })))
@@ -299,7 +299,7 @@ class RelationshipsController @Inject()(
   }
 
   def getInactiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClient { identifiers: Map[Service, EnrolmentIdentifierValue] =>
+    withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
       findService
         .getInactiveRelationshipsForClient(identifiers)
         .map(inactiveRelationships => Ok(Json.toJson(inactiveRelationships)))
