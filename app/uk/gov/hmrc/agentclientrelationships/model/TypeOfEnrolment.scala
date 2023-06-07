@@ -32,8 +32,6 @@ sealed class TypeOfEnrolment(
       .flatMap(_.identifiers.find(_.key equals identifierKey))
       .map(enrolmentIdentifier => identifierForValue(enrolmentIdentifier.value))
   }
-
-  def enrolmentService: EnrolmentService = EnrolmentService(enrolmentKey)
 }
 
 case object EnrolmentAsAgent extends TypeOfEnrolment("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
@@ -59,10 +57,6 @@ object TypeOfEnrolment {
     case _          => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
 }
-
-case class EnrolmentService(value: String)
-
-object EnrolmentService {}
 
 case class EnrolmentIdentifierValue(value: String) {
 

@@ -43,6 +43,8 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   protected type RequestAndCurrentUser = CurrentUser => Future[Result]
 
+  val supportedServices: Seq[Service]
+
   def authorisedUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(
     body: RequestAndCurrentUser)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) {
@@ -151,22 +153,16 @@ trait AuthActions extends AuthorisedFunctions with Logging {
       }
 
   //BTA & PTA Call
-  def withAuthorisedAsClient[A, T](body: Map[EnrolmentService, EnrolmentIdentifierValue] => Future[Result])(
+  def withAuthorisedAsClient[A, T](body: Map[Service, EnrolmentIdentifierValue] => Future[Result])(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
-        val identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] = (for {
-          supportedEnrolments <- Seq(
-                                  EnrolmentMtdIt,
-                                  EnrolmentMtdVat,
-                                  EnrolmentTrust,
-                                  EnrolmentTrustNT,
-                                  EnrolmentCgt,
-                                  EnrolmentPpt)
-          enrolment <- enrolments.getEnrolment(supportedEnrolments.enrolmentKey)
-          clientId  <- enrolment.identifiers.headOption
-        } yield (EnrolmentService(enrolment.key), EnrolmentIdentifierValue(clientId.value))).toMap
+        val identifiers: Map[Service, EnrolmentIdentifierValue] = (for {
+          supportedService <- supportedServices // TODO DG PIR was not here.
+          enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
+          clientId         <- enrolment.identifiers.headOption
+        } yield (supportedService, EnrolmentIdentifierValue(clientId.value))).toMap
 
         identifiers match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)

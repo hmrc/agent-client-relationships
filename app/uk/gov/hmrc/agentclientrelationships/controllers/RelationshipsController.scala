@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, UserId}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -59,6 +59,8 @@ class RelationshipsController @Inject()(
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   implicit val ec: ExecutionContext = ecp.get
+
+  val supportedServices = appConfig.supportedServices
 
   def checkForRelationship(
     arn: Arn,
@@ -289,15 +291,15 @@ class RelationshipsController @Inject()(
   }
 
   def getActiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClient { identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =>
+    withAuthorisedAsClient { identifiers: Map[Service, EnrolmentIdentifierValue] =>
       findService
         .getActiveRelationshipsForClient(identifiers)
-        .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.value, v) })))
+        .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.id, v) })))
     }
   }
 
   def getInactiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClient { identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =>
+    withAuthorisedAsClient { identifiers: Map[Service, EnrolmentIdentifierValue] =>
       findService
         .getInactiveRelationshipsForClient(identifiers)
         .map(inactiveRelationships => Ok(Json.toJson(inactiveRelationships)))

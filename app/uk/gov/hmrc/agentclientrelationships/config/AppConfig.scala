@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.config
 
 import java.net.URLDecoder
-
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 case class ConfigNotFoundException(message: String) extends RuntimeException(message)
@@ -91,5 +91,9 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
 
   val altItsaEnabled =
     servicesConfig.getBoolean("alt-itsa.enabled")
+
+  val supportedServices
+    : Seq[Service] = Service.supportedServices // TODO DG read this info from config to enable feature-flagging
+  // TODO DG - also, should PIR be among these?
 
 }
