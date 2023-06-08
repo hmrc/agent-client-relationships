@@ -21,33 +21,6 @@ import uk.gov.hmrc.domain.Nino
 
 class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
-  "enrolmentKeyPrefixFor" should {
-    "return HMRC-AS-AGENT~AgentReferenceNumber when tax identifier is of Arn type" in {
-      enrolmentKeyPrefixFor(Arn("foo")) shouldBe "HMRC-AS-AGENT~AgentReferenceNumber"
-    }
-
-    "return HMRC-MTD-IT~MTDITID when tax identifier is of MtdItId type" in {
-      enrolmentKeyPrefixFor(MtdItId("foo")) shouldBe "HMRC-MTD-IT~MTDITID"
-    }
-
-    "return HMRC-MTD-VAT~VRN when tax identifier is of Vrn type" in {
-      enrolmentKeyPrefixFor(Vrn("foo")) shouldBe "HMRC-MTD-VAT~VRN"
-    }
-
-    "return HMRC-MTD-IT~NINO when tax identifier is of Nino type" in {
-      enrolmentKeyPrefixFor(Nino("AB123456A")) shouldBe "HMRC-MTD-IT~NINO"
-    }
-
-    "return HMRC-CGT-PD~CGTPDRef when tax identifier is of CgtRef type" in {
-      enrolmentKeyPrefixFor(CgtRef("XMCGTP123456789")) shouldBe "HMRC-CGT-PD~CGTPDRef"
-    }
-
-    "return IllegalArgumentException when tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy
-        enrolmentKeyPrefixFor(Eori("foo"))
-    }
-  }
-
   "identifierNickname" should {
     "return ARN when tax identifier is of Arn type" in {
       identifierNickname(Arn("foo")) shouldBe "ARN"

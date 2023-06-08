@@ -92,8 +92,8 @@ class AppConfig @Inject()(config: Configuration, servicesConfig: ServicesConfig)
   val altItsaEnabled =
     servicesConfig.getBoolean("alt-itsa.enabled")
 
-  val supportedServices
-    : Seq[Service] = Service.supportedServices // TODO DG read this info from config to enable feature-flagging
-  // TODO DG - also, should PIR be among these?
+  // Note: Personal Income Record is not handled through agent-client-relationships
+  val supportedServices: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
+  // TODO DG read the list of supported services from config to enable feature-flagging
 
 }

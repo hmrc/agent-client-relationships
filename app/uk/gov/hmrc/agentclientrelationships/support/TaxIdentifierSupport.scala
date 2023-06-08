@@ -21,17 +21,18 @@ import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait TaxIdentifierSupport {
 
-  protected def enrolmentKeyPrefixFor(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
-    case _: Arn     => "HMRC-AS-AGENT~AgentReferenceNumber"
-    case _: MtdItId => "HMRC-MTD-IT~MTDITID"
-    case _: Vrn     => "HMRC-MTD-VAT~VRN"
-    case _: Nino    => "HMRC-MTD-IT~NINO"
-    case _: Utr     => "HMRC-TERS-ORG~SAUTR"
-    case _: Urn     => "HMRC-TERSNT-ORG~URN"
-    case _: CgtRef  => "HMRC-CGT-PD~CGTPDRef"
-    case _: PptRef  => "HMRC-PPT-ORG~EtmpRegistrationNumber"
-    case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
-  }
+  protected def buildEnrolmentKey(service: Service, taxIdentifier: TaxIdentifier): String =
+    (service, taxIdentifier) match {
+      case (_, Arn(value))                       => s"HMRC-AS-AGENT~AgentReferenceNumber~$value"
+      case (Service.MtdIt, MtdItId(value))       => s"HMRC-MTD-IT~MTDITID~$value"
+      case (Service.Vat, Vrn(value))             => s"HMRC-MTD-VAT~VRN~$value"
+      case (Service.MtdIt, Nino(value))          => s"HMRC-MTD-IT~NINO~$value"
+      case (Service.Trust, Utr(value))           => s"HMRC-TERS-ORG~SAUTR~$value"
+      case (Service.TrustNT, Urn(value))         => s"HMRC-TERSNT-ORG~URN~$value"
+      case (Service.CapitalGains, CgtRef(value)) => s"HMRC-CGT-PD~CGTPDRef~$value"
+      case (Service.Ppt, PptRef(value))          => s"HMRC-PPT-ORG~EtmpRegistrationNumber~$value"
+      case _                                     => throw new IllegalArgumentException(s"Service/tax id combination not supported: $service $taxIdentifier")
+    }
 
   protected def identifierNickname(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
     case _: Arn     => "ARN"

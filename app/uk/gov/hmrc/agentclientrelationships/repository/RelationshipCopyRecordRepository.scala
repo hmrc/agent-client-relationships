@@ -25,10 +25,10 @@ import org.mongodb.scala.model.Indexes.ascending
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.model.{MongoLocalDateTimeFormat, TypeOfEnrolment}
+import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -38,6 +38,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class RelationshipCopyRecord(
   arn: String,
+  service: Option[String],
   clientIdentifier: String,
   clientIdentifierType: String,
   references: Option[Set[RelationshipReference]] = None,
@@ -81,8 +82,6 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
     with RelationshipCopyRecordRepository
     with Logging {
 
-  private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
-
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
   override def create(record: RelationshipCopyRecord): Future[Int] =
@@ -105,7 +104,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
         Filters.and(
           Filters.equal("arn", arn.value),
           Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
         ))
       .headOption()
 
@@ -115,7 +114,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
         Filters.and(
           Filters.equal("arn", arn.value),
           Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
         ),
         Updates.set("syncToETMPStatus", status.toString)
       )
@@ -132,7 +131,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
         Filters.and(
           Filters.equal("arn", arn.value),
           Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
         ),
         Updates.set("syncToESStatus", status.toString)
       )
@@ -149,7 +148,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
         Filters.and(
           Filters.equal("arn", arn.value),
           Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", clientIdentifierType(identifier))
+          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
         ))
       .toFuture()
       .map(res => res.getDeletedCount.toInt)

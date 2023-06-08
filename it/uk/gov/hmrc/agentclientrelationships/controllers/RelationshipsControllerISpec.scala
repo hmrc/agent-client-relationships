@@ -6,7 +6,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
 
@@ -18,6 +18,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
   val relationshipCopiedSuccessfully = RelationshipCopyRecord(
     arn.value,
+    Some(Service.MtdIt.id),
     mtdItId.value,
     mtdItIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
@@ -315,6 +316,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
         deleteRecordRepository.create(
           DeleteRecord(
             arn.value,
+            Some(Service.MtdIt.id),
             mtdItId.value,
             mtdItIdType,
             LocalDateTime.now.minusMinutes(1),

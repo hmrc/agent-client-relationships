@@ -112,7 +112,7 @@ class RelationshipsControllerWithoutMongoISpec
     val identifierType: String = "MTDITID"
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
-      givenPrincipalUser(arn, "foo")
+      givenPrincipalAgentUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdItId(mtditid)
       givenNinoIsKnownFor(mtditid, nino)
@@ -175,7 +175,7 @@ class RelationshipsControllerWithoutMongoISpec
     val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
     "return 200 when relationship exists mapping and es and relationship copy attempt fails because of mongo" in {
-      givenPrincipalUser(arn, "foo")
+      givenPrincipalAgentUser(arn, "foo")
       givenGroupInfo("foo", "bar")
       givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
       givenArnIsKnownFor(arn, AgentCode(oldAgentCode))

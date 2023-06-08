@@ -30,12 +30,12 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, RegistrationRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -50,7 +50,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val arn = Arn("AARN0000002")
   val saAgentRef = SaAgentReference("T1113T")
   val mtdItId = MtdItId("ABCDEF123456789")
+  val mtdItEnrolmentKey = EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF123456789")
   val vrn = Vrn("101747641")
+  val vatEnrolmentKey = EnrolmentKey(Service.Vat, vrn)
   val agentUserId = "testUserId"
   val agentGroupId = "testGroupId"
   val agentCodeForVatDecAgent = AgentCode("oldAgentCode")
@@ -59,6 +61,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,
+    Some(Service.MtdIt.id),
     mtdItId.value,
     "MTDITID",
     Some(Set(SaRef(saAgentRef))),
@@ -66,6 +69,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     syncToESStatus = None)
   val defaultRecordForMtdVat = RelationshipCopyRecord(
     arn.value,
+    Some(Service.MtdIt.id),
     vrn.value,
     "VRN",
     Some(Set(VatRef(agentCodeForVatDecAgent))),
@@ -132,7 +136,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         cesaRelationshipExists()
         adminUserExistsForArn()
-        relationshipWillBeCreated(mtdItId)
+        relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
 
         val check = relationshipsService
@@ -177,7 +181,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         cesaRelationshipExists()
-        relationshipWillBeCreated(mtdItId)
+        relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItId) {
@@ -272,9 +276,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         arnExistsForGroupId()
-        previousRelationshipWillBeRemoved(mtdItId)
+        previousRelationshipWillBeRemoved(mtdItEnrolmentKey)
         cesaRelationshipExists()
-        relationshipWillBeCreated(mtdItId)
+        relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
 
         val check = relationshipsService
@@ -320,7 +324,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         cesaRelationshipExists()
-        relationshipWillBeCreated(mtdItId)
+        relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
 
         val maybeCheck = await(lockService.tryLock(arn, mtdItId) {
@@ -411,7 +415,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         cesaRelationshipExists()
-        relationshipWillBeCreated(mtdItId)
+        relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
         auditStub()
 
@@ -536,7 +540,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val request = FakeRequest()
 
       cesaRelationshipExists()
-      relationshipWillBeCreated(mtdItId)
+      relationshipWillBeCreated(mtdItEnrolmentKey)
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
@@ -581,7 +585,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val request = FakeRequest()
 
       cesaRelationshipExists()
-      relationshipWillBeCreated(mtdItId)
+      relationshipWillBeCreated(mtdItEnrolmentKey)
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
@@ -750,7 +754,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
         adminUserExistsForArn()
-        relationshipWillBeCreated(vrn)
+        relationshipWillBeCreated(vatEnrolmentKey)
         metricsStub()
         auditStub()
 
@@ -798,7 +802,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
-        relationshipWillBeCreated(vrn)
+        relationshipWillBeCreated(vatEnrolmentKey)
         metricsStub()
         auditStub()
 
@@ -931,8 +935,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         arnExistsForGroupId
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
-        previousRelationshipWillBeRemoved(vrn)
-        relationshipWillBeCreated(vrn)
+        previousRelationshipWillBeRemoved(vatEnrolmentKey)
+        relationshipWillBeCreated(vatEnrolmentKey)
         metricsStub()
         auditStub()
 
@@ -979,7 +983,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val request = FakeRequest()
 
         oldESRelationshipExists()
-        relationshipWillBeCreated(vrn)
+        relationshipWillBeCreated(vatEnrolmentKey)
         vrnIsKnownInETMP(vrn, true)
         metricsStub()
         auditStub()
@@ -1075,7 +1079,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         auditStub()
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
-        relationshipWillBeCreated(vrn)
+        relationshipWillBeCreated(vatEnrolmentKey)
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -1198,7 +1202,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val request = FakeRequest()
 
       oldESRelationshipExists()
-      relationshipWillBeCreated(vrn)
+      relationshipWillBeCreated(vatEnrolmentKey)
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -1243,7 +1247,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val request = FakeRequest()
 
       oldESRelationshipExists()
-      relationshipWillBeCreated(vrn)
+      relationshipWillBeCreated(vatEnrolmentKey)
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
@@ -1440,23 +1444,23 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("barArn"))))
   }
 
-  private def previousRelationshipWillBeRemoved(identifier: TaxIdentifier): OngoingStubbing[Future[Unit]] = {
-    when(es.getDelegatedGroupIdsFor(eqs(identifier))(any[HeaderCarrier](), any[ExecutionContext]()))
+  private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
+    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[HeaderCarrier](), any[ExecutionContext]()))
       .thenReturn(Future.successful(Set("foo", "bar")))
-    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(identifier))(any[HeaderCarrier](), any[ExecutionContext]()))
+    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[HeaderCarrier](), any[ExecutionContext]()))
       .thenReturn(Future.successful(()))
-    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(identifier))(any[HeaderCarrier](), any[ExecutionContext]()))
+    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(enrolmentKey))(any[HeaderCarrier](), any[ExecutionContext]()))
       .thenReturn(Future.successful(()))
   }
 
   private def vrnIsKnownInETMP(vrn: Vrn, isKnown: Boolean): OngoingStubbing[Future[Boolean]] =
     when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
-  private def relationshipWillBeCreated(identifier: TaxIdentifier): OngoingStubbing[Future[Unit]] = {
-    when(ifConnector.createAgentRelationship(eqs(identifier), eqs(arn))(eqs(hc), eqs(ec)))
+  private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
+    when(ifConnector.createAgentRelationship(eqs(enrolmentKey.singleTaxIdentifier), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
-      es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(identifier), eqs(agentCodeForAsAgent))(
+      es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
         eqs(hc),
         eqs(ec)))
       .thenReturn(Future.successful(()))
@@ -1490,27 +1494,31 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     verify(ifConnector, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEsRecordCreated(): Future[Unit] =
-    verify(es).allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(mtdItId), eqs(agentCodeForAsAgent))(
-      eqs(hc),
-      eqs(ec))
+    verify(es).allocateEnrolmentToAgent(
+      eqs(agentGroupId),
+      eqs(agentUserId),
+      eqs(mtdItEnrolmentKey),
+      eqs(agentCodeForAsAgent))(eqs(hc), eqs(ec))
 
   def verifyEsRecordNotCreated(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),
-      eqs(mtdItId),
+      eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent))(eqs(hc), eqs(ec))
 
   def verifyEsRecordCreatedForMtdVat(): Future[Unit] =
-    verify(es).allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(vrn), eqs(agentCodeForAsAgent))(
-      eqs(hc),
-      eqs(ec))
+    verify(es).allocateEnrolmentToAgent(
+      eqs(agentGroupId),
+      eqs(agentUserId),
+      eqs(vatEnrolmentKey),
+      eqs(agentCodeForAsAgent))(eqs(hc), eqs(ec))
 
   def verifyEsRecordNotCreatedMtdVat(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),
-      eqs(vrn),
+      eqs(vatEnrolmentKey),
       eqs(agentCodeForAsAgent))(eqs(hc), eqs(ec))
 
   def verifyAuditEventSent(): Map[String, Any] = {

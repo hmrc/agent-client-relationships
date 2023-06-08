@@ -9,12 +9,14 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, MtdItId, Service}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
+
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -63,6 +65,7 @@ class RecoverySchedulerISpec
 
   val arn: Arn = Arn("AARN0000002")
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
+  private val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
   val nino: Nino = Nino("AB123456C")
   val mtdItIdType = "MTDITID"
 
@@ -78,16 +81,17 @@ class RecoverySchedulerISpec
           new TaskActor(recoveryRepo, 5,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
-      givenPrincipalGroupIdExistsFor(arn, "foo")
-      givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
-      givenPrincipalUserIdExistFor(arn, "userId")
-      givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+      givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
+      givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}"), Set("foo"))
+      givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
       givenGroupInfo("foo", "bar")
 
       await(recoveryRepo.collection.find().toFuture()) shouldBe empty
 
       val deleteRecord = DeleteRecord(
         arn.value,
+        Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
         LocalDateTime.parse("2022-10-31T23:22:50.971"),
@@ -118,10 +122,10 @@ class RecoverySchedulerISpec
           new TaskActor(recoveryRepo, 5,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
-      givenPrincipalGroupIdExistsFor(arn, "foo")
-      givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
-      givenPrincipalUserIdExistFor(arn, "userId")
-      givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+      givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
+      givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}"), Set("foo"))
+      givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
       givenGroupInfo("foo", "bar")
 
       await(recoveryRepo.write("1", localDateTimeNow.plusSeconds(2)))
@@ -129,6 +133,7 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
+        Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
         LocalDateTime.parse("2022-10-31T23:22:50.971"),
@@ -162,10 +167,10 @@ class RecoverySchedulerISpec
           new TaskActor(recoveryRepo, 5,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
-      givenPrincipalGroupIdExistsFor(arn, "foo")
-      givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}", Set("foo"))
-      givenPrincipalUserIdExistFor(arn, "userId")
-      givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+      givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
+      givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}"), Set("foo"))
+      givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
+      givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
       givenGroupInfo("foo", "bar")
 
       await(recoveryRepo.write("1", localDateTimeNow.minusDays(2)))
@@ -173,6 +178,7 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
+        Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
         LocalDateTime.parse("2022-10-31T23:22:50.971"),
@@ -203,8 +209,8 @@ class RecoverySchedulerISpec
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
       givenGroupInfo("foo", "bar")
-      givenPrincipalUserIdExistFor(arn, "userId")
-      givenPrincipalGroupIdExistsFor(arn, "foo")
+      givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
+      givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
 
       await(recoveryRepo.write("1", localDateTimeNow.minusDays(2)))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
@@ -212,6 +218,7 @@ class RecoverySchedulerISpec
       (0 to 3) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
+          Some(Service.MtdIt.id),
           mtdItId.value + index,
           mtdItIdType,
           LocalDateTime.parse("2022-10-31T23:22:50.971"),
@@ -219,8 +226,8 @@ class RecoverySchedulerISpec
           syncToETMPStatus = Some(SyncStatus.Success)
         )
 
-        givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}", Set("foo"))
-        givenEnrolmentDeallocationSucceeds("foo", MtdItId(mtdItId.value + index))
+        givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}"), Set("foo"))
+        givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${MtdItId(mtdItId.value + index)}"))
 
         await(deleteRepo.create(deleteRecord))
       }
@@ -243,8 +250,8 @@ class RecoverySchedulerISpec
     "attempt to recover multiple DeleteRecords when one of them constantly fails and other fails because auth token has expired" in {
 
             givenGroupInfo("foo", "bar")
-            givenPrincipalUserIdExistFor(arn, "userId")
-            givenPrincipalGroupIdExistsFor(arn, "foo")
+            givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
+            givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
             givenAdminUser("foo", "any")
 
 
@@ -262,6 +269,7 @@ class RecoverySchedulerISpec
       (0 to 3) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
+          Some(Service.MtdIt.id),
           mtdItId.value + index,
           mtdItIdType,
           LocalDateTime.now.minusDays(index),
@@ -269,15 +277,13 @@ class RecoverySchedulerISpec
           syncToETMPStatus = Some(SyncStatus.Success)
         )
 
-        givenDelegatedGroupIdsExistForKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}", Set("foo"))
+        givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}"), Set("foo"))
         if (index == 0)
           givenEnrolmentDeallocationFailsWith(503)(
             "foo",
-            "HMRC-MTD-IT",
-            deleteRecord.clientIdentifierType,
-            deleteRecord.clientIdentifier)
+            EnrolmentKey("HMRC-MTD-IT", Seq(Identifier(deleteRecord.clientIdentifierType, deleteRecord.clientIdentifier))))
          else
-          givenEnrolmentDeallocationSucceeds("foo", MtdItId(mtdItId.value + index))
+          givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, MtdItId(mtdItId.value + index)))
 
         await(deleteRepo.create(deleteRecord))
       }

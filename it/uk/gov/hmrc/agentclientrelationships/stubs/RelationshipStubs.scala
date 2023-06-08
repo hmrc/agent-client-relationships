@@ -1,50 +1,51 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Vrn}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.domain.Nino
 
 trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
 
-  def givenPrincipalUser(taxIdentifier: TaxIdentifier, groupId: String, userId: String = "any") = {
-    givenPrincipalGroupIdExistsFor(taxIdentifier, groupId)
-    givenPrincipalUserIdExistFor(taxIdentifier, userId)
+  def givenPrincipalAgentUser(arn: Arn, groupId: String, userId: String = "any") = {
+    givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), groupId)
+    givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), userId)
   }
 
   def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) =
-    givenDelegatedGroupIdsNotExistFor(mtdItId)
+    givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, mtdItId))
 
   def givenDelegatedGroupIdsExistForMtdItId(mtdItId: MtdItId, ids: String*) =
-    givenDelegatedGroupIdsExistFor(mtdItId, Set("bar", "foo") ++ ids.toSet)
+    givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.MtdIt, mtdItId), Set("bar", "foo") ++ ids.toSet)
 
   def givenDelegatedGroupIdsNotExistForNino(nino: Nino) =
-    givenDelegatedGroupIdsNotExistFor(nino)
+    givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, nino))
 
   def givenDelegatedGroupIdsNotExistForMtdVatId(vrn: Vrn) =
-    givenDelegatedGroupIdsNotExistFor(vrn)
+    givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.Vat, vrn))
 
   def givenDelegatedGroupIdsExistForMtdVatId(vrn: Vrn) =
-    givenDelegatedGroupIdsExistFor(vrn, Set("bar", "foo"))
+    givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.Vat, vrn), Set("bar", "foo"))
 
   def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, agentCode)
+    givenEnrolmentAllocationSucceeds("foo", "any", EnrolmentKey(Service.MtdIt, mtdItId), agentCode)
 
   def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, agentCode)
+    givenEnrolmentAllocationSucceeds("foo", "any", EnrolmentKey(Service.Vat, vrn), agentCode)
 
-  def givenDelegatedGroupIdsExistForService(clientId: TaxIdentifier, ids: String*) =
-    givenDelegatedGroupIdsExistFor(clientId, Set("bar", "foo") ++ ids.toSet)
+  def givenDelegatedGroupIdsExistForEnrolmentKey(enrolmentKey: EnrolmentKey, ids: String*) =
+    givenDelegatedGroupIdsExistFor(enrolmentKey, Set("bar", "foo") ++ ids.toSet)
 
-  def givenDelegatedGroupIdsNotExistForService(clientId: TaxIdentifier) =
-    givenDelegatedGroupIdsNotExistFor(clientId)
+  def givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey: EnrolmentKey) =
+    givenDelegatedGroupIdsNotExistFor(enrolmentKey)
 
-  def givenServiceEnrolmentAllocationSucceeds(serviceId: String, clientId: TaxIdentifier, clientIdType: String, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", serviceId, clientIdType, clientId.value, agentCode)
+  def givenServiceEnrolmentAllocationSucceeds(enrolmentKey: EnrolmentKey, agentCode: String) =
+    givenEnrolmentAllocationSucceeds("foo", "any", enrolmentKey, agentCode)
 
-  def givenAgentIsAllocatedAndAssignedToClient(taxIdentifier: TaxIdentifier, agentCode: String) =
-    givenDelegatedGroupIdsExistFor(taxIdentifier, Set("foo"))
+  def givenAgentIsAllocatedAndAssignedToClient(enrolmentKey: EnrolmentKey, agentCode: String) =
+    givenDelegatedGroupIdsExistFor(enrolmentKey, Set("foo"))
 
   def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn: Vrn, agentCode: String) = {
-    givenDelegatedGroupIdsExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}", Set("oldvatfoo"))
+    givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"), Set("oldvatfoo"))
     givenGroupInfo("oldvatfoo", agentCode)
   }
 }

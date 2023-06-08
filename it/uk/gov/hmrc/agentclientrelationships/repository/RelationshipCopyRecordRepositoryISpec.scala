@@ -6,7 +6,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service, Vrn}
 
 import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Instant, LocalDateTime, ZoneOffset}
@@ -36,6 +36,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
     "create, find and update and remove a record" in {
       val relationshipCopyRecord = RelationshipCopyRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         None,
@@ -64,6 +65,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
     "overwrite existing record when creating new relationship with the same arn and client data" in {
       val relationshipCopyRecord1 = RelationshipCopyRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         None,
@@ -74,6 +76,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
       createResult1 shouldBe 1
       val relationshipCopyRecord2 = RelationshipCopyRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         None,

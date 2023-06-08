@@ -4,9 +4,10 @@ import org.mongodb.scala.model.Filters
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.LocalDateTime
@@ -22,6 +23,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
     val relationshipCopiedSuccessfully = RelationshipCopyRecord(
       arn.value,
+      Some(Service.MtdIt.id),
       mtdItId.value,
       mtdItIdType,
       syncToETMPStatus = Some(SyncStatus.Success),
@@ -33,9 +35,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       //CESA CHECK UNHAPPY PATHS
 
       "return 404 when agent not allocated to client in es nor identifier not found in des" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenDelegatedGroupIdsNotExistFor(mtdItId)
+        givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         givenNinoIsUnknownFor(mtdItId)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
@@ -47,9 +49,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       }
 
       "return 404 when agent not allocated to client in es nor cesa and no alt-itsa" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenDelegatedGroupIdsNotExistFor(mtdItId)
+        givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
@@ -62,9 +64,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       }
 
       "return 404 when agent not allocated to client in es, cesa mapping not found and no alt-itsa" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenDelegatedGroupIdsNotExistFor(mtdItId)
+        givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenArnIsUnknownFor(arn)
@@ -80,7 +82,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       //HAPPY PATHS WHEN CHECKING CESA
 
       "return 200 when agent not allocated to client in es but relationship exists in cesa" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -149,7 +151,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       // HAPPY PATH FOR ALTERNATIVE-ITSA
 
       "return 200 when no relationship in CESA but there is an alt-itsa invitation for client" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -166,7 +168,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       // UNHAPPY PATH FOR ALTERNATIVE-ITSA
 
       "return 404 when no relationship in CESA and no alt-itsa invitation for client" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -183,7 +185,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
       "return 200 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -218,7 +220,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       }
 
       "return 200 when relationship exists only in cesa and relationship copy attempt fails because of es" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -226,7 +228,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenAgentCanBeAllocatedInIF(mtdItId, arn)
-        givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-IT", "MTDITID", mtdItId.value, "bar")
+        givenEnrolmentAllocationFailsWith(404)("foo", "any", EnrolmentKey(Service.MtdIt, mtdItId), "bar")
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
@@ -287,7 +289,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       }
 
       "return 404 when relationship is not found in es but relationship copy was made before" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAdminUser("foo", "any")
@@ -301,7 +303,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 404 when relationship was previously copied from CESA to ETMP & ES but has since been deleted from ETMP & ES " +
         "(even though the relationship upon which the copy was based still exists in CESA)" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAdminUser("foo", "any")
@@ -323,7 +325,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       }
 
       "return 404 when mapping service is unavailable" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -346,9 +348,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       //HAPPY PATH :-)
 
       "return 200 when relationship exists in es" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
@@ -358,7 +360,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       }
 
       "return 404 when relationship does not exists in es" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenMtdItIdIsKnownFor(nino, mtdItId)
@@ -382,7 +384,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 404 when agent not allocated to client in es nor identifier not found in des" in {
         getAgentRecordForClient(arn)
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsUnknownFor(mtdItId)
@@ -395,7 +397,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 404 when agent not allocated to client in es nor cesa" in {
         getAgentRecordForClient(arn)
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -408,7 +410,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 404 when mapping is unavailable" in {
         getAgentRecordForClient(arn)
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -421,7 +423,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
         getAgentRecordForClient(arn)
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsKnownFor(mtdItId, nino)
@@ -442,7 +444,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 200 when agent credentials unknown but relationship exists in cesa" in {
         getAgentRecordForClient(arn)
-        givenPrincipalGroupIdNotExistsFor(arn)
+        givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
@@ -465,7 +467,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
         getAgentRecordForClient(arn)
-        givenPrincipalGroupIdNotExistsFor(arn)
+        givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenMtdItIdIsUnKnownFor(nino)
@@ -505,11 +507,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
         trait StubsForThisScenario {
           givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
-          givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+          givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
-          givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+          givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
         }
@@ -519,6 +521,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             deleteRecordRepository.create(
               DeleteRecord(
                 arn.value,
+                Some(Service.MtdIt.id),
                 mtdItId.value,
                 mtdItIdType,
                 LocalDateTime.now.minusMinutes(1),
@@ -533,6 +536,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             deleteRecordRepository.create(
               DeleteRecord(
                 arn.value,
+                Some(Service.MtdIt.id),
                 mtdItId.value,
                 mtdItIdType,
                 LocalDateTime.now.minusMinutes(1),
@@ -547,6 +551,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             deleteRecordRepository.create(
               DeleteRecord(
                 arn.value,
+                Some(Service.MtdIt.id),
                 mtdItId.value,
                 mtdItIdType,
                 LocalDateTime.now.minusMinutes(1)
@@ -577,6 +582,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             deleteRecordRepository.create(
               DeleteRecord(
                 arn.value,
+                Some(Service.MtdIt.id),
                 mtdItId.value,
                 mtdItIdType,
                 LocalDateTime.now.minusMinutes(1)
@@ -638,12 +644,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
         trait StubsForThisScenario {
           givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+          givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
-          givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+          givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
         }
@@ -658,7 +664,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
-            "MtdItId",
+            "MTDITID",
             "HMRC-MTD-IT",
             "Agent",
             "ggUserId-agent",
@@ -669,12 +675,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "the relationship exists and the MtdItId matches that of current Client user" should {
         trait StubsForThisScenario {
           givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+          givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
-          givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+          givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
         }
@@ -689,7 +695,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
-            "MtdItId",
+            "MTDITID",
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
@@ -700,12 +706,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "the relationship exists and the user is authenticated with Stride" should {
         trait StubsForThisScenario {
           givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+          givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
-          givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+          givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
         }
@@ -729,10 +735,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "the relationship exists in ETMP and not exist in ES" should {
         trait StubsForThisScenario {
           givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+          givenPrincipalGroupIdExistsFor(EnrolmentKey(Service.MtdIt, mtdItId), "clientGroupId")
           givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
           givenAdminUser("foo", "any")
@@ -748,7 +754,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
-            "MtdItId",
+            "MTDITID",
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
@@ -759,10 +765,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "the relationship does not exist in either ETMP or in ES" should {
         trait StubsForThisScenario {
           givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
+          givenPrincipalGroupIdExistsFor(EnrolmentKey(Service.MtdIt, mtdItId), "clientGroupId")
           givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
           givenAgentHasNoActiveRelationshipInIF(mtdItId, arn)
           givenAdminUser("foo", "any")
@@ -778,7 +784,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
-            "MtdItId",
+            "MTDITID",
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
@@ -789,12 +795,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "the relationship does not exist in ETMP but does exist in ES" should {
         trait StubsForThisScenario {
           givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+          givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
           givenAgentHasNoActiveRelationshipInIF(mtdItId, arn)
-          givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+          givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
         }
@@ -809,7 +815,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
-            "MtdItId",
+            "MTDITID",
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
@@ -869,11 +875,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "DES is unavailable" should {
         trait StubsForThisScenario {
           givenUserIsSubscribedAgent(arn)
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-          givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
+          givenPrincipalGroupIdExistsFor(EnrolmentKey(Service.MtdIt, mtdItId), "clientGroupId")
+          givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
           givenDesReturnsServiceUnavailable()
           givenCacheRefresh(arn)
         }
@@ -892,12 +898,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "DES responds with 404" should {
         trait StubsForThisScenario {
           givenUserIsSubscribedAgent(arn)
-          givenPrincipalUser(arn, "foo")
+          givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenPrincipalGroupIdExistsFor(mtdItId, "clientGroupId")
-          givenAgentIsAllocatedAndAssignedToClient(mtdItId, "bar")
-          givenEnrolmentDeallocationSucceeds("foo", mtdItId)
+          givenPrincipalGroupIdExistsFor(EnrolmentKey(Service.MtdIt, mtdItId), "clientGroupId")
+          givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
+          givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAgentCanNotBeDeallocatedInIF(status = 404)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
@@ -953,7 +959,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenUserIsSubscribedClient(nino)
           givenMtdItIdIsKnownFor(nino, mtdItId)
           givenAgentCanBeDeallocatedInIF(mtdItId, arn)
-          givenPrincipalGroupIdExistsFor(arn, "foo")
+          givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
           givenAdminUser("foo", "any")
           givenGroupInfo("foo", "bar")
           givenDelegatedGroupIdRequestFailsWith(404)

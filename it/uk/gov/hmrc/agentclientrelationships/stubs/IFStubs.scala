@@ -389,7 +389,7 @@ trait IFStubs {
         .withStatus(200)
         .withBody(s"""
                      |{
-                     |"relationship" :[
+                     |"relationship" : [
                      |${otherInactiveRelationship(otherTaxIdentifier)(arn)},
                      |{
                      |  "referenceNumber" : "${taxIdentifier.value}",

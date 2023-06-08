@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.model.UserId
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -71,25 +71,33 @@ class RelationshipsController @Inject()(
     val tUserId = userId.map(UserId)
     (service, clientIdType, clientId) match {
       case ("HMRC-MTD-IT", "MTDITID", _) if MtdItId.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, MtdItId(clientId))
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.MtdIt, MtdItId(clientId)))
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
-      case ("HMRC-MTD-VAT", _, _) if Vrn.isValid(clientId)        => checkWithTaxIdentifier(arn, tUserId, Vrn(clientId))
+      case ("HMRC-MTD-VAT", _, _) if Vrn.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Vat, Vrn(clientId)))
       case ("HMRC-MTD-IT", "NI", _) if Nino.isValid(clientId) =>
         des
           .getMtdIdFor(Nino(clientId))
-          .flatMap(_.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(
-            checkWithTaxIdentifier(arn, tUserId, _)))
+          .flatMap(
+            _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(
+              mtdItId =>
+                checkWithTaxIdentifier(
+                  arn,
+                  tUserId,
+                  EnrolmentKey(Service.MtdIt, mtdItId)
+              )))
       case ("IR-SA", _, _) if Nino.isValid(clientId) =>
         withSuspensionCheck(arn, service) {
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
-      case ("HMRC-TERS-ORG", _, _) if Utr.isValid(clientId) => checkWithTaxIdentifier(arn, tUserId, Utr(clientId))
+      case ("HMRC-TERS-ORG", _, _) if Utr.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Trust, Utr(clientId)))
       case ("HMRC-TERSNT-ORG", _, _) if Urn.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, Urn(clientId))
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.TrustNT, Urn(clientId)))
       case ("HMRC-CGT-PD", "CGTPDRef", _) if CgtRef.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, CgtRef(clientId))
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.CapitalGains, CgtRef(clientId)))
       case ("HMRC-PPT-ORG", "EtmpRegistrationNumber", _) if PptRef.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, PptRef(clientId))
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Ppt, PptRef(clientId)))
       case _ =>
         logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
         Future.successful(BadRequest)
@@ -116,12 +124,13 @@ class RelationshipsController @Inject()(
       case "HMRC-PPT-ORG"                      => "PPT"
     }
 
-  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], taxIdentifier: TaxIdentifier)(
+  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(
     implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
 
+    val taxIdentifier = enrolmentKey.singleTaxIdentifier
     val result = for {
       _ <- agentUserService.getAgentAdminUserFor(arn)
       /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
@@ -130,7 +139,7 @@ class RelationshipsController @Inject()(
          Statements populating audit data should be gathered together as much as possible, preferably at the controller level,
          and not scattered throughout lots of methods in different classes. */
       isClear <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
-      res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, taxIdentifier)
+      res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
             else Future.failed(RelationshipDeletePending())
     } yield {
       if (res) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
@@ -195,16 +204,16 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+  def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(service, clientIdType, clientId) match {
+      validateParams(serviceId, clientIdType, clientId) match {
         case Right((_, taxIdentifier)) =>
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
             implicit val auditData: AuditData = new AuditData()
             auditData.set("arn", arn)
 
             createService
-              .createRelationship(arn, taxIdentifier, Set(), false, true)
+              .createRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxIdentifier), Set(), false, true)
               .map {
                 case Some(_) => Created
                 case None    => logger.warn(s"create relationship is currently in Locked state"); Locked
@@ -241,9 +250,9 @@ class RelationshipsController @Inject()(
       case (a, b) => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }
 
-  def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+  def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(service, clientIdType, clientId) match {
+      validateParams(serviceId, clientIdType, clientId) match {
         case Right((_, taxIdentifier)) =>
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
@@ -253,8 +262,9 @@ class RelationshipsController @Inject()(
                    }
               _ <- id.fold {
                     Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
-                  } {
-                    deleteService.deleteRelationship(arn, _, currentUser.affinityGroup)
+                  } { taxId =>
+                    deleteService
+                      .deleteRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxId), currentUser.affinityGroup)
                   }
             } yield NoContent)
               .recover {

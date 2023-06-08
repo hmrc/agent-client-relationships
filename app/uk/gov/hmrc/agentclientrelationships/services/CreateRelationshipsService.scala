@@ -17,12 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.kenshoo.play.metrics.Metrics
-
-import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
@@ -31,6 +29,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -50,7 +49,7 @@ class CreateRelationshipsService @Inject()(
   //noinspection ScalaStyle
   def createRelationship(
     arn: Arn,
-    identifier: TaxIdentifier,
+    enrolmentKey: EnrolmentKey,
     oldReferences: Set[RelationshipReference],
     failIfCreateRecordFails: Boolean,
     failIfAllocateAgentInESFails: Boolean)(
@@ -58,14 +57,20 @@ class CreateRelationshipsService @Inject()(
     hc: HeaderCarrier,
     auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, identifier) {
+      .tryLock(arn, enrolmentKey.singleTaxIdentifier) {
         auditData.set("AgentDBRecord", false)
         auditData.set("enrolmentDelegated", false)
         auditData.set("etmpRelationshipCreated", false)
 
         def createRelationshipRecord: Future[DbUpdateStatus] = {
-          val identifierType = TypeOfEnrolment(identifier).identifierKey
-          val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
+          val identifierType = enrolmentKey.singleIdentifier.key
+          val identifier = enrolmentKey.singleIdentifier.value
+          val record = RelationshipCopyRecord(
+            arn.value,
+            Some(enrolmentKey.service),
+            identifier,
+            identifierType,
+            Some(oldReferences))
           relationshipCopyRepository
             .create(record)
             .map(count => {
@@ -74,9 +79,8 @@ class CreateRelationshipsService @Inject()(
             })
             .recoverWith {
               case NonFatal(ex) =>
-                logger.warn(
-                  s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
-                  ex)
+                logger
+                  .warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${enrolmentKey.tag}", ex)
                 if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
                 else Future.successful(DbUpdateFailed)
             }
@@ -85,9 +89,9 @@ class CreateRelationshipsService @Inject()(
           agentUser            <- retrieveAgentUser(arn)
           recordCreationStatus <- createRelationshipRecord
           if recordCreationStatus == DbUpdateSucceeded
-          etmpRecordCreationStatus <- createEtmpRecord(arn, identifier)
+          etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey.singleTaxIdentifier)
           if etmpRecordCreationStatus == DbUpdateSucceeded
-          esRecordCreationStatus <- createEsRecord(arn, identifier, agentUser, failIfAllocateAgentInESFails)
+          esRecordCreationStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails)
         } yield esRecordCreationStatus
       }
 
@@ -125,7 +129,7 @@ class CreateRelationshipsService @Inject()(
   //noinspection ScalaStyle
   private def createEsRecord(
     arn: Arn,
-    identifier: TaxIdentifier,
+    enrolmentKey: EnrolmentKey,
     agentUser: AgentUser,
     failIfAllocateAgentInESFails: Boolean)(
     implicit ec: ExecutionContext,
@@ -134,13 +138,11 @@ class CreateRelationshipsService @Inject()(
 
     def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
       relationshipCopyRepository
-        .updateEsSyncStatus(arn, identifier, status)
+        .updateEsSyncStatus(arn, enrolmentKey.singleTaxIdentifier, status)
         .map(convertDbUpdateStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
-      logger.warn(
-        s"Creating ES record failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getName})",
-        origExc)
+      logger.warn(s"Creating ES record failed for ${arn.value}, ${enrolmentKey.tag}", origExc)
       updateEsSyncStatus(Failed).flatMap { _ =>
         if (failIfAllocateAgentInESFails) Future.failed(replacementExc)
         else Future.successful(DbUpdateFailed)
@@ -150,7 +152,7 @@ class CreateRelationshipsService @Inject()(
     val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
       case RelationshipNotFound(errorCode) =>
         logger.warn(
-          s"Creating ES record for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) " +
+          s"Creating ES record for ${arn.value}, ${enrolmentKey.tag} " +
             s"not possible because of incomplete data: $errorCode")
         updateEsSyncStatus(IncompleteInputParams).map(_ => DbUpdateFailed)
     }
@@ -168,8 +170,8 @@ class CreateRelationshipsService @Inject()(
     (for {
       esSyncStatusInProgress <- updateEsSyncStatus(InProgress)
       if esSyncStatusInProgress == DbUpdateSucceeded
-      _ <- deallocatePreviousRelationship(arn, identifier)
-      _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, identifier, agentUser.agentCode)
+      _ <- deallocatePreviousRelationship(arn, enrolmentKey)
+      _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, enrolmentKey, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
       _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)
       esSyncStatusSuccess <- updateEsSyncStatus(Success)
@@ -180,11 +182,11 @@ class CreateRelationshipsService @Inject()(
           .orElse(recoverNonFatal))
   }
 
-  def deallocatePreviousRelationship(newArn: Arn, identifier: TaxIdentifier)(
+  def deallocatePreviousRelationship(newArn: Arn, enrolmentKey: EnrolmentKey)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Unit] =
     for {
-      existingAgents <- es.getDelegatedGroupIdsFor(identifier)
+      existingAgents <- es.getDelegatedGroupIdsFor(enrolmentKey)
       _ <- Future.sequence(existingAgents.map { groupId =>
             (for {
               maybeArn <- es.getAgentReferenceNumberFor(groupId)
@@ -195,32 +197,34 @@ class CreateRelationshipsService @Inject()(
                     case Some(arnToRemove) =>
                       val deleteRecord = DeleteRecord(
                         arnToRemove.value,
-                        identifier.value,
-                        TypeOfEnrolment(identifier).identifierKey,
+                        Some(enrolmentKey.service),
+                        enrolmentKey.singleIdentifier.value,
+                        enrolmentKey.singleIdentifier.key,
                         syncToETMPStatus = Some(Success),
-                        headerCarrier = Some(hc))
+                        headerCarrier = Some(hc)
+                      )
                       deleteRecordRepository
                         .create(deleteRecord)
                         .map(convertDbUpdateStatus)
                         .recover {
                           case NonFatal(ex) =>
                             logger.warn(
-                              s"Inserting delete record into mongo failed for ${newArn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
+                              s"Inserting delete record into mongo failed for ${newArn.value}, ${enrolmentKey.tag}",
                               ex)
                             DbUpdateFailed
                         }
                   }
-              _ <- es.deallocateEnrolmentFromAgent(groupId, identifier)
+              _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)
               _ <- maybeArn match {
                     case None => Future successful (())
                     case Some(removedArn) =>
                       deleteRecordRepository
-                        .remove(removedArn, identifier)
+                        .remove(removedArn, enrolmentKey.singleTaxIdentifier)
                         .map(_ > 0)
                         .recoverWith {
                           case NonFatal(ex) =>
                             logger.warn(
-                              s"Removing delete record from mongo failed for ${removedArn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
+                              s"Removing delete record from mongo failed for ${removedArn.value}, ${enrolmentKey.tag}",
                               ex)
                             Future.successful(false)
                         }
@@ -238,33 +242,33 @@ class CreateRelationshipsService @Inject()(
       _.right.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
     }
 
-  def resumeRelationshipCreation(relationshipCopyRecord: RelationshipCopyRecord, arn: Arn, identifier: TaxIdentifier)(
+  def resumeRelationshipCreation(relationshipCopyRecord: RelationshipCopyRecord, arn: Arn, enrolmentKey: EnrolmentKey)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, identifier) {
+      .tryLock(arn, enrolmentKey.singleTaxIdentifier) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
           case (true, true) =>
             for {
               agentUser  <- retrieveAgentUser(arn)
-              etmpStatus <- createEtmpRecord(arn, identifier)
+              etmpStatus <- createEtmpRecord(arn, enrolmentKey.singleTaxIdentifier)
               if etmpStatus == DbUpdateSucceeded
-              esStatus <- createEsRecord(arn, identifier, agentUser, failIfAllocateAgentInESFails = false)
+              esStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
             } yield esStatus
           case (false, true) =>
             for {
               agentUser <- retrieveAgentUser(arn)
-              esStatus  <- createEsRecord(arn, identifier, agentUser, failIfAllocateAgentInESFails = false)
+              esStatus  <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
             } yield esStatus
           case (true, false) =>
             logger.warn(
-              s"ES relationship existed without ETMP relationship for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}). " +
+              s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
                 s"This should not happen because we always create the ETMP relationship first,")
-            createEtmpRecord(arn, identifier)
+            createEtmpRecord(arn, enrolmentKey.singleTaxIdentifier)
           case (false, false) =>
             logger.warn(
-              s"recoverRelationshipCreation called for ${arn.value}, ${identifier.value} (${identifier.getClass.getName}) when no recovery needed")
+              s"recoverRelationshipCreation called for ${arn.value}, ${enrolmentKey.tag} when no recovery needed")
             Future.successful(DbUpdateFailed)
         }
       }
