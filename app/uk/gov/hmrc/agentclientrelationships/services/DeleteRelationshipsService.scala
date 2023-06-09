@@ -135,7 +135,7 @@ class DeleteRelationshipsService @Inject()(
     } yield ()
   }
 
-  private def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
+  def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[DbUpdateStatus] = {
@@ -242,13 +242,13 @@ class DeleteRelationshipsService @Inject()(
       case Some(record) =>
         val headerCarrier = record.headerCarrier.getOrElse(HeaderCarrier())
         val taxIdentifier: TaxIdentifier = record.clientIdentifierType match {
-          case IdentifierKeys.mtdItId    => MtdItId(record.clientIdentifier)
-          case IdentifierKeys.vrn        => Vrn(record.clientIdentifier)
-          case IdentifierKeys.sautr      => Utr(record.clientIdentifier)
-          case IdentifierKeys.urn        => Urn(record.clientIdentifier)
-          case IdentifierKeys.cgtPdRef   => CgtRef(record.clientIdentifier)
-          case IdentifierKeys.etmpRegNum => PptRef(record.clientIdentifier)
-          case _                         => throw new RuntimeException("unsupported client identifier type found in Delete record")
+          case "MTDITID"                => MtdItId(record.clientIdentifier)
+          case "VRN"                    => Vrn(record.clientIdentifier)
+          case "SAUTR"                  => Utr(record.clientIdentifier)
+          case "URN"                    => Urn(record.clientIdentifier)
+          case "CGTPDRef"               => CgtRef(record.clientIdentifier)
+          case "EtmpRegistrationNumber" => PptRef(record.clientIdentifier)
+          case _                        => throw new RuntimeException("unsupported client identifier type found in Delete record")
         }
         checkDeleteRecordAndEventuallyResume(taxIdentifier, Arn(record.arn))(ec, headerCarrier, auditData, NoRequest)
 

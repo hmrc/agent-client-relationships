@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.IdentifierKeys._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 
@@ -55,11 +54,11 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
     }
 
     "return MTDITID when tax identifier is of MtdItId type" in {
-      identifierNickname(MtdItId("foo")) shouldBe mtdItId
+      identifierNickname(MtdItId("foo")) shouldBe "MTDITID"
     }
 
     "return VRN when tax identifier is of Vrn type" in {
-      identifierNickname(Vrn("foo")) shouldBe vrn
+      identifierNickname(Vrn("foo")) shouldBe "VRN"
     }
 
     "return NINO when tax identifier is of Nino type" in {
@@ -67,7 +66,7 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
     }
 
     "return CGTPDRef when tax identifier is of CgtRef type" in {
-      identifierNickname(CgtRef("XMCGTP123456789")) shouldBe cgtPdRef
+      identifierNickname(CgtRef("XMCGTP123456789")) shouldBe "CGTPDRef"
     }
 
     "return IllegalArgumentException when tax identifier is not supported" in {
@@ -78,11 +77,11 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
   "from" should {
     "return appropriate tax identifier when given value and type" in {
-      TaxIdentifierSupport.from("foo", mtdItId) shouldBe MtdItId("foo")
+      TaxIdentifierSupport.from("foo", "MTDITID") shouldBe MtdItId("foo")
 
       TaxIdentifierSupport.from("AB123456A", "NINO") shouldBe Nino("AB123456A")
 
-      TaxIdentifierSupport.from("foo", vrn) shouldBe Vrn("foo")
+      TaxIdentifierSupport.from("foo", "VRN") shouldBe Vrn("foo")
 
       TaxIdentifierSupport.from("foo", "AgentReferenceNumber") shouldBe Arn("foo")
     }

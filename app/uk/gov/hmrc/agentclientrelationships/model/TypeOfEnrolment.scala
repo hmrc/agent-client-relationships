@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.IdentifierKeys._
-import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -38,31 +36,27 @@ sealed class TypeOfEnrolment(
   def enrolmentService: EnrolmentService = EnrolmentService(enrolmentKey)
 }
 
-case object EnrolmentAsAgent extends TypeOfEnrolment(HMRC_AS_AGENT, "AgentReferenceNumber", Arn.apply)
-case object EnrolmentMtdIt extends TypeOfEnrolment(HMRC_MTD_IT, mtdItId, MtdItId.apply)
-case object EnrolmentMtdVat extends TypeOfEnrolment(HMRC_MTD_VAT, vrn, Vrn.apply)
-case object EnrolmentNino extends TypeOfEnrolment(HMRC_NI, nino, Nino.apply)
-case object EnrolmentTrust extends TypeOfEnrolment(HMRC_TERS_ORG, sautr, Utr.apply)
-case object EnrolmentTrustNT extends TypeOfEnrolment(HMRC_TERSNT_ORG, urn, Urn.apply)
-case object EnrolmentCgt extends TypeOfEnrolment(HMRC_CGT_PD, cgtPdRef, CgtRef.apply)
-case object EnrolmentPpt extends TypeOfEnrolment(HMRC_PPT_ORG, etmpRegNum, PptRef.apply)
-case object EnrolmentCbc extends TypeOfEnrolment(HMRC_CBC_ORG, cbcId, CbcId.apply)
-case object EnrolmentCbcNonUk extends TypeOfEnrolment(HMRC_CBC_NON_UK_ORG, cbcId, CbcId.apply)
+case object EnrolmentAsAgent extends TypeOfEnrolment("HMRC-AS-AGENT", "AgentReferenceNumber", Arn.apply)
+case object EnrolmentMtdIt extends TypeOfEnrolment("HMRC-MTD-IT", "MTDITID", MtdItId.apply)
+case object EnrolmentMtdVat extends TypeOfEnrolment("HMRC-MTD-VAT", "VRN", Vrn.apply)
+case object EnrolmentNino extends TypeOfEnrolment("HMRC-NI", "NINO", Nino.apply)
+case object EnrolmentTrust extends TypeOfEnrolment("HMRC-TERS-ORG", "SAUTR", Utr.apply)
+case object EnrolmentTrustNT extends TypeOfEnrolment("HMRC-TERSNT-ORG", "URN", Urn.apply)
+case object EnrolmentCgt extends TypeOfEnrolment("HMRC-CGT-PD", "CGTPDRef", CgtRef.apply)
+case object EnrolmentPpt extends TypeOfEnrolment("HMRC-PPT-ORG", "EtmpRegistrationNumber", PptRef.apply)
 
 object TypeOfEnrolment {
 
   def apply(identifier: TaxIdentifier): TypeOfEnrolment = identifier match {
-    case Nino(_)       => EnrolmentNino
-    case MtdItId(_)    => EnrolmentMtdIt
-    case Vrn(_)        => EnrolmentMtdVat
-    case Arn(_)        => EnrolmentAsAgent
-    case Utr(_)        => EnrolmentTrust
-    case Urn(_)        => EnrolmentTrustNT
-    case CgtRef(_)     => EnrolmentCgt
-    case PptRef(_)     => EnrolmentPpt
-    case CbcId(_)      => EnrolmentCbc
-    case CbcNonUkId(_) => EnrolmentCbcNonUk
-    case _             => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
+    case Nino(_)    => EnrolmentNino
+    case MtdItId(_) => EnrolmentMtdIt
+    case Vrn(_)     => EnrolmentMtdVat
+    case Arn(_)     => EnrolmentAsAgent
+    case Utr(_)     => EnrolmentTrust
+    case Urn(_)     => EnrolmentTrustNT
+    case CgtRef(_)  => EnrolmentCgt
+    case PptRef(_)  => EnrolmentPpt
+    case _          => throw new IllegalArgumentException(s"Unhandled TaxIdentifier type ${identifier.getClass.getName}")
   }
 }
 
