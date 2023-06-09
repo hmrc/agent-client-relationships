@@ -268,6 +268,7 @@ trait AuthStub {
       case Urn(v)     => ("HMRC-TERSNT-ORG", "URN", v)
       case CgtRef(v)  => ("HMRC-CGT-PD", "CGTPDRef", v)
       case PptRef(v)  => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
+      case CbcId(v)   => ("HMRC-CBC-ORG", "cbcId", v)
     }
 
     stubFor(
