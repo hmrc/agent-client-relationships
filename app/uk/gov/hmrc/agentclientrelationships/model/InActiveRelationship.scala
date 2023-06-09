@@ -48,6 +48,7 @@ object InactiveRelationship {
         case _ if Utr.isValid(clientId)                            => "HMRC-TERS-ORG"
         case _ if clientType == "business" & Urn.isValid(clientId) => "HMRC-TERSNT-ORG"
         case _ if MtdItId.isValid(clientId)                        => "HMRC-MTD-IT"
+        case _ if CbcId.isValid(clientId)                          => "HMRC-CBC-ORG"
       }
       JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
     }

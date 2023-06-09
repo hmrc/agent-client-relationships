@@ -20,7 +20,7 @@ import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, TaxIdentifierSupport}
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -34,7 +34,6 @@ class CheckRelationshipsService @Inject()(
   groupSearch: UsersGroupsSearchConnector,
   val metrics: Metrics)
     extends Monitoring
-    with TaxIdentifierSupport
     with Logging {
 
   def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: EnrolmentKey)(

@@ -17,47 +17,25 @@
 package uk.gov.hmrc.agentclientrelationships.support
 
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.TaxIdentifier
 
-trait TaxIdentifierSupport {
-
-  protected def buildEnrolmentKey(service: Service, taxIdentifier: TaxIdentifier): String =
-    (service, taxIdentifier) match {
-      case (_, Arn(value))                       => s"HMRC-AS-AGENT~AgentReferenceNumber~$value"
-      case (Service.MtdIt, MtdItId(value))       => s"HMRC-MTD-IT~MTDITID~$value"
-      case (Service.Vat, Vrn(value))             => s"HMRC-MTD-VAT~VRN~$value"
-      case (Service.MtdIt, Nino(value))          => s"HMRC-MTD-IT~NINO~$value"
-      case (Service.Trust, Utr(value))           => s"HMRC-TERS-ORG~SAUTR~$value"
-      case (Service.TrustNT, Urn(value))         => s"HMRC-TERSNT-ORG~URN~$value"
-      case (Service.CapitalGains, CgtRef(value)) => s"HMRC-CGT-PD~CGTPDRef~$value"
-      case (Service.Ppt, PptRef(value))          => s"HMRC-PPT-ORG~EtmpRegistrationNumber~$value"
-      case _                                     => throw new IllegalArgumentException(s"Service/tax id combination not supported: $service $taxIdentifier")
-    }
-
-  protected def identifierNickname(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
-    case _: Arn     => "ARN"
-    case _: MtdItId => "MTDITID"
-    case _: Vrn     => "VRN"
-    case _: Nino    => "NINO"
-    case _: Utr     => "SAUTR"
-    case _: Urn     => "URN"
-    case _: CgtRef  => "CGTPDRef"
-    case _: PptRef  => "EtmpRegistrationNumber"
-    case _          => throw new IllegalArgumentException(s"Tax identifier not supported $taxIdentifier")
-  }
-
-}
+import scala.util.Try
 
 object TaxIdentifierSupport {
+
+  def identifierNickname(taxIdentifier: TaxIdentifier): String = taxIdentifier match {
+    case _: Arn => "ARN"
+    case taxId =>
+      Try(ClientIdentifier(taxId).enrolmentId)
+        .getOrElse(throw new IllegalArgumentException("unsupported tax identifier: " + taxId))
+  }
+
   def from(value: String, `type`: String): TaxIdentifier = `type` match {
-    case "MTDITID"                => MtdItId(value)
-    case "NINO"                   => Nino(value)
-    case "VRN"                    => Vrn(value)
-    case "AgentReferenceNumber"   => Arn(value)
-    case "SAUTR"                  => Utr(value)
-    case "URN"                    => Urn(value)
-    case "CGTPDRef"               => CgtRef(value)
-    case "EtmpRegistrationNumber" => PptRef(value)
-    case _                        => throw new Exception("Invalid tax identifier type " + `type`)
+    case "AgentReferenceNumber" => Arn(value)
+    case _ =>
+      ClientIdType.supportedTypes
+        .find(_.enrolmentId == `type`)
+        .map(_.createUnderlying(value))
+        .getOrElse(throw new IllegalArgumentException("unsupported tax identifier type: " + `type`))
   }
 }

@@ -4,10 +4,9 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
-import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.domain.AgentCode
 
-trait UsersGroupsSearchStubs extends TaxIdentifierSupport {
+trait UsersGroupsSearchStubs {
 
   private val ugsBaseUrl = s"/users-groups-search"
 

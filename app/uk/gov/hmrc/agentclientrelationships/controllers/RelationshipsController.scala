@@ -98,6 +98,10 @@ class RelationshipsController @Inject()(
         checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.CapitalGains, CgtRef(clientId)))
       case ("HMRC-PPT-ORG", "EtmpRegistrationNumber", _) if PptRef.isValid(clientId) =>
         checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Ppt, PptRef(clientId)))
+      case ("HMRC-CBC-ORG", "cbcId", _) if CbcId.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Cbc, CbcId(clientId)))
+      case ("HMRC-CBC-NONUK-ORG", "cbcId", _) if CbcId.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.CbcNonUk, CbcId(clientId)))
       case _ =>
         logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
         Future.successful(BadRequest)
@@ -117,11 +121,12 @@ class RelationshipsController @Inject()(
 
   private def getDesRegimeFor(regime: String) =
     regime match {
-      case "HMRC-MTD-IT" | "IR-SA"             => "ITSA"
-      case "HMRC-MTD-VAT"                      => "VATC"
-      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" => "TRS"
-      case "HMRC-CGT-PD"                       => "CGT"
-      case "HMRC-PPT-ORG"                      => "PPT"
+      case "HMRC-MTD-IT" | "IR-SA"               => "ITSA"
+      case "HMRC-MTD-VAT"                        => "VATC"
+      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG"   => "TRS"
+      case "HMRC-CGT-PD"                         => "CGT"
+      case "HMRC-PPT-ORG"                        => "PPT"
+      case "HMRC-CBC-ORG" | "HMRC-CBC-NONUK-ORG" => "CBC"
     }
 
   private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(
@@ -247,7 +252,9 @@ class RelationshipsController @Inject()(
       case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId) => Right(("HMRC-CGT-PD", CgtRef(clientId)))
       case ("HMRC-PPT-ORG", "EtmpRegistrationNumber") if PptRef.isValid(clientId) =>
         Right(("HMRC-PPT-ORG", PptRef(clientId)))
-      case (a, b) => Left(s"invalid combination ($a, $b) or clientId is invalid")
+      case ("HMRC-CBC-ORG", "cbcId") if CbcId.isValid(clientId)       => Right(("HMRC-CBC-ORG", CbcId(clientId)))
+      case ("HMRC-CBC-NONUK-ORG", "cbcId") if CbcId.isValid(clientId) => Right(("HMRC-CBC-NONUK-ORG", CbcId(clientId)))
+      case (a, b)                                                     => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }
 
   def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {

@@ -27,7 +27,7 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, ActiveRelationshipResponse, InactiveRelationship, InactiveRelationshipResponse, RegistrationRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
@@ -85,6 +85,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case PptRef(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+      case CbcId(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
     }
   }
 
@@ -225,6 +228,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+      case CbcId(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
     }
   }
 
@@ -260,6 +267,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case Urn(_)     => "TRS"
       case CgtRef(_)  => "CGT"
       case PptRef(_)  => "PPT"
+      case CbcId(_)   => "CBC"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 

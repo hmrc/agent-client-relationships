@@ -6,10 +6,9 @@ import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
+trait EnrolmentStoreProxyStubs extends Eventually {
 
   private implicit val patience = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
 

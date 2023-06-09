@@ -24,11 +24,12 @@ import play.api.libs.json.{Format, JsObject, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, TaxIdentifierSupport}
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Vrn}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -46,8 +47,7 @@ object ES2Response {
 
 @Singleton
 class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
-    extends TaxIdentifierSupport
-    with HttpAPIMonitor
+    extends HttpAPIMonitor
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
