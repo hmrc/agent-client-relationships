@@ -20,10 +20,11 @@ import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, ClientIdentifier, Identifier, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
 
-// TODO DG we should really pick a version of these 'enrolment key' data types that we like the design of,
-// and move it to agent-mtd-identifiers. BUT don't just move this. It needs to be well-designed and reviewed.
+/*
+An implementation of EnrolmentKey with some extra features to make life easier.
+ */
 case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
-  lazy val tag =
+  lazy val tag = // note: we intentionally do not use the Identifier's toString below because it uppercases everything!
     s"$service~${identifiers.sorted.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
   override def toString: String = tag
   def singleIdentifier: Identifier = // Note: unsafe (i.e. can throw exceptions)
