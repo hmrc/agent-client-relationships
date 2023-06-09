@@ -20,6 +20,7 @@ import org.scalatest.Inside
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
 
 import java.time.{Instant, ZoneOffset}
@@ -30,6 +31,7 @@ class DeleteRecordSpec extends UnitSpec with Inside {
     "serialize and deserialize from and to json" in {
       val deleteRecord = DeleteRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
@@ -47,6 +49,7 @@ class DeleteRecordSpec extends UnitSpec with Inside {
 
       val result = json.as[DeleteRecord]
 
+      result.service shouldBe deleteRecord.service
       result.clientIdentifier shouldBe deleteRecord.clientIdentifier
       result.clientIdentifierType shouldBe deleteRecord.clientIdentifierType
       result.syncToESStatus shouldBe deleteRecord.syncToESStatus

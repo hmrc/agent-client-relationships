@@ -24,7 +24,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionToPerformOperation
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Utr, Vrn}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Retrieval, ~}
@@ -70,6 +70,8 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     }
 
     override def authConnector: AuthConnector = mockAuthConnector
+
+    val supportedServices: Seq[Service] = Service.supportedServices
   }
 
   def mockAgentAuth(

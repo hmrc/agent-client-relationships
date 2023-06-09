@@ -3,8 +3,10 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import org.mongodb.scala.model.Filters
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.AgentCode
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
@@ -15,6 +17,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
   def relationshipControllerVATSpecificBehaviours(): Unit = {
     val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
       arn.value,
+      Some(Service.Vat.id),
       vrn.value,
       mtdVatIdType,
       syncToETMPStatus = Some(SyncStatus.Success),
@@ -30,7 +33,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       //HAPPY PATHS WHEN CHECKING HMRC-VATDEC-ORG
 
       "return 200 when agent not allocated to client in es but relationship exists in HMCE-VATDEC-ORG" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
@@ -97,8 +100,8 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       }
 
       "return 200 when agent credentials unknown but relationship exists in HMCE-VATDEC-ORG" in {
-        givenPrincipalGroupIdNotExistsFor(arn)
-        givenDelegatedGroupIdsNotExistFor(vrn)
+        givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
+        givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.Vat, vrn))
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
         givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
         givenAgentCanBeAllocatedInIF(vrn, arn)
@@ -135,7 +138,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
       "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of etmp" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
@@ -169,13 +172,13 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       }
 
       "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
         givenAgentCanBeAllocatedInIF(vrn, arn)
-        givenEnrolmentAllocationFailsWith(404)("foo", "any", "HMRC-MTD-VAT", "VRN", vrn.value, "bar")
+        givenEnrolmentAllocationFailsWith(404)("foo", "any", EnrolmentKey(Service.Vat, vrn), "bar")
         givenAdminUser("foo", "any")
         getVrnIsKnownInETMPFor(vrn)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
@@ -236,7 +239,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       }
 
       "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because vrn is not known in ETMP" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
@@ -292,7 +295,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
 
 
       "return 404 when relationship is not found in es but relationship copy was made before" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenAdminUser("foo", "any")
@@ -306,7 +309,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
 
       "return 404 when relationship was previously copied from HMCE-VATDEC-ORG to ETMP & ES but has since been deleted from ETMP & ES " +
         "(even though the relationship upon which the copy was based still exists in HMCE-VATDEC-ORG)" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
@@ -323,7 +326,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       }
 
       "return 404 when credentials are not found but relationship copy was made before" in {
-        givenPrincipalGroupIdNotExistsFor(arn)
+        givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         await(repo.collection.insertOne(relationshipCopiedSuccessfullyForMtdVat).toFuture())
@@ -332,7 +335,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       }
 
       "return 404 when mapping service is unavailable" in {
-        givenPrincipalUser(arn, "foo")
+        givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
@@ -352,7 +355,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
 
       "return 404 when agent not allocated to client in es" in {
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
-        givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
+        givenDelegatedGroupIdsNotExistFor(EnrolmentKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"))
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
         val result = doRequest
         result.status shouldBe 404
@@ -360,9 +363,9 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       }
 
       "return 404 when agent not allocated to client in agent-mapping but allocated in es" in {
-        givenAgentIsAllocatedAndAssignedToClient(vrn, "bar")
+        givenAgentIsAllocatedAndAssignedToClient(EnrolmentKey(Service.Vat, vrn), "bar")
         givenArnIsUnknownFor(arn)
-        givenDelegatedGroupIdsNotExistForKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}")
+        givenDelegatedGroupIdsNotExistFor(EnrolmentKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"))
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
         val result = doRequest
         result.status shouldBe 404

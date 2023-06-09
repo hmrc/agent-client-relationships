@@ -16,38 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.IdentifierKeys._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
 
-class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
-
-  "enrolmentKeyPrefixFor" should {
-    "return HMRC-AS-AGENT~AgentReferenceNumber when tax identifier is of Arn type" in {
-      enrolmentKeyPrefixFor(Arn("foo")) shouldBe "HMRC-AS-AGENT~AgentReferenceNumber"
-    }
-
-    "return HMRC-MTD-IT~MTDITID when tax identifier is of MtdItId type" in {
-      enrolmentKeyPrefixFor(MtdItId("foo")) shouldBe "HMRC-MTD-IT~MTDITID"
-    }
-
-    "return HMRC-MTD-VAT~VRN when tax identifier is of Vrn type" in {
-      enrolmentKeyPrefixFor(Vrn("foo")) shouldBe "HMRC-MTD-VAT~VRN"
-    }
-
-    "return HMRC-MTD-IT~NINO when tax identifier is of Nino type" in {
-      enrolmentKeyPrefixFor(Nino("AB123456A")) shouldBe "HMRC-MTD-IT~NINO"
-    }
-
-    "return HMRC-CGT-PD~CGTPDRef when tax identifier is of CgtRef type" in {
-      enrolmentKeyPrefixFor(CgtRef("XMCGTP123456789")) shouldBe "HMRC-CGT-PD~CGTPDRef"
-    }
-
-    "return IllegalArgumentException when tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy
-        enrolmentKeyPrefixFor(Eori("foo"))
-    }
-  }
+class TaxIdentifierSupportSpec extends UnitSpec {
 
   "identifierNickname" should {
     "return ARN when tax identifier is of Arn type" in {
@@ -55,11 +28,11 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
     }
 
     "return MTDITID when tax identifier is of MtdItId type" in {
-      identifierNickname(MtdItId("foo")) shouldBe mtdItId
+      identifierNickname(MtdItId("foo")) shouldBe "MTDITID"
     }
 
     "return VRN when tax identifier is of Vrn type" in {
-      identifierNickname(Vrn("foo")) shouldBe vrn
+      identifierNickname(Vrn("foo")) shouldBe "VRN"
     }
 
     "return NINO when tax identifier is of Nino type" in {
@@ -67,7 +40,7 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
     }
 
     "return CGTPDRef when tax identifier is of CgtRef type" in {
-      identifierNickname(CgtRef("XMCGTP123456789")) shouldBe cgtPdRef
+      identifierNickname(CgtRef("XMCGTP123456789")) shouldBe "CGTPDRef"
     }
 
     "return IllegalArgumentException when tax identifier is not supported" in {
@@ -78,11 +51,11 @@ class TaxIdentifierSupportSpec extends UnitSpec with TaxIdentifierSupport {
 
   "from" should {
     "return appropriate tax identifier when given value and type" in {
-      TaxIdentifierSupport.from("foo", mtdItId) shouldBe MtdItId("foo")
+      TaxIdentifierSupport.from("foo", "MTDITID") shouldBe MtdItId("foo")
 
       TaxIdentifierSupport.from("AB123456A", "NINO") shouldBe Nino("AB123456A")
 
-      TaxIdentifierSupport.from("foo", vrn) shouldBe Vrn("foo")
+      TaxIdentifierSupport.from("foo", "VRN") shouldBe Vrn("foo")
 
       TaxIdentifierSupport.from("foo", "AgentReferenceNumber") shouldBe Arn("foo")
     }

@@ -24,10 +24,9 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentIdentifierValue, EnrolmentService, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -61,6 +60,8 @@ class RelationshipsController @Inject()(
 
   implicit val ec: ExecutionContext = ecp.get
 
+  val supportedServices = appConfig.supportedServices
+
   def checkForRelationship(
     arn: Arn,
     service: String,
@@ -69,52 +70,72 @@ class RelationshipsController @Inject()(
     userId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val tUserId = userId.map(UserId)
     (service, clientIdType, clientId) match {
-      case (HMRC_MTD_IT, IdentifierKeys.mtdItId, _) if MtdItId.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, MtdItId(clientId))
-      case (HMRC_VAT_DEC_ORG, "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
-      case (HMRC_MTD_VAT, _, _) if Vrn.isValid(clientId)         => checkWithTaxIdentifier(arn, tUserId, Vrn(clientId))
-      case (HMRC_MTD_IT, "NI", _) if Nino.isValid(clientId) =>
+      case ("HMRC-MTD-IT", "MTDITID", _) if MtdItId.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.MtdIt, MtdItId(clientId)))
+      case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
+      case ("HMRC-MTD-VAT", _, _) if Vrn.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Vat, Vrn(clientId)))
+      case ("HMRC-MTD-IT", "NI", _) if Nino.isValid(clientId) =>
         des
           .getMtdIdFor(Nino(clientId))
-          .flatMap(_.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(
-            checkWithTaxIdentifier(arn, tUserId, _)))
-      case (IR_SA, _, _) if Nino.isValid(clientId) =>
-        withIrSaSuspensionCheck(arn) {
+          .flatMap(
+            _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(
+              mtdItId =>
+                checkWithTaxIdentifier(
+                  arn,
+                  tUserId,
+                  EnrolmentKey(Service.MtdIt, mtdItId)
+              )))
+      case ("IR-SA", _, _) if Nino.isValid(clientId) =>
+        withSuspensionCheck(arn, service) {
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
-      case (HMRC_TERS_ORG, _, _) if Utr.isValid(clientId) => checkWithTaxIdentifier(arn, tUserId, Utr(clientId))
-      case (HMRC_TERSNT_ORG, _, _) if Urn.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, Urn(clientId))
-      case (HMRC_CGT_PD, IdentifierKeys.cgtPdRef, _) if CgtRef.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, CgtRef(clientId))
-      case (HMRC_PPT_ORG, IdentifierKeys.etmpRegNum, _) if PptRef.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, PptRef(clientId))
-      case (HMRC_CBC_ORG, IdentifierKeys.cbcId, _) if CbcId.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, CbcId(clientId))
-      case (HMRC_CBC_NON_UK_ORG, IdentifierKeys.cbcId, _) if CbcNonUkId.isValid(clientId) =>
-        checkWithTaxIdentifier(arn, tUserId, CbcNonUkId(clientId))
+      case ("HMRC-TERS-ORG", _, _) if Utr.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Trust, Utr(clientId)))
+      case ("HMRC-TERSNT-ORG", _, _) if Urn.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.TrustNT, Urn(clientId)))
+      case ("HMRC-CGT-PD", "CGTPDRef", _) if CgtRef.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.CapitalGains, CgtRef(clientId)))
+      case ("HMRC-PPT-ORG", "EtmpRegistrationNumber", _) if PptRef.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Ppt, PptRef(clientId)))
+      case ("HMRC-CBC-ORG", "cbcId", _) if CbcId.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.Cbc, CbcId(clientId)))
+      case ("HMRC-CBC-NONUK-ORG", "cbcId", _) if CbcId.isValid(clientId) =>
+        checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(Service.CbcNonUk, CbcId(clientId)))
       case _ =>
         logger.warn(s"invalid (service, clientIdType) combination or clientId is invalid")
         Future.successful(BadRequest)
     }
   }
 
-  private def withIrSaSuspensionCheck(agentId: TaxIdentifier)(
+  private def withSuspensionCheck(agentId: TaxIdentifier, service: String)(
     proceed: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     des.getAgentRecord(agentId).flatMap {
-      case None => Future.successful(BadRequest)
-      case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
-        logger.warn(s"agent with id : ${agentId.value} is suspended for regime ITSA")
+      case None =>
+        Future.successful(BadRequest)
+      case Some(record) if record.isSuspended && record.suspendedFor(getDesRegimeFor(service)) =>
+        logger.warn(s"agent with id : ${agentId.value} is suspended for regime ${getDesRegimeFor(service)}")
         Future.successful(BadRequest)
       case _ => proceed
     }
 
-  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], taxIdentifier: TaxIdentifier)(
+  private def getDesRegimeFor(regime: String) =
+    regime match {
+      case "HMRC-MTD-IT" | "IR-SA"               => "ITSA"
+      case "HMRC-MTD-VAT"                        => "VATC"
+      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG"   => "TRS"
+      case "HMRC-CGT-PD"                         => "CGT"
+      case "HMRC-PPT-ORG"                        => "PPT"
+      case "HMRC-CBC-ORG" | "HMRC-CBC-NONUK-ORG" => "CBC"
+    }
+
+  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(
     implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
 
+    val taxIdentifier = enrolmentKey.singleTaxIdentifier
     val result = for {
       _ <- agentUserService.getAgentAdminUserFor(arn)
       /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
@@ -123,7 +144,7 @@ class RelationshipsController @Inject()(
          Statements populating audit data should be gathered together as much as possible, preferably at the controller level,
          and not scattered throughout lots of methods in different classes. */
       isClear <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
-      res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, taxIdentifier)
+      res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
             else Future.failed(RelationshipDeletePending())
     } yield {
       if (res) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
@@ -179,7 +200,8 @@ class RelationshipsController @Inject()(
         case false => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
       .recover {
-        case upS: Upstream5xxResponse => throw upS
+        case upS: Upstream5xxResponse =>
+          throw upS
         case NonFatal(ex) =>
           logger.warn(
             s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}")
@@ -187,16 +209,16 @@ class RelationshipsController @Inject()(
       }
   }
 
-  def create(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+  def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      getTaxIdentifier(service, clientIdType, clientId) match {
+      validateParams(serviceId, clientIdType, clientId) match {
         case Right((_, taxIdentifier)) =>
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
             implicit val auditData: AuditData = new AuditData()
             auditData.set("arn", arn)
 
             createService
-              .createRelationship(arn, taxIdentifier, Set(), false, true)
+              .createRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxIdentifier), Set(), false, true)
               .map {
                 case Some(_) => Created
                 case None    => logger.warn(s"create relationship is currently in Locked state"); Locked
@@ -215,30 +237,29 @@ class RelationshipsController @Inject()(
       }
   }
 
-  private def getTaxIdentifier(
+  private def validateParams(
     service: String,
     clientType: String,
     clientId: String): Either[String, (String, TaxIdentifier)] =
     (service, clientType) match {
-      case (HMRC_MTD_IT, IdentifierKeys.mtdItId) if MtdItId.isValid(clientId) => Right((HMRC_MTD_IT, MtdItId(clientId)))
-      case (HMRC_MTD_IT, IdentifierKeys.ni) if Nino.isValid(clientId)         => Right((HMRC_MTD_IT, Nino(clientId)))
-      case (HMRC_MTD_VAT, IdentifierKeys.vrn) if Vrn.isValid(clientId)        => Right((HMRC_MTD_VAT, Vrn(clientId)))
-      case (IR_SA, "ni") if Nino.isValid(clientId)                            => Right((IR_SA, Nino(clientId)))
-      case (HMRC_VAT_DEC_ORG, "vrn") if Vrn.isValid(clientId)                 => Right((HMRC_VAT_DEC_ORG, Vrn(clientId)))
-      case (HMRC_TERS_ORG, IdentifierKeys.sautr) if Utr.isValid(clientId)     => Right((HMRC_TERS_ORG, Utr(clientId)))
-      case (HMRC_TERSNT_ORG, IdentifierKeys.urn) if Urn.isValid(clientId)     => Right((HMRC_TERSNT_ORG, Urn(clientId)))
-      case (HMRC_CGT_PD, IdentifierKeys.cgtPdRef) if CgtRef.isValid(clientId) => Right((HMRC_CGT_PD, CgtRef(clientId)))
-      case (HMRC_CBC_ORG, IdentifierKeys.cbcId) if CbcId.isValid(clientId)    => Right((HMRC_CBC_ORG, CbcId(clientId)))
-      case (HMRC_CBC_NON_UK_ORG, IdentifierKeys.cbcId) if CbcId.isValid(clientId) =>
-        Right((HMRC_CBC_NON_UK_ORG, CbcId(clientId)))
-      case (HMRC_PPT_ORG, IdentifierKeys.etmpRegNum) if PptRef.isValid(clientId) =>
-        Right((HMRC_PPT_ORG, PptRef(clientId)))
-      case (a, b) => Left(s"invalid combination ($a, $b) or clientId is invalid")
+      case ("HMRC-MTD-IT", "MTDITID") if MtdItId.isValid(clientId) => Right(("HMRC-MTD-IT", MtdItId(clientId)))
+      case ("HMRC-MTD-IT", "NI") if Nino.isValid(clientId)         => Right(("HMRC-MTD-IT", Nino(clientId)))
+      case ("HMRC-MTD-VAT", "VRN") if Vrn.isValid(clientId)        => Right(("HMRC-MTD-VAT", Vrn(clientId)))
+      case ("IR-SA", "ni") if Nino.isValid(clientId)               => Right(("IR-SA", Nino(clientId)))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId)     => Right(("HMCE-VATDEC-ORG", Vrn(clientId)))
+      case ("HMRC-TERS-ORG", "SAUTR") if Utr.isValid(clientId)     => Right(("HMRC-TERS-ORG", Utr(clientId)))
+      case ("HMRC-TERSNT-ORG", "URN") if Urn.isValid(clientId)     => Right(("HMRC-TERSNT-ORG", Urn(clientId)))
+      case ("HMRC-CGT-PD", "CGTPDRef") if CgtRef.isValid(clientId) => Right(("HMRC-CGT-PD", CgtRef(clientId)))
+      case ("HMRC-PPT-ORG", "EtmpRegistrationNumber") if PptRef.isValid(clientId) =>
+        Right(("HMRC-PPT-ORG", PptRef(clientId)))
+      case ("HMRC-CBC-ORG", "cbcId") if CbcId.isValid(clientId)       => Right(("HMRC-CBC-ORG", CbcId(clientId)))
+      case ("HMRC-CBC-NONUK-ORG", "cbcId") if CbcId.isValid(clientId) => Right(("HMRC-CBC-NONUK-ORG", CbcId(clientId)))
+      case (a, b)                                                     => Left(s"invalid combination ($a, $b) or clientId is invalid")
     }
 
-  def delete(arn: Arn, service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+  def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      getTaxIdentifier(service, clientIdType, clientId) match {
+      validateParams(serviceId, clientIdType, clientId) match {
         case Right((_, taxIdentifier)) =>
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
@@ -248,8 +269,9 @@ class RelationshipsController @Inject()(
                    }
               _ <- id.fold {
                     Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
-                  } {
-                    deleteService.deleteRelationship(arn, _, currentUser.affinityGroup)
+                  } { taxId =>
+                    deleteService
+                      .deleteRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxId), currentUser.affinityGroup)
                   }
             } yield NoContent)
               .recover {
@@ -286,15 +308,15 @@ class RelationshipsController @Inject()(
   }
 
   def getActiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClient { identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =>
+    withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
       findService
         .getActiveRelationshipsForClient(identifiers)
-        .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.value, v) })))
+        .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.id, v) })))
     }
   }
 
   def getInactiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClient { identifiers: Map[EnrolmentService, EnrolmentIdentifierValue] =>
+    withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
       findService
         .getInactiveRelationshipsForClient(identifiers)
         .map(inactiveRelationships => Ok(Json.toJson(inactiveRelationships)))
@@ -312,10 +334,10 @@ class RelationshipsController @Inject()(
 
   def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      getTaxIdentifier(service, clientIdType, clientId) match {
+      validateParams(service, clientIdType, clientId) match {
         case Right((service, taxIdentifier)) =>
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
-            val relationships = if (service == HMRC_MTD_IT) {
+            val relationships = if (service == "HMRC-MTD-IT") {
               findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
             } else {
               findService.getActiveRelationshipsForClient(taxIdentifier)

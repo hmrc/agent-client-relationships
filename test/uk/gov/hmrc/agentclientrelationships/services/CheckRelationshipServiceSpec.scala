@@ -24,7 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.UserId
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Vrn}
@@ -46,7 +46,8 @@ class CheckRelationshipServiceSpec
   private val enrolment: Enrolment = {
     Enrolment("HMRC-MTD-VAT", "activated", "Edward Stone", Seq(Identifier("VRN", taxIdentifier.value)))
   }
-  private val enrolmentKey: String = "HMRC-MTD-VAT~VRN~101747641"
+  private val enrolmentKeyStr: String = "HMRC-MTD-VAT~VRN~101747641"
+  private val enrolmentKey: EnrolmentKey = EnrolmentKey(enrolmentKeyStr)
   val userId = UserId("testUserId")
   val groupId = "testGroupId"
   val agentCode: AgentCode = AgentCode("ABC1234")
@@ -59,7 +60,7 @@ class CheckRelationshipServiceSpec
     "when relationship exists between client and agent" - {
       "should return 200 (even if the client is not assigned to the user in EACD) when the client is unallocated (not in any access groups)" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(taxIdentifier))(any[HeaderCarrier], any[ExecutionContext]))
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
           es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
@@ -74,11 +75,11 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
         val crs = new CheckRelationshipsService(es, ap, gs, metrics)
-        crs.checkForRelationship(arn, Some(userId), taxIdentifier).futureValue shouldBe true
+        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
       "should return 404 if the client is in at least an access groups but the user has not been assigned the client" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(taxIdentifier))(any[HeaderCarrier], any[ExecutionContext]))
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
           es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
@@ -93,11 +94,11 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
         val crs = new CheckRelationshipsService(es, ap, gs, metrics)
-        crs.checkForRelationship(arn, Some(userId), taxIdentifier).futureValue shouldBe false
+        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
       "should return 200 if the client is in at least an access groups and the user has been assigned the client" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(taxIdentifier))(any[HeaderCarrier], any[ExecutionContext]))
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
           es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
@@ -112,13 +113,13 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
         val crs = new CheckRelationshipsService(es, ap, gs, metrics)
-        crs.checkForRelationship(arn, Some(userId), taxIdentifier).futureValue shouldBe true
+        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
     }
     "when relationship does not exist between client and agent" - {
       "should return 404" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(taxIdentifier))(any[HeaderCarrier], any[ExecutionContext]))
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set.empty[String]))
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
@@ -128,13 +129,13 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
         val relationshipsService = new CheckRelationshipsService(es, ap, gs, metrics)
-        relationshipsService.checkForRelationship(arn, Some(userId), taxIdentifier).futureValue shouldBe false
+        relationshipsService.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
     "when user does not belong to the agent's group" - {
       "should return 404" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(taxIdentifier))(any[HeaderCarrier], any[ExecutionContext]))
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
           es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
@@ -149,7 +150,7 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some("someOtherUserId")))))
 
         val crs = new CheckRelationshipsService(es, ap, gs, metrics)
-        crs.checkForRelationship(arn, Some(userId), taxIdentifier).futureValue shouldBe false
+        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
   }
@@ -158,7 +159,7 @@ class CheckRelationshipServiceSpec
     "when relationship exists between client and agent" - {
       "should return 200" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(taxIdentifier))(any[HeaderCarrier], any[ExecutionContext]))
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
@@ -168,13 +169,13 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
         val crs = new CheckRelationshipsService(es, ap, gs, metrics)
-        crs.checkForRelationship(arn, None, taxIdentifier).futureValue shouldBe true
+        crs.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe true
       }
     }
     "when relationship does not exist between client and agent" - {
       "should return 404" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(taxIdentifier))(any[HeaderCarrier], any[ExecutionContext]))
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set.empty[String]))
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
@@ -184,7 +185,7 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
         val relationshipsService = new CheckRelationshipsService(es, ap, gs, metrics)
-        relationshipsService.checkForRelationship(arn, None, taxIdentifier).futureValue shouldBe false
+        relationshipsService.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe false
       }
     }
   }

@@ -7,8 +7,9 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
@@ -62,15 +63,18 @@ class EnrolmentStoreProxyConnectorSpec
 
   "EnrolmentStoreProxy" should {
 
+    val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, MtdItId("foo"))
+    val vatEnrolmentKey = EnrolmentKey(Service.Vat, Vrn("foo"))
+
     "return some agent's groupId for given ARN" in {
       givenAuditConnector()
-      givenPrincipalGroupIdExistsFor(Arn("foo"), "bar")
+      givenPrincipalGroupIdExistsFor(agentEnrolmentKey(Arn("foo")), "bar")
       await(connector.getPrincipalGroupIdFor(Arn("foo"))) shouldBe "bar"
     }
 
     "return RelationshipNotFound Exception when ARN not found" in {
       givenAuditConnector()
-      givenPrincipalGroupIdNotExistsFor(Arn("foo"))
+      givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(Arn("foo")))
       an[RelationshipNotFound] shouldBe thrownBy {
         await(connector.getPrincipalGroupIdFor(Arn("foo")))
       }
@@ -78,49 +82,49 @@ class EnrolmentStoreProxyConnectorSpec
 
     "return some agents's groupIds for given MTDITID" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(MtdItId("foo"), Set("bar", "car", "dar"))
-      await(connector.getDelegatedGroupIdsFor(MtdItId("foo"))) should contain("bar")
+      givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set("bar", "car", "dar"))
+      await(connector.getDelegatedGroupIdsFor(mtdItEnrolmentKey)) should contain("bar")
     }
 
     "return Empty when MTDITID not found" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsNotExistFor(MtdItId("foo"))
-      await(connector.getDelegatedGroupIdsFor(MtdItId("foo"))) should be(empty)
+      givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
+      await(connector.getDelegatedGroupIdsFor(mtdItEnrolmentKey)) should be(empty)
     }
 
     "return some agents's groupIds for given NINO" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(Nino("AB123456C"), Set("bar", "car", "dar"))
-      await(connector.getDelegatedGroupIdsFor(Nino("AB123456C"))) should contain("bar")
+      givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")), Set("bar", "car", "dar"))
+      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")))) should contain("bar")
     }
 
     "return Empty when NINO not found" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsNotExistFor(Nino("AB123456C"))
-      await(connector.getDelegatedGroupIdsFor(Nino("AB123456C"))) should be(empty)
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")))
+      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")))) should be(empty)
     }
 
     "return some agents's groupIds for given VRN" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(Vrn("foo"), Set("bar", "car", "dar"))
-      await(connector.getDelegatedGroupIdsFor(Vrn("foo"))) should contain("bar")
+      givenDelegatedGroupIdsExistFor(vatEnrolmentKey, Set("bar", "car", "dar"))
+      await(connector.getDelegatedGroupIdsFor(vatEnrolmentKey)) should contain("bar")
     }
 
     "return some agents's groupIds for given VATRegNo" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistForKey("HMCE-VATDEC-ORG~VATRegNo~oldfoo", Set("bar", "car", "dar"))
+      givenDelegatedGroupIdsExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~oldfoo"), Set("bar", "car", "dar"))
       await(connector.getDelegatedGroupIdsForHMCEVATDECORG(Vrn("oldfoo"))) should contain("bar")
     }
 
     "return Empty when VRN not found" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsNotExistFor(Vrn("foo"))
-      await(connector.getDelegatedGroupIdsFor(Vrn("foo"))) should be(empty)
+      givenDelegatedGroupIdsNotExistFor(vatEnrolmentKey)
+      await(connector.getDelegatedGroupIdsFor(vatEnrolmentKey)) should be(empty)
     }
 
     "return some ARN for the known groupId" in {
       givenAuditConnector()
-      givenEnrolmentExistsForGroupId("bar", Arn("foo"))
+      givenEnrolmentExistsForGroupId("bar", agentEnrolmentKey(Arn("foo")))
       await(connector.getAgentReferenceNumberFor("bar")) shouldBe Some(Arn("foo"))
     }
 
@@ -133,97 +137,99 @@ class EnrolmentStoreProxyConnectorSpec
 
   "TaxEnrolments" should {
 
+    val enrolmentKey = EnrolmentKey("HMRC-MTD-IT~MTDITID~ABC1233")
+
     "allocate an enrolment to an agent" in {
       givenAuditConnector()
-      givenEnrolmentAllocationSucceeds("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
-      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      givenEnrolmentAllocationSucceeds("group1", "user1", enrolmentKey, "bar")
+      await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
+      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
     }
 
     "throw an exception if allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(404)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentAllocationFailsWith(404)("group1", "user1", enrolmentKey, "bar")
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
     }
 
     "throw an exception if allocation failed because of bad request" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(400)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentAllocationFailsWith(400)("group1", "user1", enrolmentKey, "bar")
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
     }
 
     "throw an exception if allocation failed because of unauthorized" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(401)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentAllocationFailsWith(401)("group1", "user1", enrolmentKey, "bar")
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
     }
 
     "keep calm if conflict reported" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(409)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
-      await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
-      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      givenEnrolmentAllocationFailsWith(409)("group1", "user1", enrolmentKey, "bar")
+      await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
+      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
     }
 
     "throw an exception if service not available when allocating enrolment" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(503)("group1", "user1", "HMRC-MTD-IT", "MTDITID", "ABC1233", "bar")
+      givenEnrolmentAllocationFailsWith(503)("group1", "user1", enrolmentKey, "bar")
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", MtdItId("ABC1233"), AgentCode("bar")))
+        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", "HMRC-MTD-IT~MTDITID~ABC1233", "bar")
+      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
     }
 
     "de-allocate an enrolment from an agent" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationSucceeds("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
-      await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
+      givenEnrolmentDeallocationSucceeds("group1", enrolmentKey)
+      await(connector.deallocateEnrolmentFromAgent("group1", enrolmentKey))
+      verifyEnrolmentDeallocationAttempt("group1", enrolmentKey)
     }
 
     "throw an exception if de-allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(404)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
+      givenEnrolmentDeallocationFailsWith(404)("group1", enrolmentKey)
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
+        await(connector.deallocateEnrolmentFromAgent("group1", enrolmentKey))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
+      verifyEnrolmentDeallocationAttempt("group1", enrolmentKey)
     }
 
     "throw an exception if de-allocation failed because of bad request" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(400)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
+      givenEnrolmentDeallocationFailsWith(400)("group1", enrolmentKey)
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
+        await(connector.deallocateEnrolmentFromAgent("group1", enrolmentKey))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
+      verifyEnrolmentDeallocationAttempt("group1", enrolmentKey)
     }
 
     "throw an exception if de-allocation failed because of unauthorized" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(401)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
+      givenEnrolmentDeallocationFailsWith(401)("group1", enrolmentKey)
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
+        await(connector.deallocateEnrolmentFromAgent("group1", enrolmentKey))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
+      verifyEnrolmentDeallocationAttempt("group1", enrolmentKey)
     }
 
     "throw an exception if service not available when de-allocating enrolment" in {
       givenAuditConnector()
-      givenEnrolmentDeallocationFailsWith(503)("group1", "HMRC-MTD-IT", "MTDITID", "ABC1233")
+      givenEnrolmentDeallocationFailsWith(503)("group1", enrolmentKey)
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.deallocateEnrolmentFromAgent("group1", MtdItId("ABC1233")))
+        await(connector.deallocateEnrolmentFromAgent("group1", enrolmentKey))
       }
-      verifyEnrolmentDeallocationAttempt("group1", "HMRC-MTD-IT~MTDITID~ABC1233")
+      verifyEnrolmentDeallocationAttempt("group1", enrolmentKey)
     }
   }
 }

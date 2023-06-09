@@ -7,6 +7,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import play.utils.UriEncoding
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.MongoRecoveryLockService
 import uk.gov.hmrc.agentclientrelationships.stubs._
@@ -97,11 +98,26 @@ trait RelationshipsBaseControllerISpec
     ()
   }
 
+  val HMRCMTDIT = "HMRC-MTD-IT"
+
+  val HMRCPIR = "PERSONAL-INCOME-RECORD"
+
+  val HMRCMTDVAT = "HMRC-MTD-VAT"
+
+  val HMRCTERSORG = "HMRC-TERS-ORG"
+
+  val HMRCTERSNTORG = "HMRC-TERSNT-ORG"
+
+  val HMRCCGTPD = "HMRC-CGT-PD"
+
+  val HMRCPPTORG = "HMRC-PPT-ORG"
+
   val arn = Arn("AARN0000002")
   val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
   val arn2 = Arn("AARN0000004")
   val arn3 = Arn("AARN0000006")
   val mtdItId = MtdItId("ABCDEF123456789")
+  val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
@@ -124,7 +140,7 @@ trait RelationshipsBaseControllerISpec
   val cgtRef = CgtRef("XMCGTP123456789")
 
   val pptRef = PptRef("XAPPT0004567890")
-  val cbcRef = CbcId("XACBC1234567890")
+
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_) => Vrn("101747641")
@@ -144,7 +160,7 @@ trait RelationshipsBaseControllerISpec
                                                etmpStatus: Option[SyncStatus.Value],
                                                esStatus: Option[SyncStatus.Value]) =
     await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
-      case Some(DeleteRecord(arn.value, mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _, _)) =>
+      case Some(DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _, _)) =>
     }
 
   protected def verifyDeleteRecordNotExists =

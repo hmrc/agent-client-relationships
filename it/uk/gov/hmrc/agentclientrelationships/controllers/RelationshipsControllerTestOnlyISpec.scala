@@ -24,6 +24,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Http, MongoApp, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.http.HeaderCarrier
 
 class RelationshipsControllerTestOnlyISpec
@@ -78,14 +79,14 @@ class RelationshipsControllerTestOnlyISpec
 
     "return 204 for a valid arn and mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, mtditid, mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, Some(Service.MtdIt.id), mtditid, mtdItIdType))) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 204
     }
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, "ABCDEF123456780", mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, Some(Service.MtdIt.id), "ABCDEF123456780", mtdItIdType))) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 404
     }

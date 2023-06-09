@@ -24,10 +24,9 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -40,6 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class DeleteRecord(
   arn: String,
+  service: Option[String],
   clientIdentifier: String,
   clientIdentifierType: String,
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
@@ -112,7 +112,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
     with DeleteRecordRepository
     with Logging {
 
-  private def clientIdentifierType(identifier: TaxIdentifier) = TypeOfEnrolment(identifier).identifierKey
+  private def clientIdentifierType(identifier: TaxIdentifier) = ClientIdentifier(identifier).enrolmentId
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 

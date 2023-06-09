@@ -19,10 +19,9 @@ package uk.gov.hmrc.agentclientrelationships.services
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.UserId
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, TaxIdentifierSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey}
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
@@ -35,34 +34,33 @@ class CheckRelationshipsService @Inject()(
   groupSearch: UsersGroupsSearchConnector,
   val metrics: Metrics)
     extends Monitoring
-    with TaxIdentifierSupport
     with Logging {
 
-  def checkForRelationship(arn: Arn, userId: Option[UserId], taxIdentifier: TaxIdentifier)(
+  def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: EnrolmentKey)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier): Future[Boolean] = userId match {
-    case None         => checkForRelationshipAgencyLevel(arn, taxIdentifier).map(_._1)
-    case Some(userId) => checkForRelationshipUserLevel(arn, userId, taxIdentifier)
+    case None         => checkForRelationshipAgencyLevel(arn, enrolmentKey).map(_._1)
+    case Some(userId) => checkForRelationshipUserLevel(arn, userId, enrolmentKey)
   }
 
-  def checkForRelationshipAgencyLevel(arn: Arn, taxIdentifier: TaxIdentifier)(
+  def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: EnrolmentKey)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier): Future[(Boolean, String)] =
     for {
       groupId           <- es.getPrincipalGroupIdFor(arn)
-      allocatedGroupIds <- es.getDelegatedGroupIdsFor(taxIdentifier)
+      allocatedGroupIds <- es.getDelegatedGroupIdsFor(enrolmentKey)
       groupHasAssignedEnrolment = allocatedGroupIds.contains(groupId)
     } yield {
       (groupHasAssignedEnrolment, groupId)
     }
 
-  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, taxIdentifier: TaxIdentifier)(
+  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, enrolmentKey: EnrolmentKey)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier): Future[Boolean] =
     // 1. Check that the agency with the given Arn has a relationship with the client.
-    checkForRelationshipAgencyLevel(arn, taxIdentifier).flatMap {
+    checkForRelationshipAgencyLevel(arn, enrolmentKey).flatMap {
       case (false, _) =>
-        logger.info(s"checkForRelationship: Agency-level relationship does not exist between $arn and $taxIdentifier")
+        logger.info(s"checkForRelationship: Agency-level relationship does not exist between $arn and $enrolmentKey")
         Future.successful(false)
       case (true, groupId) =>
         // 2. Check that the user belongs to the Arn's group.
@@ -73,15 +71,17 @@ class CheckRelationshipsService @Inject()(
             Future.successful(false)
           } else {
             // 3. Check that the client is assigned to the agent user.
-            val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
-            val (serviceId, _) = EnrolmentKey.deconstruct(enrolmentKey)
+            val serviceId = enrolmentKey.service
             for {
               // if the client is unassigned (not yet put into any access groups), behave as if granular permissions were disabled for that client
               isClientUnassigned <- ap.clientIsUnassigned(arn, enrolmentKey)
               isEnrolmentAssignedToUser <- es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId)).map {
                                             usersAssignedEnrolments =>
-                                              usersAssignedEnrolments.exists(enrolment =>
-                                                EnrolmentKey.enrolmentKeys(enrolment).contains(enrolmentKey))
+                                              usersAssignedEnrolments.exists(
+                                                enrolment =>
+                                                  uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
+                                                    .enrolmentKeys(enrolment)
+                                                    .contains(enrolmentKey.tag))
                                           }
             } yield {
               isClientUnassigned || isEnrolmentAssignedToUser

@@ -7,7 +7,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.{Failed, Success}
 import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service, Vrn}
 
 import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Instant, LocalDateTime, ZoneOffset}
@@ -37,6 +37,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "create, find and update and remove a record" in {
       val deleteRecord = DeleteRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         now,
@@ -69,6 +70,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "create a  new record when an old record with the same arn already exists" in {
       val deleteRecordOld = DeleteRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         now,
@@ -80,6 +82,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecordNew = DeleteRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747697",
         "VRN",
         now,
@@ -98,6 +101,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "fail to create a  new record when an old record with the same arn, clientId and clientIdType already exists" in {
       val deleteRecordOld = DeleteRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         now,
@@ -109,6 +113,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecordNew = DeleteRecord(
         "TARN0000001",
+        Some(Service.Vat.id),
         "101747696",
         "VRN",
         now,
@@ -128,6 +133,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "select not attempted delete record first" in {
       val deleteRecord1 = DeleteRecord(
         "TARN0000001",
+        Some(Service.MtdIt.id),
         "ABCDEF0000000001",
         "MTDITID",
         now,
@@ -137,6 +143,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
+        Some(Service.MtdIt.id),
         "ABCDEF0000000002",
         "MTDITID",
         now,
@@ -145,6 +152,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         lastRecoveryAttempt = None)
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
+        Some(Service.MtdIt.id),
         "ABCDEF0000000001",
         "MTDITID",
         now,
@@ -167,6 +175,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "select the oldest attempted delete record first" in {
       val deleteRecord1 = DeleteRecord(
         "TARN0000001",
+        Some(Service.MtdIt.id),
         "ABCDEF0000000001",
         "MTDITID",
         now,
@@ -176,6 +185,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
+        Some(Service.MtdIt.id),
         "ABCDEF0000000002",
         "MTDITID",
         now,
@@ -185,6 +195,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
+        Some(Service.MtdIt.id),
         "ABCDEF0000000001",
         "MTDITID",
         now,

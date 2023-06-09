@@ -23,10 +23,11 @@ import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -34,7 +35,6 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import uk.gov.hmrc.agentclientrelationships.util._
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRC_MTD_IT
 sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
 }
@@ -144,7 +144,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                        references.map(SaRef.apply),
                        maybeRelationshipCopyRecord,
                        arn,
-                       mtdItId)
+                       EnrolmentKey(Service.MtdIt, mtdItId))
                        .map {
                          case Some(_) =>
                            auditService.sendCreateRelationshipAuditEvent
@@ -181,15 +181,15 @@ class CheckAndCopyRelationshipsService @Inject()(
     references: Set[RelationshipReference],
     maybeRelationshipCopyRecord: Option[RelationshipCopyRecord],
     arn: Arn,
-    identifier: TaxIdentifier
+    enrolmentKey: EnrolmentKey
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData) =
     maybeRelationshipCopyRecord match {
       case Some(relationshipCopyRecord) =>
-        createRelationshipsService.resumeRelationshipCreation(relationshipCopyRecord, arn, identifier)
+        createRelationshipsService.resumeRelationshipCreation(relationshipCopyRecord, arn, enrolmentKey)
       case None =>
         createRelationshipsService.createRelationship(
           arn,
-          identifier,
+          enrolmentKey,
           references,
           failIfCreateRecordFails = true,
           failIfAllocateAgentInESFails = false)
@@ -216,7 +216,7 @@ class CheckAndCopyRelationshipsService @Inject()(
                          references.map(VatRef.apply),
                          maybeRelationshipCopyRecord,
                          arn,
-                         vrn)
+                         EnrolmentKey(Service.Vat, vrn))
                          .map {
                            case Some(_) =>
                              auditService.sendCreateRelationshipAuditEventForMtdVat
@@ -281,7 +281,7 @@ class CheckAndCopyRelationshipsService @Inject()(
     auditData: AuditData): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
-        aca.getPartialAuthExistsFor(nino, arn, HMRC_MTD_IT).map { hasPartialAuth =>
+        aca.getPartialAuthExistsFor(nino, arn, "HMRC-MTD-IT").map { hasPartialAuth =>
           auditData.set("partialAuth", hasPartialAuth)
           auditService.sendCheckCESAAuditEvent
           hasPartialAuth

@@ -5,22 +5,22 @@ import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-import uk.gov.hmrc.agentclientrelationships.model.TypeOfEnrolment
-import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
+trait EnrolmentStoreProxyStubs extends Eventually {
 
   private implicit val patience = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
 
   private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store"
   private val teBaseUrl = s"/tax-enrolments"
 
+  def agentEnrolmentKey(arn: Arn): EnrolmentKey = EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}")
+
   // ES1
-  def givenPrincipalGroupIdExistsFor(taxIdentifier: TaxIdentifier, groupId: String) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+  def givenPrincipalGroupIdExistsFor(enrolmentKey: EnrolmentKey, groupId: String) = {
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=principal"))
         .willReturn(aResponse()
           .withBody(s"""
                        |{
@@ -31,10 +31,9 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
           """.stripMargin)))
   }
 
-  def givenPrincipalGroupIdNotExistsFor(taxIdentifier: TaxIdentifier) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+  def givenPrincipalGroupIdNotExistsFor(enrolmentKey: EnrolmentKey) = {
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=principal"))
         .willReturn(aResponse()
           .withStatus(204)))
   }
@@ -48,14 +47,9 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
       get(urlContains("/groups?type=principal"))
         .willReturn(aResponse().withStatus(status).withBody("FAILED_ESP")))
 
-  def givenDelegatedGroupIdsExistFor(taxIdentifier: TaxIdentifier, groupIds: Set[String]) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
-    givenDelegatedGroupIdsExistForKey(enrolmentKey, groupIds)
-  }
-
-  def givenDelegatedGroupIdsExistForKey(enrolmentKey: String, groupIds: Set[String]) =
+  def givenDelegatedGroupIdsExistFor(enrolmentKey: EnrolmentKey, groupIds: Set[String]) =
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=delegated"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"))
         .willReturn(aResponse()
           .withBody(s"""
                        |{
@@ -65,14 +59,9 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
                        |}
           """.stripMargin)))
 
-  def givenDelegatedGroupIdsNotExistFor(taxIdentifier: TaxIdentifier) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
-    givenDelegatedGroupIdsNotExistForKey(enrolmentKey)
-  }
-
-  def givenDelegatedGroupIdsNotExistForKey(enrolmentKey: String) =
+  def givenDelegatedGroupIdsNotExistFor(enrolmentKey: EnrolmentKey) =
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/groups?type=delegated"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"))
         .willReturn(aResponse()
           .withStatus(204)))
 
@@ -81,14 +70,13 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
       get(urlContains("/groups?type=delegated"))
         .willReturn(aResponse().withStatus(status)))
 
-  def givenPrincipalUserIdExistFor(taxIdentifier: TaxIdentifier, userId: String) = {
-    givenPrincipalUserIdsExistFor(taxIdentifier, List(userId))
+  def givenPrincipalUserIdExistFor(enrolmentKey: EnrolmentKey, userId: String) = {
+    givenPrincipalUserIdsExistFor(enrolmentKey, List(userId))
   }
 
-  def givenPrincipalUserIdsExistFor(taxIdentifier: TaxIdentifier, userIds: Seq[String]) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+  def givenPrincipalUserIdsExistFor(enrolmentKey: EnrolmentKey, userIds: Seq[String]) = {
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/users?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/users?type=principal"))
         .willReturn(aResponse()
           .withBody(s"""
                        |{
@@ -99,10 +87,9 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
           """.stripMargin)))
   }
 
-  def givenPrincipalUserIdNotExistFor(taxIdentifier: TaxIdentifier) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
+  def givenPrincipalUserIdNotExistFor(enrolmentKey: EnrolmentKey) = {
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/enrolments/$enrolmentKey/users?type=principal"))
+      get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/users?type=principal"))
         .willReturn(aResponse()
           .withStatus(204)))
   }
@@ -110,12 +97,10 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenEnrolmentAllocationSucceeds(
     groupId: String,
     clientUserId: String,
-    key: String,
-    identifier: String,
-    value: String,
+    enrolmentKey: EnrolmentKey,
     agentCode: String) =
     stubFor(
-      post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+      post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(s"""
                                           |{
                                           |   "userId":"$clientUserId",
@@ -125,11 +110,11 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
         .withHeader("Content-Type", containing("application/json"))
         .willReturn(aResponse().withStatus(201)))
 
-  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey: String, agentCode: String) =
+  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey: EnrolmentKey, agentCode: String) =
     eventually {
       verify(
         1,
-        postRequestedFor(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=$agentCode"))
+        postRequestedFor(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
           .withRequestBody(similarToJson(s"""
                                             |{
                                             |   "userId":"$clientUserId",
@@ -147,12 +132,10 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
   def givenEnrolmentAllocationFailsWith(responseStatus: Int)(
     groupId: String,
     clientUserId: String,
-    key: String,
-    identifier: String,
-    value: String,
+    enrolmentKey: EnrolmentKey,
     agentCode: String) =
     stubFor(
-      post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value?legacy-agentCode=$agentCode"))
+      post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(s"""
                                           |{
                                           |   "userId":"$clientUserId",
@@ -161,16 +144,9 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
                                           |""".stripMargin))
         .willReturn(aResponse().withStatus(responseStatus)))
 
-  def givenEnrolmentDeallocationSucceeds(groupId: String, taxIdentifier: TaxIdentifier) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
-    stubFor(
-      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey"))
-        .willReturn(aResponse().withStatus(204)))
-  }
-
-  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: String) =
+  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: EnrolmentKey) =
     eventually {
-      verify(1, deleteRequestedFor(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey")))
+      verify(1, deleteRequestedFor(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}")))
     }
 
   def verifyNoEnrolmentHasBeenDeallocated() =
@@ -178,22 +154,15 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
       verify(0, deleteRequestedFor(urlContains(s"$teBaseUrl/groups/")))
     }
 
-  def givenEnrolmentDeallocationSucceeds(groupId: String, key: String, identifier: String, value: String) =
+  def givenEnrolmentDeallocationSucceeds(groupId: String, enrolmentKey: EnrolmentKey) =
     stubFor(
-      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value"))
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}"))
         .willReturn(aResponse().withStatus(204)))
-
-  def givenEnrolmentDeallocationFailsWith(responseStatus: Int, groupId: String, taxIdentifier: TaxIdentifier) = {
-    val enrolmentKey = enrolmentKeyPrefixFor(taxIdentifier) + "~" + taxIdentifier.value
-    stubFor(
-      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$enrolmentKey"))
-        .willReturn(aResponse().withStatus(responseStatus)))
-  }
-
+  
   def givenEnrolmentDeallocationFailsWith(
-    responseStatus: Int)(groupId: String, key: String, identifier: String, value: String) =
+    responseStatus: Int)(groupId: String, enrolmentKey: EnrolmentKey) =
     stubFor(
-      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/$key~$identifier~$value"))
+      delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}"))
         .willReturn(aResponse().withStatus(responseStatus)))
 
   def givenEsIsUnavailable() = {
@@ -205,8 +174,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
         .willReturn(aResponse().withStatus(503)))
   }
 
-  def givenEnrolmentExistsForGroupId(groupId: String, taxIdentifier: TaxIdentifier): StubMapping = {
-    val enrolmentKey = TypeOfEnrolment(taxIdentifier)
+  def givenEnrolmentExistsForGroupId(groupId: String, enrolmentKey: EnrolmentKey): StubMapping = {
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
         .willReturn(
@@ -218,7 +186,7 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
                          |    "totalRecords": 1,
                          |    "enrolments": [
                          |        {
-                         |           "service": "${enrolmentKey.enrolmentKey}",
+                         |           "service": "${enrolmentKey.service}",
                          |           "state": "active",
                          |           "friendlyName": "My First Client's PAYE Enrolment",
                          |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
@@ -226,8 +194,8 @@ trait EnrolmentStoreProxyStubs extends TaxIdentifierSupport with Eventually {
                          |           "activationDate": "2018-10-13T17:36:00.000Z",
                          |           "identifiers": [
                          |              {
-                         |                 "key": "${enrolmentKey.identifierKey}",
-                         |                 "value": "${taxIdentifier.value}"
+                         |                 "key": "${enrolmentKey.singleIdentifier.key}",
+                         |                 "value": "${enrolmentKey.singleIdentifier.value}"
                          |              }
                          |           ]
                          |        }
