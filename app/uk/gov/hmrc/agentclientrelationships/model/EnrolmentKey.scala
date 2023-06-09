@@ -40,14 +40,14 @@ object EnrolmentKey {
   def apply(s: String): EnrolmentKey =
     parse(s).getOrElse(throw new IllegalArgumentException("Invalid enrolment key: " + s))
 
-  def apply(service: Service, taxIdentifiers: TaxIdentifier*): EnrolmentKey =
-    EnrolmentKey(
-      service.id,
-      taxIdentifiers.map(taxIdentifier => Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value))
-    )
+  def apply(service: Service, taxIdentifier: TaxIdentifier): EnrolmentKey =
+    EnrolmentKey(service.id, taxIdentifier)
 
-  def from(service: String, identifiers: (String, String)*): EnrolmentKey =
-    EnrolmentKey(service, identifiers.map { case (k, v) => Identifier(k, v) })
+  def apply(serviceKey: String, taxIdentifier: TaxIdentifier): EnrolmentKey =
+    EnrolmentKey(
+      serviceKey,
+      Seq(Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value))
+    )
 
   def parse(s: String): Option[EnrolmentKey] = {
     val parts = s.split("~")

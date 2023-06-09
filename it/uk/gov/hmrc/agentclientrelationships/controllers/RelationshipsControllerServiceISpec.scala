@@ -44,4 +44,16 @@ class RelationshipsControllerServiceISpec
   behave like relationshipsControllerPutISpec(Service.Ppt.id, pptRef, "EtmpRegistrationNumber")
   behave like relationshipsControllerDeleteISpec(Service.Ppt.id, pptRef, "EtmpRegistrationNumber")
   behave like strideEndpointISpec(Service.Ppt.id, pptRef, "EtmpRegistrationNumber")
+
+  // CBC
+  behave like relationshipsControllerGetISpec(Service.Cbc.id, cbcId, "cbcId")
+  behave like relationshipsControllerPutISpec(Service.Cbc.id, cbcId, "cbcId")
+  behave like relationshipsControllerDeleteISpec(Service.Cbc.id, cbcId, "cbcId")
+  behave like strideEndpointISpec(Service.Cbc.id, cbcId, "cbcId")
+
+  // CBC (non-UK)
+  behave like relationshipsControllerGetISpec(Service.CbcNonUk.id, cbcId, "cbcId")
+  behave like relationshipsControllerPutISpec(Service.CbcNonUk.id, cbcId, "cbcId")
+  behave like relationshipsControllerDeleteISpec(Service.CbcNonUk.id, cbcId, "cbcId")
+  behave like strideEndpointISpec(Service.CbcNonUk.id, cbcId, "cbcId")
 }

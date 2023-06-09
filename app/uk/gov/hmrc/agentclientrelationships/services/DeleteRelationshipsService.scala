@@ -137,7 +137,7 @@ class DeleteRelationshipsService @Inject()(
     } yield ()
   }
 
-  def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
+  private def deleteEtmpRecord(arn: Arn, taxIdentifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[DbUpdateStatus] = {

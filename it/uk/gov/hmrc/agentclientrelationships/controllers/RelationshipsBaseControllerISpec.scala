@@ -98,20 +98,6 @@ trait RelationshipsBaseControllerISpec
     ()
   }
 
-  val HMRCMTDIT = "HMRC-MTD-IT"
-
-  val HMRCPIR = "PERSONAL-INCOME-RECORD"
-
-  val HMRCMTDVAT = "HMRC-MTD-VAT"
-
-  val HMRCTERSORG = "HMRC-TERS-ORG"
-
-  val HMRCTERSNTORG = "HMRC-TERSNT-ORG"
-
-  val HMRCCGTPD = "HMRC-CGT-PD"
-
-  val HMRCPPTORG = "HMRC-PPT-ORG"
-
   val arn = Arn("AARN0000002")
   val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
   val arn2 = Arn("AARN0000004")
@@ -140,7 +126,7 @@ trait RelationshipsBaseControllerISpec
   val cgtRef = CgtRef("XMCGTP123456789")
 
   val pptRef = PptRef("XAPPT0004567890")
-
+  val cbcId = CbcId("XACBC1234567890")
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_) => Vrn("101747641")
