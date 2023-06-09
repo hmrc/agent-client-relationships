@@ -50,7 +50,7 @@ class CreateRelationshipsService @Inject()(
   //noinspection ScalaStyle
   def createRelationship(
     arn: Arn,
-    taxIdentifier: TaxIdentifier,
+    identifier: TaxIdentifier,
     oldReferences: Set[RelationshipReference],
     failIfCreateRecordFails: Boolean,
     failIfAllocateAgentInESFails: Boolean)(
@@ -58,14 +58,14 @@ class CreateRelationshipsService @Inject()(
     hc: HeaderCarrier,
     auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, taxIdentifier) {
+      .tryLock(arn, identifier) {
         auditData.set("AgentDBRecord", false)
         auditData.set("enrolmentDelegated", false)
         auditData.set("etmpRelationshipCreated", false)
 
         def createRelationshipRecord: Future[DbUpdateStatus] = {
-          val identifierKey: String = TypeOfEnrolment(taxIdentifier).identifierKey
-          val record = RelationshipCopyRecord(arn.value, taxIdentifier.value, identifierKey, Some(oldReferences))
+          val identifierType = TypeOfEnrolment(identifier).identifierKey
+          val record = RelationshipCopyRecord(arn.value, identifier.value, identifierType, Some(oldReferences))
           relationshipCopyRepository
             .create(record)
             .map(count => {
@@ -75,20 +75,19 @@ class CreateRelationshipsService @Inject()(
             .recoverWith {
               case NonFatal(ex) =>
                 logger.warn(
-                  s"Inserting relationship record into mongo failed for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getSimpleName})",
+                  s"Inserting relationship record into mongo failed for ${arn.value}, ${identifier.value} (${identifier.getClass.getSimpleName})",
                   ex)
                 if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
                 else Future.successful(DbUpdateFailed)
             }
         }
-
         for {
           agentUser            <- retrieveAgentUser(arn)
           recordCreationStatus <- createRelationshipRecord
           if recordCreationStatus == DbUpdateSucceeded
-          etmpRecordCreationStatus <- createEtmpRecord(arn, taxIdentifier)
+          etmpRecordCreationStatus <- createEtmpRecord(arn, identifier)
           if etmpRecordCreationStatus == DbUpdateSucceeded
-          esRecordCreationStatus <- createEsRecord(arn, taxIdentifier, agentUser, failIfAllocateAgentInESFails)
+          esRecordCreationStatus <- createEsRecord(arn, identifier, agentUser, failIfAllocateAgentInESFails)
         } yield esRecordCreationStatus
       }
 

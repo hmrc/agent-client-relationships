@@ -78,6 +78,4 @@ case class EnrolmentIdentifierValue(value: String) {
   def asUrn: Urn = Urn(value)
   def asCgtRef: CgtRef = CgtRef(value)
   def asPptRef: PptRef = PptRef(value)
-  def asCbcId: CbcId = CbcId(value)
-  def asCbcNonUkId: CbcNonUkId = CbcNonUkId(value)
 }

@@ -6,9 +6,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.IdentifierKeys.cbcId
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRC_CBC_ORG, HMRC_CGT_PD, HMRC_MTD_IT, HMRC_MTD_VAT, HMRC_PPT_ORG, HMRC_TERSNT_ORG, HMRC_TERS_ORG}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
 
@@ -30,13 +28,12 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
                          regime: String,
                          clientId: TaxIdentifier)
 
-  val itsaClient = TestClient(HMRC_MTD_IT, "ITSA", mtdItId)
-  val vatClient = TestClient(HMRC_MTD_VAT, "VATC", vrn)
-  val trustClient = TestClient(HMRC_TERS_ORG, "TRS", utr)
-  val trustNTClient = TestClient(HMRC_TERSNT_ORG, "TRS", urn)
-  val cgtClient = TestClient(HMRC_CGT_PD, "CGT", cgtRef)
-  val pptClient = TestClient(HMRC_PPT_ORG, "PPT", pptRef)
-  val cbcClient = TestClient(HMRC_CBC_ORG, cbcId, cbcRef)
+  val itsaClient = TestClient(HMRCMTDIT, "ITSA", mtdItId)
+  val vatClient = TestClient(HMRCMTDVAT, "VATC", vrn)
+  val trustClient = TestClient(HMRCTERSORG, "TRS", utr)
+  val trustNTClient = TestClient(HMRCTERSNTORG, "TRS", urn)
+  val cgtClient = TestClient(HMRCCGTPD, "CGT", cgtRef)
+  val pptClient = TestClient(HMRCPPTORG, "PPT", pptRef)
 
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
   val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient)

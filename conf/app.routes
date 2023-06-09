@@ -1,13 +1,13 @@
 
-GET     /agent/:arn/service/:service/client/:clientIdType/:clientId     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String, userId: Option[String] ?= None)
-PUT     /agent/:arn/service/:service/client/:clientIdType/:clientId     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.create(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
-DELETE  /agent/:arn/service/:service/client/:clientIdType/:clientId     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
-GET     /agent/relationships/inactive                                   @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent
-DELETE  /agent/:arn/terminate                                           @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET     /agent/:arn/client/:nino/legacy-mapped-relationship             @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getLegacySaRelationshipStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
-GET     /client/relationships/active                                    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
-GET     /client/relationships/inactive                                  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsForClient
-GET     /client/relationships/service/:service                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
+GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String, userId: Option[String] ?= None)
+PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.create(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
+DELETE       /agent/:arn/service/:service/client/:clientIdType/:clientId   @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
+GET           /agent/relationships/inactive                                                    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent
+DELETE      /agent/:arn/terminate                                                                 @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /agent/:arn/client/:nino/legacy-mapped-relationship                                           @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getLegacySaRelationshipStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
+GET           /client/relationships/active                                                     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
+GET           /client/relationships/inactive                                            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsForClient
+GET           /client/relationships/service/:service                                     @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
 
 # stride endpoints
-GET     /relationships/service/:service/client/:clientIdType/:clientId  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
+GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
