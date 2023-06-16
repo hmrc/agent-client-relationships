@@ -27,12 +27,10 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
   lazy val tag = // note: we intentionally do not use the Identifier's toString below because it uppercases everything!
     s"$service~${identifiers.sorted.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
   override def toString: String = tag
-  def singleIdentifier: Identifier = // Note: unsafe (i.e. can throw exceptions)
-    if (identifiers.length == 1) identifiers.head else throw new RuntimeException("No single identifier")
-  def singleTaxIdentifier: TaxIdentifier = { // Note: unsafe (i.e. can throw exceptions)
-    val identifier = singleIdentifier
-    ClientIdType.supportedTypes.find(_.enrolmentId == identifier.key).get.createUnderlying(identifier.value)
-  }
+  def singleIdentifier: Identifier =
+    identifiers.head // TODO eventually remove this method as we must expect multiple identifiers
+  def singleTaxIdentifier: TaxIdentifier = // TODO eventually remove this method as we must expect multiple identifiers
+    ClientIdType.supportedTypes.find(_.enrolmentId == singleIdentifier.key).get.createUnderlying(singleIdentifier.value)
 }
 
 object EnrolmentKey {

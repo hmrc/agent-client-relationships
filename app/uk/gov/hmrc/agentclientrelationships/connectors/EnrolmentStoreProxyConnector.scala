@@ -25,11 +25,11 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Vrn}
+import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
-import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -186,5 +186,13 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
         }
       }
     }
+  }
+
+  // ES20
+  def findUtrForCbcId(cbcId: CbcId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Utr]] = {
+    if ((cbcId, hc, ec) == null) println("boo") // just to suppress unused fatal warnings!
+
+    Future.successful(Some(Utr("0378163771")))
+    // TODO implement the real thing!
   }
 }

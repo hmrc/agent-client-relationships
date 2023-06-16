@@ -22,7 +22,7 @@ import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, MappingConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.services._
@@ -51,6 +51,7 @@ class RelationshipsController @Inject()(
   des: DesConnector,
   ecp: Provider[ExecutionContext],
   mappingConnector: MappingConnector,
+  esConnector: EnrolmentStoreProxyConnector,
   auditService: AuditService,
   override val controllerComponents: ControllerComponents)
     extends BackendController(controllerComponents)
@@ -89,7 +90,7 @@ class RelationshipsController @Inject()(
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // "normal" cases
       case (svc, idType, id) =>
-        validateParams(svc, idType, id) match {
+        validateParams(svc, idType, id).flatMap {
           case Right(enrolmentKey) => checkWithTaxIdentifier(arn, tUserId, enrolmentKey)
           case Left(validationError) =>
             logger.warn(s"Invalid parameters: $validationError")
@@ -113,7 +114,6 @@ class RelationshipsController @Inject()(
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
-
     val taxIdentifier = enrolmentKey.singleTaxIdentifier
     val result = for {
       _ <- agentUserService.getAgentAdminUserFor(arn)
@@ -189,7 +189,7 @@ class RelationshipsController @Inject()(
 
   def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(serviceId, clientIdType, clientId) match {
+      validateParams(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.singleTaxIdentifier
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
@@ -197,7 +197,7 @@ class RelationshipsController @Inject()(
             auditData.set("arn", arn)
 
             createService
-              .createRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxIdentifier), Set(), false, true)
+              .createRelationship(arn, enrolmentKey, Set(), false, true)
               .map {
                 case Some(_) => Created
                 case None    => logger.warn(s"create relationship is currently in Locked state"); Locked
@@ -216,41 +216,67 @@ class RelationshipsController @Inject()(
       }
   }
 
-  private def validateParams(serviceKey: String, clientType: String, clientId: String): Either[String, EnrolmentKey] =
+  private def validateParams(serviceKey: String, clientType: String, clientId: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
-      case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) => Right(EnrolmentKey("IR-SA", Nino(clientId)))
+      case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
       case (Service.MtdIt.id, "ni" | "NI") if Nino.isValid(clientId) =>
-        Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId)))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) => Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId)))
+        Future.successful(Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId))))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
+      case (Service.Cbc.id, CbcIdType.enrolmentId) => // need to fetch the UTR to make a 'complete' enrolment key
+        esConnector.findUtrForCbcId(CbcId(clientId)).map {
+          case Some(utr) =>
+            Right(
+              EnrolmentKey(
+                Service.Cbc.id,
+                Seq(Identifier(CbcIdType.enrolmentId, clientId), Identifier("UTR" /* Not "SAUTR"! */, utr.value))))
+          case None => Left(s"CbcId provided $clientId for UK CBC should have an associated UTR but one was not found")
+        }
       // "normal" cases
       case (serviceKey, taxIdType) if appConfig.supportedServices.exists(_.id == serviceKey) =>
         val service: Service = Service.forId(serviceKey)
         val clientIdType: ClientIdType[TaxIdentifier] = service.supportedClientIdType
         if (taxIdType == clientIdType.enrolmentId) {
-          if (clientIdType.isValid(clientId)) Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId)))
+          if (clientIdType.isValid(clientId))
+            Future.successful(Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId))))
           else
-            Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
-        } else Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey")
-      case (svc, _) => Left(s"Unknown service $svc")
+            Future.successful(
+              Left(
+                s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation"))
+        } else
+          Future.successful(
+            Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey"))
+      case (svc, _) => Future.successful(Left(s"Unknown service $svc"))
     }
 
   def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(serviceId, clientIdType, clientId) match {
+      validateParams(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.singleTaxIdentifier
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
-              id <- taxIdentifier match {
-                     case nino @ Nino(_) => des.getMtdIdFor(nino)
-                     case _              => Future successful Option(taxIdentifier)
-                   }
-              _ <- id.fold {
-                    Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
-                  } { taxId =>
-                    deleteService
-                      .deleteRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxId), currentUser.affinityGroup)
+              eEnrolmentKey: Either[String, EnrolmentKey] <- taxIdentifier match {
+                                                              // TODO it would be good to remove this special case for Nino ... but I don't know if we can
+                                                              case nino @ Nino(_) =>
+                                                                des.getMtdIdFor(nino).map {
+                                                                  case Some(mtdItId) =>
+                                                                    Right(
+                                                                      EnrolmentKey(Service.forId(serviceId), mtdItId))
+                                                                  case None =>
+                                                                    Left(
+                                                                      s"Could not identify $taxIdentifier for $clientIdType")
+                                                                }
+                                                              case _ =>
+                                                                validateParams(serviceId, clientIdType, clientId)
+                                                            }
+              _ <- eEnrolmentKey match {
+                    case Left(error) => Future.successful(logger.error(error))
+                    case Right(ek)   => deleteService.deleteRelationship(arn, ek, currentUser.affinityGroup)
                   }
             } yield NoContent)
               .recover {
@@ -313,7 +339,7 @@ class RelationshipsController @Inject()(
 
   def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(service, clientIdType, clientId) match {
+      validateParams(service, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.singleTaxIdentifier
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
