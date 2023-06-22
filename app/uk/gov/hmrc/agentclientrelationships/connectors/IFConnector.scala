@@ -321,6 +321,11 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         request +
           (("relationshipType", JsString("ZA01"))) +
           (("authProfile", JsString("ALL00001")))
+      case Some("CBC") =>
+        request +
+          (("relationshipType", JsString("ZA01"))) +
+          (("authProfile", JsString("ALL00001"))) +
+          (("idType", JsString("CBC")))
       case _ =>
         request
     }

@@ -3,7 +3,7 @@ package uk.gov.hmrc.agentclientrelationships.support
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -28,11 +28,10 @@ class RecoverySchedulerISpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
-    with DesStubs
-    with DesStubsGet
-    with MappingStubs
     with DataStreamStub
-    with AuthStub
+      with IFStubs
+      with ACAStubs
+      with IntegrationPatience
    {
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -41,17 +40,15 @@ class RecoverySchedulerISpec
                         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
                         "microservice.services.tax-enrolments.port"               -> wireMockPort,
                         "microservice.services.users-groups-search.port"          -> wireMockPort,
-                        "microservice.services.des.port"                          -> wireMockPort,
-                        "microservice.services.auth.port"                         -> wireMockPort,
-                        "microservice.services.agent-mapping.port"                -> wireMockPort,
+                        "microservice.services.if.port"                          -> wireMockPort,
                         "auditing.consumer.baseUri.host"                          -> wireMockHost,
                         "auditing.consumer.baseUri.port"                          -> wireMockPort,
-                        "microservice.services.agent-user-client-details.port"    -> wireMockPort,
                         "features.copy-relationship.mtd-it"                       -> true,
                         "features.copy-relationship.mtd-vat"                      -> true,
+                         "microservice.services.agent-client-authorisation.port"  -> wireMockPort,
         "features.recovery-enable" -> false,
-        "auditing.enabled" -> false,
-        "metrics.enabled" -> false,
+        "auditing.enabled" -> true,
+        "metrics.enabled" -> true,
         "mongodb.uri" -> mongoUri
       )
 
@@ -60,8 +57,6 @@ class RecoverySchedulerISpec
   private lazy val recoveryRepo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
   private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
-
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
 
   val arn: Arn = Arn("AARN0000002")
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
@@ -74,7 +69,7 @@ class RecoverySchedulerISpec
 
   "Recovery Scheduler" should {
 
-    "attempt to recover if DeleteRecord exists but RecoveryRecord not" in {
+    "attempt to recover if a DeleteRecord exists and it requires only ETMP (because ES had already succeeded)" in {
 
       val testKit = ActorTestKit()
       val actorRef = system.actorOf(
@@ -82,28 +77,24 @@ class RecoverySchedulerISpec
           new TaskActor(recoveryRepo, 5,
             deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
 
-      givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
-      givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value}"), Set("foo"))
-      givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
-      givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
-      givenGroupInfo("foo", "bar")
-
-      await(recoveryRepo.collection.find().toFuture()) shouldBe empty
+      givenAgentCanBeDeallocatedInIF(mtdItId, arn)
+      givenSetRelationshipEnded(mtdItId, arn)
+      givenAuditConnector()
 
       val deleteRecord = DeleteRecord(
         arn.value,
         Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
-        LocalDateTime.parse("2022-10-31T23:22:50.971"),
-        syncToESStatus = Some(SyncStatus.Failed),
-        syncToETMPStatus = Some(SyncStatus.Success)
+        LocalDateTime.now(),
+        syncToESStatus = Some(SyncStatus.Success),
+        syncToETMPStatus = Some(SyncStatus.Failed)
       )
 
+      await(recoveryRepo.collection.find().toFuture()) shouldBe empty
       await(deleteRepo.collection.insertOne(deleteRecord).toFuture())
-      await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
-
-      testKit.scheduler.scheduleOnce(0.seconds, new Runnable {
+      await(deleteRepo.findBy(arn, mtdItId)).isDefined shouldBe true
+      testKit.scheduler.scheduleOnce(1.second, new Runnable {
         def run = {
           actorRef ! "uid"
         }
@@ -116,7 +107,7 @@ class RecoverySchedulerISpec
       testKit.shutdownTestKit()
     }
 
-    "attempt to recover if both DeleteRecord and RecoveryRecord exist and nextRunAt is in the future" in {
+    "attempt to recover if a DeleteRecord and a RecoveryRecord exists and both ES and ETMP are required" in {
       val testKit = ActorTestKit()
       val actorRef = system.actorOf(
         Props(
@@ -128,6 +119,10 @@ class RecoverySchedulerISpec
       givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
       givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
       givenGroupInfo("foo", "bar")
+      givenAdminUser("foo", "userId")
+      givenAgentCanBeDeallocatedInIF(mtdItId, arn)
+      givenSetRelationshipEnded(mtdItId, arn)
+      givenAuditConnector()
 
       await(recoveryRepo.write("1", localDateTimeNow.plusSeconds(2)))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
@@ -137,15 +132,15 @@ class RecoverySchedulerISpec
         Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
-        LocalDateTime.parse("2022-10-31T23:22:50.971"),
+        LocalDateTime.now(),
         syncToESStatus = Some(SyncStatus.Failed),
-        syncToETMPStatus = Some(SyncStatus.Success)
+        syncToETMPStatus = Some(SyncStatus.Failed)
       )
 
       await(deleteRepo.create(deleteRecord))
-      await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
+      await(deleteRepo.findBy(arn, mtdItId)).isDefined shouldBe true
 
-      testKit.scheduler.scheduleOnce(0.seconds, new Runnable {
+      testKit.scheduler.scheduleOnce(1.second, new Runnable {
         def run = {
           actorRef ! "uid"
         }
@@ -172,8 +167,12 @@ class RecoverySchedulerISpec
       givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
       givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
       givenGroupInfo("foo", "bar")
+      givenAdminUser("foo", "userId")
+      givenAgentCanBeDeallocatedInIF(mtdItId, arn)
+      givenSetRelationshipEnded(mtdItId, arn)
+      givenAuditConnector()
 
-      await(recoveryRepo.write("1", localDateTimeNow.minusDays(2)))
+      await(recoveryRepo.write("1", localDateTimeNow.minusHours(1)))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       val deleteRecord = DeleteRecord(
@@ -181,14 +180,14 @@ class RecoverySchedulerISpec
         Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
-        LocalDateTime.parse("2022-10-31T23:22:50.971"),
+        LocalDateTime.now().minusHours(2),
         syncToESStatus = Some(SyncStatus.Failed),
-        syncToETMPStatus = Some(SyncStatus.Success)
+        syncToETMPStatus = Some(SyncStatus.Failed)
       )
       await(deleteRepo.create(deleteRecord))
-      await(deleteRepo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord)
+      await(deleteRepo.findBy(arn, mtdItId)).isDefined shouldBe true
 
-      testKit.scheduler.scheduleOnce(0.seconds, new Runnable {
+      testKit.scheduler.scheduleOnce(1.second, new Runnable {
         def run = {
           actorRef ! "uid"
         }
@@ -221,13 +220,14 @@ class RecoverySchedulerISpec
           Some(Service.MtdIt.id),
           mtdItId.value + index,
           mtdItIdType,
-          LocalDateTime.parse("2022-10-31T23:22:50.971"),
-          syncToESStatus = Some(SyncStatus.Failed),
-          syncToETMPStatus = Some(SyncStatus.Success)
+          LocalDateTime.now(),
+          syncToESStatus = Some(SyncStatus.Success),
+          syncToETMPStatus = Some(SyncStatus.Failed)
         )
 
-        givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}"), Set("foo"))
-        givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${MtdItId(mtdItId.value + index)}"))
+        givenAgentCanBeDeallocatedInIF(MtdItId(mtdItId.value + index)  , arn)
+        givenSetRelationshipEnded(MtdItId(mtdItId.value + index), arn)
+        givenAuditConnector()
 
         await(deleteRepo.create(deleteRecord))
       }
@@ -235,25 +235,20 @@ class RecoverySchedulerISpec
       val res1 = await(deleteRepo.collection.find().toFuture()).length
       res1 shouldBe 4
 
-      testKit.scheduler.scheduleOnce(500.millis, new Runnable {
+      testKit.scheduler.scheduleOnce(1.second, new Runnable {
         def run = {
           actorRef ! "uid"
         }
       })
 
       eventually {
+        await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
         await(deleteRepo.collection.find().toFuture()).length shouldBe 0
       }
       testKit.shutdownTestKit()
     }
 
     "attempt to recover multiple DeleteRecords when one of them constantly fails and other fails because auth token has expired" in {
-
-            givenGroupInfo("foo", "bar")
-            givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
-            givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
-            givenAdminUser("foo", "any")
-
 
       val testKit = ActorTestKit()
       val actorRef = system.actorOf(
@@ -263,7 +258,7 @@ class RecoverySchedulerISpec
 
       await(recoveryRepo.collection.drop().toFuture())
 
-      await(recoveryRepo.write("1", localDateTimeNow.minusDays(2)))
+      await(recoveryRepo.write("1", localDateTimeNow.minusSeconds(10)))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       (0 to 3) foreach { index =>
@@ -272,32 +267,37 @@ class RecoverySchedulerISpec
           Some(Service.MtdIt.id),
           mtdItId.value + index,
           mtdItIdType,
-          LocalDateTime.now.minusDays(index),
+          LocalDateTime.now.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Failed),
-          syncToETMPStatus = Some(SyncStatus.Success)
+          syncToETMPStatus = Some(SyncStatus.Failed)
         )
 
+        givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
+        givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
+        givenGroupInfo("foo", "bar")
+        givenAdminUser("foo", "userId")
+        givenAuditConnector()
         givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}"), Set("foo"))
+
         if (index == 0)
           givenEnrolmentDeallocationFailsWith(503)(
             "foo",
             EnrolmentKey("HMRC-MTD-IT", Seq(Identifier(deleteRecord.clientIdentifierType, deleteRecord.clientIdentifier))))
-         else
+        else {
+          givenAgentCanBeDeallocatedInIF(MtdItId(mtdItId.value + index), arn)
+          givenSetRelationshipEnded(MtdItId(mtdItId.value + index), arn)
           givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, MtdItId(mtdItId.value + index)))
+        }
 
         await(deleteRepo.create(deleteRecord))
       }
 
 
-      testKit.scheduler.scheduleOnce(500.millis, new Runnable {
+      testKit.scheduler.scheduleOnce(1.second, new Runnable {
         def run = {
           actorRef ! "uid"
         }
       })
-
-      eventually {
-        await(deleteRepo.collection.find().toFuture()).length shouldBe 1
-      }
 
       eventually {
         val deleteRecords = await(deleteRepo.collection.find().toFuture())

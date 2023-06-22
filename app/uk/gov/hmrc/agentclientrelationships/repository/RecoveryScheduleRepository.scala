@@ -23,6 +23,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
+import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -31,13 +32,12 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class RecoveryRecord(uid: String, runAt: LocalDateTime)
 
 object RecoveryRecord {
 
-  implicit val localDateTimeFormat = MongoJavatimeFormats.localDateTimeFormat
+  implicit val localDateTimeFormat = MongoLocalDateTimeFormat.localDateTimeFormat
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 
