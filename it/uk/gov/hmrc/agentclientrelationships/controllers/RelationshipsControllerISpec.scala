@@ -169,8 +169,6 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       val result = doRequest
       result.status shouldBe 200
 
-      implicit val localDateFormat = MongoLocalDateTimeFormat.localDateFormat
-
       (result.json \\ "arn").head.as[String] shouldBe arn.value
       (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
       (result.json \\ "clientId").head.as[String] shouldBe otherId.value

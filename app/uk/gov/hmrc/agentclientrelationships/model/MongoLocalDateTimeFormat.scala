@@ -34,6 +34,12 @@ object MongoLocalDateTimeFormat {
       .at[String](__ \ "$date" \ "$numberLong")
       .contramap(_.atStartOfDay(ZoneOffset.UTC).toInstant.toEpochMilli.toString)
 
+  // for data that exists prior to the hmrc-mongo migration
+  final val legacyDateReads: Reads[LocalDate] =
+    Reads
+      .at[String](__)
+      .map(date => LocalDate.parse(date))
+
   // LocalDateTime
 
   final val localDateTimeReads: Reads[LocalDateTime] =
@@ -43,15 +49,20 @@ object MongoLocalDateTimeFormat {
         Instant.ofEpochMilli(dateTime.toLong).atZone(ZoneOffset.UTC).toLocalDateTime
       }
 
+  // for data that exists prior to the hmrc-mongo migration -
+  final val legacyDateTimeReads: Reads[LocalDateTime] =
+    Reads
+      .at[String](__)
+      .map(dateTime => LocalDateTime.parse(dateTime))
+
   final val localDateTimeWrites: Writes[LocalDateTime] =
     Writes
       .at[String](__ \ "$date" \ "$numberLong")
       .contramap(_.toInstant(ZoneOffset.UTC).toEpochMilli.toString)
 
   final implicit val localDateTimeFormat: Format[LocalDateTime] =
-    Format(localDateTimeReads, localDateTimeWrites)
+    Format(localDateTimeReads.orElse(legacyDateTimeReads), localDateTimeWrites)
 
   final implicit val localDateFormat: Format[LocalDate] =
-    Format(localDateReads, localDateWrites)
-
+    Format(localDateReads.orElse(legacyDateReads), localDateWrites)
 }

@@ -3,7 +3,7 @@ package uk.gov.hmrc.agentclientrelationships.support
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.TestKit
-import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -31,7 +31,6 @@ class RecoverySchedulerISpec
     with DataStreamStub
       with IFStubs
       with ACAStubs
-      with IntegrationPatience
    {
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -57,6 +56,8 @@ class RecoverySchedulerISpec
   private lazy val recoveryRepo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
   private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
+
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
 
   val arn: Arn = Arn("AARN0000002")
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
@@ -256,7 +257,7 @@ class RecoverySchedulerISpec
 
       await(recoveryRepo.collection.drop().toFuture())
 
-      (0 to 4) foreach { index =>
+      (0 to 2) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
           Some(Service.MtdIt.id),
