@@ -63,7 +63,7 @@ class TaskActor(
     case uid: String =>
       mongoRecoveryScheduleRepository.read.foreach {
         case RecoveryRecord(recordUid, runAt) =>
-          val now = LocalDateTime.now()
+          val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
           if (uid == recordUid) {
             val newUid = UUID.randomUUID().toString
             val nextRunAt = (if (runAt.isBefore(now)) now else runAt)

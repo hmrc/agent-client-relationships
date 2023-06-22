@@ -17,7 +17,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, MtdItId, Service}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.test.CleanMongoCollectionSupport
 
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
@@ -64,8 +64,6 @@ class RecoverySchedulerISpec
   val nino: Nino = Nino("AB123456C")
   val mtdItIdType = "MTDITID"
 
-  val localDateTimeNow: LocalDateTime = LocalDateTime.now
-
 
   "Recovery Scheduler" should {
 
@@ -86,7 +84,7 @@ class RecoverySchedulerISpec
         Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
-        LocalDateTime.now(),
+        LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Success),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
@@ -124,7 +122,7 @@ class RecoverySchedulerISpec
       givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
 
-      await(recoveryRepo.write("1", localDateTimeNow.plusSeconds(2)))
+      await(recoveryRepo.write("1", LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       val deleteRecord = DeleteRecord(
@@ -132,7 +130,7 @@ class RecoverySchedulerISpec
         Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
-        LocalDateTime.now(),
+        LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
@@ -172,7 +170,7 @@ class RecoverySchedulerISpec
       givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
 
-      await(recoveryRepo.write("1", localDateTimeNow.minusHours(1)))
+      await(recoveryRepo.write("1", LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       val deleteRecord = DeleteRecord(
@@ -180,7 +178,7 @@ class RecoverySchedulerISpec
         Some(Service.MtdIt.id),
         mtdItId.value,
         mtdItIdType,
-        LocalDateTime.now().minusHours(2),
+        LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
@@ -211,7 +209,7 @@ class RecoverySchedulerISpec
       givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
 
-      await(recoveryRepo.write("1", localDateTimeNow.minusDays(2)))
+      await(recoveryRepo.write("1", LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
 
       (0 to 3) foreach { index =>
@@ -220,7 +218,7 @@ class RecoverySchedulerISpec
           Some(Service.MtdIt.id),
           mtdItId.value + index,
           mtdItIdType,
-          LocalDateTime.now(),
+          LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
           syncToESStatus = Some(SyncStatus.Success),
           syncToETMPStatus = Some(SyncStatus.Failed)
         )
@@ -258,16 +256,13 @@ class RecoverySchedulerISpec
 
       await(recoveryRepo.collection.drop().toFuture())
 
-      await(recoveryRepo.write("1", localDateTimeNow.minusSeconds(10)))
-      await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
-
-      (0 to 3) foreach { index =>
+      (0 to 4) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
           Some(Service.MtdIt.id),
           mtdItId.value + index,
           mtdItIdType,
-          LocalDateTime.now.minusSeconds(index),
+          LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Failed)
         )
@@ -291,7 +286,6 @@ class RecoverySchedulerISpec
 
         await(deleteRepo.create(deleteRecord))
       }
-
 
       testKit.scheduler.scheduleOnce(1.second, new Runnable {
         def run = {
