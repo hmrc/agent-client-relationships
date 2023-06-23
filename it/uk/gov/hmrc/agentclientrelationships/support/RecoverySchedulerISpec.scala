@@ -32,6 +32,7 @@ class RecoverySchedulerISpec
     with DataStreamStub
       with IFStubs
       with ACAStubs
+      with AUCDStubs
       with BeforeAndAfterEach
    {
 
@@ -47,6 +48,7 @@ class RecoverySchedulerISpec
                         "features.copy-relationship.mtd-it"                       -> true,
                         "features.copy-relationship.mtd-vat"                      -> true,
                          "microservice.services.agent-client-authorisation.port"  -> wireMockPort,
+        "microservice.services.agent-user-client-details.port"                    -> wireMockPort,
         "features.recovery-enable" -> false,
         "auditing.enabled" -> true,
         "metrics.enabled" -> true,
@@ -129,6 +131,7 @@ class RecoverySchedulerISpec
       givenAgentCanBeDeallocatedInIF(mtdItId, arn)
       givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
+      givenCacheRefresh(arn)
 
       val deleteRecord = DeleteRecord(
         arn.value,
@@ -160,6 +163,7 @@ class RecoverySchedulerISpec
       givenAgentCanBeDeallocatedInIF(mtdItId, arn)
       givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
+      givenCacheRefresh(arn)
 
       val deleteRecord = DeleteRecord(
         arn.value,
@@ -199,6 +203,7 @@ class RecoverySchedulerISpec
         givenAgentCanBeDeallocatedInIF(MtdItId(mtdItId.value + index)  , arn)
         givenSetRelationshipEnded(MtdItId(mtdItId.value + index), arn)
         givenAuditConnector()
+        givenCacheRefresh(arn)
 
         await(deleteRepo.create(deleteRecord))
       }
@@ -240,6 +245,7 @@ class RecoverySchedulerISpec
           givenAgentCanBeDeallocatedInIF(MtdItId(mtdItId.value + index), arn)
           givenSetRelationshipEnded(MtdItId(mtdItId.value + index), arn)
           givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, MtdItId(mtdItId.value + index)))
+          givenCacheRefresh(arn)
         }
 
         await(deleteRepo.create(deleteRecord))

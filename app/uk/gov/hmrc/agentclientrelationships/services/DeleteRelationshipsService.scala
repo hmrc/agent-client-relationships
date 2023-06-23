@@ -241,7 +241,6 @@ class DeleteRelationshipsService @Inject()(
   def tryToResume(implicit ec: ExecutionContext, auditData: AuditData): Future[Boolean] =
     deleteRecordRepository.selectNextToRecover.flatMap {
       case Some(record) =>
-        println(s">>>>>>>>>> found a delete record with time ${record.dateTime} for id ${record.clientIdentifier}")
         val headerCarrier = record.headerCarrier.getOrElse(HeaderCarrier())
         val taxIdentifier: TaxIdentifier =
           TaxIdentifierSupport.from(record.clientIdentifier, record.clientIdentifierType)
@@ -266,8 +265,6 @@ class DeleteRelationshipsService @Inject()(
                        if (record.dateTime
                              .plusSeconds(recoveryTimeout)
                              .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)) {
-                         println(
-                           s">>>>>>>>>>>record datetime of ${record.dateTime} is after for ${record.clientIdentifier}")
                          for {
                            isDone <- resumeRelationshipRemoval(record)
                            _ <- if (isDone) removeDeleteRecord(arn, taxIdentifier)
