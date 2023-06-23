@@ -23,21 +23,21 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
+import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, ZoneOffset}
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 case class RecoveryRecord(uid: String, runAt: LocalDateTime)
 
 object RecoveryRecord {
 
-  implicit val localDateTimeFormat = MongoJavatimeFormats.localDateTimeFormat
+  implicit val localDateTimeFormat = MongoLocalDateTimeFormat.localDateTimeFormat
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 
@@ -64,7 +64,8 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: MongoComponent)(
     collection.find().headOption().flatMap {
       case Some(record) => Future successful record
       case None => {
-        val record = RecoveryRecord(UUID.randomUUID().toString, LocalDateTime.now())
+        val record =
+          RecoveryRecord(UUID.randomUUID().toString, LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime)
         collection.insertOne(record).toFuture.map(_ => record)
       }.recoverWith {
         case NonFatal(error) =>

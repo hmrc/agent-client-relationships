@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord}
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 
-import java.time.{Instant, ZoneOffset}
+import java.time.{LocalDateTime, ZoneOffset}
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
@@ -63,7 +63,7 @@ class TaskActor(
     case uid: String =>
       mongoRecoveryScheduleRepository.read.foreach {
         case RecoveryRecord(recordUid, runAt) =>
-          val now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+          val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
           if (uid == recordUid) {
             val newUid = UUID.randomUUID().toString
             val nextRunAt = (if (runAt.isBefore(now)) now else runAt)

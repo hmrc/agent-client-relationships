@@ -24,6 +24,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
+import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier}
@@ -31,7 +32,6 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import javax.inject.{Inject, Singleton}
@@ -58,8 +58,8 @@ case class DeleteRecord(
 
 object DeleteRecord {
 
-  implicit val dateReads: Reads[LocalDateTime] = MongoJavatimeFormats.localDateTimeReads
-  implicit val dateWrites: Writes[LocalDateTime] = MongoJavatimeFormats.localDateTimeWrites
+  implicit val dateReads: Reads[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeReads
+  implicit val dateWrites: Writes[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeWrites
 
   implicit val hcWrites: OWrites[HeaderCarrier] = new OWrites[HeaderCarrier] {
     override def writes(hc: HeaderCarrier): JsObject =

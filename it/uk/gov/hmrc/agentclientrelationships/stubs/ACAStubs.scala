@@ -1,9 +1,10 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 
 trait ACAStubs {
@@ -89,6 +90,16 @@ trait ACAStubs {
     stubFor(
       put(urlEqualTo(s"/agent-client-authorisation/alt-itsa/update/${nino.value}"))
         .willReturn(aResponse().withStatus(responseStatus))
+    )
+
+  def givenSetRelationshipEnded(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
+    stubFor(
+      put(urlEqualTo(s"/agent-client-authorisation/invitations/set-relationship-ended"))
+        .withRequestBody(containing(taxIdentifier.value))
+        .withRequestBody(containing(arn.value))
+        .willReturn(
+          aResponse()
+            .withStatus(204))
     )
 
 }

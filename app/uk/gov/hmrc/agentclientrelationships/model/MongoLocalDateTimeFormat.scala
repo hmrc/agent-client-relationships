@@ -65,5 +65,4 @@ object MongoLocalDateTimeFormat {
 
   final implicit val localDateFormat: Format[LocalDate] =
     Format(localDateReads.orElse(legacyDateReads), localDateWrites)
-
 }
