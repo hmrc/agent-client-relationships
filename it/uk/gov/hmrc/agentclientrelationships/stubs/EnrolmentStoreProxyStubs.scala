@@ -10,7 +10,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 trait EnrolmentStoreProxyStubs extends Eventually {
 
-  private implicit val patience = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
+  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
 
   private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store"
   private val teBaseUrl = s"/tax-enrolments"
@@ -18,7 +18,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
   def agentEnrolmentKey(arn: Arn): EnrolmentKey = EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}")
 
   // ES1
-  def givenPrincipalGroupIdExistsFor(enrolmentKey: EnrolmentKey, groupId: String) = {
+  def givenPrincipalGroupIdExistsFor(enrolmentKey: EnrolmentKey, groupId: String): StubMapping = {
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=principal"))
         .willReturn(aResponse()
@@ -31,7 +31,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
           """.stripMargin)))
   }
 
-  def givenPrincipalGroupIdNotExistsFor(enrolmentKey: EnrolmentKey) = {
+  def givenPrincipalGroupIdNotExistsFor(enrolmentKey: EnrolmentKey): StubMapping = {
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=principal"))
         .willReturn(aResponse()
@@ -42,12 +42,12 @@ trait EnrolmentStoreProxyStubs extends Eventually {
     override def `match`(url: String): MatchResult = pattern.`match`(url)
   }
 
-  def givenPrincipalGroupIdRequestFailsWith(status: Int) =
+  def givenPrincipalGroupIdRequestFailsWith(status: Int): StubMapping =
     stubFor(
       get(urlContains("/groups?type=principal"))
         .willReturn(aResponse().withStatus(status).withBody("FAILED_ESP")))
 
-  def givenDelegatedGroupIdsExistFor(enrolmentKey: EnrolmentKey, groupIds: Set[String]) =
+  def givenDelegatedGroupIdsExistFor(enrolmentKey: EnrolmentKey, groupIds: Set[String]): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"))
         .willReturn(aResponse()
@@ -59,22 +59,22 @@ trait EnrolmentStoreProxyStubs extends Eventually {
                        |}
           """.stripMargin)))
 
-  def givenDelegatedGroupIdsNotExistFor(enrolmentKey: EnrolmentKey) =
+  def givenDelegatedGroupIdsNotExistFor(enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"))
         .willReturn(aResponse()
           .withStatus(204)))
 
-  def givenDelegatedGroupIdRequestFailsWith(status: Int) =
+  def givenDelegatedGroupIdRequestFailsWith(status: Int): StubMapping =
     stubFor(
       get(urlContains("/groups?type=delegated"))
         .willReturn(aResponse().withStatus(status)))
 
-  def givenPrincipalUserIdExistFor(enrolmentKey: EnrolmentKey, userId: String) = {
+  def givenPrincipalUserIdExistFor(enrolmentKey: EnrolmentKey, userId: String): StubMapping = {
     givenPrincipalUserIdsExistFor(enrolmentKey, List(userId))
   }
 
-  def givenPrincipalUserIdsExistFor(enrolmentKey: EnrolmentKey, userIds: Seq[String]) = {
+  def givenPrincipalUserIdsExistFor(enrolmentKey: EnrolmentKey, userIds: Seq[String]): StubMapping = {
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/users?type=principal"))
         .willReturn(aResponse()
@@ -87,7 +87,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
           """.stripMargin)))
   }
 
-  def givenPrincipalUserIdNotExistFor(enrolmentKey: EnrolmentKey) = {
+  def givenPrincipalUserIdNotExistFor(enrolmentKey: EnrolmentKey): StubMapping = {
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/users?type=principal"))
         .willReturn(aResponse()
@@ -98,7 +98,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
     groupId: String,
     clientUserId: String,
     enrolmentKey: EnrolmentKey,
-    agentCode: String) =
+    agentCode: String): StubMapping =
     stubFor(
       post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(s"""
@@ -110,7 +110,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
         .withHeader("Content-Type", containing("application/json"))
         .willReturn(aResponse().withStatus(201)))
 
-  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey: EnrolmentKey, agentCode: String) =
+  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey: EnrolmentKey, agentCode: String): Unit =
     eventually {
       verify(
         1,
@@ -124,7 +124,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
       )
     }
 
-  def verifyNoEnrolmentHasBeenAllocated() =
+  def verifyNoEnrolmentHasBeenAllocated(): Unit =
     eventually {
       verify(0, postRequestedFor(urlContains(s"$teBaseUrl/groups/")))
     }
@@ -133,7 +133,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
     groupId: String,
     clientUserId: String,
     enrolmentKey: EnrolmentKey,
-    agentCode: String) =
+    agentCode: String): StubMapping =
     stubFor(
       post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(s"""
@@ -144,28 +144,28 @@ trait EnrolmentStoreProxyStubs extends Eventually {
                                           |""".stripMargin))
         .willReturn(aResponse().withStatus(responseStatus)))
 
-  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: EnrolmentKey) =
+  def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: EnrolmentKey): Unit =
     eventually {
       verify(1, deleteRequestedFor(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}")))
     }
 
-  def verifyNoEnrolmentHasBeenDeallocated() =
+  def verifyNoEnrolmentHasBeenDeallocated(): Unit =
     eventually {
       verify(0, deleteRequestedFor(urlContains(s"$teBaseUrl/groups/")))
     }
 
-  def givenEnrolmentDeallocationSucceeds(groupId: String, enrolmentKey: EnrolmentKey) =
+  def givenEnrolmentDeallocationSucceeds(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}"))
         .willReturn(aResponse().withStatus(204)))
   
   def givenEnrolmentDeallocationFailsWith(
-    responseStatus: Int)(groupId: String, enrolmentKey: EnrolmentKey) =
+    responseStatus: Int)(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}"))
         .willReturn(aResponse().withStatus(responseStatus)))
 
-  def givenEsIsUnavailable() = {
+  def givenEsIsUnavailable(): StubMapping = {
     stubFor(
       any(urlMatching(s"$esBaseUrl/.*"))
         .willReturn(aResponse().withStatus(503)))
@@ -209,6 +209,49 @@ trait EnrolmentStoreProxyStubs extends Eventually {
       get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
         .willReturn(aResponse()
           .withStatus(204)))
+
+  //ES20 - QueryKnownFactsByVerifiersAndIdentifiers
+  def givenKnownFactsForCbcId(cbcId: String, expectedUtr: String): StubMapping =
+    stubFor(
+      post(urlEqualTo(s"$esBaseUrl/enrolments"))
+        .withRequestBody(similarToJson(s"""
+                            |{
+                            |    "service": "HMRC-CBC-ORG",
+                            |    "knownFacts": [
+                            |        {
+                            |            "key": "cbcId",
+                            |            "value": "$cbcId"
+                            |        }
+                            |    ]
+                            |}
+             """.stripMargin))
+        .willReturn(aResponse().withStatus(200).withBody(
+        s"""
+           |{
+           |    "service": "HMRC-CBC-ORG",
+           |    "enrolments": [
+           |        {
+           |            "identifiers": [
+           |                {
+           |                    "key": "UTR",
+           |                    "value": "$expectedUtr"
+           |                },
+           |                {
+           |                    "key": "cbcId",
+           |                    "value": "$cbcId"
+           |                }
+           |            ],
+           |            "verifiers": [
+           |                {
+           |                    "key": "Email",
+           |                    "value": "placeholder.email@gov.uk"
+           |                }
+           |            ]
+           |        }
+           |    ]
+           |}
+           |""".stripMargin))
+    )
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
 
