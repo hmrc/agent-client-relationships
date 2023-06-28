@@ -60,7 +60,7 @@ class RelationshipsController @Inject()(
 
   implicit val ec: ExecutionContext = ecp.get
 
-  val supportedServices = appConfig.supportedServices
+  val supportedServices: Seq[Service] = appConfig.supportedServices
 
   def checkForRelationship(
     arn: Arn,
@@ -89,7 +89,7 @@ class RelationshipsController @Inject()(
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // "normal" cases
       case (svc, idType, id) =>
-        validateParams(svc, idType, id) match {
+        validateForEnrolmentKey(svc, idType, id) match {
           case Right(enrolmentKey) => checkWithTaxIdentifier(arn, tUserId, enrolmentKey)
           case Left(validationError) =>
             logger.warn(s"Invalid parameters: $validationError")
@@ -114,7 +114,7 @@ class RelationshipsController @Inject()(
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
 
-    val taxIdentifier = enrolmentKey.singleTaxIdentifier
+    val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
     val result = for {
       _ <- agentUserService.getAgentAdminUserFor(arn)
       /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
@@ -160,7 +160,7 @@ class RelationshipsController @Inject()(
           Right(cesaResult.grantAccess)
       }
       .recover {
-        case upS: Upstream5xxResponse =>
+        case upS: UpstreamErrorResponse =>
           throw upS
         case NonFatal(ex) =>
           logger.warn(
@@ -179,7 +179,7 @@ class RelationshipsController @Inject()(
         case false => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
       .recover {
-        case upS: Upstream5xxResponse => throw upS
+        case upS: UpstreamErrorResponse => throw upS
         case NonFatal(ex) =>
           logger.warn(
             s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}")
@@ -189,21 +189,27 @@ class RelationshipsController @Inject()(
 
   def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(serviceId, clientIdType, clientId) match {
+      validateForEnrolmentKey(serviceId, clientIdType, clientId) match {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.singleTaxIdentifier
+          val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
             implicit val auditData: AuditData = new AuditData()
             auditData.set("arn", arn)
 
             createService
-              .createRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxIdentifier), Set(), false, true)
+              .createRelationship(
+                arn,
+                EnrolmentKey(Service.forId(serviceId), taxIdentifier),
+                Set(),
+                failIfCreateRecordFails = false,
+                failIfAllocateAgentInESFails = true
+              )
               .map {
                 case Some(_) => Created
                 case None    => logger.warn(s"create relationship is currently in Locked state"); Locked
               }
               .recover {
-                case upS: Upstream5xxResponse =>
+                case upS: UpstreamErrorResponse =>
                   logger.warn(s"Could not create relationship due to ${upS.getMessage}")
                   InternalServerError(toJson(upS.getMessage))
                 case NonFatal(ex) =>
@@ -216,30 +222,41 @@ class RelationshipsController @Inject()(
       }
   }
 
-  private def validateParams(serviceKey: String, clientType: String, clientId: String): Either[String, EnrolmentKey] =
+  private def validateForEnrolmentKey(
+    serviceKey: String,
+    clientType: String,
+    clientId: String): Either[String, EnrolmentKey] =
     (serviceKey, clientType) match {
       // "special" cases
       case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) => Right(EnrolmentKey("IR-SA", Nino(clientId)))
       case (Service.MtdIt.id, "ni" | "NI") if Nino.isValid(clientId) =>
         Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId)))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) => Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId)))
-      // "normal" cases
-      case (serviceKey, taxIdType) if appConfig.supportedServices.exists(_.id == serviceKey) =>
-        val service: Service = Service.forId(serviceKey)
-        val clientIdType: ClientIdType[TaxIdentifier] = service.supportedClientIdType
-        if (taxIdType == clientIdType.enrolmentId) {
-          if (clientIdType.isValid(clientId)) Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId)))
-          else
-            Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
-        } else Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey")
-      case (svc, _) => Left(s"Unknown service $svc")
+      //"normal" cases
+      case (serviceKey, _) =>
+        if (appConfig.supportedServices.exists(_.id == serviceKey)) {
+          validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
+        } else Left(s"Unknown service $serviceKey")
     }
+
+  private def validateSupportedServiceForEnrolmentKey(
+    serviceKey: String,
+    taxIdType: String,
+    clientId: String): Either[String, EnrolmentKey] = {
+    val service: Service = Service.forId(serviceKey)
+    val clientIdType: ClientIdType[TaxIdentifier] = service.supportedClientIdType
+    if (taxIdType == clientIdType.enrolmentId) {
+      if (clientIdType.isValid(clientId)) Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId)))
+      else
+        Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
+    } else Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey")
+  }
 
   def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(serviceId, clientIdType, clientId) match {
+      validateForEnrolmentKey(serviceId, clientIdType, clientId) match {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.singleTaxIdentifier
+          val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
               id <- taxIdentifier match {
@@ -254,7 +271,7 @@ class RelationshipsController @Inject()(
                   }
             } yield NoContent)
               .recover {
-                case upS: Upstream5xxResponse =>
+                case upS: UpstreamErrorResponse =>
                   logger.warn(s"Could not delete relationship: ${upS.getMessage}")
                   InternalServerError(toJson(upS.getMessage))
                 case NonFatal(ex) =>
@@ -279,7 +296,7 @@ class RelationshipsController @Inject()(
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
       .recover {
-        case upS: Upstream5xxResponse => throw upS
+        case upS: UpstreamErrorResponse => throw upS
         case NonFatal(_) =>
           logger.warn("checkWithVrn: lookupESForOldRelationship failed")
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
@@ -313,9 +330,9 @@ class RelationshipsController @Inject()(
 
   def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateParams(service, clientIdType, clientId) match {
+      validateForEnrolmentKey(service, clientIdType, clientId) match {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.singleTaxIdentifier
+          val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
             val relationships = if (service == Service.MtdIt.id) {
               findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))

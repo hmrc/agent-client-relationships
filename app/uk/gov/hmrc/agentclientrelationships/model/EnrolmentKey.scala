@@ -27,12 +27,28 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
   lazy val tag = // note: we intentionally do not use the Identifier's toString below because it uppercases everything!
     s"$service~${identifiers.sorted.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
   override def toString: String = tag
-  def singleIdentifier: Identifier = // Note: unsafe (i.e. can throw exceptions)
+
+  // TODO eventually remove these 'single' methods
+  def singleIdentifier: Identifier =
     if (identifiers.length == 1) identifiers.head else throw new RuntimeException("No single identifier")
-  def singleTaxIdentifier: TaxIdentifier = { // Note: unsafe (i.e. can throw exceptions)
+  def singleTaxIdentifier
+    : TaxIdentifier = {
     val identifier = singleIdentifier
     ClientIdType.supportedTypes.find(_.enrolmentId == identifier.key).get.createUnderlying(identifier.value)
   }
+
+  /** Note: unsafe (i.e. can throw exceptions)
+    * Supplying no key assumes the enrolment has a single identifier - TODO do we want to keep this assumption?
+    * For enrolments with multiple identifiers you will always need to specify which one, or it will grab the first.
+   **/
+  def oneIdentifier(key: Option[String] = None): Identifier =
+    if (key.isEmpty) identifiers.head else identifiers.find(i => i.key == key.get).get
+
+  def oneTaxIdentifier(key: Option[String] = None): TaxIdentifier = {
+    val identifier = oneIdentifier(key)
+    ClientIdType.supportedTypes.find(_.enrolmentId == identifier.key).get.createUnderlying(identifier.value)
+  }
+
 }
 
 object EnrolmentKey {
