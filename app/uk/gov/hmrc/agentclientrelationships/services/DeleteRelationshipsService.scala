@@ -42,9 +42,7 @@ import scala.util.control.NonFatal
 @Singleton
 class DeleteRelationshipsService @Inject()(
   es: EnrolmentStoreProxyConnector,
-  des: DesConnector,
   ifConnector: IFConnector,
-  ugs: UsersGroupsSearchConnector,
   aca: AgentClientAuthorisationConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
@@ -56,7 +54,8 @@ class DeleteRelationshipsService @Inject()(
     extends Monitoring
     with Logging {
 
-  val recoveryTimeout = appConfig.recoveryTimeout
+  val recoveryTimeout: Int = appConfig.recoveryTimeout
+
   //noinspection ScalaStyle
   def deleteRelationship(arn: Arn, enrolmentKey: EnrolmentKey, affinityGroup: Option[AffinityGroup])(
     implicit ec: ExecutionContext,
@@ -66,8 +65,8 @@ class DeleteRelationshipsService @Inject()(
 
     implicit val auditData: AuditData = setAuditDataForUser(currentUser, arn, enrolmentKey)
 
-    val taxIdentifier: TaxIdentifier = enrolmentKey.singleTaxIdentifier
-    val identifierType = enrolmentKey.singleIdentifier.key
+    val identifierType = enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).key
+    val taxIdentifier: TaxIdentifier = enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ )
 
     auditData.set("AgentDBRecord", false)
     auditData.set("enrolmentDeAllocated", false)
@@ -91,7 +90,7 @@ class DeleteRelationshipsService @Inject()(
       val record = DeleteRecord(
         arn.value,
         Some(enrolmentKey.service),
-        enrolmentKey.singleIdentifier.value,
+        enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).value,
         identifierType,
         headerCarrier = Some(hc),
         relationshipEndedBy = endedBy
@@ -101,7 +100,7 @@ class DeleteRelationshipsService @Inject()(
         if recordDeletionStatus == DbUpdateSucceeded
         esRecordDeletionStatus <- deleteEsRecord(arn, enrolmentKey)
         if esRecordDeletionStatus == DbUpdateSucceeded
-        etmpRecordDeletionStatus <- deleteEtmpRecord(arn, enrolmentKey.singleTaxIdentifier)
+        etmpRecordDeletionStatus <- deleteEtmpRecord(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ ))
         if etmpRecordDeletionStatus == DbUpdateSucceeded
         removed <- removeDeleteRecord(arn, taxIdentifier)
         if removed
@@ -174,7 +173,7 @@ class DeleteRelationshipsService @Inject()(
     auditData: AuditData): Future[DbUpdateStatus] = {
 
     val updateEsSyncStatus = deleteRecordRepository
-      .updateEsSyncStatus(arn, enrolmentKey.singleTaxIdentifier, _: SyncStatus)
+      .updateEsSyncStatus(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ ), _: SyncStatus)
       .map(convertDbUpdateStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
@@ -239,7 +238,7 @@ class DeleteRelationshipsService @Inject()(
       }
 
   def tryToResume(implicit ec: ExecutionContext, auditData: AuditData): Future[Boolean] =
-    deleteRecordRepository.selectNextToRecover.flatMap {
+    deleteRecordRepository.selectNextToRecover().flatMap {
       case Some(record) =>
         val headerCarrier = record.headerCarrier.getOrElse(HeaderCarrier())
         val taxIdentifier: TaxIdentifier =
@@ -307,6 +306,7 @@ class DeleteRelationshipsService @Inject()(
               .find(_.supportedClientIdType.enrolmentId == deleteRecord.clientIdentifierType)
               .map(_.id))
           .getOrElse(throw new RuntimeException("Could not determine service"))
+        // TODO cbc - will fail for uk
         val enrolmentKey =
           EnrolmentKey(serviceKey, Seq(Identifier(deleteRecord.clientIdentifierType, deleteRecord.clientIdentifier)))
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
@@ -345,8 +345,8 @@ class DeleteRelationshipsService @Inject()(
     val auditData = new AuditData()
     if (currentUser.credentials.providerType == "GovernmentGateway") {
       auditData.set("agentReferenceNumber", arn.value)
-      auditData.set("clientId", enrolmentKey.singleIdentifier.value)
-      auditData.set("clientIdType", enrolmentKey.singleIdentifier.key)
+      auditData.set("clientId", enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).value)
+      auditData.set("clientIdType", enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).key)
       auditData.set("service", enrolmentKey.service)
       auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
       auditData.set("authProviderId", currentUser.credentials.providerId)
@@ -356,7 +356,7 @@ class DeleteRelationshipsService @Inject()(
       auditData.set("authProviderId", currentUser.credentials.providerId)
       auditData.set("authProviderIdType", currentUser.credentials.providerType)
       auditData.set("agentReferenceNumber", arn.value)
-      auditData.set("clientId", enrolmentKey.singleIdentifier.value)
+      auditData.set("clientId", enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).value)
       auditData.set("service", enrolmentKey.service)
       auditData
     } else throw new IllegalStateException("No providerType found")

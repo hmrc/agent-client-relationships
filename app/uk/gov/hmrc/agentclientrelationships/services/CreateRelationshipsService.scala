@@ -57,17 +57,18 @@ class CreateRelationshipsService @Inject()(
     hc: HeaderCarrier,
     auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, enrolmentKey.singleTaxIdentifier) {
+      .tryLock(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ )) {
         auditData.set("AgentDBRecord", false)
         auditData.set("enrolmentDelegated", false)
         auditData.set("etmpRelationshipCreated", false)
 
         def createRelationshipRecord: Future[DbUpdateStatus] = {
-          val identifierType = enrolmentKey.singleIdentifier.key
-          val identifier = enrolmentKey.singleIdentifier.value
+          val identifierType = enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).key
+          val identifier = enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).value
+          // is there a need to update to store multi identifiers?
           val record = RelationshipCopyRecord(
             arn.value,
-            Some(enrolmentKey.service),
+            Some(enrolmentKey.service), //is there a case where we'd not have the service?
             identifier,
             identifierType,
             Some(oldReferences))
@@ -90,7 +91,7 @@ class CreateRelationshipsService @Inject()(
           agentUser            <- retrieveAgentUser(arn)
           recordCreationStatus <- createRelationshipRecord
           if recordCreationStatus == DbUpdateSucceeded
-          etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey.singleTaxIdentifier)
+          etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ ))
           if etmpRecordCreationStatus == DbUpdateSucceeded
           esRecordCreationStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails)
         } yield esRecordCreationStatus
@@ -139,7 +140,7 @@ class CreateRelationshipsService @Inject()(
 
     def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
       relationshipCopyRepository
-        .updateEsSyncStatus(arn, enrolmentKey.singleTaxIdentifier, status)
+        .updateEsSyncStatus(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ ), status)
         .map(convertDbUpdateStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
@@ -183,6 +184,7 @@ class CreateRelationshipsService @Inject()(
           .orElse(recoverNonFatal))
   }
 
+  //noinspection ScalaStyle
   def deallocatePreviousRelationship(newArn: Arn, enrolmentKey: EnrolmentKey)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[Unit] =
@@ -199,8 +201,8 @@ class CreateRelationshipsService @Inject()(
                       val deleteRecord = DeleteRecord(
                         arnToRemove.value,
                         Some(enrolmentKey.service),
-                        enrolmentKey.singleIdentifier.value,
-                        enrolmentKey.singleIdentifier.key,
+                        enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).value,
+                        enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).key,
                         syncToETMPStatus = Some(Success),
                         headerCarrier = Some(hc)
                       )
@@ -220,7 +222,7 @@ class CreateRelationshipsService @Inject()(
                     case None => Future successful (())
                     case Some(removedArn) =>
                       deleteRecordRepository
-                        .remove(removedArn, enrolmentKey.singleTaxIdentifier)
+                        .remove(removedArn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ ))
                         .map(_ > 0)
                         .recoverWith {
                           case NonFatal(ex) =>
@@ -248,12 +250,12 @@ class CreateRelationshipsService @Inject()(
     hc: HeaderCarrier,
     auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, enrolmentKey.singleTaxIdentifier) {
+      .tryLock(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ )) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
           case (true, true) =>
             for {
               agentUser  <- retrieveAgentUser(arn)
-              etmpStatus <- createEtmpRecord(arn, enrolmentKey.singleTaxIdentifier)
+              etmpStatus <- createEtmpRecord(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ ))
               if etmpStatus == DbUpdateSucceeded
               esStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
             } yield esStatus
@@ -266,7 +268,7 @@ class CreateRelationshipsService @Inject()(
             logger.warn(
               s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
                 s"This should not happen because we always create the ETMP relationship first,")
-            createEtmpRecord(arn, enrolmentKey.singleTaxIdentifier)
+            createEtmpRecord(arn, enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ ))
           case (false, false) =>
             logger.warn(
               s"recoverRelationshipCreation called for ${arn.value}, ${enrolmentKey.tag} when no recovery needed")

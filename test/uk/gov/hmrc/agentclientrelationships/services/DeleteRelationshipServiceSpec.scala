@@ -21,7 +21,7 @@ import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.Configuration
-import play.api.mvc.Request
+import play.api.mvc.{AnyContentAsEmpty, Request}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -38,7 +38,7 @@ import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.time.{Instant, ZoneOffset}
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -47,15 +47,15 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val testAuditData: AuditData = new AuditData
 
-  def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+  def now: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
-  val arn = Arn("AARN0000002")
-  val mtdItId = MtdItId("ABCDEF123456789")
-  val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
+  val arn: Arn = Arn("AARN0000002")
+  val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
+  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
   val agentUserId = "testUserId"
   val agentGroupId = "testGroupId"
-  val agentCodeForAsAgent = AgentCode("ABC1234")
-  val agentUser = AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn)
+  val agentCodeForAsAgent: AgentCode = AgentCode("ABC1234")
+  val agentUser: AgentUser = AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn)
 
   "deleteRelationship" should {
 
@@ -67,8 +67,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      implicit val request = FakeRequest()
-      implicit val currentUser =
+      implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+      implicit val currentUser: CurrentUser =
         CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
@@ -83,8 +83,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAgentExists
       givenESDeAllocationFails
 
-      implicit val request = FakeRequest()
-      implicit val currentUser =
+      implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+      implicit val currentUser: CurrentUser =
         CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
       an[Exception] shouldBe thrownBy {
         await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
@@ -105,8 +105,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenETMPDeAuthFails
       givenAucdCacheRefresh
 
-      implicit val request = FakeRequest()
-      implicit val currentUser =
+      implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+      implicit val currentUser: CurrentUser =
         CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
       an[Exception] shouldBe thrownBy {
         await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
@@ -123,7 +123,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
       await(repo.remove(arn, mtdItId))
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, None, Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
@@ -152,8 +152,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedFails
       givenAucdCacheRefresh
 
-      implicit val request = FakeRequest()
-      implicit val currentUser =
+      implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+      implicit val currentUser: CurrentUser =
         CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
@@ -169,11 +169,11 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     // HAPPY PATHS :-)
 
     "Do nothing if ETMP and ES are in successful states" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Success), Some(Success))
       await(repo.create(deleteRecord))
 
-      val result =
+      val result: Boolean =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
@@ -182,13 +182,13 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry ETMP de-authorisation when only ETMP requires action" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Failed), Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
 
-      val result =
+      val result: Boolean =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
@@ -201,12 +201,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Do not retry ETMP de-authorisation when ETMP state is InProgress" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(InProgress), Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
 
-      val result =
+      val result: Boolean =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
@@ -219,7 +219,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry ES de-allocation when only ES requires action (impossible state since ES goes first)" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
@@ -228,7 +228,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result =
+      val result: Boolean =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
@@ -241,14 +241,14 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Do not retry ES de-allocation when ES state is InProgress" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Success), Some(InProgress))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
       givenESDeAllocationSucceeds
 
-      val result =
+      val result: Boolean =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
@@ -261,7 +261,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry both ETMP and ES de-allocation when both require action" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Failed), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
@@ -271,7 +271,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result =
+      val result: Boolean =
         await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
@@ -286,7 +286,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     // FAILURE SCENARIOS
 
     "When retry ETMP de-authorisation fails keep status Failed" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Failed), Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthFails
@@ -304,7 +304,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "When retry ES de-allocation fails keep status failed" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
@@ -328,12 +328,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
   "checkDeleteRecordAndEventuallyResume" should {
     implicit val request: Request[_] = NoRequest
     "return true if there is no pending delete record" in new TestFixture {
-      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
       result shouldBe true
     }
     "return true if delete record found and resumption succeeded" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenRelationshipBetweenAgentAndClientExists
@@ -342,20 +342,20 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItId)) shouldBe None
     }
     "return false if delete record found but resumption failed" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Success), Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
       givenESDeAllocationFails
 
-      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
       result shouldBe false
       await(repo.findBy(arn, mtdItId)) should matchPattern {
@@ -363,7 +363,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       }
     }
     "return true if delete record found but authorisation missing and only need ETMP de-auth" in new TestFixture {
-      val deleteRecord =
+      val deleteRecord: DeleteRecord =
         DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, "MTDITID", now, Some(Failed), Some(Success))
       await(repo.create(deleteRecord))
       givenAgentExists
@@ -371,7 +371,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
 
-      val result = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItId)) shouldBe None
@@ -380,7 +380,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
   "tryToResume" should {
     "select not attempted delete record first" in new TestFixture {
-      val deleteRecord1 = DeleteRecord(
+      val deleteRecord1: DeleteRecord = DeleteRecord(
         arn.value + "1",
         Some(Service.MtdIt.id),
         "ABCDEF0000000001",
@@ -389,7 +389,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         None,
         Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(1)))
-      val deleteRecord2 = DeleteRecord(
+      val deleteRecord2: DeleteRecord = DeleteRecord(
         arn.value,
         Some(Service.MtdIt.id),
         mtdItId.value,
@@ -399,7 +399,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         Some(Success),
         lastRecoveryAttempt = None,
         headerCarrier = None)
-      val deleteRecord3 = DeleteRecord(
+      val deleteRecord3: DeleteRecord = DeleteRecord(
         arn.value + "3",
         Some(Service.MtdIt.id),
         "ABCDEF0000000001",
@@ -420,14 +420,14 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
 
-      val result = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
+      val result: Boolean = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItId)) shouldBe None
     }
 
     "select the oldest attempted delete record first" in new TestFixture {
-      val deleteRecord1 = DeleteRecord(
+      val deleteRecord1: DeleteRecord = DeleteRecord(
         arn.value + "1",
         Some(Service.MtdIt.id),
         "ABCDEF0000000001",
@@ -436,7 +436,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         Some(Success),
         Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(1)))
-      val deleteRecord2 = DeleteRecord(
+      val deleteRecord2: DeleteRecord = DeleteRecord(
         arn.value,
         Some(Service.MtdIt.id),
         mtdItId.value,
@@ -445,7 +445,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         Some(Success),
         Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(13)))
-      val deleteRecord3 = DeleteRecord(
+      val deleteRecord3: DeleteRecord = DeleteRecord(
         arn.value + "3",
         Some(Service.MtdIt.id),
         "ABCDEF0000000001",
@@ -467,7 +467,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
+      val result: Boolean = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItId)) shouldBe None
@@ -476,22 +476,20 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
   trait TestFixture {
 
-    val es = mock[EnrolmentStoreProxyConnector]
-    val des = mock[DesConnector]
-    val ugs = mock[UsersGroupsSearchConnector]
-    val auditService = mock[AuditService]
-    val checkService = mock[CheckRelationshipsService]
-    val agentUserService = mock[AgentUserService]
-    val metrics = mock[Metrics]
-    val ifConnector = mock[IFConnector]
-    val aca = mock[AgentClientAuthorisationConnector]
-    val aucdConnector = mock[AgentUserClientDetailsConnector]
+    val es: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
+    val auditService: AuditService = mock[AuditService]
+    val checkService: CheckRelationshipsService = mock[CheckRelationshipsService]
+    val agentUserService: AgentUserService = mock[AgentUserService]
+    val metrics: Metrics = mock[Metrics]
+    val ifConnector: IFConnector = mock[IFConnector]
+    val aca: AgentClientAuthorisationConnector = mock[AgentClientAuthorisationConnector]
+    val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
 
     val repo = new FakeDeleteRecordRepository
     val lockService = new FakeLockService
 
-    val servicesConfig = mock[ServicesConfig]
-    val configuration = mock[Configuration]
+    val servicesConfig: ServicesConfig = mock[ServicesConfig]
+    val configuration: Configuration = mock[Configuration]
 
     when(servicesConfig.getInt(eqs("recovery-timeout"))).thenReturn(100)
     when(servicesConfig.getString(any[String])).thenReturn("")
@@ -499,9 +497,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     val underTest = new DeleteRelationshipsService(
       es,
-      des,
       ifConnector,
-      ugs,
       aca,
       repo,
       aucdConnector,

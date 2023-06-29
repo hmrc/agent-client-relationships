@@ -1457,7 +1457,10 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(ifConnector.createAgentRelationship(eqs(enrolmentKey.singleTaxIdentifier), eqs(arn))(eqs(hc), eqs(ec)))
+    when(
+      ifConnector.createAgentRelationship(eqs(enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ )), eqs(arn))(
+        eqs(hc),
+        eqs(ec)))
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(

@@ -28,15 +28,6 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
     s"$service~${identifiers.sorted.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
   override def toString: String = tag
 
-  // TODO eventually remove these 'single' methods
-  def singleIdentifier: Identifier =
-    if (identifiers.length == 1) identifiers.head else throw new RuntimeException("No single identifier")
-  def singleTaxIdentifier
-    : TaxIdentifier = {
-    val identifier = singleIdentifier
-    ClientIdType.supportedTypes.find(_.enrolmentId == identifier.key).get.createUnderlying(identifier.value)
-  }
-
   /** Note: unsafe (i.e. can throw exceptions)
     * Supplying no key assumes the enrolment has a single identifier - TODO do we want to keep this assumption?
     * For enrolments with multiple identifiers you will always need to specify which one, or it will grab the first.
@@ -44,6 +35,7 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
   def oneIdentifier(key: Option[String] = None): Identifier =
     if (key.isEmpty) identifiers.head else identifiers.find(i => i.key == key.get).get
 
+  /* Note: unsafe, see oneIdentifier */
   def oneTaxIdentifier(key: Option[String] = None): TaxIdentifier = {
     val identifier = oneIdentifier(key)
     ClientIdType.supportedTypes.find(_.enrolmentId == identifier.key).get.createUnderlying(identifier.value)

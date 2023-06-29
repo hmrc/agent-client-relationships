@@ -22,7 +22,7 @@ import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, MappingConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.services._
@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, Relationship
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Provider, Singleton}
@@ -50,6 +50,7 @@ class RelationshipsController @Inject()(
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
   ecp: Provider[ExecutionContext],
+  esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
   auditService: AuditService,
   override val controllerComponents: ControllerComponents)
@@ -89,7 +90,8 @@ class RelationshipsController @Inject()(
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // "normal" cases
       case (svc, idType, id) =>
-        validateForEnrolmentKey(svc, idType, id) match {
+        // TODO, unnecessary ES20 call?
+        validateForEnrolmentKey(svc, idType, id).flatMap {
           case Right(enrolmentKey) => checkWithTaxIdentifier(arn, tUserId, enrolmentKey)
           case Left(validationError) =>
             logger.warn(s"Invalid parameters: $validationError")
@@ -108,13 +110,18 @@ class RelationshipsController @Inject()(
       case _ => proceed
     }
 
+  //noinspection ScalaStyle
   private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(
     implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
 
-    val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
+    // this feels like the start of another growing match statement
+    val taxIdentifier = if (enrolmentKey.service == Service.Cbc.id) {
+      enrolmentKey.oneTaxIdentifier(Some(CbcIdType.enrolmentId))
+    } else { enrolmentKey.oneTaxIdentifier() }
+
     val result = for {
       _ <- agentUserService.getAgentAdminUserFor(arn)
       /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
@@ -189,9 +196,9 @@ class RelationshipsController @Inject()(
 
   def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateForEnrolmentKey(serviceId, clientIdType, clientId) match {
+      validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
+          val taxIdentifier = enrolmentKey.oneTaxIdentifier( /*TODO would fail for cbc, clientType failing tests - nino?*/ )
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
             implicit val auditData: AuditData = new AuditData()
             auditData.set("arn", arn)
@@ -199,7 +206,7 @@ class RelationshipsController @Inject()(
             createService
               .createRelationship(
                 arn,
-                EnrolmentKey(Service.forId(serviceId), taxIdentifier),
+                enrolmentKey,
                 Set(),
                 failIfCreateRecordFails = false,
                 failIfAllocateAgentInESFails = true
@@ -222,41 +229,57 @@ class RelationshipsController @Inject()(
       }
   }
 
-  private def validateForEnrolmentKey(
-    serviceKey: String,
-    clientType: String,
-    clientId: String): Either[String, EnrolmentKey] =
+  //noinspection ScalaStyle
+  private def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
-      case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) => Right(EnrolmentKey("IR-SA", Nino(clientId)))
+      case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
       case (Service.MtdIt.id, "ni" | "NI") if Nino.isValid(clientId) =>
-        Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId)))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) => Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId)))
+        Future.successful(Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId))))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
+      case (Service.Cbc.id, CbcIdType.enrolmentId) => // need to fetch the UTR to make a 'complete' enrolment key
+        esConnector.findUtrForCbcId(CbcId(clientId)).map {
+          case Some(utr) =>
+            Right(
+              EnrolmentKey(
+                Service.Cbc.id,
+                Seq(Identifier("UTR" /* Not "SAUTR"! */, utr.value), Identifier(CbcIdType.enrolmentId, clientId))
+              )
+            )
+          case None => Left(s"CbcId provided $clientId for UK CBC should have an associated UTR but one was not found")
+        }
       //"normal" cases
       case (serviceKey, _) =>
         if (appConfig.supportedServices.exists(_.id == serviceKey)) {
           validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
-        } else Left(s"Unknown service $serviceKey")
+        } else Future.successful(Left(s"Unknown service $serviceKey"))
     }
 
   private def validateSupportedServiceForEnrolmentKey(
     serviceKey: String,
     taxIdType: String,
-    clientId: String): Either[String, EnrolmentKey] = {
+    clientId: String): Future[Either[String, EnrolmentKey]] = {
     val service: Service = Service.forId(serviceKey)
     val clientIdType: ClientIdType[TaxIdentifier] = service.supportedClientIdType
     if (taxIdType == clientIdType.enrolmentId) {
-      if (clientIdType.isValid(clientId)) Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId)))
+      if (clientIdType.isValid(clientId))
+        Future.successful(Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId))))
       else
-        Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
-    } else Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey")
+        Future.successful(
+          Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation"))
+    } else
+      Future.successful(Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey"))
   }
 
   def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateForEnrolmentKey(serviceId, clientIdType, clientId) match {
+      validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
+          val taxIdentifier = enrolmentKey.oneTaxIdentifier( /*TODO would fail for cbc, clientType failing tests - nino?*/ )
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
               id <- taxIdentifier match {
@@ -330,9 +353,10 @@ class RelationshipsController @Inject()(
 
   def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateForEnrolmentKey(service, clientIdType, clientId) match {
+      //TODO, unnecessary ES20 call?
+      validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.singleTaxIdentifier // TODO cbc will fail for uk
+          val taxIdentifier = enrolmentKey.oneTaxIdentifier( /*TODO would fail for cbc, clientType failing tests - nino?*/ )
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
             val relationships = if (service == Service.MtdIt.id) {
               findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
@@ -348,6 +372,7 @@ class RelationshipsController @Inject()(
       }
   }
 
+  // Note test only?? Move!
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { _ =>
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
