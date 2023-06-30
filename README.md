@@ -1,14 +1,18 @@
 # agent-client-relationships
 
-[![Build Status](https://travis-ci.org/hmrc/agent-client-relationships.svg)](https://travis-ci.org/hmrc/agent-client-relationships) [ ![Download](https://api.bintray.com/packages/hmrc/releases/agent-client-relationships/images/download.svg) ](https://bintray.com/hmrc/releases/agent-client-relationships/_latestVersion)
+[![Build Status](https://travis-ci.org/hmrc/agent-client-relationships.svg)](https://travis-ci.org/hmrc/agent-client-relationships)
 
-This is a backend micro-service whose domain is Agent Client Relationships.
+This is a backend microservice whose domain is Agent Client Relationships. Relationships are established after a client accepts an invitation.
+
 It is used to manage relationships between agents and clients for the following services:
  - HMRC-MTD-IT
  - HMRC-MTD-VAT
- - HMRC-TERS-ORG
+ - HMRC-TERS-ORG / HMRC-TERSNT-ORG (Trusts and estates)
  - IR-SA 
  - HMCE-VATDEC-ORG
+ - HMRC-CGT-PD
+ - HMRC-PPT-ORG
+ - HRMC-CBC-ORG / HMRC-CBC-NONUK-ORG (Country by country, support pending)
 
 ### Agent access groups (new)
 
