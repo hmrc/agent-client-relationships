@@ -36,7 +36,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
     "create, find and update and remove a record" in {
       val relationshipCopyRecord = RelationshipCopyRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747696",
         "VRN",
         None,
@@ -65,7 +65,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
     "overwrite existing record when creating new relationship with the same arn and client data" in {
       val relationshipCopyRecord1 = RelationshipCopyRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747696",
         "VRN",
         None,
@@ -76,7 +76,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
       createResult1 shouldBe 1
       val relationshipCopyRecord2 = RelationshipCopyRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747696",
         "VRN",
         None,

@@ -1,7 +1,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import org.mongodb.scala.model.Filters
-import play.api.libs.json.JsObject
+import play.api.libs.json.{Format, JsObject}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, MongoLocalDateTimeFormat, TerminationResponse}
@@ -16,9 +16,9 @@ import java.util.Base64
 
 class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
-  val relationshipCopiedSuccessfully = RelationshipCopyRecord(
+  val relationshipCopiedSuccessfully: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
-    Some(Service.MtdIt.id),
+    Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
     mtdItId.value,
     mtdItIdType,
     syncToETMPStatus = Some(SyncStatus.Success),
@@ -29,14 +29,14 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
                          regime: String,
                          clientId: TaxIdentifier)
 
-  val itsaClient = TestClient(Service.MtdIt.id, "ITSA", mtdItId)
-  val vatClient = TestClient(Service.Vat.id, "VATC", vrn)
-  val trustClient = TestClient(Service.Trust.id, "TRS", utr)
-  val trustNTClient = TestClient(Service.TrustNT.id, "TRS", urn)
-  val cgtClient = TestClient(Service.CapitalGains.id, "CGT", cgtRef)
-  val pptClient = TestClient(Service.Ppt.id, "PPT", pptRef)
-  val cbcClient = TestClient(Service.Cbc.id, "CBC", cbcId)
-  val cbcNonUkClient = TestClient(Service.CbcNonUk.id, "CBC", cbcId)
+  val itsaClient: TestClient = TestClient(Service.MtdIt.id, "ITSA", mtdItId)
+  val vatClient: TestClient = TestClient(Service.Vat.id, "VATC", vrn)
+  val trustClient: TestClient = TestClient(Service.Trust.id, "TRS", utr)
+  val trustNTClient: TestClient = TestClient(Service.TrustNT.id, "TRS", urn)
+  val cgtClient: TestClient = TestClient(Service.CapitalGains.id, "CGT", cgtRef)
+  val pptClient: TestClient = TestClient(Service.Ppt.id, "PPT", pptRef)
+  val cbcClient: TestClient = TestClient(Service.Cbc.id, "CBC", cbcId)
+  val cbcNonUkClient: TestClient = TestClient(Service.CbcNonUk.id, "CBC", cbcId)
 
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
   val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient)
@@ -57,37 +57,37 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
   "GET /client/relationships/service/:service" should {
     individualList.foreach { client =>
-      runActiveRelationshipsScenario(client, true, false)
+      runActiveRelationshipsScenario(client, isLoggedInClientInd = true, isLoggedInBusiness = false)
     }
 
     businessList.foreach { client =>
-      runActiveRelationshipsScenario(client, false, true)
+      runActiveRelationshipsScenario(client, isLoggedInClientInd = false, isLoggedInBusiness = true)
     }
 
     individualList.foreach { client =>
-      runActiveRelationshipsErrorScenario(client, true, false)
+      runActiveRelationshipsErrorScenario(client, isLoggedInClientInd = true, isLoggedInBusiness = false)
     }
 
     businessList.foreach { client =>
-      runActiveRelationshipsErrorScenario(client, false, true)
+      runActiveRelationshipsErrorScenario(client, isLoggedInClientInd = false, isLoggedInBusiness = true)
     }
   }
 
-  def runActiveRelationshipsScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean) = {
+  def runActiveRelationshipsScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean): Unit = {
     val requestPath: String = s"/agent-client-relationships/client/relationships/service/${testClient.service}"
 
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest() = doAgentGetRequest(requestPath)
 
     s"find relationship for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipsViaClient(testClient.clientId, arn)
 
-        val result: HttpResponse = doRequest
+        val result: HttpResponse = doRequest()
         result.status shouldBe 200
 
         (result.json \ "arn").get.as[String] shouldBe arn.value
-        (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
+        (result.json \ "dateTo").get.as[LocalDate].toString shouldBe "9999-12-31"
     }
 
     s"find multiple relationships for service ${testClient.service} " +
@@ -96,17 +96,17 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getSomeActiveRelationshipsViaClient(testClient.clientId, arn.value, arn2.value, arn3.value)
 
-      val result: HttpResponse = doRequest
+      val result: HttpResponse = doRequest()
       result.status shouldBe 200
       (result.json \ "arn").get.as[String] shouldBe arn3.value
-      (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
+      (result.json \ "dateTo").get.as[LocalDate].toString shouldBe "9999-12-31"
     }
   }
 
-  def runActiveRelationshipsErrorScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean) = {
+  def runActiveRelationshipsErrorScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean): Unit = {
     val requestPath: String = s"/agent-client-relationships/relationships/service/${testClient.service}"
 
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest() = doAgentGetRequest(requestPath)
 
     "find relationship but filter out if the end date has been changed from 9999-12-31 " +
     s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
@@ -114,7 +114,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getInactiveRelationshipViaClient(testClient.clientId, arn.value)
 
-      val result: HttpResponse = doRequest
+      val result: HttpResponse = doRequest()
       result.status shouldBe 404
     }
 
@@ -124,7 +124,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getActiveRelationshipFailsWith(testClient.clientId, 404)
 
-      val result = doRequest
+      val result: HttpResponse = doRequest()
       result.status shouldBe 404
     }
 
@@ -135,7 +135,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getActiveRelationshipFailsWith(testClient.clientId, 400)
 
-      val result = doRequest
+      val result: HttpResponse = doRequest()
       result.status shouldBe 404
     }
 
@@ -152,9 +152,9 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
   }
 
-  def runInactiveRelationshipsScenario(testClient: TestClient) = {
+  def runInactiveRelationshipsScenario(testClient: TestClient): Unit = {
     val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive"
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest() = doAgentGetRequest(requestPath)
     val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive")
 
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
@@ -166,26 +166,26 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getInactiveRelationshipsViaAgent(arn, otherId, testClient.clientId)
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 200
 
       (result.json \\ "arn").head.as[String] shouldBe arn.value
-      (result.json \\ "dateTo").head.as[LocalDate].toString() shouldBe "2015-09-21"
+      (result.json \\ "dateTo").head.as[LocalDate].toString shouldBe "2015-09-21"
       (result.json \\ "clientId").head.as[String] shouldBe otherId.value
       (result.json \\ "clientType").head.as[String] shouldBe clientType
       (result.json \\ "service").head.as[String] shouldBe testClient.service
 
       (result.json \\ "arn")(1).as[String] shouldBe arn.value
-      (result.json \\ "dateTo")(1).as[LocalDate].toString() shouldBe LocalDate.now().toString
+      (result.json \\ "dateTo") (1).as[LocalDate].toString shouldBe LocalDate.now().toString
       (result.json \\ "clientId")(1).as[String] shouldBe testClient.clientId.value
       (result.json \\ "clientType")(1).as[String] shouldBe clientType
       (result.json \\ "service")(1).as[String] shouldBe testClient.service
     }
   }
 
-  def runInactiveRelationshipsErrorScenario(testClient: TestClient) = {
+  def runInactiveRelationshipsErrorScenario(testClient: TestClient): Unit = {
     val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive"
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest() = doAgentGetRequest(requestPath)
     val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/relationships/inactive")
 
     s"find relationship but filter out if the relationship is still active for ${testClient.service}" in {
@@ -193,7 +193,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getAgentInactiveRelationshipsButActive(arnEncoded, arn.value, testClient.clientId.value)
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 404
     }
 
@@ -202,7 +202,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getFailAgentInactiveRelationships(arnEncoded, 404)
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 404
     }
 
@@ -211,7 +211,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getAgentInactiveRelationshipsNoDateTo(arn, testClient.clientId.value)
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 404
     }
 
@@ -220,20 +220,20 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
       getFailAgentInactiveRelationships(arnEncoded, 400)
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 404
     }
   }
 
-  def runInvalidCallForVatAndCgt(testClient: TestClient) = {
+  def runInvalidCallForVatAndCgt(testClient: TestClient): Unit = {
 
     val requestPath: String = s"/agent-client-relationships/agent/relationships/inactive"
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest() = doAgentGetRequest(requestPath)
 
     s"return 404 for invalid parameters given for ${testClient.regime}" in {
       getFailWithInvalidAgentInactiveRelationships(arn.value)
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 404
     }
   }
@@ -241,7 +241,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   "GET /client/relationships/active" should {
 
     val requestPath: String = s"/agent-client-relationships/client/relationships/active"
-    def doRequest: HttpResponse = doAgentGetRequest(requestPath)
+    def doRequest(): HttpResponse = doAgentGetRequest(requestPath)
     val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/client/relationships/active")
 
 
@@ -256,7 +256,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       getActiveRelationshipsViaClient(cgtRef, arn)
 
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 200
       val response = result.json.as[JsObject]
 
@@ -275,7 +275,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
         getInactiveRelationshipViaClient(notActiveClient.clientId, arn.value)
       }
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 200
       val response = result.json.as[JsObject]
 
@@ -291,7 +291,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
         getActiveRelationshipFailsWith(notActiveClient.clientId, 404)
       }
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 200
       val response = result.json.as[JsObject]
 
@@ -305,7 +305,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/terminate"
     def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
-    def doRequest = ws.url(s"http://localhost:$port$requestPath")
+    def doRequest() = ws.url(s"http://localhost:$port$requestPath")
       .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}").delete()
 
     "return 200 after successful termination" in {
@@ -316,7 +316,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
         deleteRecordRepository.create(
           DeleteRecord(
             arn.value,
-            Some(Service.MtdIt.id),
+            Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
             mtdItId.value,
             mtdItIdType,
             LocalDateTime.now.minusMinutes(1),
@@ -326,7 +326,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       //insert copy-relationship document
        await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
 
-      val result = await(doRequest)
+      val result = await(doRequest())
       result.status shouldBe 200
       val response = result.json.as[TerminationResponse]
 
@@ -345,7 +345,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
     val requestPath: String = s"/agent-client-relationships/client/relationships/inactive"
 
-    def doRequest: HttpResponse = doAgentGetRequest(requestPath)
+    def doRequest(): HttpResponse = doAgentGetRequest(requestPath)
 
     val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/client/relationships/inactive")
 
@@ -360,14 +360,14 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       getInactiveRelationshipsForClient(pptRef)
       getInactiveRelationshipsForClient(cgtRef)
 
-      val result = doRequest
+      val result = doRequest()
 
       result.status shouldBe 200
 
-      implicit val localDateFormat = MongoLocalDateTimeFormat.localDateFormat
+      implicit val localDateFormat: Format[LocalDate] = MongoLocalDateTimeFormat.localDateFormat
 
       (result.json(0) \ "arn").as[String] shouldBe "ABCDE123456"
-      (result.json(0) \ "dateTo").as[LocalDate].toString() shouldBe "2018-09-09"
+      (result.json(0) \ "dateTo").as[LocalDate].toString shouldBe "2018-09-09"
       (result.json(0) \ "clientId").as[String] shouldBe "ABCDEF123456789"
       (result.json(0) \ "clientType").as[String] shouldBe "personal"
       (result.json(0) \ "service").as[String] shouldBe "HMRC-MTD-IT"
@@ -401,7 +401,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       getNoInactiveRelationshipsForClient(cgtRef)
 
 
-      val result = doRequest
+      val result = doRequest()
       result.status shouldBe 200
 
       result.body shouldBe "[]"

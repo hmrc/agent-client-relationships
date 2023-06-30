@@ -79,14 +79,14 @@ class RelationshipsControllerTestOnlyISpec
 
     "return 204 for a valid arn and mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, Some(Service.MtdIt.id), mtditid, mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, Some(s"${Service.MtdIt.id}~$mtdItIdType~ABCDEF0000000001"), mtditid, mtdItIdType))) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 204
     }
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, Some(Service.MtdIt.id), "ABCDEF123456780", mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, Some(s"${Service.MtdIt.id}~$mtdItIdType~ABCDEF123456780"), "ABCDEF123456780", mtdItIdType))) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 404
     }

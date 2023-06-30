@@ -29,8 +29,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
+  //noinspection ScalaStyle
   def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
-    val enrolmentKey = EnrolmentKey(Service.forId(serviceId), clientId)
+    val enrolmentKey = if (serviceId == Service.Cbc.id) {
+      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~$clientId")
+    } else EnrolmentKey(Service.forId(serviceId), clientId)
     s"GET  /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" should {
 
       val requestPath: String =
@@ -43,6 +46,9 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "return 200 when relationship exists in es" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
+        if (serviceId == Service.Cbc.id) {
+          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+        }
         givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
@@ -76,6 +82,9 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "return 404 when delete is pending" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
+        if (serviceId == Service.Cbc.id) {
+          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+        }
         givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
         givenAdminUser("foo", "any")
         givenEnrolmentDeallocationFailsWith(404)("foo", mtdItEnrolmentKey)
@@ -85,7 +94,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           deleteRecordRepository.create(
             DeleteRecord(
               arn.value,
-              Some(Service.MtdIt.id),
+              Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
               clientId.value,
               clientIdType,
               now,
@@ -123,8 +132,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     }
   }
 
+  //noinspection ScalaStyle
   def relationshipsControllerPutISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
-    val enrolmentKey = EnrolmentKey(Service.forId(serviceId), clientId)
+    val enrolmentKey = if (serviceId == Service.Cbc.id) {
+      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~$clientId")
+    } else EnrolmentKey(Service.forId(serviceId), clientId)
     s"PUT /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" should {
 
       val requestPath: String =
@@ -135,6 +147,9 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenGroupInfo("foo", "bar")
         givenEnrolmentExistsForGroupId("bar", agentEnrolmentKey(Arn("barArn")))
         givenEnrolmentExistsForGroupId("foo", agentEnrolmentKey(Arn("fooArn")))
+        if (serviceId == Service.Cbc.id) {
+          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+        }
         givenDelegatedGroupIdsExistForEnrolmentKey(enrolmentKey)
         givenAgentCanBeAllocatedInIF(clientId, arn)
         givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
@@ -292,8 +307,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     }
   }
 
+  //noinspection ScalaStyle
   def relationshipsControllerDeleteISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
-    val enrolmentKey = EnrolmentKey(Service.forId(serviceId), clientId)
+    val enrolmentKey = if (serviceId == Service.Cbc.id) {
+      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~$clientId")
+    } else EnrolmentKey(Service.forId(serviceId), clientId)
     s"DELETE /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" when {
 
       val requestPath: String =
@@ -649,6 +667,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   }
 
+  //noinspection ScalaStyle
   def strideEndpointISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String) = {
     s"GET /relationships/service/$serviceId/client/$clientIdType/:clientId" should {
 

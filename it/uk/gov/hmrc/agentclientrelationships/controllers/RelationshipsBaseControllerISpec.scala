@@ -103,7 +103,7 @@ trait RelationshipsBaseControllerISpec
   val arn2 = Arn("AARN0000004")
   val arn3 = Arn("AARN0000006")
   val mtdItId = MtdItId("ABCDEF123456789")
-  val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
+  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
@@ -146,7 +146,7 @@ trait RelationshipsBaseControllerISpec
                                                etmpStatus: Option[SyncStatus.Value],
                                                esStatus: Option[SyncStatus.Value]) =
     await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
-      case Some(DeleteRecord(arn.value, Some(Service.MtdIt.id), mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _, _)) =>
+      case Some(DeleteRecord(arn.value, Some("HMRC-MTD-IT~MTDITID~ABCDEF123456789"), mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _, _)) =>
     }
 
   protected def verifyDeleteRecordNotExists =

@@ -103,7 +103,7 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(Service.MtdIt.id),
+        Some(mtdItEnrolmentKey.toString),
         mtdItId.value,
         mtdItIdType,
         LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
@@ -135,7 +135,7 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(Service.MtdIt.id),
+        Some(mtdItEnrolmentKey.toString),
         mtdItId.value,
         mtdItIdType,
         LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
@@ -167,7 +167,7 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(Service.MtdIt.id),
+        Some(mtdItEnrolmentKey.toString),
         mtdItId.value,
         mtdItIdType,
         LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
@@ -192,7 +192,7 @@ class RecoverySchedulerISpec
       (0 to 3) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
-          Some(Service.MtdIt.id),
+          Some(mtdItEnrolmentKey.toString),
           mtdItId.value + index,
           mtdItIdType,
           LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
@@ -222,7 +222,7 @@ class RecoverySchedulerISpec
       (0 to 2) foreach { index =>
         val deleteRecord = DeleteRecord(
           arn.value,
-          Some(Service.MtdIt.id),
+          Some(mtdItEnrolmentKey.toString),
           mtdItId.value + index,
           mtdItIdType,
           LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),

@@ -47,21 +47,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach with ResettingMockitoSugar {
 
   val testDataGenerator = new Generator()
-  val arn = Arn("AARN0000002")
-  val saAgentRef = SaAgentReference("T1113T")
-  val mtdItId = MtdItId("ABCDEF123456789")
-  val mtdItEnrolmentKey = EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF123456789")
-  val vrn = Vrn("101747641")
-  val vatEnrolmentKey = EnrolmentKey(Service.Vat, vrn)
+  val arn: Arn = Arn("AARN0000002")
+  val saAgentRef: SaAgentReference = SaAgentReference("T1113T")
+  val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
+  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF123456789")
+  val vrn: Vrn = Vrn("101747641")
+  val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
   val agentUserId = "testUserId"
   val agentGroupId = "testGroupId"
-  val agentCodeForVatDecAgent = AgentCode("oldAgentCode")
-  val agentCodeForAsAgent = AgentCode("ABC1234")
+  val agentCodeForVatDecAgent: AgentCode = AgentCode("oldAgentCode")
+  val agentCodeForAsAgent: AgentCode = AgentCode("ABC1234")
   val agentUserForAsAgent = Right(AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn))
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,
-    Some(Service.MtdIt.id),
+    Some(mtdItEnrolmentKey.toString),
     mtdItId.value,
     "MTDITID",
     Some(Set(SaRef(saAgentRef))),
@@ -69,7 +69,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     syncToESStatus = None)
   val defaultRecordForMtdVat = RelationshipCopyRecord(
     arn.value,
-    Some(Service.MtdIt.id),
+    Some(vatEnrolmentKey.toString),
     vrn.value,
     "VRN",
     Some(Set(VatRef(agentCodeForVatDecAgent))),
@@ -1457,10 +1457,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(
-      ifConnector.createAgentRelationship(eqs(enrolmentKey.oneTaxIdentifier( /*TODO cbc uk will fail*/ )), eqs(arn))(
-        eqs(hc),
-        eqs(ec)))
+    when(ifConnector.createAgentRelationship(eqs(enrolmentKey.oneTaxIdentifier()), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(

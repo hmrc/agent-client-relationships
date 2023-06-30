@@ -37,7 +37,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "create, find and update and remove a record" in {
       val deleteRecord = DeleteRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747696",
         "VRN",
         now,
@@ -67,10 +67,10 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       removeResult shouldBe 1
     }
 
-    "create a  new record when an old record with the same arn already exists" in {
+    "create a new record when an old record with the same arn already exists" in {
       val deleteRecordOld = DeleteRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747696",
         "VRN",
         now,
@@ -82,7 +82,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecordNew = DeleteRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747697",
         "VRN",
         now,
@@ -101,7 +101,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "fail to create a  new record when an old record with the same arn, clientId and clientIdType already exists" in {
       val deleteRecordOld = DeleteRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747696",
         "VRN",
         now,
@@ -113,7 +113,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecordNew = DeleteRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
+        Some(s"${Service.Vat.id}~VRN~101747696"),
         "101747696",
         "VRN",
         now,
@@ -133,7 +133,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
     "select not attempted delete record first" in {
       val deleteRecord1 = DeleteRecord(
         "TARN0000001",
-        Some(Service.MtdIt.id),
+        Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
         "ABCDEF0000000001",
         "MTDITID",
         now,
@@ -143,7 +143,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
-        Some(Service.MtdIt.id),
+        Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
         "ABCDEF0000000002",
         "MTDITID",
         now,
@@ -152,7 +152,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         lastRecoveryAttempt = None)
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
-        Some(Service.MtdIt.id),
+        Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
         "ABCDEF0000000001",
         "MTDITID",
         now,
@@ -168,14 +168,14 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       val createResult3 = await(repo.create(deleteRecord3))
       createResult3 shouldBe 1
 
-      val result = await(repo.selectNextToRecover)
+      val result = await(repo.selectNextToRecover())
       result shouldBe Some(deleteRecord2)
     }
 
     "select the oldest attempted delete record first" in {
       val deleteRecord1 = DeleteRecord(
         "TARN0000001",
-        Some(Service.MtdIt.id),
+        Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
         "ABCDEF0000000001",
         "MTDITID",
         now,
@@ -185,7 +185,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
-        Some(Service.MtdIt.id),
+        Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000002"),
         "ABCDEF0000000002",
         "MTDITID",
         now,
@@ -195,7 +195,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       )
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
-        Some(Service.MtdIt.id),
+        Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
         "ABCDEF0000000001",
         "MTDITID",
         now,
@@ -211,7 +211,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       val createResult3 = await(repo.create(deleteRecord3))
       createResult3 shouldBe 1
 
-      val result = await(repo.selectNextToRecover)
+      val result = await(repo.selectNextToRecover())
       result shouldBe Some(deleteRecord2)
     }
 
