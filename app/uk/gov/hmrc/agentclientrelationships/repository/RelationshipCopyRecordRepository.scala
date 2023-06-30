@@ -36,9 +36,10 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
+/* Despite the name not just for copy across, also used as CreateRecord recovery */
 case class RelationshipCopyRecord(
   arn: String,
-  service: Option[String],
+  maybeEnrolmentKey: Option[String], // APB-7215 - added to accommodate multiple identifiers (cbc)
   clientIdentifier: String,
   clientIdentifierType: String,
   references: Option[Set[RelationshipReference]] = None,
@@ -53,7 +54,7 @@ case class RelationshipCopyRecord(
 }
 
 object RelationshipCopyRecord {
-  implicit val localDateTimeFormat = MongoLocalDateTimeFormat.localDateTimeFormat
+  implicit val localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
   implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 }
 

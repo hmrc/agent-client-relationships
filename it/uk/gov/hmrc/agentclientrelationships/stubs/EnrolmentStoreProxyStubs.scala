@@ -194,8 +194,8 @@ trait EnrolmentStoreProxyStubs extends Eventually {
                          |           "activationDate": "2018-10-13T17:36:00.000Z",
                          |           "identifiers": [
                          |              {
-                         |                 "key": "${enrolmentKey.oneIdentifier(/*TODO cbc uk will fail*/).key}",
-                         |                 "value": "${enrolmentKey.oneIdentifier(/*TODO cbc uk will fail*/).value}"
+                         |                 "key": "${enrolmentKey.oneIdentifier().key}",
+                         |                 "value": "${enrolmentKey.oneIdentifier().value}"
                          |              }
                          |           ]
                          |        }

@@ -24,7 +24,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, MongoLocalDateTimeFormat}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier}
@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class DeleteRecord(
   arn: String,
-  service: Option[String],
+  maybeEnrolmentKey: Option[String], // 06.2023 - added to accommodate multiple identifiers (cbc)
   clientIdentifier: String,
   clientIdentifierType: String,
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
@@ -49,6 +49,9 @@ case class DeleteRecord(
   numberOfAttempts: Int = 0,
   headerCarrier: Option[HeaderCarrier] = None,
   relationshipEndedBy: Option[String] = None) {
+
+  val enrolmentKey: Option[EnrolmentKey] = maybeEnrolmentKey.map(ek => EnrolmentKey.apply(ek))
+
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
   def needToDeleteEtmpRecord: Boolean = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))

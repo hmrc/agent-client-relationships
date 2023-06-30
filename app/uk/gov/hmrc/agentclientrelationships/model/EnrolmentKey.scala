@@ -24,16 +24,26 @@ import uk.gov.hmrc.domain.TaxIdentifier
 An implementation of EnrolmentKey with some extra features to make life easier.
  */
 case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
-  lazy val tag = // note: we intentionally do not use the Identifier's toString below because it uppercases everything!
+  lazy val tag = // note: we intentionally do not use the Identifier's toString below because it upper cases everything!
     s"$service~${identifiers.sorted.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
   override def toString: String = tag
 
   /** Note: unsafe (i.e. can throw exceptions)
-    * Supplying no key assumes the enrolment has a single identifier - TODO do we want to keep this assumption?
-    * For enrolments with multiple identifiers you will always need to specify which one, or it will grab the first.
+    *
+    * Supplying no key assumes the service has a single 'supported' identifier!
+    * For other enrolments with multiple identifiers you should try and specify which one, or it will grab the first.
    **/
   def oneIdentifier(key: Option[String] = None): Identifier =
-    if (key.isEmpty) identifiers.head else identifiers.find(i => i.key == key.get).get
+    identifiers
+      .find(
+        i =>
+          i.key == key.getOrElse(
+            if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
+              Service.forId(service).supportedClientIdType.enrolmentId
+            } else identifiers.head.key // fallback to old behaviour
+        )
+      )
+      .getOrElse(throw new IllegalArgumentException(s"No identifier for $key with $service"))
 
   /* Note: unsafe, see oneIdentifier */
   def oneTaxIdentifier(key: Option[String] = None): TaxIdentifier = {

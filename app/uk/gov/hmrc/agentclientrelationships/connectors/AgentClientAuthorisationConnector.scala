@@ -97,7 +97,7 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
     )
     val payload = SetRelationshipEndedPayload(
       arn = arn,
-      clientId = enrolmentKey.oneIdentifier( /*TODO cbc uk will fail*/ ).value,
+      clientId = enrolmentKey.oneIdentifier().value,
       service = enrolmentKey.service,
       endedBy = Some(endedBy))
     monitor(s"ConsumedAPI-ACA-setRelationshipEnded-PUT") {

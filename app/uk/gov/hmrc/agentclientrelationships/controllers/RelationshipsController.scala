@@ -76,7 +76,7 @@ class RelationshipsController @Inject()(
         withIrSaSuspensionCheck(arn) {
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
-      case ("HMRC-MTD-IT", "ni" | "NI", _) if Nino.isValid(clientId) =>
+      case (Service.MtdIt.id, "ni" | "NI", _) if Nino.isValid(clientId) =>
         des
           .getMtdIdFor(Nino(clientId))
           .flatMap(
@@ -110,17 +110,13 @@ class RelationshipsController @Inject()(
       case _ => proceed
     }
 
-  //noinspection ScalaStyle
   private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(
     implicit request: Request[_]) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
 
-    // this feels like the start of another growing match statement
-    val taxIdentifier = if (enrolmentKey.service == Service.Cbc.id) {
-      enrolmentKey.oneTaxIdentifier(Some(CbcIdType.enrolmentId))
-    } else { enrolmentKey.oneTaxIdentifier() }
+    val taxIdentifier = enrolmentKey.oneTaxIdentifier()
 
     val result = for {
       _ <- agentUserService.getAgentAdminUserFor(arn)
@@ -198,7 +194,7 @@ class RelationshipsController @Inject()(
     implicit request =>
       validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.oneTaxIdentifier( /*TODO would fail for cbc, clientType failing tests - nino?*/ )
+          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
             implicit val auditData: AuditData = new AuditData()
             auditData.set("arn", arn)
@@ -279,7 +275,8 @@ class RelationshipsController @Inject()(
     implicit request =>
       validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.oneTaxIdentifier( /*TODO would fail for cbc, clientType failing tests - nino?*/ )
+          val taxIdentifier =
+            enrolmentKey.oneTaxIdentifier()
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
               id <- taxIdentifier match {
@@ -356,7 +353,7 @@ class RelationshipsController @Inject()(
       //TODO, unnecessary ES20 call?
       validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.oneTaxIdentifier( /*TODO would fail for cbc, clientType failing tests - nino?*/ )
+          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
             val relationships = if (service == Service.MtdIt.id) {
               findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
