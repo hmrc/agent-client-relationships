@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoException
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 import java.time.{Instant, ZoneOffset}
 import scala.collection.mutable
@@ -27,20 +27,21 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class FakeDeleteRecordRepository extends DeleteRecordRepository {
-  private val data: mutable.Map[String, DeleteRecord] = mutable.Map()
+  private val data: mutable.Map[(Arn, EnrolmentKey), DeleteRecord] = mutable.Map()
 
+  // the provided DeleteCopyRecord must use an enrolment key
   override def create(record: DeleteRecord): Future[Int] =
-    findBy(Arn(record.arn), MtdItId(record.clientIdentifier)).map(
+    findBy(Arn(record.arn), record.enrolmentKey.get).map(
       result =>
         if (result.isDefined)
           throw new MongoException("duplicate key error collection")
         else {
-          data += ((record.arn + record.clientIdentifier) → record)
+          data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
           1
       })
 
-  override def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[DeleteRecord]] = {
-    val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
+  override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]] = {
+    val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined)
         maybeValue
@@ -48,41 +49,41 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         None)
   }
 
-  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] = {
-    val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
+  override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = {
+    val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
-        data(arn.value + identifier.value) = maybeValue.get.copy(syncToETMPStatus = Some(status))
+        data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
         1
       } else
-        throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
+        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}"))
 
   }
 
-  override def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] = {
-    val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
+  override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = {
+    val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
-        data(arn.value + identifier.value) = maybeValue.get.copy(syncToESStatus = Some(status))
+        data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
         1
       } else
-        throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
+        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}"))
   }
 
-  override def remove(arn: Arn, identifier: TaxIdentifier): Future[Int] = {
-    val maybeRemove = data.remove(arn.value + identifier.value)
+  override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] = {
+    val maybeRemove = data.remove((arn, enrolmentKey))
     if (maybeRemove.isDefined) Future.successful(1)
     else Future.successful(0)
   }
 
-  override def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier): Future[Unit] = {
-    val maybeValue: Option[DeleteRecord] = data.get(arn.value + identifier.value)
+  override def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit] = {
+    val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined)
-        data(arn.value + identifier.value) =
+        data((arn, enrolmentKey)) =
           maybeValue.get.copy(lastRecoveryAttempt = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       else
-        throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, $identifier"))
+        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}"))
   }
 
   override def selectNextToRecover: Future[Option[DeleteRecord]] =
@@ -98,11 +99,9 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
   def reset() =
     data.clear()
 
-  override def terminateAgent(arn: Arn): Future[Either[String, Int]] =
-    Future.successful(
-      data
-        .remove(arn.value)
-        .fold(
-          Right(0)
-        )(_ => Right(1)))
+  override def terminateAgent(arn: Arn): Future[Either[String, Int]] = {
+    val keysToRemove: Seq[(Arn, EnrolmentKey)] = data.keys.filter(_._1 == arn).toSeq
+    keysToRemove.foreach(data.remove)
+    Future.successful(Right(keysToRemove.size))
+  }
 }

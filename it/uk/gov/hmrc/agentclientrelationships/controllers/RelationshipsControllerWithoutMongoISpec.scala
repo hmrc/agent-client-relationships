@@ -17,18 +17,18 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import com.google.inject.AbstractModule
-import org.mongodb.scala.model.Filters
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
@@ -98,8 +98,10 @@ class RelationshipsControllerWithoutMongoISpec
 
   val arn = Arn("AARN0000002")
   val mtditid = MtdItId("ABCDEF123456789")
+  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtditid)
   val nino = Nino("AB123456C")
   val vrn = Vrn("101747641")
+  val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
   val oldAgentCode = "oldAgentCode"
   val mtdVatIdType = "VRN"
 
@@ -107,9 +109,6 @@ class RelationshipsControllerWithoutMongoISpec
 
     val requestPath =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
-
-    //val identifier: TaxIdentifier = mtditid
-    val identifierType: String = "MTDITID"
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
       givenPrincipalAgentUser(arn, "foo")
@@ -124,19 +123,12 @@ class RelationshipsControllerWithoutMongoISpec
       givenAuditConnector()
       givenAdminUser("foo", "any")
 
-      def query =
-        repo.collection.find(
-          Filters.and(
-            Filters.equal("arn" , arn.value),
-            Filters.equal("clientIdentifier" , mtditid.value),
-            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
-
-      await(query) shouldBe empty
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
       val result = doAgentRequest(requestPath)
       result.status shouldBe 200
 
-      await(query) shouldBe empty
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
       verifyAuditRequestSent(
         1,
@@ -186,20 +178,12 @@ class RelationshipsControllerWithoutMongoISpec
       givenAdminUser("foo", "any")
       getVrnIsKnownInETMPFor(vrn)
 
-      def query =
-        repo.collection.find(
-          Filters.and(
-            Filters.equal("arn" , arn.value),
-            Filters.equal("clientIdentifier" , vrn.value),
-            Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
-
-
-      await(query) shouldBe empty
+      await(repo.findBy(arn, vatEnrolmentKey)) shouldBe empty
 
       val result = doAgentRequest(requestPath)
       result.status shouldBe 200
 
-      await(query) shouldBe empty
+      await(repo.findBy(arn, vatEnrolmentKey)) shouldBe empty
 
       verifyAuditRequestSent(
         1,
@@ -236,8 +220,7 @@ class RelationshipsControllerWithoutMongoISpec
 
     val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/IR-SA/client/ni/$nino"
 
-    val identifier: TaxIdentifier = nino
-    val identifierType: String = "NINO"
+    val enrolmentKey: EnrolmentKey = EnrolmentKey("IR-SA", Seq(Identifier("NINO", nino.value)))
 
     "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
       getAgentRecordForClient(arn)
@@ -245,19 +228,12 @@ class RelationshipsControllerWithoutMongoISpec
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()
 
-      def query =
-        repo.collection.find(
-          Filters.and(
-            Filters.equal("arn" , arn.value),
-            Filters.equal("clientIdentifier" , identifier.value),
-            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
-
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
       val result = doAgentRequest(requestPath)
       result.status shouldBe 200
 
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
       verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
 
@@ -275,20 +251,12 @@ class RelationshipsControllerWithoutMongoISpec
       givenPartialAuthExistsFor(arn, nino)
       givenAuditConnector()
 
-      def query =
-        repo.collection.find(
-          Filters.and(
-            Filters.equal("arn" , arn.value),
-            Filters.equal("clientIdentifier" , identifier.value),
-            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
-
-
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
       val result = doAgentRequest(requestPath)
       result.status shouldBe 200
 
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
       verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
 
@@ -306,19 +274,12 @@ class RelationshipsControllerWithoutMongoISpec
       givenPartialAuthNotExistsFor(arn, nino)
       givenAuditConnector()
 
-      def query =
-        repo.collection.find(
-          Filters.and(
-            Filters.equal("arn" , arn.value),
-            Filters.equal("clientIdentifier" , identifier.value),
-            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
-
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe empty
 
       val result = doAgentRequest(requestPath)
       result.status shouldBe 404
 
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe empty
 
       verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
 
@@ -336,19 +297,12 @@ class RelationshipsControllerWithoutMongoISpec
       givenAgentClientAuthorisationReturnsError(arn, nino, 503)
       givenAuditConnector()
 
-      def query =
-        repo.collection.find(
-          Filters.and(
-            Filters.equal("arn" , arn.value),
-            Filters.equal("clientIdentifier" , identifier.value),
-            Filters.equal("clientIdentifierType" , identifierType))).toFuture()
-
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
       val result = doAgentRequest(requestPath)
       result.status shouldBe 404
 
-      await(query) shouldBe empty
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
       verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
 

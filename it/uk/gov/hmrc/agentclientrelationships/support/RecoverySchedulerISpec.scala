@@ -14,8 +14,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, MtdItId, Service}
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.time.{LocalDateTime, ZoneOffset}
@@ -63,11 +62,9 @@ class RecoverySchedulerISpec
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
 
-  val arn: Arn = Arn("AARN0000002")
-  val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
+  private val arn: Arn = Arn("AARN0000002")
+  private val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   private val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
-  val nino: Nino = Nino("AB123456C")
-  val mtdItIdType = "MTDITID"
 
      override def beforeEach(): Unit = {
        super.beforeEach()
@@ -103,16 +100,14 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(mtdItEnrolmentKey.toString),
-        mtdItId.value,
-        mtdItIdType,
-        LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
+        Some(mtdItEnrolmentKey),
+        dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Success),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
 
       await(deleteRepo.collection.insertOne(deleteRecord).toFuture())
-      await(deleteRepo.findBy(arn, mtdItId)).isDefined shouldBe true
+      await(deleteRepo.findBy(arn, mtdItEnrolmentKey)).isDefined shouldBe true
 
       eventually {
         await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
@@ -135,16 +130,14 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(mtdItEnrolmentKey.toString),
-        mtdItId.value,
-        mtdItIdType,
-        LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
+        Some(mtdItEnrolmentKey),
+        dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
 
       await(deleteRepo.create(deleteRecord))
-      await(deleteRepo.findBy(arn, mtdItId)).isDefined shouldBe true
+      await(deleteRepo.findBy(arn, mtdItEnrolmentKey)).isDefined shouldBe true
 
       eventually {
         await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
@@ -167,15 +160,13 @@ class RecoverySchedulerISpec
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(mtdItEnrolmentKey.toString),
-        mtdItId.value,
-        mtdItIdType,
-        LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
+        Some(mtdItEnrolmentKey),
+        dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
       await(deleteRepo.create(deleteRecord))
-      await(deleteRepo.findBy(arn, mtdItId)).isDefined shouldBe true
+      await(deleteRepo.findBy(arn, mtdItEnrolmentKey)).isDefined shouldBe true
 
       eventually {
         await(recoveryRepo.collection.find().toFuture()).length shouldBe 1
@@ -190,18 +181,18 @@ class RecoverySchedulerISpec
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
 
       (0 to 3) foreach { index =>
+        val iMtdItId = MtdItId("ABCDEF12345678" + index)
+
         val deleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey.toString),
-          mtdItId.value + index,
-          mtdItIdType,
-          LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
+          Some(EnrolmentKey(Service.MtdIt, iMtdItId)),
+          dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Success),
           syncToETMPStatus = Some(SyncStatus.Failed)
         )
 
-        givenAgentCanBeDeallocatedInIF(MtdItId(mtdItId.value + index)  , arn)
-        givenSetRelationshipEnded(MtdItId(mtdItId.value + index), arn)
+        givenAgentCanBeDeallocatedInIF(iMtdItId, arn)
+        givenSetRelationshipEnded(iMtdItId, arn)
         givenAuditConnector()
         givenCacheRefresh(arn)
 
@@ -220,12 +211,12 @@ class RecoverySchedulerISpec
     "attempt to recover multiple DeleteRecords and one of them repeatedly fails" in {
 
       (0 to 2) foreach { index =>
+        val iMtdItId = MtdItId("ABCDEF12345678" + index)
+
         val deleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey.toString),
-          mtdItId.value + index,
-          mtdItIdType,
-          LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
+          Some(EnrolmentKey(Service.MtdIt, iMtdItId)),
+          dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Failed)
         )
@@ -235,16 +226,16 @@ class RecoverySchedulerISpec
         givenGroupInfo("foo", "bar")
         givenAdminUser("foo", "userId")
         givenAuditConnector()
-        givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${mtdItId.value + index}"), Set("foo"))
+        givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.MtdIt, iMtdItId), Set("foo"))
 
         if (index == 0)
           givenEnrolmentDeallocationFailsWith(503)(
             "foo",
-            EnrolmentKey("HMRC-MTD-IT", Seq(Identifier(deleteRecord.clientIdentifierType, deleteRecord.clientIdentifier))))
+            deleteRecord.enrolmentKey.get)
         else {
-          givenAgentCanBeDeallocatedInIF(MtdItId(mtdItId.value + index), arn)
-          givenSetRelationshipEnded(MtdItId(mtdItId.value + index), arn)
-          givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, MtdItId(mtdItId.value + index)))
+          givenAgentCanBeDeallocatedInIF(iMtdItId, arn)
+          givenSetRelationshipEnded(iMtdItId, arn)
+          givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, iMtdItId))
           givenCacheRefresh(arn)
         }
 

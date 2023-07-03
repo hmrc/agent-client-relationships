@@ -17,37 +17,37 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import com.google.inject.ImplementedBy
-
-import javax.inject.{Inject, Singleton}
 import org.mongodb.scala.MongoWriteException
-import org.mongodb.scala.model.{Filters, FindOneAndReplaceOptions, IndexModel, IndexOptions, Updates}
 import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, MongoLocalDateTimeFormat}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier}
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Instant, LocalDateTime, ZoneOffset}
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 /* Despite the name not just for copy across, also used as CreateRecord recovery */
 case class RelationshipCopyRecord(
   arn: String,
-  maybeEnrolmentKey: Option[String], // APB-7215 - added to accommodate multiple identifiers (cbc)
-  clientIdentifier: String,
-  clientIdentifierType: String,
+  enrolmentKey: Option[EnrolmentKey], // APB-7215 - added to accommodate multiple identifiers (cbc)
+  clientIdentifier: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
+  clientIdentifierType: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
   references: Option[Set[RelationshipReference]] = None,
-  dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
+  dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None) {
 
-  val enrolmentKey: Option[EnrolmentKey] = maybeEnrolmentKey.map(ek => EnrolmentKey.apply(ek))
+  // Legacy records use client id & client id type. Newer records use enrolment key.
+  require(enrolmentKey.isDefined || (clientIdentifier.isDefined && clientIdentifierType.isDefined))
 
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
 
@@ -64,10 +64,10 @@ object RelationshipCopyRecord {
 @ImplementedBy(classOf[MongoRelationshipCopyRecordRepository])
 trait RelationshipCopyRecordRepository {
   def create(record: RelationshipCopyRecord): Future[Int]
-  def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[RelationshipCopyRecord]]
-  def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int]
-  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int]
-  def remove(arn: Arn, identifier: TaxIdentifier): Future[Int]
+  def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[RelationshipCopyRecord]]
+  def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int]
+  def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int]
+  def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int]
   def terminateAgent(arn: Arn): Future[Either[String, Int]]
 }
 
@@ -78,9 +78,21 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
       collectionName = "relationship-copy-record",
       domainFormat = formats,
       indexes = Seq(
+        // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
+        // The situation will be simplified after a migration of the legacy documents.
         IndexModel(
           ascending("arn", "clientIdentifier", "clientIdentifierType"),
-          IndexOptions().name("arnAndAgentReference").unique(true))
+          IndexOptions()
+            .name("arnAndAgentReferencePartial")
+            .partialFilterExpression(Filters.exists("clientIdentifier"))
+            .unique(true)
+        ),
+        IndexModel(
+          ascending("arn", "enrolmentKey"),
+          IndexOptions()
+            .name("arnAndEnrolmentKeyPartial")
+            .partialFilterExpression(Filters.exists("enrolmentKey"))
+            .unique(true))
       )
     )
     with RelationshipCopyRecordRepository
@@ -91,37 +103,19 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
   override def create(record: RelationshipCopyRecord): Future[Int] =
     collection
       .findOneAndReplace(
-        Filters.and(
-          Filters.equal("arn", record.arn),
-          Filters.equal("clientIdentifier", record.clientIdentifier),
-          Filters.equal("clientIdentifierType", record.clientIdentifierType)
-        ),
+        filter(Arn(record.arn), record.enrolmentKey.get), // we assume that all newly created records WILL have an enrolment key
         record,
         FindOneAndReplaceOptions().upsert(true)
       )
       .toFuture()
       .map(_ => 1)
 
-  override def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[RelationshipCopyRecord]] =
-    collection
-      .find(
-        Filters.and(
-          Filters.equal("arn", arn.value),
-          Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
-        ))
-      .headOption()
+  override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[RelationshipCopyRecord]] =
+    collection.find(filter(arn, enrolmentKey)).headOption()
 
-  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] =
+  override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
     collection
-      .updateMany(
-        Filters.and(
-          Filters.equal("arn", arn.value),
-          Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
-        ),
-        Updates.set("syncToETMPStatus", status.toString)
-      )
+      .updateMany(filter(arn, enrolmentKey), Updates.set("syncToETMPStatus", status.toString))
       .toFuture()
       .map(res => res.getModifiedCount.toInt)
       .recover {
@@ -129,16 +123,9 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
           logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
       }
 
-  override def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] =
+  override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
     collection
-      .updateMany(
-        Filters.and(
-          Filters.equal("arn", arn.value),
-          Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
-        ),
-        Updates.set("syncToESStatus", status.toString)
-      )
+      .updateMany(filter(arn, enrolmentKey), Updates.set("syncToESStatus", status.toString))
       .toFuture()
       .map(res => res.getModifiedCount.toInt)
       .recover {
@@ -146,14 +133,9 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
           logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
       }
 
-  override def remove(arn: Arn, identifier: TaxIdentifier): Future[Int] =
+  override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] =
     collection
-      .deleteMany(
-        Filters.and(
-          Filters.equal("arn", arn.value),
-          Filters.equal("clientIdentifier", identifier.value),
-          Filters.equal("clientIdentifierType", ClientIdentifier(identifier).enrolmentId)
-        ))
+      .deleteMany(filter(arn, enrolmentKey))
       .toFuture()
       .map(res => res.getDeletedCount.toInt)
 
@@ -165,4 +147,20 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
       .recover {
         case ex: MongoWriteException => Left(ex.getMessage)
       }
+
+  private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
+    val identifierType: String = enrolmentKey.identifiers.head.key
+    val identifier: String = enrolmentKey.identifiers.head.value
+    Filters.or(
+      Filters.and(
+        Filters.equal("arn", arn.value),
+        Filters.equal("enrolmentKey", enrolmentKey.tag)
+      ),
+      Filters.and(
+        Filters.equal("arn", arn.value),
+        Filters.equal("clientIdentifier", identifier),
+        Filters.equal("clientIdentifierType", identifierType)
+      ),
+    )
+  }
 }

@@ -1,12 +1,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import org.mongodb.scala.model.Filters
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.mongo.lock.Lock
 
@@ -53,16 +52,10 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
 
-        def query() =
-          repo.collection.find(Filters.and(
-            Filters.equal("arn", arn.value),
-            Filters.equal( "clientIdentifier",clientId.value),
-            Filters.equal("clientIdentifierType", clientIdType))).toFuture()
-
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, enrolmentKey)) shouldBe None
         val result = doRequest
         result.status shouldBe 200
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, enrolmentKey)) shouldBe empty
       }
 
       //UNHAPPY PATHS
@@ -94,18 +87,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           deleteRecordRepository.create(
             DeleteRecord(
               arn.value,
-              Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
-              clientId.value,
-              clientIdType,
-              now,
-              Some(SyncStatus.Success),
-              Some(SyncStatus.Failed))))
+              Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value)))),
+              syncToETMPStatus = Some(SyncStatus.Success),
+              syncToESStatus = Some(SyncStatus.Failed))))
 
         val result = doRequest
         result.status shouldBe 404
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_DELETE_PENDING"
 
-        await(deleteRecordRepository.remove(arn, clientId))
+        await(deleteRecordRepository.remove(arn, enrolmentKey))
       }
 
       //FAILURE CASES
@@ -202,7 +192,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         await(mongoLockRepository.collection.insertOne(
           Lock(
-            id = s"recovery-${arn.value}-${clientId.value}",
+            id = s"recovery-${arn.value}-${enrolmentKey.tag}",
             owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
             expiryTime = Instant.now().plusSeconds(2),
             timeCreated = Instant.now().minusMillis(500))).toFuture())
@@ -659,7 +649,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 404 for any call" in {
 
-        await(repo.create(RelationshipCopyRecord(arn.value, Some(serviceId), clientId.value, clientIdType))) shouldBe 1
+        await(repo.create(RelationshipCopyRecord(arn.value, Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value))))))) shouldBe 1
         val result = doAgentDeleteRequest(requestPath)
         result.status shouldBe 404
       }

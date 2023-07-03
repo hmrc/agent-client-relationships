@@ -125,7 +125,7 @@ class RelationshipsController @Inject()(
          TODO: Must refactor to remove these hidden side-effects and put them somewhere more explicit.
          Statements populating audit data should be gathered together as much as possible, preferably at the controller level,
          and not scattered throughout lots of methods in different classes. */
-      isClear <- deleteService.checkDeleteRecordAndEventuallyResume(taxIdentifier, arn)
+      isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
       res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
             else Future.failed(RelationshipDeletePending())
     } yield {
@@ -279,15 +279,16 @@ class RelationshipsController @Inject()(
             enrolmentKey.oneTaxIdentifier()
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
-              id <- taxIdentifier match {
-                     case nino @ Nino(_) => des.getMtdIdFor(nino)
-                     case _              => Future successful Option(taxIdentifier)
-                   }
-              _ <- id.fold {
+              maybeEk <- taxIdentifier match {
+                          // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
+                          case nino @ Nino(_) => des.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
+                          case _              => Future.successful(Some(enrolmentKey))
+                        }
+              _ <- maybeEk.fold {
                     Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
-                  } { taxId =>
+                  } { ek =>
                     deleteService
-                      .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
+                      .deleteRelationship(arn, ek, currentUser.affinityGroup)
                   }
             } yield NoContent)
               .recover {

@@ -75,7 +75,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
 
-      await(repo.findBy(arn, mtdItId)) shouldBe None
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
 
     "save deleteRecord if ES de-allocation failed" in new TestFixture {
@@ -93,7 +93,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasNOTBeenPerformed
 
-      await(repo.findBy(arn, mtdItId)) should matchPattern {
+      await(repo.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
         case Some(DeleteRecord(arn.value, _, _, _, _, None, Some(Failed), None, _, _, Some("HMRC"))) =>
       }
     }
@@ -115,23 +115,16 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
 
-      await(repo.findBy(arn, mtdItId)) should matchPattern {
+      await(repo.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
         case Some(DeleteRecord(arn.value, _, _, _, _, Some(Failed), Some(Success), None, _, _, Some("HMRC"))) =>
       }
-      await(repo.remove(arn, mtdItId))
+      await(repo.remove(arn, mtdItEnrolmentKey))
     }
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
-      await(repo.remove(arn, mtdItId))
+      await(repo.remove(arn, mtdItEnrolmentKey))
       val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          None,
-          Some(Failed))
+        DeleteRecord(arn.value, Some(mtdItEnrolmentKey), syncToETMPStatus = None, syncToESStatus = Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -148,7 +141,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
 
-      await(repo.findBy(arn, mtdItId)) shouldBe None
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
 
     "delete relationship and succeed if setRelationshipFails" in new TestFixture {
@@ -167,7 +160,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
 
-      await(repo.findBy(arn, mtdItId)) shouldBe None
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
   }
 
@@ -179,12 +172,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Success),
-          Some(Success))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Success),
+          syncToESStatus = Some(Success))
       await(repo.create(deleteRecord))
 
       val result: Boolean =
@@ -199,12 +189,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Failed),
-          Some(Success))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Failed),
+          syncToESStatus = Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
@@ -216,7 +203,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasNOTBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
 
-      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItEnrolmentKey))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
@@ -225,12 +212,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(InProgress),
-          Some(Success))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(InProgress),
+          syncToESStatus = Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
 
@@ -241,7 +225,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasNOTBeenPerformed
       verifyETMPDeAuthorisationHasNOTBeenPerformed
 
-      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItEnrolmentKey))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(InProgress)
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
@@ -250,12 +234,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Success),
-          Some(Failed))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Success),
+          syncToESStatus = Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -270,7 +251,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasNOTBeenPerformed
 
-      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItEnrolmentKey))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
@@ -279,12 +260,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Success),
-          Some(InProgress))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Success),
+          syncToESStatus = Some(InProgress))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -297,21 +275,14 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasNOTBeenPerformed
       verifyETMPDeAuthorisationHasNOTBeenPerformed
 
-      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItEnrolmentKey))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
       record.flatMap(_.syncToESStatus) shouldBe Some(InProgress)
     }
 
     "Retry both ETMP and ES de-allocation when both require action" in new TestFixture {
       val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Failed),
-          Some(Failed))
+        DeleteRecord(arn.value, Some(mtdItEnrolmentKey), syncToETMPStatus = Some(Failed), syncToESStatus = Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -327,7 +298,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
 
-      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItEnrolmentKey))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
@@ -338,12 +309,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Failed),
-          Some(Success))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Failed),
+          syncToESStatus = Some(Success))
       await(repo.create(deleteRecord))
       givenETMPDeAuthFails
 
@@ -354,7 +322,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasNOTBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
 
-      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItEnrolmentKey))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(Failed)
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
@@ -363,12 +331,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Success),
-          Some(Failed))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Success),
+          syncToESStatus = Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -382,7 +347,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasNOTBeenPerformed
 
-      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItId))
+      val record: Option[DeleteRecord] = await(repo.findBy(arn, mtdItEnrolmentKey))
       record.flatMap(_.syncToETMPStatus) shouldBe Some(Success)
       record.flatMap(_.syncToESStatus) shouldBe Some(Failed)
     }
@@ -391,7 +356,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
   "checkDeleteRecordAndEventuallyResume" should {
     implicit val request: Request[_] = NoRequest
     "return true if there is no pending delete record" in new TestFixture {
-      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(arn, mtdItEnrolmentKey))
 
       result shouldBe true
     }
@@ -399,12 +364,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Success),
-          Some(Failed))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Success),
+          syncToESStatus = Some(Failed))
       await(repo.create(deleteRecord))
       givenRelationshipBetweenAgentAndClientExists
       givenAgentExists
@@ -412,30 +374,27 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(arn, mtdItEnrolmentKey))
 
       result shouldBe true
-      await(repo.findBy(arn, mtdItId)) shouldBe None
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
     "return false if delete record found but resumption failed" in new TestFixture {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Success),
-          Some(Failed))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Success),
+          syncToESStatus = Some(Failed))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
       givenESDeAllocationFails
 
-      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(arn, mtdItEnrolmentKey))
 
       result shouldBe false
-      await(repo.findBy(arn, mtdItId)) should matchPattern {
+      await(repo.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
         case Some(DeleteRecord(arn.value, _, _, _, _, Some(Success), Some(Failed), Some(_), _, _, _)) =>
       }
     }
@@ -443,22 +402,19 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
-          Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-          mtdItId.value,
-          "MTDITID",
-          now,
-          Some(Failed),
-          Some(Success))
+          Some(mtdItEnrolmentKey),
+          syncToETMPStatus = Some(Failed),
+          syncToESStatus = Some(Success))
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
 
-      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(mtdItId, arn))
+      val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(arn, mtdItEnrolmentKey))
 
       result shouldBe true
-      await(repo.findBy(arn, mtdItId)) shouldBe None
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
   }
 
@@ -466,33 +422,24 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     "select not attempted delete record first" in new TestFixture {
       val deleteRecord1: DeleteRecord = DeleteRecord(
         arn.value + "1",
-        Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-        "ABCDEF0000000001",
-        "MTDITID",
-        now,
-        None,
-        Some(Failed),
+        Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+        syncToETMPStatus = None,
+        syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(1))
       )
       val deleteRecord2: DeleteRecord = DeleteRecord(
         arn.value,
-        Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-        mtdItId.value,
-        "MTDITID",
-        now,
-        Some(Failed),
-        Some(Success),
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Failed),
+        syncToESStatus = Some(Success),
         lastRecoveryAttempt = None,
         headerCarrier = None
       )
       val deleteRecord3: DeleteRecord = DeleteRecord(
         arn.value + "3",
-        Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-        "ABCDEF0000000001",
-        "MTDITID",
-        now,
-        Some(Success),
-        Some(Failed),
+        Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(5))
       )
 
@@ -500,7 +447,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.create(deleteRecord2))
       await(repo.create(deleteRecord3))
 
-      await(repo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord2)
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe Some(deleteRecord2)
 
       givenRelationshipBetweenAgentAndClientExists
       givenAgentExists
@@ -510,38 +457,29 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val result: Boolean = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
 
       result shouldBe true
-      await(repo.findBy(arn, mtdItId)) shouldBe None
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
 
     "select the oldest attempted delete record first" in new TestFixture {
       val deleteRecord1: DeleteRecord = DeleteRecord(
         arn.value + "1",
-        Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-        "ABCDEF0000000001",
-        "MTDITID",
-        now,
-        Some(Success),
-        Some(Failed),
+        Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(1))
       )
       val deleteRecord2: DeleteRecord = DeleteRecord(
         arn.value,
-        Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-        mtdItId.value,
-        "MTDITID",
-        now,
-        Some(Success),
-        Some(Failed),
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(13))
       )
       val deleteRecord3: DeleteRecord = DeleteRecord(
         arn.value + "3",
-        Some(s"${Service.MtdIt.id}~MTDITID~${mtdItId.value}"),
-        "ABCDEF0000000001",
-        "MTDITID",
-        now,
-        Some(Success),
-        Some(Failed),
+        Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(5))
       )
 
@@ -549,7 +487,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.create(deleteRecord2))
       await(repo.create(deleteRecord3))
 
-      await(repo.findBy(arn, mtdItId)) shouldBe Some(deleteRecord2)
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe Some(deleteRecord2)
 
       givenRelationshipBetweenAgentAndClientExists
       givenAgentExists
@@ -560,7 +498,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       val result: Boolean = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
 
       result shouldBe true
-      await(repo.findBy(arn, mtdItId)) shouldBe None
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
   }
 
