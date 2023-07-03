@@ -287,7 +287,7 @@ class RelationshipsController @Inject()(
                     Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
                   } { taxId =>
                     deleteService
-                      .deleteRelationship(arn, EnrolmentKey(Service.forId(serviceId), taxId), currentUser.affinityGroup)
+                      .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
                   }
             } yield NoContent)
               .recover {
@@ -350,7 +350,6 @@ class RelationshipsController @Inject()(
 
   def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      //TODO, unnecessary ES20 call?
       validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()

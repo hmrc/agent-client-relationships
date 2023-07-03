@@ -25,7 +25,7 @@ import org.mongodb.scala.model.Indexes.ascending
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, MongoLocalDateTimeFormat}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier}
@@ -46,6 +46,9 @@ case class RelationshipCopyRecord(
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None) {
+
+  val enrolmentKey: Option[EnrolmentKey] = maybeEnrolmentKey.map(ek => EnrolmentKey.apply(ek))
+
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
 
   def needToCreateEtmpRecord: Boolean = !syncToETMPStatus.contains(Success)

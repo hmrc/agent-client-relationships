@@ -176,7 +176,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       (result.json \\ "service").head.as[String] shouldBe testClient.service
 
       (result.json \\ "arn")(1).as[String] shouldBe arn.value
-      (result.json \\ "dateTo") (1).as[LocalDate].toString shouldBe LocalDate.now().toString
+      (result.json \\ "dateTo")(1).as[LocalDate].toString shouldBe LocalDate.now().toString
       (result.json \\ "clientId")(1).as[String] shouldBe testClient.clientId.value
       (result.json \\ "clientType")(1).as[String] shouldBe clientType
       (result.json \\ "service")(1).as[String] shouldBe testClient.service

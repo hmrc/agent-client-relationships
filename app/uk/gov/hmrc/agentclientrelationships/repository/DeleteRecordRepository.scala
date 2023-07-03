@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class DeleteRecord(
   arn: String,
-  maybeEnrolmentKey: Option[String], // 06.2023 - added to accommodate multiple identifiers (cbc)
+  maybeEnrolmentKey: Option[String], // APB-7215 - added to accommodate multiple identifiers (cbc)
   clientIdentifier: String,
   clientIdentifierType: String,
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
