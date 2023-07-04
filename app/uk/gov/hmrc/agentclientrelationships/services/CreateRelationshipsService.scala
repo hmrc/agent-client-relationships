@@ -107,7 +107,7 @@ class CreateRelationshipsService @Inject()(
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- ifConnector.createAgentRelationship(enrolmentKey.oneTaxIdentifier(), arn)
+      maybeResponse <- ifConnector.createAgentRelationship(enrolmentKey.oneTaxIdentifier(), arn) // TODO DG this may not return what we want
       if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipCreated", true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)

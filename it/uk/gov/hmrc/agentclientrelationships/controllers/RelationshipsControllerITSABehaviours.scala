@@ -449,7 +449,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenMtdItIdIsUnKnownFor(nino)
 
-        val enrolmentKey = EnrolmentKey("IR-SA", Seq(Identifier("NINO", nino.value))) // TODO DG not sure about this
+        val enrolmentKey = EnrolmentKey("IR-SA", Seq(Identifier("NINO", nino.value)))
 
         await(repo.findBy(arn, enrolmentKey)) shouldBe None
         val result = doRequest
