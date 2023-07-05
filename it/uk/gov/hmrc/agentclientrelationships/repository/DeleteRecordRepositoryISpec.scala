@@ -184,6 +184,59 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       val result = await(repo.selectNextToRecover())
       result shouldBe Some(deleteRecord2)
     }
+  }
+
+  "Legacy DeleteRecords (i.e. with id and idType instead of enrolment key)" should {
+
+    val deleteRecord1 = DeleteRecord(
+      "TARN0000001",
+      enrolmentKey = None,
+      clientIdentifier = Some("ABCDEF0000000001"),
+      clientIdentifierType = Some("MTDITID"),
+      syncToETMPStatus = Some(Failed),
+      syncToESStatus = Some(Failed),
+    )
+    val deleteRecord2 = DeleteRecord(
+      "TARN0000001",
+      enrolmentKey = None,
+      clientIdentifier = Some("123456789"),
+      clientIdentifierType = Some("VRN"),
+      syncToETMPStatus = Some(Failed),
+      syncToESStatus = Some(Failed),
+    )
+    val deleteRecord3 = DeleteRecord(
+      "TARN0000002",
+      enrolmentKey = None,
+      clientIdentifier = Some("ABCDEF0000000001"),
+      clientIdentifierType = Some("MTDITID"),
+      syncToETMPStatus = Some(Failed),
+      syncToESStatus = Some(Failed),
+    )
+
+    val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))
+    val vatEnrolmentKey = EnrolmentKey(Service.Vat, Vrn("123456789"))
+
+    "be correctly found and retrieved" in {
+      await(repo.collection.insertOne(deleteRecord1).toFuture())
+      await(repo.collection.insertOne(deleteRecord2).toFuture())
+      await(repo.collection.insertOne(deleteRecord3).toFuture())
+      await(repo.findBy(Arn("TARN0000001"), mtdItEnrolmentKey)) shouldBe Some(deleteRecord1)
+      await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey)) shouldBe Some(deleteRecord2)
+      await(repo.findBy(Arn("TARN0000002"), mtdItEnrolmentKey)) shouldBe Some(deleteRecord3)
+      await(repo.findBy(Arn("TARN0000002"), vatEnrolmentKey)) shouldBe None // does not exist
+    }
+
+    "be correctly updated" in {
+      await(repo.collection.insertOne(deleteRecord1).toFuture())
+      await(repo.collection.insertOne(deleteRecord2).toFuture())
+      await(repo.collection.insertOne(deleteRecord3).toFuture())
+      await(repo.updateEsSyncStatus(Arn("TARN0000001"), mtdItEnrolmentKey, Success))
+      await(repo.updateEtmpSyncStatus(Arn("TARN0000001"), vatEnrolmentKey, Success))
+      await(repo.updateEsSyncStatus(Arn("TARN0000002"), vatEnrolmentKey, Success)) // This one should do nothing as the record does not exist
+      await(repo.findBy(Arn("TARN0000001"), mtdItEnrolmentKey)) shouldBe Some(deleteRecord1.copy(syncToESStatus = Some(Success)))
+      await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey)) shouldBe Some(deleteRecord2.copy(syncToETMPStatus = Some(Success)))
+      await(repo.findBy(Arn("TARN0000002"), mtdItEnrolmentKey)) shouldBe Some(deleteRecord3)
+    }
 
   }
 
