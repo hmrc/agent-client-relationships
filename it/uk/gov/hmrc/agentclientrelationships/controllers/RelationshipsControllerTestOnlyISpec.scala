@@ -21,10 +21,11 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Http, MongoApp, UnitSpec, WireMockSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service}
 import uk.gov.hmrc.http.HeaderCarrier
 
 class RelationshipsControllerTestOnlyISpec
@@ -67,9 +68,8 @@ class RelationshipsControllerTestOnlyISpec
     ()
   }
 
-  val arn = "AARN0000002"
-  val mtditid = "ABCDEF123456789"
-  val mtdItIdType = "MTDITID"
+  private val arn = "AARN0000002"
+  private val mtditid = "ABCDEF123456789"
 
   private def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
@@ -79,14 +79,14 @@ class RelationshipsControllerTestOnlyISpec
 
     "return 204 for a valid arn and mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, Some(s"${Service.MtdIt.id}~$mtdItIdType~ABCDEF0000000001"), mtditid, mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, Some(EnrolmentKey(Service.MtdIt, MtdItId(mtditid)))))) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 204
     }
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, Some(s"${Service.MtdIt.id}~$mtdItIdType~ABCDEF123456780"), "ABCDEF123456780", mtdItIdType))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780")))))) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 404
     }

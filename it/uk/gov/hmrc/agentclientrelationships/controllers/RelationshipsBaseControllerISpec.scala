@@ -106,6 +106,7 @@ trait RelationshipsBaseControllerISpec
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
+  val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
   val nino = Nino("AB123456C")
   val mtdItIdType = "MTDITID"
@@ -145,12 +146,12 @@ trait RelationshipsBaseControllerISpec
   protected def verifyDeleteRecordHasStatuses(
                                                etmpStatus: Option[SyncStatus.Value],
                                                esStatus: Option[SyncStatus.Value]) =
-    await(deleteRecordRepository.findBy(arn, mtdItId)) should matchPattern {
-      case Some(DeleteRecord(arn.value, Some("HMRC-MTD-IT~MTDITID~ABCDEF123456789"), mtdItId.value, `mtdItIdType`, _, `etmpStatus`, `esStatus`, _, _, _, _)) =>
+    await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
+      case Some(DeleteRecord(arn.value, Some(ek), _, _, _, `etmpStatus`, `esStatus`, _, _, _, _)) if ek == EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789"))=>
     }
 
   protected def verifyDeleteRecordNotExists =
-    await(deleteRecordRepository.findBy(arn, mtdItId)) shouldBe None
+    await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
 
 }

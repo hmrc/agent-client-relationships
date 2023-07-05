@@ -4,7 +4,7 @@ import org.mongodb.scala.model.Filters
 import play.api.libs.json.{Format, JsObject}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, MongoLocalDateTimeFormat, TerminationResponse}
+import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -18,9 +18,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
   val relationshipCopiedSuccessfully: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
-    Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
-    mtdItId.value,
-    mtdItIdType,
+    Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
     syncToETMPStatus = Some(SyncStatus.Success),
     syncToESStatus = Some(SyncStatus.Success))
 
@@ -316,12 +314,10 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
         deleteRecordRepository.create(
           DeleteRecord(
             arn.value,
-            Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
-            mtdItId.value,
-            mtdItIdType,
-            LocalDateTime.now.minusMinutes(1),
-            Some(SyncStatus.Success),
-            Some(SyncStatus.Failed))))
+            Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+            dateTime = LocalDateTime.now.minusMinutes(1),
+            syncToETMPStatus = Some(SyncStatus.Success),
+            syncToESStatus = Some(SyncStatus.Failed))))
 
       //insert copy-relationship document
        await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())

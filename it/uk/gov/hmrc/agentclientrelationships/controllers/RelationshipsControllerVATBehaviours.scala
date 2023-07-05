@@ -1,6 +1,5 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import org.mongodb.scala.model.Filters
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -17,9 +16,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
   def relationshipControllerVATSpecificBehaviours(): Unit = {
     val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
       arn.value,
-      Some(Service.Vat.id),
-      vrn.value,
-      mtdVatIdType,
+      Some(EnrolmentKey(Service.Vat, vrn)),
       syncToETMPStatus = Some(SyncStatus.Success),
       syncToESStatus = Some(SyncStatus.Success))
 
@@ -44,22 +41,14 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         getVrnIsKnownInETMPFor(vrn)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        def query() =
-          repo.collection.find(
-            Filters.and(
-              Filters.equal("arn" , arn.value),
-              Filters.equal( "clientIdentifier" , vrn.value),
-              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
-
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, vatEnrolmentKey)) shouldBe empty
 
         val result = doRequest
         result.status shouldBe 200
 
-        await(query()).head should have(
+        await(repo.findBy(arn, vatEnrolmentKey)).get should have(
           'arn (arn.value),
-          'clientIdentifier (vrn.value),
-          'clientIdentifierType (mtdVatIdType),
+          'enrolmentKey (Some(vatEnrolmentKey)),
           'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
           'syncToETMPStatus (Some(SyncStatus.Success)),
           'syncToESStatus (Some(SyncStatus.Success))
@@ -108,20 +97,13 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         getVrnIsKnownInETMPFor(vrn)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
 
-        def query() =
-          repo.collection.find(
-            Filters.and(
-              Filters.equal("arn", arn.value),
-              Filters.equal( "clientIdentifier", vrn.value),
-              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
-
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
         val result = doRequest
         result.status shouldBe 200
 
         // the status is 200 but the relationship copy cannot have succeeded with an unknown agent
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
         verifyAuditRequestSent(
           1,
@@ -149,22 +131,14 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         getVrnIsKnownInETMPFor(vrn)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        def query() =
-          repo.collection.find(
-            Filters.and(
-              Filters.equal("arn", arn.value),
-              Filters.equal("clientIdentifier" , vrn.value),
-              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
-
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
         val result = doRequest
         result.status shouldBe 200
 
-        await(query()).head should have(
+        await(repo.findBy(arn, vatEnrolmentKey)).get should have(
           'arn (arn.value),
-          'clientIdentifier (vrn.value),
-          'clientIdentifierType (mtdVatIdType),
+          'enrolmentKey (Some(vatEnrolmentKey)),
           'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
           'syncToETMPStatus (Some(SyncStatus.Failed)),
           'syncToESStatus (None)
@@ -183,22 +157,14 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         getVrnIsKnownInETMPFor(vrn)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        def query() =
-          repo.collection.find(
-            Filters.and(
-              Filters.equal("arn", arn.value),
-              Filters.equal("clientIdentifier" , vrn.value),
-              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
-
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
         val result = doRequest
         result.status shouldBe 200
 
-        await(query()).head should have(
+        await(repo.findBy(arn, vatEnrolmentKey)).get should have(
           'arn (arn.value),
-          'clientIdentifier (vrn.value),
-          'clientIdentifierType (mtdVatIdType),
+          'enrolmentKey (Some(vatEnrolmentKey)),
           'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
           'syncToETMPStatus (Some(SyncStatus.Success)),
           'syncToESStatus (Some(SyncStatus.Failed))
@@ -247,19 +213,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         getVrnIsNotKnownInETMPFor(vrn)
         givenAdminUser("foo", "any")
 
-        def query() =
-          repo.collection.find(
-            Filters.and(
-              Filters.equal("arn", arn.value),
-              Filters.equal("clientIdentifier" , vrn.value),
-              Filters.equal("clientIdentifierType" , mtdVatIdType))).toFuture()
-
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
         val result = doRequest
         result.status shouldBe 200
 
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
         verifyAuditRequestSent(
           1,

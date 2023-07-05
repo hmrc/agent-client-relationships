@@ -210,7 +210,8 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
           case Status.NO_CONTENT =>
             logger.warn(s"not found in ES for $cbcId")
             None
-          case other => throw UpstreamErrorResponse(response.body, other, other)
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
         }
       }
     }

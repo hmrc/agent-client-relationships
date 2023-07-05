@@ -26,7 +26,6 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
 
 import javax.inject.{Inject, Singleton}
@@ -57,20 +56,16 @@ class CreateRelationshipsService @Inject()(
     hc: HeaderCarrier,
     auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, enrolmentKey.oneTaxIdentifier()) {
+      .tryLock(arn, enrolmentKey) {
         auditData.set("AgentDBRecord", false)
         auditData.set("enrolmentDelegated", false)
         auditData.set("etmpRelationshipCreated", false)
 
         def createRelationshipRecord: Future[DbUpdateStatus] = {
-          val identifierType = enrolmentKey.oneIdentifier().key
-          val identifier = enrolmentKey.oneIdentifier().value
           val record = RelationshipCopyRecord(
             arn.value,
-            Some(enrolmentKey.toString), // APB-7215 added to accommodate multiple identifiers
-            identifier,
-            identifierType,
-            Some(oldReferences))
+            Some(enrolmentKey), // APB-7215 added to accommodate multiple identifiers
+            references = Some(oldReferences))
           relationshipCopyRepository
             .create(record)
             .map(count => {
@@ -90,29 +85,29 @@ class CreateRelationshipsService @Inject()(
           agentUser            <- retrieveAgentUser(arn)
           recordCreationStatus <- createRelationshipRecord
           if recordCreationStatus == DbUpdateSucceeded
-          etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey.oneTaxIdentifier())
+          etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey)
           if etmpRecordCreationStatus == DbUpdateSucceeded
           esRecordCreationStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails)
         } yield esRecordCreationStatus
       }
 
-  private def createEtmpRecord(arn: Arn, identifier: TaxIdentifier)(
+  private def createEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(
     implicit ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData): Future[DbUpdateStatus] = {
     val updateEtmpSyncStatus = relationshipCopyRepository
-      .updateEtmpSyncStatus(arn, identifier, _: SyncStatus)
+      .updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus)
       .map(convertDbUpdateStatus)
 
     val recoverFromException = (origExc: Throwable, replacementExc: Throwable) => {
-      logger.warn(s"Creating ETMP record failed for ${arn.value}, $identifier due to: ${origExc.getMessage}")
+      logger.warn(s"Creating ETMP record failed for ${arn.value}, $enrolmentKey due to: ${origExc.getMessage}")
       updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
     }
 
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- ifConnector.createAgentRelationship(identifier, arn)
+      maybeResponse <- ifConnector.createAgentRelationship(enrolmentKey.oneTaxIdentifier(), arn) // TODO DG this may not return what we want
       if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipCreated", true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
@@ -139,7 +134,7 @@ class CreateRelationshipsService @Inject()(
 
     def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
       relationshipCopyRepository
-        .updateEsSyncStatus(arn, enrolmentKey.oneTaxIdentifier(), status)
+        .updateEsSyncStatus(arn, enrolmentKey, status)
         .map(convertDbUpdateStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
@@ -199,9 +194,7 @@ class CreateRelationshipsService @Inject()(
                     case Some(arnToRemove) =>
                       val deleteRecord = DeleteRecord(
                         arnToRemove.value,
-                        Some(enrolmentKey.toString),
-                        enrolmentKey.oneIdentifier().value,
-                        enrolmentKey.oneIdentifier().key,
+                        Some(enrolmentKey),
                         syncToETMPStatus = Some(Success),
                         headerCarrier = Some(hc)
                       )
@@ -221,7 +214,7 @@ class CreateRelationshipsService @Inject()(
                     case None => Future successful (())
                     case Some(removedArn) =>
                       deleteRecordRepository
-                        .remove(removedArn, enrolmentKey.oneTaxIdentifier())
+                        .remove(removedArn, enrolmentKey)
                         .map(_ > 0)
                         .recoverWith {
                           case NonFatal(ex) =>
@@ -249,12 +242,12 @@ class CreateRelationshipsService @Inject()(
     hc: HeaderCarrier,
     auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, enrolmentKey.oneTaxIdentifier()) {
+      .tryLock(arn, enrolmentKey) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
           case (true, true) =>
             for {
               agentUser  <- retrieveAgentUser(arn)
-              etmpStatus <- createEtmpRecord(arn, enrolmentKey.oneTaxIdentifier())
+              etmpStatus <- createEtmpRecord(arn, enrolmentKey)
               if etmpStatus == DbUpdateSucceeded
               esStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
             } yield esStatus
@@ -267,7 +260,7 @@ class CreateRelationshipsService @Inject()(
             logger.warn(
               s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
                 s"This should not happen because we always create the ETMP relationship first,")
-            createEtmpRecord(arn, enrolmentKey.oneTaxIdentifier())
+            createEtmpRecord(arn, enrolmentKey)
           case (false, false) =>
             logger.warn(
               s"recoverRelationshipCreation called for ${arn.value}, ${enrolmentKey.tag} when no recovery needed")

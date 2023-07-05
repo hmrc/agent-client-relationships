@@ -131,7 +131,7 @@ class CheckAndCopyRelationshipsService @Inject()(
     auditData.set("clientId", mtdItId)
     auditData.set("clientIdType", "mtditid")
 
-    relationshipCopyRepository.findBy(arn, mtdItId).flatMap {
+    relationshipCopyRepository.findBy(arn, EnrolmentKey(Service.MtdIt, mtdItId)).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         logger.warn(s"Relationship has been already been found in CESA and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
@@ -204,7 +204,7 @@ class CheckAndCopyRelationshipsService @Inject()(
     auditData.set("Journey", "CopyExistingESRelationship")
     auditData.set("service", "mtd-vat")
     auditData.set("vrn", vrn)
-    relationshipCopyRepository.findBy(arn, vrn).flatMap {
+    relationshipCopyRepository.findBy(arn, EnrolmentKey(Service.Vat, vrn)).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
         //logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
@@ -339,7 +339,7 @@ class CheckAndCopyRelationshipsService @Inject()(
   }
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] =
-    relationshipCopyRepository.remove(arn, mtdItId).flatMap { n =>
+    relationshipCopyRepository.remove(arn, EnrolmentKey(Service.MtdIt, mtdItId)).flatMap { n =>
       if (n == 0)
         Future.failed(RelationshipNotFound("Nothing has been removed from db."))
       else {

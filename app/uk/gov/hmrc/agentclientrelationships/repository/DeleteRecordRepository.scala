@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import com.google.inject.ImplementedBy
 import org.mongodb.scala.MongoWriteException
-import org.mongodb.scala.model.Filters.{and, equal}
+import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Updates.{combine, inc, set}
 import org.mongodb.scala.model._
 import play.api.Logging
@@ -27,22 +27,22 @@ import play.api.libs.json._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, MongoLocalDateTimeFormat}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier}
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class DeleteRecord(
   arn: String,
-  maybeEnrolmentKey: Option[String], // APB-7215 - added to accommodate multiple identifiers (cbc)
-  clientIdentifier: String,
-  clientIdentifierType: String,
-  dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
+  enrolmentKey: Option[EnrolmentKey], // APB-7215 - added to accommodate multiple identifiers (cbc)
+  clientIdentifier: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
+  clientIdentifierType: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
+  dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None,
   lastRecoveryAttempt: Option[LocalDateTime] = None,
@@ -50,7 +50,8 @@ case class DeleteRecord(
   headerCarrier: Option[HeaderCarrier] = None,
   relationshipEndedBy: Option[String] = None) {
 
-  val enrolmentKey: Option[EnrolmentKey] = maybeEnrolmentKey.map(ek => EnrolmentKey.apply(ek))
+  // Legacy records use client id & client id type. Newer records use enrolment key.
+  require(enrolmentKey.isDefined || (clientIdentifier.isDefined && clientIdentifierType.isDefined))
 
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
@@ -90,11 +91,11 @@ object DeleteRecord {
 @ImplementedBy(classOf[MongoDeleteRecordRepository])
 trait DeleteRecordRepository {
   def create(record: DeleteRecord): Future[Int]
-  def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[DeleteRecord]]
-  def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int]
-  def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int]
-  def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier): Future[Unit]
-  def remove(arn: Arn, identifier: TaxIdentifier): Future[Int]
+  def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]]
+  def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int]
+  def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int]
+  def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit]
+  def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int]
   def selectNextToRecover(): Future[Option[DeleteRecord]]
 
   def terminateAgent(arn: Arn): Future[Either[String, Int]]
@@ -107,15 +108,26 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
       collectionName = "delete-record",
       domainFormat = formats,
       indexes = Seq(
+        // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
+        // The situation will be simplified after a migration of the legacy documents.
         IndexModel(
           Indexes.ascending("arn", "clientIdentifier", "clientIdentifierType"),
-          IndexOptions().unique(true).name("arnAndAgentReference"))
+          IndexOptions()
+            .partialFilterExpression(Filters.exists("clientIdentifier"))
+            .unique(true)
+            .name("arnAndAgentReferencePartial")
+        ),
+        IndexModel(
+          Indexes.ascending("arn", "enrolmentKey"),
+          IndexOptions()
+            .partialFilterExpression(Filters.exists("enrolmentKey"))
+            .unique(true)
+            .name("arnAndEnrolmentKeyPartial")
+        )
       )
     )
     with DeleteRecordRepository
     with Logging {
-
-  private def clientIdentifierType(identifier: TaxIdentifier) = ClientIdentifier(identifier).enrolmentId
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
@@ -130,54 +142,31 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
           INDICATE_ERROR_DURING_DB_UPDATE
       })
 
-  override def findBy(arn: Arn, identifier: TaxIdentifier): Future[Option[DeleteRecord]] =
-    collection
-      .find(
-        and(
-          equal("arn", arn.value),
-          equal("clientIdentifier", identifier.value),
-          equal("clientIdentifierType", clientIdentifierType(identifier))))
-      .headOption()
+  override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]] =
+    collection.find(filter(arn, enrolmentKey)).headOption()
 
-  override def updateEtmpSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] =
+  override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
     collection
-      .updateOne(
-        and(
-          equal("arn", arn.value),
-          equal("clientIdentifier", identifier.value),
-          equal("clientIdentifierType", clientIdentifierType(identifier))),
-        set("syncToETMPStatus", status.toString),
-        UpdateOptions().upsert(false)
-      )
+      .updateOne(filter(arn, enrolmentKey), set("syncToETMPStatus", status.toString), UpdateOptions().upsert(false))
       .toFuture()
       .map(updateResult => {
         if (updateResult.getModifiedCount != 1L) logger.warn(s"Updating ETMP sync status ($status) failed")
         updateResult.getModifiedCount.toInt
       })
 
-  override def updateEsSyncStatus(arn: Arn, identifier: TaxIdentifier, status: SyncStatus): Future[Int] =
+  override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
     collection
-      .updateOne(
-        and(
-          equal("arn", arn.value),
-          equal("clientIdentifier", identifier.value),
-          equal("clientIdentifierType", clientIdentifierType(identifier))),
-        set("syncToESStatus", status.toString),
-        UpdateOptions().upsert(false)
-      )
+      .updateOne(filter(arn, enrolmentKey), set("syncToESStatus", status.toString), UpdateOptions().upsert(false))
       .toFuture()
       .map(updateResult => {
         if (updateResult.getModifiedCount != 1L) logger.warn(s"Updating ES sync status ($status) failed")
         updateResult.getModifiedCount.toInt
       })
 
-  override def markRecoveryAttempt(arn: Arn, identifier: TaxIdentifier): Future[Unit] =
+  override def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit] =
     collection
       .findOneAndUpdate(
-        and(
-          equal("arn", arn.value),
-          equal("clientIdentifier", identifier.value),
-          equal("clientIdentifierType", clientIdentifierType(identifier))),
+        filter(arn, enrolmentKey),
         combine(
           set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
           inc("numberOfAttempts", 1))
@@ -185,14 +174,9 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
       .toFuture()
       .map(_ => ())
 
-  override def remove(arn: Arn, identifier: TaxIdentifier): Future[Int] =
+  override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] =
     collection
-      .deleteOne(
-        and(
-          equal("arn", arn.value),
-          equal("clientIdentifier", identifier.value),
-          equal("clientIdentifierType", clientIdentifierType(identifier)))
-      )
+      .deleteOne(filter(arn, enrolmentKey))
       .toFuture()
       .map(deleteResult => deleteResult.getDeletedCount.toInt)
 
@@ -210,4 +194,20 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
       .recover {
         case e: MongoWriteException => Left(e.getMessage)
       }
+
+  private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
+    val identifierType: String = enrolmentKey.identifiers.head.key
+    val identifier: String = enrolmentKey.identifiers.head.value
+    Filters.or(
+      Filters.and(
+        Filters.equal("arn", arn.value),
+        Filters.equal("enrolmentKey", enrolmentKey.tag)
+      ),
+      Filters.and(
+        Filters.equal("arn", arn.value),
+        Filters.equal("clientIdentifier", identifier),
+        Filters.equal("clientIdentifierType", identifierType)
+      ),
+    )
+  }
 }

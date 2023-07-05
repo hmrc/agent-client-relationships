@@ -61,18 +61,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,
-    Some(mtdItEnrolmentKey.toString),
-    mtdItId.value,
-    "MTDITID",
-    Some(Set(SaRef(saAgentRef))),
+    Some(mtdItEnrolmentKey),
+    references = Some(Set(SaRef(saAgentRef))),
     syncToETMPStatus = None,
     syncToESStatus = None)
   val defaultRecordForMtdVat = RelationshipCopyRecord(
     arn.value,
-    Some(vatEnrolmentKey.toString),
-    vrn.value,
-    "VRN",
-    Some(Set(VatRef(agentCodeForVatDecAgent))),
+    Some(vatEnrolmentKey),
+    references = Some(Set(VatRef(agentCodeForVatDecAgent))),
     syncToETMPStatus = None,
     syncToESStatus = None)
 
@@ -147,7 +143,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         verifyEtmpRecordCreated()
         val auditDetails = verifyAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(Success)
+        await(relationshipCopyRepository.findBy(arn, mtdItEnrolmentKey)).value.syncToETMPStatus shouldBe Some(Success)
       }
 
       s"skip recovery of ETMP relationship but still return FoundAndCopied if RelationshipCopyRecord exists " +
@@ -184,7 +180,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
 
-        val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItId) {
+        val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
           relationshipsService
             .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         })
@@ -194,7 +190,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         verifyEtmpRecordNotCreated()
         val auditDetails = verifyAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe status
+        await(relationshipCopyRepository.findBy(arn, mtdItEnrolmentKey)).value.syncToETMPStatus shouldBe status
       }
     }
     // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
@@ -245,7 +241,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
-        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier]))
+        when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey]))
           .thenReturn(Future.successful(1))
         when(agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
           .thenReturn(Future.successful(agentUserForAsAgent))
@@ -291,7 +287,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditDetails = verifyAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails("enrolmentDelegated") shouldBe true
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToESStatus shouldBe Some(Success)
+        await(relationshipCopyRepository.findBy(arn, mtdItEnrolmentKey)).value.syncToESStatus shouldBe Some(Success)
       }
 
       s"skip recovery of ES relationship and return FoundButLockedCouldNotCopy if RelationshipCopyRecord exists " +
@@ -327,7 +323,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
 
-        val maybeCheck = await(lockService.tryLock(arn, mtdItId) {
+        val maybeCheck = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
           relationshipsService
             .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
         })
@@ -339,7 +335,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditDetails = verifyAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails.get("enrolmentDelegated") shouldBe None
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToESStatus shouldBe status
+        await(relationshipCopyRepository.findBy(arn, mtdItEnrolmentKey)).value.syncToESStatus shouldBe status
       }
     }
 
@@ -429,7 +425,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditDetails = verifyAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
         auditDetails.get("enrolmentDelegated") shouldBe None
-        await(relationshipCopyRepository.findBy(arn, mtdItId)).value.syncToETMPStatus shouldBe Some(Success)
+        await(relationshipCopyRepository.findBy(arn, mtdItEnrolmentKey)).value.syncToETMPStatus shouldBe Some(Success)
       }
     }
 
@@ -628,7 +624,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       cesaRelationshipExists()
       metricsStub()
 
-      val check = await(lockService.tryLock(arn, mtdItId) {
+      val check = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
         relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
       })
@@ -638,7 +634,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       verifyEtmpRecordNotCreated()
       verifyEsRecordNotCreated()
 
-      await(relationshipCopyRepository.findBy(arn, mtdItId)) shouldBe None
+      await(relationshipCopyRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
 
     "allow only a single request at a time to create a relationship for MTD-VAT i.e. apply a lock on the first request before creating " +
@@ -673,7 +669,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       metricsStub()
       auditStub()
 
-      val check = await(lockService.tryLock(arn, vrn) {
+      val check = await(lockService.tryLock(arn, vatEnrolmentKey) {
         relationshipsService
           .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
       })
@@ -683,7 +679,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       verifyEtmpRecordNotCreated()
       verifyEsRecordNotCreated()
 
-      await(relationshipCopyRepository.findBy(arn, vrn)) shouldBe None
+      await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)) shouldBe None
     }
 
     "create relationship when there is no legacy relationship in CESA but there is a alt-itsa authorisation in place. " +
@@ -767,7 +763,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditDetails = verifyESAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
         auditDetails("vrnExistsInEtmp") shouldBe true
-        await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToETMPStatus shouldBe Some(Success)
+        await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)).value.syncToETMPStatus shouldBe Some(Success)
       }
 
       s"skip recovery of ETMP relationship and return FoundButLockedCouldNotCopy if RelationshipCopyRecord exists " +
@@ -806,7 +802,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
         auditStub()
 
-        val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vrn) {
+        val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vatEnrolmentKey) {
           relationshipsService
             .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         })
@@ -816,7 +812,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         verifyEtmpRecordNotCreatedForMtdVat()
         val auditDetails = verifyESAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
-        await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToETMPStatus shouldBe status
+        await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)).value.syncToETMPStatus shouldBe status
       }
     }
     // We ignore the RelationshipCopyRecord if there is no relationship in ES as a failsafe in case we have made a logic error.
@@ -904,7 +900,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
         when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
-        when(deleteRecordRepository.remove(any[Arn], any[TaxIdentifier]))
+        when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey]))
           .thenReturn(Future.successful(1))
         when(agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
           .thenReturn(Future.successful(agentUserForAsAgent))
@@ -950,7 +946,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditDetails = verifyESAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails("enrolmentDelegated") shouldBe true
-        await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToESStatus shouldBe Some(Success)
+        await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)).value.syncToESStatus shouldBe Some(Success)
       }
 
       s"skip recovery of ES relationship return FoundButLockedCouldNotCopy if RelationshipCopyRecord exists " +
@@ -988,7 +984,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
         auditStub()
 
-        val maybeCheck = await(lockService.tryLock(arn, vrn) {
+        val maybeCheck = await(lockService.tryLock(arn, vatEnrolmentKey) {
           relationshipsService
             .checkForOldRelationshipAndCopy(arn, vrn)(ec, hc, request, auditData)
         })
@@ -1000,7 +996,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditDetails = verifyESAuditEventSent()
         auditDetails.get("etmpRelationshipCreated") shouldBe None
         auditDetails.get("enrolmentDelegated") shouldBe None
-        await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToESStatus shouldBe status
+        await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)).value.syncToESStatus shouldBe status
       }
     }
 
@@ -1091,7 +1087,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditDetails = verifyESAuditEventSent()
         auditDetails("etmpRelationshipCreated") shouldBe true
         auditDetails.get("enrolmentDelegated") shouldBe None
-        await(relationshipCopyRepository.findBy(arn, vrn)).value.syncToETMPStatus shouldBe Some(Success)
+        await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)).value.syncToETMPStatus shouldBe Some(Success)
       }
     }
 

@@ -1,12 +1,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import org.mongodb.scala.model.Filters
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.mongo.lock.Lock
 
@@ -32,8 +31,14 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   //noinspection ScalaStyle
   def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~$clientId")
+      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
     } else EnrolmentKey(Service.forId(serviceId), clientId)
+    def extraSetup(serviceId: String): Unit = {
+      if (serviceId == Service.Cbc.id)
+        givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+      ()
+    }
+
     s"GET  /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" should {
 
       val requestPath: String =
@@ -46,23 +51,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "return 200 when relationship exists in es" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        if (serviceId == Service.Cbc.id) {
-          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
-        }
         givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
+        extraSetup(serviceId)
 
-        def query() =
-          repo.collection.find(Filters.and(
-            Filters.equal("arn", arn.value),
-            Filters.equal( "clientIdentifier",clientId.value),
-            Filters.equal("clientIdentifierType", clientIdType))).toFuture()
-
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, enrolmentKey)) shouldBe None
         val result = doRequest
         result.status shouldBe 200
-        await(query()) shouldBe empty
+        await(repo.findBy(arn, enrolmentKey)) shouldBe empty
       }
 
       //UNHAPPY PATHS
@@ -74,6 +71,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenDelegatedGroupIdsNotExistFor(EnrolmentKey(s"$serviceId~$clientIdType~${clientId.value}"))
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
+        extraSetup(serviceId)
 
         val result = doRequest
         result.status shouldBe 404
@@ -82,30 +80,25 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "return 404 when delete is pending" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        if (serviceId == Service.Cbc.id) {
-          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
-        }
-        givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
+        givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
         givenAdminUser("foo", "any")
-        givenEnrolmentDeallocationFailsWith(404)("foo", mtdItEnrolmentKey)
+        givenEnrolmentDeallocationFailsWith(404)("foo", enrolmentKey)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
+        extraSetup(serviceId)
 
         await(
           deleteRecordRepository.create(
             DeleteRecord(
               arn.value,
-              Some(s"${Service.MtdIt.id}~MTDITID~ABCDEF0000000001"),
-              clientId.value,
-              clientIdType,
-              now,
-              Some(SyncStatus.Success),
-              Some(SyncStatus.Failed))))
+              Some(enrolmentKey),
+              syncToETMPStatus = Some(SyncStatus.Success),
+              syncToESStatus = Some(SyncStatus.Failed))))
 
         val result = doRequest
         result.status shouldBe 404
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_DELETE_PENDING"
 
-        await(deleteRecordRepository.remove(arn, clientId))
+        await(deleteRecordRepository.remove(arn, enrolmentKey))
       }
 
       //FAILURE CASES
@@ -114,8 +107,9 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
-
         givenDelegatedGroupIdRequestFailsWith(500)
+        extraSetup(serviceId)
+
         val result = doRequest
         result.status shouldBe 500
       }
@@ -125,6 +119,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdRequestFailsWith(400)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
+        extraSetup(serviceId)
 
         val result = doRequest
         result.status shouldBe 400
@@ -135,8 +130,14 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   //noinspection ScalaStyle
   def relationshipsControllerPutISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~$clientId")
+      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
     } else EnrolmentKey(Service.forId(serviceId), clientId)
+    def extraSetup(serviceId: String): Unit = {
+      if (serviceId == Service.Cbc.id)
+        givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+      ()
+    }
+
     s"PUT /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" should {
 
       val requestPath: String =
@@ -147,9 +148,6 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenGroupInfo("foo", "bar")
         givenEnrolmentExistsForGroupId("bar", agentEnrolmentKey(Arn("barArn")))
         givenEnrolmentExistsForGroupId("foo", agentEnrolmentKey(Arn("fooArn")))
-        if (serviceId == Service.Cbc.id) {
-          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
-        }
         givenDelegatedGroupIdsExistForEnrolmentKey(enrolmentKey)
         givenAgentCanBeAllocatedInIF(clientId, arn)
         givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
@@ -157,6 +155,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenServiceEnrolmentAllocationSucceeds(enrolmentKey, "bar")
         givenAdminUser("foo", "any")
         givenCacheRefresh(arn)
+        extraSetup(serviceId)
       }
 
       "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
@@ -192,6 +191,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenDelegatedGroupIdsNotExistFor(enrolmentKey) // no previous relationships to deallocate
         givenEnrolmentAllocationSucceeds("foo", "any", enrolmentKey, "NQJUEJCWT14")
         givenCacheRefresh(arn)
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
@@ -199,10 +199,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 423 Locked if there is a record in the lock repository" in {
         givenUserIsSubscribedClient(clientId)
+        extraSetup(serviceId)
 
         await(mongoLockRepository.collection.insertOne(
           Lock(
-            id = s"recovery-${arn.value}-${clientId.value}",
+            id = s"recovery-${arn.value}-${enrolmentKey.tag}",
             owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
             expiryTime = Instant.now().plusSeconds(2),
             timeCreated = Instant.now().minusMillis(500))).toFuture())
@@ -216,6 +217,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenUserIsSubscribedClient(clientId)
         givenEnrolmentNotExistsForGroupId("zoo")
         givenEnrolmentDeallocationSucceeds("zoo", enrolmentKey)
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
@@ -230,6 +232,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenServiceEnrolmentAllocationSucceeds(enrolmentKey, "bar")
         givenAdminUser("foo", "any")
         givenCacheRefresh(arn)
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
@@ -240,6 +243,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenPrincipalAgentUser(arn, "foo", userId = "user1")
         givenGroupInfo(groupId = "foo", agentCode = "bar")
         givenDelegatedGroupIdRequestFailsWith(503)
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
@@ -257,6 +261,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           enrolmentKey,
           agentCode = "bar")
         givenAdminUser("foo", "user1")
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
@@ -271,6 +276,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenDesReturnsServiceUnavailable()
         givenIFReturnsServiceUnavailable()
         givenAdminUser("foo", "any")
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
@@ -284,6 +290,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey)
         givenAgentCanNotBeAllocatedInIF(status = 404)
         givenAdminUser("foo", "any")
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
@@ -293,6 +300,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "return 403 for a client with a mismatched clientId" in {
         val dummyClientId: TaxIdentifier = Service.forId(serviceId).supportedClientIdType.createUnderlying("unmatched")
         givenUserIsSubscribedClient(dummyClientId)
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 403
@@ -300,6 +308,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 403 for a client with no client enrolments" in {
         givenUserHasNoClientEnrolments
+        extraSetup(serviceId)
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 403
@@ -310,8 +319,14 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   //noinspection ScalaStyle
   def relationshipsControllerDeleteISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~$clientId")
+      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
     } else EnrolmentKey(Service.forId(serviceId), clientId)
+    def extraSetup(serviceId: String): Unit = {
+      if (serviceId == Service.Cbc.id)
+        givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+      ()
+    }
+
     s"DELETE /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" when {
 
       val requestPath: String =
@@ -367,6 +382,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
+          extraSetup(serviceId)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -394,6 +410,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
+          extraSetup(serviceId)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -420,6 +437,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenAgentCanBeDeallocatedInIF(clientId, arn)
           givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
           givenAdminUser("foo", "any")
+          extraSetup(serviceId)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -446,6 +464,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey)
           givenAgentCanBeDeallocatedInIF(clientId, arn)
           givenAdminUser("foo", "any")
+          extraSetup(serviceId)
         }
 
         "return 500" in new StubsForThisScenario {
@@ -472,6 +491,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey)
           givenAgentHasNoActiveRelationshipInIF(clientId, arn)
           givenAdminUser("foo", "any")
+          extraSetup(serviceId)
         }
 
         "return 500" in new StubsForThisScenario {
@@ -499,6 +519,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
+          extraSetup(serviceId)
         }
 
         "return 204" in new StubsForThisScenario {
@@ -522,12 +543,16 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "agent has a mismatched arn" should {
         "return 403" in {
           givenUserIsSubscribedAgent(Arn("unmatched"))
+          extraSetup(serviceId)
+
           doAgentDeleteRequest(requestPath).status shouldBe 403
         }
 
         "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserIsSubscribedAgent(Arn("unmatched"))
           doAgentDeleteRequest(requestPath)
+          extraSetup(serviceId)
+
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
@@ -535,12 +560,16 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "agent has no agent enrolments" should {
         "return 403" in {
           givenUserHasNoAgentEnrolments(arn)
+          extraSetup(serviceId)
+
           doAgentDeleteRequest(requestPath).status shouldBe 403
         }
 
         "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserHasNoAgentEnrolments(arn)
           doAgentDeleteRequest(requestPath)
+          extraSetup(serviceId)
+
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
@@ -550,6 +579,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenUserIsSubscribedAgent(arn)
           givenEsIsUnavailable()
           givenAgentCanBeDeallocatedInIF(clientId, arn)
+          extraSetup(serviceId)
         }
 
         "return 500" in new StubsForThisScenario {
@@ -570,6 +600,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenPrincipalGroupIdExistsFor(enrolmentKey, "clientGroupId")
           givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
           givenIFReturnsServiceUnavailable()
+          extraSetup(serviceId)
         }
 
         "return 500" in new StubsForThisScenario {
@@ -590,6 +621,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenPrincipalGroupIdExistsFor(enrolmentKey, "clientGroupId")
           givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
           givenAgentCanNotBeDeallocatedInIF(status = 404)
+          extraSetup(serviceId)
         }
 
         "return 500" in new StubsForThisScenario {
@@ -611,11 +643,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         "return 403" in {
           givenUserIsSubscribedClient(dummyClientId)
+          extraSetup(serviceId)
+
           doAgentDeleteRequest(requestPath).status shouldBe 403
         }
 
         "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserIsSubscribedClient(dummyClientId)
+          extraSetup(serviceId)
+
           doAgentDeleteRequest(requestPath)
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
@@ -624,11 +660,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "client has no client enrolments" should {
         "return 403" in {
           givenUserHasNoClientEnrolments
+          extraSetup(serviceId)
+
           doAgentDeleteRequest(requestPath).status shouldBe 403
         }
 
         "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserHasNoClientEnrolments
+          extraSetup(serviceId)
+
           doAgentDeleteRequest(requestPath)
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
@@ -639,6 +679,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenUserIsSubscribedClient(clientId)
           givenAgentCanBeDeallocatedInIF(clientId, arn)
           givenAuditConnector()
+          extraSetup(serviceId)
           //givenPrincipalGroupIdNotExistsFor(clientId)
         }
 
@@ -659,7 +700,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 404 for any call" in {
 
-        await(repo.create(RelationshipCopyRecord(arn.value, Some(serviceId), clientId.value, clientIdType))) shouldBe 1
+        await(repo.create(RelationshipCopyRecord(arn.value, Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value))))))) shouldBe 1
         val result = doAgentDeleteRequest(requestPath)
         result.status shouldBe 404
       }
@@ -676,8 +717,18 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       def doRequest = doAgentGetRequest(requestPath)
       val req = FakeRequest()
 
+      val enrolmentKey = if (serviceId == Service.Cbc.id) {
+        EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
+      } else EnrolmentKey(Service.forId(serviceId), clientId)
+      def extraSetup(serviceId: String): Unit = {
+        if (serviceId == Service.Cbc.id)
+          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+        ()
+      }
+
       "find relationship and send back Json" in {
         givenAuthorisedAsStrideUser(req, "someStrideId")
+        extraSetup(serviceId)
 
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
@@ -694,6 +745,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "find relationship but filter out if the end date has been changed from 9999-12-31" in {
         givenAuthorisedAsStrideUser(req, "someStrideId")
+        extraSetup(serviceId)
 
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
@@ -707,6 +759,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "find multiple relationships but filter out active and ended relationships" in {
         givenAuthorisedAsStrideUser(req, "someStrideId")
+        extraSetup(serviceId)
 
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
@@ -722,6 +775,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 404 when DES returns 404 relationship not found" in {
         givenAuthorisedAsStrideUser(req, "someStrideId")
+        extraSetup(serviceId)
 
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
@@ -735,6 +789,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 404 when DES returns 400 (treated as relationship not found)" in {
         givenAuthorisedAsStrideUser(req, "someStrideId")
+        extraSetup(serviceId)
 
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
