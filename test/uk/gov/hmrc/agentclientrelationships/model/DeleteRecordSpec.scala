@@ -31,9 +31,9 @@ class DeleteRecordSpec extends UnitSpec with Inside {
     "serialize and deserialize from and to json" in {
       val deleteRecord = DeleteRecord(
         "TARN0000001",
-        Some(Service.Vat.id),
-        "101747696",
-        "VRN",
+        Some(EnrolmentKey(s"${Service.Vat.id}~VRN~101747696")),
+        Some("101747696"),
+        Some("VRN"),
         Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
@@ -49,7 +49,7 @@ class DeleteRecordSpec extends UnitSpec with Inside {
 
       val result = json.as[DeleteRecord]
 
-      result.service shouldBe deleteRecord.service
+      result.enrolmentKey shouldBe deleteRecord.enrolmentKey
       result.clientIdentifier shouldBe deleteRecord.clientIdentifier
       result.clientIdentifierType shouldBe deleteRecord.clientIdentifierType
       result.syncToESStatus shouldBe deleteRecord.syncToESStatus

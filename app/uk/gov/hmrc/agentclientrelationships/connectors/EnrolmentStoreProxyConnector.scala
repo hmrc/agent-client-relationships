@@ -20,12 +20,12 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json.{Format, JsObject, Json}
+import play.api.libs.json.{Format, JsObject, Json, OWrites}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Enrolment, Identifier, Vrn}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
@@ -37,12 +37,19 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class ES8Request(userId: String, `type`: String)
 object ES8Request {
-  implicit val writes = Json.writes[ES8Request]
+  implicit val writes: OWrites[ES8Request] = Json.writes[ES8Request]
 }
 
 case class ES2Response(enrolments: Seq[Enrolment])
 object ES2Response {
   implicit val format: Format[ES2Response] = Json.format[ES2Response]
+}
+
+// Note: knownFacts accepts identifier or verifier (key/value object), but we only need by identifier
+case class ES20Request(service: String, knownFacts: Seq[Identifier])
+object ES20Request {
+  implicit val format: Format[ES20Request] = Json.format[ES20Request]
+  def forCbcId(cbcId: String): ES20Request = ES20Request("HMRC-CBC-ORG", Seq(Identifier("cbcId", cbcId)))
 }
 
 @Singleton
@@ -187,4 +194,27 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
       }
     }
   }
+
+  // ES20 - query known facts by verifiers or identifiers
+  def findUtrForCbcId(cbcId: CbcId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Identifier]] = {
+    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments")
+    monitor("ConsumedAPI-ES-queryKnownFactsByIdentifiersOrVerifiers-POST") {
+      http.POST[ES20Request, HttpResponse](url.toString, ES20Request.forCbcId(cbcId.value)).map { response =>
+        response.status match {
+          case Status.OK =>
+            (response.json \ "enrolments")
+              .as[Seq[JsObject]]
+              .headOption
+              .map(obj => (obj \ "identifiers").as[Seq[Identifier]])
+              .flatMap(identifiers => identifiers.find(i => i.key == "UTR"))
+          case Status.NO_CONTENT =>
+            logger.warn(s"not found in ES for $cbcId")
+            None
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
+  }
+
 }

@@ -9,7 +9,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, MtdItId, Service, Vrn}
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.domain.{AgentCode, Nino}
@@ -53,9 +53,9 @@ class EnrolmentStoreProxyConnectorSpec
         "agent.trackPage.cache.enabled" -> true
       )
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val httpClient = app.injector.instanceOf[http.HttpClient]
+  val httpClient: HttpClient = app.injector.instanceOf[http.HttpClient]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   val connector =
@@ -132,6 +132,15 @@ class EnrolmentStoreProxyConnectorSpec
       givenAuditConnector()
       givenEnrolmentNotExistsForGroupId("bar")
       await(connector.getAgentReferenceNumberFor("bar")) shouldBe None
+    }
+
+    "return some utr for cbcId (known fact)" in {
+      val cbcId = CbcId("XACBC4940653845")
+      val expectedUtr = "1172123849"
+      givenKnownFactsForCbcId(cbcId.value, expectedUtr)
+      await(connector.findUtrForCbcId(cbcId)) shouldBe Some(
+        Identifier("UTR", expectedUtr)
+      )
     }
   }
 

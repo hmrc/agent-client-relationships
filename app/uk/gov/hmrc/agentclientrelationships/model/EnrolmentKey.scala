@@ -24,15 +24,33 @@ import uk.gov.hmrc.domain.TaxIdentifier
 An implementation of EnrolmentKey with some extra features to make life easier.
  */
 case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
-  lazy val tag = // note: we intentionally do not use the Identifier's toString below because it uppercases everything!
+  lazy val tag = // note: we intentionally do not use the Identifier's toString below because it upper cases everything!
     s"$service~${identifiers.sorted.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
   override def toString: String = tag
-  def singleIdentifier: Identifier = // Note: unsafe (i.e. can throw exceptions)
-    if (identifiers.length == 1) identifiers.head else throw new RuntimeException("No single identifier")
-  def singleTaxIdentifier: TaxIdentifier = { // Note: unsafe (i.e. can throw exceptions)
-    val identifier = singleIdentifier
+
+  /** Note: unsafe (i.e. can throw exceptions)
+    *
+    * Supplying no key assumes the service has a single 'supported' identifier!
+    * For other enrolments with multiple identifiers you should try and specify which one, or it will grab the first.
+   **/
+  def oneIdentifier(key: Option[String] = None): Identifier =
+    identifiers
+      .find(
+        i =>
+          i.key == key.getOrElse(
+            if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
+              Service.forId(service).supportedClientIdType.enrolmentId
+            } else identifiers.head.key // fallback to old behaviour
+        )
+      )
+      .getOrElse(throw new IllegalArgumentException(s"No identifier for $key with $service"))
+
+  /* Note: unsafe, see oneIdentifier */
+  def oneTaxIdentifier(key: Option[String] = None): TaxIdentifier = {
+    val identifier = oneIdentifier(key)
     ClientIdType.supportedTypes.find(_.enrolmentId == identifier.key).get.createUnderlying(identifier.value)
   }
+
 }
 
 object EnrolmentKey {

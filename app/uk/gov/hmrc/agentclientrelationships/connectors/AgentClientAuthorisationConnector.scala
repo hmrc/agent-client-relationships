@@ -90,14 +90,14 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
    */
   def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(
     implicit hc: HeaderCarrier,
-    ec: ExecutionContext) = {
+    ec: ExecutionContext): Future[Boolean] = {
     val url: URL = new URL(
       acaBaseUrl,
       "/agent-client-authorisation/invitations/set-relationship-ended"
     )
     val payload = SetRelationshipEndedPayload(
       arn = arn,
-      clientId = enrolmentKey.singleIdentifier.value,
+      clientId = enrolmentKey.oneIdentifier().value,
       service = enrolmentKey.service,
       endedBy = Some(endedBy))
     monitor(s"ConsumedAPI-ACA-setRelationshipEnded-PUT") {

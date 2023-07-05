@@ -17,29 +17,28 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.google.inject.ImplementedBy
-
-import javax.inject.{Inject, Singleton}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[MongoRecoveryLockService])
 trait RecoveryLockService {
 
-  def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(
+  def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(
     implicit ec: ExecutionContext): Future[Option[T]]
 }
 
 @Singleton
 class MongoRecoveryLockService @Inject()(lockRepository: MongoLockRepository) extends RecoveryLockService {
 
-  override def tryLock[T](arn: Arn, identifier: TaxIdentifier)(body: => Future[T])(
+  override def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(
     implicit ec: ExecutionContext): Future[Option[T]] = {
     val recoveryLock =
-      LockService(lockRepository, lockId = s"recovery-${arn.value}-${identifier.value}", ttl = 5.minutes)
+      LockService(lockRepository, lockId = s"recovery-${arn.value}-${enrolmentKey.tag}", ttl = 5.minutes)
     recoveryLock.withLock(body)
   }
 }
