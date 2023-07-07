@@ -5,7 +5,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.mongo.lock.Lock
 
@@ -35,7 +35,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     } else EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)
-        givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+        givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
       ()
     }
 
@@ -134,7 +134,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     } else EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)
-        givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+        givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
       ()
     }
 
@@ -323,7 +323,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     } else EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)
-        givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+        givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
       ()
     }
 
@@ -722,7 +722,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       } else EnrolmentKey(Service.forId(serviceId), clientId)
       def extraSetup(serviceId: String): Unit = {
         if (serviceId == Service.Cbc.id)
-          givenKnownFactsForCbcId(clientId.value, enrolmentKey.oneIdentifier(Some("UTR")).value)
+          givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
         ()
       }
 

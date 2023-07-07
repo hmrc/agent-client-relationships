@@ -25,11 +25,11 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Enrolment, Identifier, Vrn}
+import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Service, Vrn}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
-import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -196,25 +196,24 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
   }
 
   // ES20 - query known facts by verifiers or identifiers
-  def findUtrForCbcId(cbcId: CbcId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Identifier]] = {
+  def queryKnownFacts(service: Service, knownFacts: Seq[Identifier])(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Option[Seq[Identifier]]] = {
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments")
+    val request = ES20Request(service.id, knownFacts)
     monitor("ConsumedAPI-ES-queryKnownFactsByIdentifiersOrVerifiers-POST") {
-      http.POST[ES20Request, HttpResponse](url.toString, ES20Request.forCbcId(cbcId.value)).map { response =>
+      http.POST[ES20Request, HttpResponse](url.toString, request).map { response =>
         response.status match {
           case Status.OK =>
             (response.json \ "enrolments")
               .as[Seq[JsObject]]
               .headOption
               .map(obj => (obj \ "identifiers").as[Seq[Identifier]])
-              .flatMap(identifiers => identifiers.find(i => i.key == "UTR"))
-          case Status.NO_CONTENT =>
-            logger.warn(s"not found in ES for $cbcId")
-            None
+          case Status.NO_CONTENT => None
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }
       }
     }
   }
-
 }

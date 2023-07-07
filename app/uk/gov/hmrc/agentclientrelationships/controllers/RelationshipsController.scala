@@ -237,22 +237,44 @@ class RelationshipsController @Inject()(
         Future.successful(Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId))))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
-      case (Service.Cbc.id, CbcIdType.enrolmentId) => // need to fetch the UTR to make a 'complete' enrolment key
-        esConnector.findUtrForCbcId(CbcId(clientId)).map {
-          case Some(utr) =>
-            Right(
-              EnrolmentKey(
-                Service.Cbc.id,
-                Seq(Identifier("UTR" /* Not "SAUTR"! */, utr.value), Identifier(CbcIdType.enrolmentId, clientId))
-              )
-            )
-          case None => Left(s"CbcId provided $clientId for UK CBC should have an associated UTR but one was not found")
-        }
+      case (Service.Cbc.id, CbcIdType.enrolmentId) =>
+        makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       //"normal" cases
       case (serviceKey, _) =>
         if (appConfig.supportedServices.exists(_.id == serviceKey)) {
           validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
         } else Future.successful(Left(s"Unknown service $serviceKey"))
+    }
+
+  /**
+    * This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be
+    * HMRC-CBC-NONUK-ORG (if the caller has no way of knowing). We check and correct the enrolment key as needed.
+    * Also, if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId) as required by specs.
+    * First, query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
+    */
+  private[controllers] def makeSanitisedCbcEnrolmentKey(
+    cbcId: CbcId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
+    // Try as HMRC-CBC-ORG (UK version)
+    esConnector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))).flatMap {
+      case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
+        logger.info(s"CbcId ${cbcId.value} not found as as HMRC-CBC-ORG. Trying as HMRC-CBC-NONUK-ORG.")
+        esConnector.queryKnownFacts(Service.CbcNonUk, Seq(Identifier("cbcId", cbcId.value))).map {
+          case Some(_) => Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
+          case None    => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
+        }
+      case Some(identifiers) =>
+        identifiers.find(_.key == "UTR") match {
+          case Some(utr) =>
+            Future.successful(
+              Right(
+                EnrolmentKey(
+                  Service.Cbc.id,
+                  Seq(Identifier("UTR" /* Not "SAUTR"! */, utr.value), Identifier(CbcIdType.enrolmentId, cbcId.value))
+                )))
+          case None =>
+            Future.successful(
+              Left(s"CbcId provided ${cbcId.value} for UK CBC should have an associated UTR but none was found"))
+        }
     }
 
   private def validateSupportedServiceForEnrolmentKey(
