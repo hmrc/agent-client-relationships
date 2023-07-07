@@ -6,9 +6,9 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Identifier, MtdItId, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{LocalDate, LocalDateTime}
@@ -401,6 +401,39 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 200
 
       result.body shouldBe "[]"
+    }
+  }
+
+  "sanitising a CBC enrolment key" should {
+    implicit val hc: HeaderCarrier = HeaderCarrier()
+    implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+    "work for a HMRC-CBC-ORG enrolment key with a UTR stored in the enrolment store" in {
+      val controller = app.injector.instanceOf[RelationshipsController]
+      givenCbcUkExistsInES(cbcId, utr.value)
+      await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) shouldBe
+        Right(EnrolmentKey(Service.Cbc.id, Seq(Identifier("UTR", utr.value), Identifier("cbcId", cbcId.value))))
+    }
+    "correct the service to HMRC-CBC-NONUK-ORG if the given cbcId corresponds to non-uk in the enrolment store" in {
+      val controller = app.injector.instanceOf[RelationshipsController]
+      givenCbcUkDoesNotExistInES(cbcId)
+      givenCbcNonUkExistsInES(cbcId)
+      await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) shouldBe
+        Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier("cbcId", cbcId.value))))
+    }
+    "fail if there is no match in enrolment store for either HMRC-CBC-ORG or HMRC-CBC-NONUK-ORG" in {
+      val controller = app.injector.instanceOf[RelationshipsController]
+      givenCbcUkDoesNotExistInES(cbcId)
+      givenCbcNonUkDoesNotExistInES(cbcId)
+      await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern {
+        case Left(_) =>
+      }
+    }
+    "fail if there is a match for HMRC-CBC-ORG (UK) but no UTR is available" in {
+      val controller = app.injector.instanceOf[RelationshipsController]
+      givenKnownFactsQuery(Service.Cbc, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
+      await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern {
+        case Left(_) =>
+      }
     }
   }
 }

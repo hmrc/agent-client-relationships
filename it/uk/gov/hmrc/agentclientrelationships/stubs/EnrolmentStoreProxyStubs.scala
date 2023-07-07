@@ -5,8 +5,11 @@ import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
+import play.api.http.Status
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.domain.TaxIdentifier
 
 trait EnrolmentStoreProxyStubs extends Eventually {
 
@@ -211,36 +214,16 @@ trait EnrolmentStoreProxyStubs extends Eventually {
           .withStatus(204)))
 
   //ES20 - QueryKnownFactsByVerifiersAndIdentifiers
-  def givenKnownFactsForCbcId(cbcId: String, expectedUtr: String): StubMapping =
-    stubFor(
-      post(urlEqualTo(s"$esBaseUrl/enrolments"))
-        .withRequestBody(similarToJson(s"""
-                            |{
-                            |    "service": "HMRC-CBC-ORG",
-                            |    "knownFacts": [
-                            |        {
-                            |            "key": "cbcId",
-                            |            "value": "$cbcId"
-                            |        }
-                            |    ]
-                            |}
-             """.stripMargin))
-        .willReturn(aResponse().withStatus(200).withBody(
+  def givenKnownFactsQuery(service: Service, taxIdentifier: TaxIdentifier, expectedIdentifiers: Option[Seq[Identifier]]): StubMapping = {
+    val response = expectedIdentifiers match {
+      case None => aResponse().withStatus(Status.NO_CONTENT)
+      case Some(identifiers) => aResponse().withStatus(Status.OK).withBody(
         s"""
            |{
-           |    "service": "HMRC-CBC-ORG",
+           |    "service": "${service.id}",
            |    "enrolments": [
            |        {
-           |            "identifiers": [
-           |                {
-           |                    "key": "UTR",
-           |                    "value": "$expectedUtr"
-           |                },
-           |                {
-           |                    "key": "cbcId",
-           |                    "value": "$cbcId"
-           |                }
-           |            ],
+           |            "identifiers": ${Json.prettyPrint(Json.toJson(identifiers))},
            |            "verifiers": [
            |                {
            |                    "key": "Email",
@@ -250,8 +233,34 @@ trait EnrolmentStoreProxyStubs extends Eventually {
            |        }
            |    ]
            |}
-           |""".stripMargin))
+           |""".stripMargin)
+    }
+    stubFor(
+      post(urlEqualTo(s"$esBaseUrl/enrolments"))
+        .withRequestBody(similarToJson(s"""
+                            |{
+                            |    "service": "${service.id}",
+                            |    "knownFacts": [
+                            |        {
+                            |            "key": "${ClientIdentifier(taxIdentifier).enrolmentId}",
+                            |            "value": "${taxIdentifier.value}"
+                            |        }
+                            |    ]
+                            |}
+             """.stripMargin))
+        .willReturn(response)
     )
+  }
+
+  def givenCbcUkExistsInES(cbcId: CbcId, expectedUtr: String): StubMapping =
+    givenKnownFactsQuery(Service.Cbc, cbcId, Some(Seq(Identifier("UTR", expectedUtr), Identifier("cbcId", cbcId.value))))
+  def givenCbcUkDoesNotExistInES(cbcId: CbcId): StubMapping =
+    givenKnownFactsQuery(Service.Cbc, cbcId, None)
+  def givenCbcNonUkExistsInES(cbcId: CbcId): StubMapping =
+    givenKnownFactsQuery(Service.CbcNonUk, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
+  def givenCbcNonUkDoesNotExistInES(cbcId: CbcId): StubMapping =
+    givenKnownFactsQuery(Service.CbcNonUk, cbcId, None)
+
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
 

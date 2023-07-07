@@ -137,10 +137,8 @@ class EnrolmentStoreProxyConnectorSpec
     "return some utr for cbcId (known fact)" in {
       val cbcId = CbcId("XACBC4940653845")
       val expectedUtr = "1172123849"
-      givenKnownFactsForCbcId(cbcId.value, expectedUtr)
-      await(connector.findUtrForCbcId(cbcId)) shouldBe Some(
-        Identifier("UTR", expectedUtr)
-      )
+      givenCbcUkExistsInES(cbcId, expectedUtr)
+      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain (Identifier("UTR", expectedUtr))
     }
   }
 
