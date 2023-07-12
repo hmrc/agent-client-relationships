@@ -93,7 +93,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
             .name("arnAndEnrolmentKeyPartial")
             .partialFilterExpression(Filters.exists("enrolmentKey"))
             .unique(true))
-      )
+      ),
+      replaceIndexes = true
     )
     with RelationshipCopyRecordRepository
     with Logging {
