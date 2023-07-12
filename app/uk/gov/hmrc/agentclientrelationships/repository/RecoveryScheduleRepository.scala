@@ -55,7 +55,8 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: MongoComponent)(
       domainFormat = RecoveryRecord.formats,
       indexes = Seq(
         IndexModel(ascending("uid", "runAt"), IndexOptions().unique(true))
-      )
+      ),
+      replaceIndexes = true
     )
     with RecoveryScheduleRepository
     with Logging {

@@ -124,7 +124,8 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
             .unique(true)
             .name("arnAndEnrolmentKeyPartial")
         )
-      )
+      ),
+      replaceIndexes = true
     )
     with DeleteRecordRepository
     with Logging {
