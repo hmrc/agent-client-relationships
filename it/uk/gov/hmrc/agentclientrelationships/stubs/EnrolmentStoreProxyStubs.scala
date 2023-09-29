@@ -253,7 +253,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
   }
 
   def givenCbcUkExistsInES(cbcId: CbcId, expectedUtr: String): StubMapping =
-    givenKnownFactsQuery(Service.Cbc, cbcId, Some(Seq(Identifier("UTR", expectedUtr), Identifier("cbcId", cbcId.value))))
+    givenKnownFactsQuery(Service.Cbc, cbcId, Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", expectedUtr))))
   def givenCbcUkDoesNotExistInES(cbcId: CbcId): StubMapping =
     givenKnownFactsQuery(Service.Cbc, cbcId, None)
   def givenCbcNonUkExistsInES(cbcId: CbcId): StubMapping =
