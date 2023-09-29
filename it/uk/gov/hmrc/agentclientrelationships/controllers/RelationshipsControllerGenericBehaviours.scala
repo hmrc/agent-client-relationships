@@ -31,7 +31,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   //noinspection ScalaStyle
   def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
+      EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
     } else EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)
@@ -130,7 +130,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   //noinspection ScalaStyle
   def relationshipsControllerPutISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
+      EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
     } else EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)
@@ -319,7 +319,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   //noinspection ScalaStyle
   def relationshipsControllerDeleteISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
+      EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
     } else EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)

@@ -411,7 +411,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       val controller = app.injector.instanceOf[RelationshipsController]
       givenCbcUkExistsInES(cbcId, utr.value)
       await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) shouldBe
-        Right(EnrolmentKey(Service.Cbc.id, Seq(Identifier("UTR", utr.value), Identifier("cbcId", cbcId.value))))
+        Right(EnrolmentKey(Service.Cbc.id, Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value))))
     }
     "correct the service to HMRC-CBC-NONUK-ORG if the given cbcId corresponds to non-uk in the enrolment store" in {
       val controller = app.injector.instanceOf[RelationshipsController]
@@ -424,13 +424,6 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       val controller = app.injector.instanceOf[RelationshipsController]
       givenCbcUkDoesNotExistInES(cbcId)
       givenCbcNonUkDoesNotExistInES(cbcId)
-      await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern {
-        case Left(_) =>
-      }
-    }
-    "fail if there is a match for HMRC-CBC-ORG (UK) but no UTR is available" in {
-      val controller = app.injector.instanceOf[RelationshipsController]
-      givenKnownFactsQuery(Service.Cbc, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
       await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern {
         case Left(_) =>
       }

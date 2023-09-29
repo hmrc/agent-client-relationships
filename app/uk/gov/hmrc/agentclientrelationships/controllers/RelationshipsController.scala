@@ -263,18 +263,12 @@ class RelationshipsController @Inject()(
           case None    => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
         }
       case Some(identifiers) =>
-        identifiers.find(_.key == "UTR") match {
-          case Some(utr) =>
-            Future.successful(
-              Right(
-                EnrolmentKey(
-                  Service.Cbc.id,
-                  Seq(Identifier("UTR" /* Not "SAUTR"! */, utr.value), Identifier(CbcIdType.enrolmentId, cbcId.value))
-                )))
-          case None =>
-            Future.successful(
-              Left(s"CbcId provided ${cbcId.value} for UK CBC should have an associated UTR but none was found"))
-        }
+        Future.successful(
+          Right(
+            EnrolmentKey(
+              Service.Cbc.id,
+              identifiers
+            )))
     }
 
   private def validateSupportedServiceForEnrolmentKey(

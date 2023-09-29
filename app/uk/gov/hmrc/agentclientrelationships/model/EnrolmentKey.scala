@@ -25,7 +25,7 @@ An implementation of EnrolmentKey with some extra features to make life easier.
  */
 case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
   lazy val tag = // note: we intentionally do not use the Identifier's toString below because it upper cases everything!
-    s"$service~${identifiers.sorted.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
+    s"$service~${identifiers.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
   override def toString: String = tag
 
   /** Note: unsafe (i.e. can throw exceptions)
