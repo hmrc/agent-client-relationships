@@ -87,7 +87,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
           s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
       case CbcId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
     }
   }
 
@@ -231,7 +231,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case CbcId(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+            taxIdentifier)}&from=$from&to=$now")
     }
   }
 
@@ -323,8 +323,6 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
           (("authProfile", JsString("ALL00001")))
       case Some("CBC") =>
         request +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001"))) +
           (("idType", JsString("CBC")))
       case _ =>
         request
