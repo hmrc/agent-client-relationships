@@ -23,7 +23,7 @@ trait IFStubs {
     case PptRef(ref) =>
       s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=true&regime=PPT&relationship=ZA01&auth-profile=ALL00001"
     case CbcId(ref) =>
-      s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC&relationship=ZA01&auth-profile=ALL00001"
+      s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
   }
 
 
