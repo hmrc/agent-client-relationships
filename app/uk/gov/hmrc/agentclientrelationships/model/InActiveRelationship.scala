@@ -39,8 +39,10 @@ object InactiveRelationship {
       val dateTo = (json \ "dateTo").asOpt[LocalDate]
       val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
       val clientId = (json \ "referenceNumber").as[String]
-      val clientType =
+      val clientType = {
         if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
+        //TODO WG - match order matters  MtdItId.isValid match other and needs to be last
+      }
       val service = clientId match {
         case _ if clientId.matches(CgtRef.cgtRegex)                => Service.CapitalGains.id
         case _ if PptRef.isValid(clientId)                         => Service.Ppt.id
@@ -48,6 +50,7 @@ object InactiveRelationship {
         case _ if Vrn.isValid(clientId)                            => Service.Vat.id
         case _ if Utr.isValid(clientId)                            => Service.Trust.id
         case _ if clientType == "business" & Urn.isValid(clientId) => Service.TrustNT.id
+        case _ if PlrId.isValid(clientId)                          => Service.Pillar2.id
         case _ if MtdItId.isValid(clientId)                        => Service.MtdIt.id
       }
       JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))

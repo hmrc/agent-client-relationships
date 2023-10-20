@@ -69,6 +69,7 @@ class IFConnectorISpec
   val urn = Urn("XXTRUST12345678")
   val cgt = CgtRef("XMCGTP837878749")
   val pptRef = PptRef("XAPPT0004567890")
+  val plrId = PlrId("XMPLR0012345678")
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
@@ -76,6 +77,7 @@ class IFConnectorISpec
     case Utr(_)     => Utr("2134514321")
     case Urn(_)     => Urn("XXTRUST12345678")
     case PptRef(_)  => PptRef("XAPPT0004567890")
+    case PlrId(_)   => PlrId("XMPLR0012345678")
   }
 
   "IFConnector CreateAgentRelationship" should {
@@ -194,6 +196,27 @@ class IFConnectorISpec
       )
     }
 
+    "request body contains regime as PLR and idType as ZPLR when client Id is a PlrId" in {
+      givenAgentCanBeAllocatedInIF(PlrId("somePlrId"), Arn("someArn"))
+      givenAuditConnector()
+
+      await(ifConnector.createAgentRelationship(PlrId("somePlrId"), Arn("someArn")))
+
+      verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withRequestBody(
+            equalToJson(
+              s"""{
+                 |"regime": "PLR",
+                 |"refNumber" : "somePlrId"
+                 |}""".stripMargin,
+              true,
+              true
+            ))
+      )
+    }
+
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(ifConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
     }
@@ -239,6 +262,13 @@ class IFConnectorISpec
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(PptRef("foo"), Arn("bar"))).get.processingDate should not be null
     }
+
+    "delete relationship between agent and client and return 200 for Pillar2 service with PlrId" in {
+      givenAgentCanBeDeallocatedInIF(PlrId("foo"), Arn("bar"))
+      givenAuditConnector()
+      await(ifConnector.deleteAgentRelationship(PlrId("foo"), Arn("bar"))).get.processingDate should not be null
+    }
+
 
     "not delete relationship between agent and client and return nothing for ItSa service" in {
       givenAgentCanNotBeDeallocatedInIF(status = 404)
@@ -313,6 +343,13 @@ class IFConnectorISpec
       result.get.arn shouldBe agentARN
     }
 
+    "return existing active relationships for specified clientId for Pillar2 service" in {
+      getActiveRelationshipsViaClient(plrId, agentARN)
+
+      val result = await(ifConnector.getActiveClientRelationships(plrId))
+      result.get.arn shouldBe agentARN
+    }
+
 
     "return None if IF returns 404 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 404)
@@ -353,6 +390,13 @@ class IFConnectorISpec
       getActiveRelationshipFailsWith(pptRef, status = 404)
 
       val result = await(ifConnector.getActiveClientRelationships(pptRef))
+      result shouldBe None
+    }
+
+    "return None if IF returns 404 for Pillar2 service" in {
+      getActiveRelationshipFailsWith(plrId, status = 404)
+
+      val result = await(ifConnector.getActiveClientRelationships(plrId))
       result shouldBe None
     }
 
@@ -591,6 +635,21 @@ class IFConnectorISpec
         dateFrom = Some(LocalDate.parse("2015-09-10")),
         clientId = cgt.value,
         service = "HMRC-CGT-PD",
+        clientType = "business"
+      )
+    }
+
+    "return existing inactive relationships for specified clientId for Pillar2 service" in {
+
+      getInactiveRelationshipsForClient(plrId)
+
+      val result = await(ifConnector.getInactiveClientRelationships(plrId))
+      result.head shouldBe InactiveRelationship(
+        arn = agentARN,
+        dateTo = Some(LocalDate.parse("2018-09-09")),
+        dateFrom = Some(LocalDate.parse("2015-09-10")),
+        clientId = plrId.value,
+        service = "HMRC-PILLAR2-ORG",
         clientType = "business"
       )
     }
