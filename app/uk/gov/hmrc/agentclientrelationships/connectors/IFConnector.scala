@@ -27,7 +27,7 @@ import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, ActiveRelationshipResponse, InactiveRelationship, InactiveRelationshipResponse, RegistrationRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PptRef, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PlrId, PptRef, Urn, Utr, Vrn}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
@@ -88,6 +88,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case CbcId(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+      case PlrId(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+
     }
   }
 
@@ -232,6 +236,11 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now")
+      case PlrId(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier)}&from=$from&to=$now")
+
     }
   }
 
@@ -268,6 +277,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case CgtRef(_)  => "CGT"
       case PptRef(_)  => "PPT"
       case CbcId(_)   => "CBC"
+      case PlrId(_)   => "PLR"
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
@@ -324,6 +334,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case Some("CBC") =>
         request +
           (("idType", JsString("CBC")))
+      case Some("PLR") =>
+        request +
+          (("idType", JsString("PLR")))
       case _ =>
         request
     }

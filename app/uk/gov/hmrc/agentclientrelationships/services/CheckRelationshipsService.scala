@@ -21,7 +21,8 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
+import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey.enrolmentKey
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
@@ -77,11 +78,9 @@ class CheckRelationshipsService @Inject()(
               isClientUnassigned <- ap.clientIsUnassigned(arn, enrolmentKey)
               isEnrolmentAssignedToUser <- es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId)).map {
                                             usersAssignedEnrolments =>
-                                              usersAssignedEnrolments.exists(
-                                                enrolment =>
-                                                  uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
-                                                    .enrolmentKeys(enrolment)
-                                                    .contains(enrolmentKey.tag))
+                                              usersAssignedEnrolments.exists(enrolment =>
+                                                enrolmentKeys(enrolment)
+                                                  .contains(enrolmentKey.tag))
                                           }
             } yield {
               isClientUnassigned || isEnrolmentAssignedToUser
@@ -89,5 +88,8 @@ class CheckRelationshipsService @Inject()(
           }
         }
     }
+
+  private def enrolmentKeys(enrolment: Enrolment): Seq[String] =
+    enrolment.identifiers.map(identifier => enrolmentKey(enrolment.service, identifier.value))
 
 }
