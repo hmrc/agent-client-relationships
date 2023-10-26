@@ -128,6 +128,7 @@ trait RelationshipsBaseControllerISpec
 
   val pptRef = PptRef("XAPPT0004567890")
   val cbcId = CbcId("XACBC1234567890")
+  val plrId = PlrId("XAPLR2222222222")
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_) => Vrn("101747641")
@@ -135,6 +136,7 @@ trait RelationshipsBaseControllerISpec
     case Urn(_) => Urn("XXTRUST12345678")
     case CgtRef(_) => cgtRef
     case PptRef(_) => pptRef
+    case PlrId(_) => plrId
   }
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()

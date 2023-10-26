@@ -140,6 +140,13 @@ class EnrolmentStoreProxyConnectorSpec
       givenCbcUkExistsInES(cbcId, expectedUtr)
       await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain (Identifier("UTR", expectedUtr))
     }
+
+    "return some utr for plrId (known fact)" in {
+      val cbcId = CbcId("XACBC4940653845")
+      val expectedUtr = "1172123849"
+      givenCbcUkExistsInES(cbcId, expectedUtr)
+      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain (Identifier("UTR", expectedUtr))
+    }
   }
 
   "TaxEnrolments" should {

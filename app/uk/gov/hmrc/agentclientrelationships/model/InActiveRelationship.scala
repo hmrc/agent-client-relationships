@@ -41,7 +41,6 @@ object InactiveRelationship {
       val clientId = (json \ "referenceNumber").as[String]
       val clientType = {
         if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
-        //TODO WG - match order matters  MtdItId.isValid match other and needs to be last
       }
       val service = clientId match {
         case _ if clientId.matches(CgtRef.cgtRegex)                => Service.CapitalGains.id

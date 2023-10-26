@@ -35,11 +35,12 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val pptClient: TestClient = TestClient(Service.Ppt.id, "PPT", pptRef)
   val cbcClient: TestClient = TestClient(Service.Cbc.id, "CBC", cbcId)
   val cbcNonUkClient: TestClient = TestClient(Service.CbcNonUk.id, "CBC", cbcId)
+  val pillar2Client: TestClient = TestClient(Service.Pillar2.id, "PLRID", plrId)
 
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
-  val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient)
+  val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
 
-  val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient)
+  val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
 
   val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
 
@@ -49,7 +50,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE,"strideId-1234456")
     }
     else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
-    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId)
+    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId)
     else requestIsNotAuthenticated()
   }
 

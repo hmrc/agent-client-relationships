@@ -413,12 +413,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 204" in new StubsForThisScenario {
+        "return 204 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             clientId.value,
@@ -467,12 +463,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 500" in new StubsForThisScenario {
+        "return 500 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             clientId.value,
@@ -494,12 +486,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 500" in new StubsForThisScenario {
+        "return 500 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             clientId.value,
@@ -522,12 +510,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 204" in new StubsForThisScenario {
+        "return 204 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             clientId.value,
@@ -541,35 +525,20 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
        * Agent's Unhappy paths
        */
       "agent has a mismatched arn" should {
-        "return 403" in {
+        "return 403 and not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserIsSubscribedAgent(Arn("unmatched"))
           extraSetup(serviceId)
-
           doAgentDeleteRequest(requestPath).status shouldBe 403
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
-          givenUserIsSubscribedAgent(Arn("unmatched"))
-          doAgentDeleteRequest(requestPath)
-          extraSetup(serviceId)
-
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
 
       "agent has no agent enrolments" should {
-        "return 403" in {
+        "return 403 and not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserHasNoAgentEnrolments(arn)
           extraSetup(serviceId)
 
           doAgentDeleteRequest(requestPath).status shouldBe 403
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
-          givenUserHasNoAgentEnrolments(arn)
-          doAgentDeleteRequest(requestPath)
-          extraSetup(serviceId)
-
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
@@ -582,12 +551,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 500" in new StubsForThisScenario {
+        "return 500 and not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
@@ -603,12 +568,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 500" in new StubsForThisScenario {
+        "return 500 and not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
@@ -624,12 +585,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 500" in new StubsForThisScenario {
+        "return 500 and not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
@@ -641,35 +598,21 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       "client has a mismatched clientId" should {
         val dummyClientId: TaxIdentifier = Service.forId(serviceId).supportedClientIdType.createUnderlying("unmatched")
 
-        "return 403" in {
+        "return 403 and not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserIsSubscribedClient(dummyClientId)
           extraSetup(serviceId)
 
           doAgentDeleteRequest(requestPath).status shouldBe 403
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
-          givenUserIsSubscribedClient(dummyClientId)
-          extraSetup(serviceId)
-
-          doAgentDeleteRequest(requestPath)
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
 
       "client has no client enrolments" should {
-        "return 403" in {
+        "return 403 and not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserHasNoClientEnrolments
           extraSetup(serviceId)
 
           doAgentDeleteRequest(requestPath).status shouldBe 403
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
-          givenUserHasNoClientEnrolments
-          extraSetup(serviceId)
-
-          doAgentDeleteRequest(requestPath)
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
@@ -683,12 +626,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           //givenPrincipalGroupIdNotExistsFor(clientId)
         }
 
-        "return 500" in new StubsForScenario {
+        "return 500 and not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-        }
-
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
-          doAgentDeleteRequest(requestPath)
           verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
         }
       }
