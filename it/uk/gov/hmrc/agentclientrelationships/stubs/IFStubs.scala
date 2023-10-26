@@ -286,6 +286,20 @@ trait IFStubs {
          |  "activity" : "09"
          |}
        """.stripMargin
+    case PlrId(clientId) => arn =>
+      s"""
+         |{
+         |  "referenceNumber" : "$clientId",
+         |  "agentReferenceNumber" : "${arn.value}",
+         |  "organisation" : {
+         |    "organisationName": "someOrganisationName"
+         |  },
+         |  "dateFrom" : "2015-09-10",
+         |  "dateTo" : "2015-09-21",
+         |  "contractAccountCategory" : "01",
+         |  "activity" : "09"
+         |}
+       """.stripMargin
   }
 
   private def inactiveUrl(arn: Arn) = s"/registration/relationship?arn=${arn.value}" +

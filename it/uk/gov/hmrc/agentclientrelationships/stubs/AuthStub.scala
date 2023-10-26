@@ -78,17 +78,17 @@ trait AuthStub {
        |}
        """.stripMargin
 
-  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, withThisGgUserId: String = "12345-credId") = {
+  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, plrId: PlrId, withThisGgUserId: String = "12345-credId") = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, cbcId, withThisGgUserId))))
+            .withBody(givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId, withThisGgUserId))))
     this
   }
 
-  private def givenLoginClientBusinessAllJsonResponseBody(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, withThisGgUserId: String) =
+  private def givenLoginClientBusinessAllJsonResponseBody(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, plrId: PlrId, withThisGgUserId: String) =
     s"""
        |{
        |"affinityGroup": "Organisation",
@@ -142,6 +142,14 @@ trait AuthStub {
        |		"identifiers": [{
        |			"key": "cbcId",
        |			"value": "${cbcId.value}"
+       |		}],
+       |		"state": "Activated"
+       |  },
+       | {
+       |		"key": "HMRC-PILLAR2-ORG",
+       |		"identifiers": [{
+       |			"key": "PLRID",
+       |			"value": "${plrId.value}"
        |		}],
        |		"state": "Activated"
        |	}],
@@ -269,6 +277,7 @@ trait AuthStub {
       case CgtRef(v)  => ("HMRC-CGT-PD", "CGTPDRef", v)
       case PptRef(v)  => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
       case CbcId(v)   => ("HMRC-CBC-ORG", "cbcId", v)
+      case PlrId(v)   => ("HMRC-PILLAR2-ORG", "PLRID", v)
     }
 
     stubFor(

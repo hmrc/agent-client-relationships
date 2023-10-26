@@ -56,4 +56,10 @@ class RelationshipsControllerServiceISpec
   behave like relationshipsControllerPutISpec(Service.CbcNonUk.id, cbcId, "cbcId")
   behave like relationshipsControllerDeleteISpec(Service.CbcNonUk.id, cbcId, "cbcId")
   behave like strideEndpointISpec(Service.CbcNonUk.id, cbcId, "cbcId")
+
+  // Pillar2
+  behave like relationshipsControllerGetISpec(Service.Pillar2.id, plrId, "PLRID")
+  behave like relationshipsControllerPutISpec(Service.Pillar2.id, plrId, "PLRID")
+  behave like relationshipsControllerDeleteISpec(Service.Pillar2.id, plrId, "PLRID")
+  behave like strideEndpointISpec(Service.Pillar2.id, plrId, "PLRID")
 }
