@@ -25,7 +25,7 @@ trait IFStubs {
     case CbcId(ref) =>
       s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
     case PlrId(ref) =>
-      s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
+      s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
   }
 
 
@@ -319,7 +319,7 @@ trait IFStubs {
     case PptRef(ref) =>
       s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=false&regime=PPT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case PlrId(ref) =>
-      s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=false&regime=PLR&from=2015-01-01&to=${LocalDate.now().toString}"
+      s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=false&regime=PLR&from=2015-01-01&to=${LocalDate.now().toString}"
   }
 
   def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {

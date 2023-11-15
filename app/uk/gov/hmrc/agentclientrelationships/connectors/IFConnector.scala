@@ -90,7 +90,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
           s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
 
     }
   }
@@ -238,7 +238,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
             taxIdentifier)}&from=$from&to=$now")
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now")
 
     }
