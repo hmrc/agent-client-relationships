@@ -196,7 +196,7 @@ class IFConnectorISpec
       )
     }
 
-    "request body contains regime as PLR and idType as ZPLR when client Id is a PlrId" in {
+    "request body contains regime as PLR and idType as PLR when client Id is a PlrId" in {
       givenAgentCanBeAllocatedInIF(PlrId("somePlrId"), Arn("someArn"))
       givenAuditConnector()
 
