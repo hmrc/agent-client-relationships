@@ -83,6 +83,7 @@ case object VrnNotFoundInEtmp extends CheckAndCopyResult {
 @Singleton
 class CheckAndCopyRelationshipsService @Inject()(
   es: EnrolmentStoreProxyConnector,
+  ifConnector: IFConnector,
   des: DesConnector,
   mapping: MappingConnector,
   ugs: UsersGroupsSearchConnector,
@@ -137,7 +138,7 @@ class CheckAndCopyRelationshipsService @Inject()(
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
-          nino <- des.getNinoFor(mtdItId)
+          nino <- ifConnector.getNinoFor(mtdItId)
           references <- nino.fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(
                          lookupCesaForOldRelationship(arn, _))
           result <- if (references.nonEmpty)

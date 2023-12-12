@@ -42,7 +42,7 @@ class FindRelationshipsService @Inject()(
   def getItsaRelationshipForClient(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     for {
-      mtdItId <- des.getMtdIdFor(nino)
+      mtdItId <- ifConnector.getMtdIdFor(nino)
       relationships <- mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
                         ifConnector.getActiveClientRelationships(_))
     } yield relationships

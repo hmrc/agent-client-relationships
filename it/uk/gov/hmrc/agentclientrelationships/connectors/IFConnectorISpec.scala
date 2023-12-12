@@ -13,7 +13,7 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, IFStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import java.time.LocalDate
@@ -42,6 +42,7 @@ class IFConnectorISpec
         "microservice.services.auth.port"                  -> wireMockPort,
         "microservice.services.if.environment"            -> "stub",
         "microservice.services.if.authorization-token"    -> "token",
+        "microservice.services.if.authorization-api1171-token" -> "token",
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
@@ -78,6 +79,62 @@ class IFConnectorISpec
     case Urn(_)     => Urn("XXTRUST12345678")
     case PptRef(_)  => PptRef("XAPPT0004567890")
     case PlrId(_)   => PlrId("XMPLR0012345678")
+  }
+
+  "IfConnector GetBusinessDetails" should {
+
+    val mtdItId = MtdItId("foo")
+    val nino = Nino("AB123456C")
+
+    "return some nino when agent's mtdId identifier is known to ETMP" in {
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenAuditConnector()
+      await(ifConnector.getNinoFor(mtdItId)) shouldBe Some(nino)
+    }
+
+    "return nothing when agent's mtdId identifier is unknown to ETMP" in {
+      givenNinoIsUnknownFor(mtdItId)
+      givenAuditConnector()
+      await(ifConnector.getNinoFor(mtdItId)) shouldBe None
+    }
+
+    "return nothing when agent's mtdId identifier is invalid" in {
+      givenmtdIdIsInvalid(mtdItId)
+      givenAuditConnector()
+      await(ifConnector.getNinoFor(mtdItId)) shouldBe None
+    }
+
+    "return nothing when IF is unavailable" in {
+      givenIFReturnsServiceUnavailable()
+      givenAuditConnector()
+      await(ifConnector.getNinoFor(mtdItId)) shouldBe None
+    }
+
+    "return nothing when IF is throwing errors" in {
+      givenIFReturnsServerError()
+      givenAuditConnector()
+      await(ifConnector.getNinoFor(mtdItId)) shouldBe None
+    }
+
+    "record metrics for GetRegistrationDetailsBymtdId" in {
+      givenNinoIsKnownFor(mtdItId, Nino("AB123456C"))
+      givenCleanMetricRegistry()
+      givenAuditConnector()
+      await(ifConnector.getNinoFor(mtdItId))
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetBusinessDetailsByMtdId-GET")
+    }
+
+    "return MtdItId when agent's nino is known to ETMP" in {
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenAuditConnector()
+      await(ifConnector.getMtdIdFor(nino)) shouldBe Some(mtdItId)
+    }
+
+    "return nothing when agent's nino identifier is unknown to ETMP" in {
+      givenMtdItIdIsUnKnownFor(nino)
+      givenAuditConnector()
+      await(ifConnector.getMtdIdFor(nino)) shouldBe None
+    }
   }
 
   "IFConnector CreateAgentRelationship" should {
@@ -301,6 +358,7 @@ class IFConnectorISpec
 
     "return existing active relationships for specified clientId for ItSa service" in {
       getActiveRelationshipsViaClient(mtdItId, agentARN)
+      givenAuditConnector()
 
       val result = await(ifConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
@@ -308,21 +366,21 @@ class IFConnectorISpec
 
     "return existing active relationships for specified clientId for Vat service" in {
       getActiveRelationshipsViaClient(vrn, agentARN)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for CGT service" in {
       getActiveRelationshipsViaClient(cgt, agentARN)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(cgt))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for TRS (UTR) service" in {
       getActiveRelationshipsViaClient(utr, agentARN)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(utr))
       result.get.arn shouldBe agentARN
 
@@ -330,7 +388,7 @@ class IFConnectorISpec
 
     "return existing active relationships for specified clientId for TRS (URN) service" in {
       getActiveRelationshipsViaClient(urn, agentARN)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(urn))
       result.get.arn shouldBe agentARN
 
@@ -338,14 +396,14 @@ class IFConnectorISpec
 
     "return existing active relationships for specified clientId for PPT service" in {
       getActiveRelationshipsViaClient(pptRef, agentARN)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(pptRef))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Pillar2 service" in {
       getActiveRelationshipsViaClient(plrId, agentARN)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(plrId))
       result.get.arn shouldBe agentARN
     }
@@ -353,70 +411,70 @@ class IFConnectorISpec
 
     "return None if IF returns 404 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if IF returns 404 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "return None if IF returns 404 for CGT service" in {
       getActiveRelationshipFailsWith(cgt, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(cgt))
       result shouldBe None
     }
 
     "return None if IF returns 404 for TRS (UTR) service" in {
       getActiveRelationshipFailsWith(utr, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(utr))
       result shouldBe None
     }
 
     "return None if IF returns 404 for TRS (URN) service" in {
       getActiveRelationshipFailsWith(urn, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(urn))
       result shouldBe None
     }
 
     "return None if IF returns 404 for PPT service" in {
       getActiveRelationshipFailsWith(pptRef, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(pptRef))
       result shouldBe None
     }
 
     "return None if IF returns 404 for Pillar2 service" in {
       getActiveRelationshipFailsWith(plrId, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(plrId))
       result shouldBe None
     }
 
     "return None if IF returns 400 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 400)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if IF returns 400 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 400)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
@@ -446,7 +504,7 @@ class IFConnectorISpec
 
     "return existing inactive relationships for specified clientId for ItSa service" in {
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
-
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
@@ -460,7 +518,7 @@ class IFConnectorISpec
 
     "return existing inactive relationships for specified clientId for Vat service" in {
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn)
-
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
@@ -475,35 +533,35 @@ class IFConnectorISpec
 
     "return empty sequence if IF returns 404 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if IF returns 404 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 404)
-
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if IF returns 400 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 400)
-
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if IF returns 400 for Vat service" in {
       getFailWithSuspendedAgentInactiveRelationships(encodedArn)
-
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
-
+      givenAuditConnector()
       val result = await(ifConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
@@ -516,12 +574,15 @@ class IFConnectorISpec
     val beforeCurrentDateRelationship =
       ActiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")))
     "return true when the relationship has no end date" in {
+      givenAuditConnector()
       ifConnector.isActive(noEndRelationship) shouldBe true
     }
     "return true when the end date is after the current date" in {
+      givenAuditConnector()
       ifConnector.isActive(afterCurrentDateRelationship) shouldBe true
     }
     "return false when the end date is before the current date" in {
+      givenAuditConnector()
       ifConnector.isActive(beforeCurrentDateRelationship) shouldBe false
     }
   }
@@ -547,12 +608,15 @@ class IFConnectorISpec
         "HMRC-MTD-VAT")
 
     "return false when the relationship is active" in {
+      givenAuditConnector()
       ifConnector.isNotActive(noEndRelationship) shouldBe false
     }
     "return true when the end date is before the current date" in {
+      givenAuditConnector()
       ifConnector.isNotActive(endsBeforeCurrentDate) shouldBe true
     }
     "return true when the end date is equal to the current date" in {
+      givenAuditConnector()
       ifConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
     }
   }
@@ -562,6 +626,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for ItSa service" in {
 
       getInactiveRelationshipsForClient(mtdItId)
+      givenAuditConnector()
 
       val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
 
@@ -578,6 +643,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for VAT service" in {
 
       getInactiveRelationshipsForClient(vrn)
+      givenAuditConnector()
 
       val result = await(ifConnector.getInactiveClientRelationships(vrn))
 
@@ -594,6 +660,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for Trust service with UTR" in {
 
       getInactiveRelationshipsForClient(utr)
+      givenAuditConnector()
 
       val result = await(ifConnector.getInactiveClientRelationships(utr))
 
@@ -610,6 +677,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for Trust service with URN" in {
 
       getInactiveRelationshipsForClient(urn)
+      givenAuditConnector()
 
       val result = await(ifConnector.getInactiveClientRelationships(urn))
 
@@ -626,6 +694,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for CGT-PD service" in {
 
       getInactiveRelationshipsForClient(cgt)
+      givenAuditConnector()
 
       val result = await(ifConnector.getInactiveClientRelationships(cgt))
 
@@ -642,6 +711,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for Pillar2 service" in {
 
       getInactiveRelationshipsForClient(plrId)
+      givenAuditConnector()
 
       val result = await(ifConnector.getInactiveClientRelationships(plrId))
       result.head shouldBe InactiveRelationship(
@@ -657,6 +727,7 @@ class IFConnectorISpec
     "return empty Seq if the identifier is valid but there are no inactive relationships" in {
 
       getNoInactiveRelationshipsForClient(mtdItId)
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
@@ -664,6 +735,7 @@ class IFConnectorISpec
     "return empty Seq if the identifier if IF responds with a Bad Request" in {
 
       getFailInactiveRelationshipsForClient(mtdItId, 400)
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
@@ -671,18 +743,21 @@ class IFConnectorISpec
     "return empty Seq if the identifier if IF responds with Not Found" in {
 
       getFailInactiveRelationshipsForClient(mtdItId, 404)
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
     "return empty Seq if IF returns 403 and body AGENT_SUSPENDED" in {
       getFailInactiveRelationshipsForClient(mtdItId, 403, Some(s""""{"code":"AGENT_SUSPENDED","reason":"The remote endpoint has indicated that the agent is suspended"}"""))
+      givenAuditConnector()
       val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
     "return empty Seq when IF is unavailable" in {
       givenIFReturnsServiceUnavailable()
+      givenAuditConnector()
       await(ifConnector.getInactiveClientRelationships(mtdItId)) shouldBe empty
     }
   }

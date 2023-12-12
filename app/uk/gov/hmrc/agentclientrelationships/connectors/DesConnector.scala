@@ -51,32 +51,6 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
-    val url = new URL(s"${appConfig.desUrl}/registration/business-details/mtdbsa/${encodePathSegment(mtdbsa.value)}")
-
-    getWithDesHeaders("GetRegistrationBusinessDetailsByMtdbsa", url).map { result =>
-      result.status match {
-        case Status.OK => Option((result.json \ "nino").as[Nino])
-        case other =>
-          logger.error(s"Error in GetRegistrationBusinessDetailsByMtdbsa. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
-    val url = new URL(s"${appConfig.desUrl}/registration/business-details/nino/${encodePathSegment(nino.value)}")
-
-    getWithDesHeaders("GetRegistrationBusinessDetailsByNino", url).map { result =>
-      result.status match {
-        case Status.OK => Option((result.json \ "mtdbsa").as[MtdItId])
-        case other =>
-          logger.error(s"Error in GetRegistrationBusinessDetailsByNino. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
   def getClientSaAgentSaReferences(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
     val url = new URL(s"${appConfig.desUrl}/registration/relationship/nino/${encodePathSegment(nino.value)}")
