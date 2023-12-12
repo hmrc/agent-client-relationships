@@ -91,7 +91,7 @@ trait RelationshipsBaseControllerISpec
   def repo: MongoRelationshipCopyRecordRepository = new MongoRelationshipCopyRecordRepository(mongoComponent)
   def deleteRecordRepository: MongoDeleteRecordRepository = new MongoDeleteRecordRepository(mongoComponent)
 
-  override def beforeEach() {
+  override def beforeEach(): Unit = {
     super.beforeEach()
     givenAuditConnector()
     await(mongoComponent.database.drop().toFuture())

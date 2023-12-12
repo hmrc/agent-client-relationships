@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -113,7 +113,7 @@ class CreateRelationshipsService @Inject()(
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)
       .recoverWith {
-        case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
+        case e @ UpstreamErrorResponse.Upstream5xxResponse(UpstreamErrorResponse(_, upstreamCode, reportAs, headers)) =>
           recoverFromException(
             e,
             UpstreamErrorResponse(s"RELATIONSHIP_CREATE_FAILED_IF", upstreamCode, reportAs, headers))
@@ -154,7 +154,7 @@ class CreateRelationshipsService @Inject()(
     }
 
     val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
+      case e @ UpstreamErrorResponse.Upstream5xxResponse(UpstreamErrorResponse(_, upstreamCode, reportAs, headers)) =>
         logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs, headers))
     }
 
@@ -234,7 +234,7 @@ class CreateRelationshipsService @Inject()(
   private def retrieveAgentUser(
     arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     agentUserService.getAgentAdminUserFor(arn).map {
-      _.right.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
+      _.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
     }
 
   def resumeRelationshipCreation(relationshipCopyRecord: RelationshipCopyRecord, arn: Arn, enrolmentKey: EnrolmentKey)(

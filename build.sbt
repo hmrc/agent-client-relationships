@@ -17,12 +17,11 @@ lazy val root = (project in file("."))
     organization := "uk.gov.hmrc",
     PlayKeys.playDefaultPort := 9434,
     majorVersion := 1,
-    scalaVersion := "2.12.15",
+    scalaVersion := "2.13.10",
     scalacOptions ++= Seq(
       "-Yrangepos",
       "-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
-      "-Yno-adapted-args",
       "-Ywarn-value-discard",
       "-Ywarn-dead-code",
       "-deprecation",
@@ -44,10 +43,16 @@ lazy val root = (project in file("."))
   )
   .configs(IntegrationTest)
   .settings(
+    //fix for scoverage compile errors for scala 2.13.10
+    libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always)
+  )
+  .settings(
     IntegrationTest / Keys.fork := false,
     Defaults.itSettings,
     IntegrationTest / unmanagedSourceDirectories += baseDirectory(_ / "it").value,
-    IntegrationTest / parallelExecution := false
+    IntegrationTest / parallelExecution := false,
+    // Turn off exhaustibility test for integration tests, to ensure legacy tests compile
+    IntegrationTest / scalacOptions += "-Xno-patmat-analysis"
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
 

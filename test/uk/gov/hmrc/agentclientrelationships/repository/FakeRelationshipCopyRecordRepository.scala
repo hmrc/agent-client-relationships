@@ -35,7 +35,7 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
       if (result.isDefined) {
         throw new MongoException("duplicate key error collection")
       } else {
-        data += ((Arn(record.arn), record.enrolmentKey.get) → record)
+        data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
         1
       }
     })

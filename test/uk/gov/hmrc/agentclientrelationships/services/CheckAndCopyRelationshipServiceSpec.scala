@@ -928,7 +928,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditData = new AuditData()
         val request = FakeRequest()
 
-        arnExistsForGroupId
+        arnExistsForGroupId()
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
         previousRelationshipWillBeRemoved(vatEnrolmentKey)

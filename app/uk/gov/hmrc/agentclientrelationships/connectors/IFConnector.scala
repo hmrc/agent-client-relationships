@@ -91,7 +91,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       case PlrId(_) =>
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
-
+      case e =>
+        val message = s"getActiveClientRelationshipsUrl: Unexpected tax identifier type $e"
+        logger.error(message)
+        throw new IllegalArgumentException(message)
     }
   }
 
@@ -240,7 +243,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         new URL(
           s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
             taxIdentifier)}&from=$from&to=$now")
-
+      case e =>
+        val message = s"inactiveClientRelationshipIFUrl: Unexpected tax identifier type $e"
+        logger.error(message)
+        throw new IllegalArgumentException(message)
     }
   }
 

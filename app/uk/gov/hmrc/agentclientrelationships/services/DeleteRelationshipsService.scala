@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
@@ -152,7 +152,7 @@ class DeleteRelationshipsService @Inject()(
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)
       .recoverWith {
-        case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
+        case e @ UpstreamErrorResponse.Upstream5xxResponse(UpstreamErrorResponse(_, upstreamCode, reportAs, _)) =>
           recoverFromException(e, UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_IF", upstreamCode, reportAs))
         case NonFatal(ex) =>
           recoverFromException(ex, new Exception(s"RELATIONSHIP_DELETE_FAILED_IF"))
@@ -185,7 +185,7 @@ class DeleteRelationshipsService @Inject()(
     }
 
     lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
+      case e @ UpstreamErrorResponse.Upstream5xxResponse(UpstreamErrorResponse(_, upstreamCode, reportAs, _)) =>
         logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
     }
 

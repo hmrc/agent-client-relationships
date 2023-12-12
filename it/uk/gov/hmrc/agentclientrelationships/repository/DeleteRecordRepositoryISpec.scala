@@ -30,7 +30,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    await(repo.ensureIndexes)
+    await(repo.ensureIndexes())
     ()
   }
 

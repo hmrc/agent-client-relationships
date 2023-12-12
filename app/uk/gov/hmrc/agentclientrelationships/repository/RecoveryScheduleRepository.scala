@@ -67,7 +67,7 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: MongoComponent)(
       case None => {
         val record =
           RecoveryRecord(UUID.randomUUID().toString, LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime)
-        collection.insertOne(record).toFuture.map(_ => record)
+        collection.insertOne(record).toFuture().map(_ => record)
       }.recoverWith {
         case NonFatal(error) =>
           logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")

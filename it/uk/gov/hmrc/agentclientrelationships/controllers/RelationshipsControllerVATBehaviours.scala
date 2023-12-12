@@ -47,11 +47,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         result.status shouldBe 200
 
         await(repo.findBy(arn, vatEnrolmentKey)).get should have(
-          'arn (arn.value),
-          'enrolmentKey (Some(vatEnrolmentKey)),
-          'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
-          'syncToETMPStatus (Some(SyncStatus.Success)),
-          'syncToESStatus (Some(SyncStatus.Success))
+          Symbol("arn") (arn.value),
+          Symbol("enrolmentKey") (Some(vatEnrolmentKey)),
+          Symbol("references") (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+          Symbol("syncToETMPStatus") (Some(SyncStatus.Success)),
+          Symbol("syncToESStatus") (Some(SyncStatus.Success))
         )
 
         verifyAuditRequestSent(
@@ -137,11 +137,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         result.status shouldBe 200
 
         await(repo.findBy(arn, vatEnrolmentKey)).get should have(
-          'arn (arn.value),
-          'enrolmentKey (Some(vatEnrolmentKey)),
-          'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
-          'syncToETMPStatus (Some(SyncStatus.Failed)),
-          'syncToESStatus (None)
+          Symbol("arn") (arn.value),
+          Symbol("enrolmentKey") (Some(vatEnrolmentKey)),
+          Symbol("references") (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+          Symbol("syncToETMPStatus") (Some(SyncStatus.Failed)),
+          Symbol("syncToESStatus") (None)
         )
       }
 
@@ -163,11 +163,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         result.status shouldBe 200
 
         await(repo.findBy(arn, vatEnrolmentKey)).get should have(
-          'arn (arn.value),
-          'enrolmentKey (Some(vatEnrolmentKey)),
-          'references (Some(Set(VatRef(AgentCode(oldAgentCode))))),
-          'syncToETMPStatus (Some(SyncStatus.Success)),
-          'syncToESStatus (Some(SyncStatus.Failed))
+          Symbol("arn") (arn.value),
+          Symbol("enrolmentKey") (Some(vatEnrolmentKey)),
+          Symbol("references") (Some(Set(VatRef(AgentCode(oldAgentCode))))),
+          Symbol("syncToETMPStatus") (Some(SyncStatus.Success)),
+          Symbol("syncToESStatus") (Some(SyncStatus.Failed))
         )
 
         verifyAuditRequestSent(
