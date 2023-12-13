@@ -35,7 +35,7 @@ trait IFStubs {
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""{ "nino": "${nino.value}" }""")))
+            .withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}""")))
 
   def givenNinoIsUnknownFor(mtdId: MtdItId) =
     stubFor(
@@ -50,7 +50,9 @@ trait IFStubs {
   def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId) =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(200).withBody(s"""{ "mtdId": "${mtdId.value}" }""")))
+        .willReturn(aResponse()
+          .withStatus(200)
+          .withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}""")))
 
   def givenMtdItIdIsUnKnownFor(nino: Nino) =
     stubFor(
