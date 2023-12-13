@@ -216,7 +216,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
 
     getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "nino").as[Nino])
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
@@ -234,7 +234,7 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
 
     getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "mtdId").as[MtdItId])
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
