@@ -21,14 +21,16 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
+import play.api.http.Status.{NOT_FOUND, OK}
 import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, ActiveRelationshipResponse, InactiveRelationship, InactiveRelationshipResponse, RegistrationRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PlrId, PptRef, Urn, Utr, Vrn}
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
 
@@ -45,7 +47,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
+
   private val ifAuthToken = appConfig.ifAuthToken
+  private val ifAPI1171Token = appConfig.ifAPI1171Token
   private val ifEnv = appConfig.ifEnvironment
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
@@ -198,6 +202,42 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         case Status.OK => Option(response.json.as[RegistrationRelationshipResponse])
         case other: Int =>
           logger.error(s"Error in IF DeleteAgentRelationship: $other, ${response.body}")
+          None
+      }
+    }
+  }
+
+  /*
+  API#1171 Get Business Details (for ITSA customers)
+  https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "nino").as[Nino])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
+          None
+      }
+    }
+  }
+
+  /*
+    API#1171 Get Business Details (for ITSA customers)
+    https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "mtdId").as[MtdItId])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
           None
       }
     }

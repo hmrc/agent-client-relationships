@@ -2,9 +2,10 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import java.time.LocalDate
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+
+import java.time.LocalDate
 
 trait IFStubs {
 
@@ -27,6 +28,39 @@ trait IFStubs {
     case PlrId(ref) =>
       s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
   }
+
+  def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino) =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{ "nino": "${nino.value}" }""")))
+
+  def givenNinoIsUnknownFor(mtdId: MtdItId) =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
+        .willReturn(aResponse().withStatus(404)))
+
+  def givenmtdIdIsInvalid(mtdId: MtdItId) =
+    stubFor(
+      get(urlMatching(s"/registration/.*?/mtdId/${mtdId.value}"))
+        .willReturn(aResponse().withStatus(400)))
+
+  def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId) =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
+        .willReturn(aResponse().withStatus(200).withBody(s"""{ "mtdId": "${mtdId.value}" }""")))
+
+  def givenMtdItIdIsUnKnownFor(nino: Nino) =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
+        .willReturn(aResponse().withStatus(404)))
+
+  def givenNinoIsInvalid(nino: Nino) =
+    stubFor(
+      get(urlMatching(s"/registration/.*?/nino/${nino.value}"))
+        .willReturn(aResponse().withStatus(400)))
 
 
   def givenIFReturnsServerError() =

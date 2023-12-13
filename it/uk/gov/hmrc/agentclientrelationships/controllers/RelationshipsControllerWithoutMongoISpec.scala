@@ -67,6 +67,7 @@ class RelationshipsControllerWithoutMongoISpec
         "microservice.services.tax-enrolments.port"        -> wireMockPort,
         "microservice.services.users-groups-search.port"   -> wireMockPort,
         "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.if.port"                     -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "microservice.services.agent-client-authorisation.port" -> wireMockPort,

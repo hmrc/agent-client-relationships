@@ -22,7 +22,7 @@ import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, MappingConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, IFConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.services._
@@ -49,6 +49,7 @@ class RelationshipsController @Inject()(
   agentUserService: AgentUserService,
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
+  ifConnector: IFConnector,
   ecp: Provider[ExecutionContext],
   esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
@@ -77,7 +78,7 @@ class RelationshipsController @Inject()(
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
       case (Service.MtdIt.id, "ni" | "NI", _) if Nino.isValid(clientId) =>
-        des
+        ifConnector
           .getMtdIdFor(Nino(clientId))
           .flatMap(
             _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(
@@ -297,8 +298,9 @@ class RelationshipsController @Inject()(
             (for {
               maybeEk <- taxIdentifier match {
                           // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
-                          case nino @ Nino(_) => des.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
-                          case _              => Future.successful(Some(enrolmentKey))
+                          case nino @ Nino(_) =>
+                            ifConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
+                          case _ => Future.successful(Some(enrolmentKey))
                         }
               _ <- maybeEk.fold {
                     Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))

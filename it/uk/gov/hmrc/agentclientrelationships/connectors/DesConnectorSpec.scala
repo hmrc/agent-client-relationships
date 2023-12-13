@@ -8,7 +8,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
+import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IFStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
@@ -17,7 +17,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DesConnectorSpec
-    extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub
+    extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub with IFStubs
     with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
@@ -69,62 +69,6 @@ class DesConnectorSpec
     case Vrn(_)     => Vrn("101747641")
     case Utr(_)     => Utr("2134514321")
     case Urn(_)     => Urn("AAAAA6426901067")
-  }
-
-  "DesConnector GetRegistrationBusinessDetails" should {
-
-    val mtdItId = MtdItId("foo")
-    val nino = Nino("AB123456C")
-
-    "return some nino when agent's mtdbsa identifier is known to ETMP" in {
-      givenNinoIsKnownFor(mtdItId, nino)
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId)) shouldBe Some(nino)
-    }
-
-    "return nothing when agent's mtdbsa identifier is unknown to ETMP" in {
-      givenNinoIsUnknownFor(mtdItId)
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId)) shouldBe None
-    }
-
-    "return nothing when agent's mtdbsa identifier is invalid" in {
-      givenMtdbsaIsInvalid(mtdItId)
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId)) shouldBe None
-    }
-
-    "return nothing when DES is unavailable" in {
-      givenDesReturnsServiceUnavailable()
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId)) shouldBe None
-    }
-
-    "return nothing when DES is throwing errors" in {
-      givenDesReturnsServerError()
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId)) shouldBe None
-    }
-
-    "record metrics for GetRegistrationBusinessDetailsByMtdbsa" in {
-      givenNinoIsKnownFor(mtdItId, Nino("AB123456C"))
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      await(desConnector.getNinoFor(mtdItId))
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetRegistrationBusinessDetailsByMtdbsa-GET")
-    }
-
-    "return MtdItId when agent's nino is known to ETMP" in {
-      givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenAuditConnector()
-      await(desConnector.getMtdIdFor(nino)) shouldBe Some(mtdItId)
-    }
-
-    "return nothing when agent's nino identifier is unknown to ETMP" in {
-      givenMtdItIdIsUnKnownFor(nino)
-      givenAuditConnector()
-      await(desConnector.getMtdIdFor(nino)) shouldBe None
-    }
   }
 
   "DesConnector GetStatusAgentRelationship" should {
