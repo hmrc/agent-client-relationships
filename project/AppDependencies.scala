@@ -22,6 +22,6 @@ object AppDependencies {
     "com.github.tomakehurst" %  "wiremock-jre8"            % "2.26.1"     % "test, it",
     "org.scalamock"          %% "scalamock"                % "4.4.0"      % "test, it",
     "com.vladsch.flexmark"   %  "flexmark-all"             % "0.35.10"    % "test, it",
-    "com.typesafe.akka"      %% "akka-actor-testkit-typed" % "2.6.20"     % "test, it"
+    "com.typesafe.akka"      %% "akka-actor-testkit-typed" % "2.6.21"     % "test, it"
   )
 }

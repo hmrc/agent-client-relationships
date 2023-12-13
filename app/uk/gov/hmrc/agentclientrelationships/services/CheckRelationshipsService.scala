@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
 import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey.enrolmentKey
 import uk.gov.hmrc.http.HeaderCarrier
@@ -32,10 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class CheckRelationshipsService @Inject()(
   es: EnrolmentStoreProxyConnector,
   ap: AgentPermissionsConnector,
-  groupSearch: UsersGroupsSearchConnector,
-  val metrics: Metrics)
-    extends Monitoring
-    with Logging {
+  groupSearch: UsersGroupsSearchConnector)
+    extends Logging {
 
   def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: EnrolmentKey)(
     implicit ec: ExecutionContext,

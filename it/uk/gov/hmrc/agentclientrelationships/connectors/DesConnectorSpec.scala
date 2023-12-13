@@ -1,18 +1,15 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
@@ -22,11 +19,6 @@ class DesConnectorSpec
 
   override implicit lazy val app: Application = appBuilder
     .build()
-
-  val httpClient = app.injector.instanceOf[HttpClient]
-  val metrics = app.injector.instanceOf[Metrics]
-  val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -55,8 +47,7 @@ class DesConnectorSpec
   private implicit val hc: HeaderCarrier = HeaderCarrier()
   private implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  val desConnector =
-    new DesConnector(httpClient, metrics, agentCacheProvider)
+  val desConnector = app.injector.instanceOf[DesConnector]
 
   val mtdItId = MtdItId("ABCDEF123456789")
   val vrn = Vrn("101747641")

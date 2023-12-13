@@ -1,22 +1,20 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentclientrelationships.stubs.ACAStubs
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AgentClientAuthorisationConnectorSpec  extends UnitSpec
+class AgentClientAuthorisationConnectorSpec extends UnitSpec
   with GuiceOneServerPerSuite
   with WireMockSupport
   with ACAStubs
@@ -26,7 +24,6 @@ class AgentClientAuthorisationConnectorSpec  extends UnitSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpClient = app.injector.instanceOf[HttpClient]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -40,10 +37,7 @@ class AgentClientAuthorisationConnectorSpec  extends UnitSpec
   val agentARN = Arn("ABCDE123456")
   val nino = Nino("AB213308A")
 
-  val acaConnector = new AgentClientAuthorisationConnector(
-    httpClient,
-    app.injector.instanceOf[Metrics]
-  )
+  val acaConnector = app.injector.instanceOf[AgentClientAuthorisationConnector]
 
   "getPartialAuthExistsFor" should {
 

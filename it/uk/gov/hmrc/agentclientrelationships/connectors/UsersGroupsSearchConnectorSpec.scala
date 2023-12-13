@@ -1,17 +1,13 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, UsersGroupsSearchStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpClient
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -20,14 +16,10 @@ class UsersGroupsSearchConnectorSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with DataStreamStub
-    with MetricTestSupport
     with UsersGroupsSearchStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
-
-  val httpClient = app.injector.instanceOf[HttpClient]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
@@ -53,7 +45,7 @@ class UsersGroupsSearchConnectorSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val connector = new UsersGroupsSearchConnector(httpClient, app.injector.instanceOf[Metrics])
+  val connector = app.injector.instanceOf[UsersGroupsSearchConnector]
 
   "UsersGroupsSearchConnector" should {
 

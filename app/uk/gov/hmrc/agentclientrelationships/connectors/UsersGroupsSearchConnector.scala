@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
 import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
@@ -55,11 +54,11 @@ object UserDetails {
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, override val kenshooRegistry: MetricRegistry)(
+  implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with HttpErrorFunctions
     with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]] = {
     val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentMatchers.{any, eq => equ}
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfterEach
@@ -52,8 +51,6 @@ class CheckRelationshipServiceSpec
   val groupId = "testGroupId"
   val agentCode: AgentCode = AgentCode("ABC1234")
 
-  val metrics = mock[Metrics]
-
   implicit val hc = HeaderCarrier()
 
   "checkForRelationship (user level)" - {
@@ -74,7 +71,7 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(es, ap, gs)
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
       "should return 404 if the client is in at least an access groups but the user has not been assigned the client" in {
@@ -93,7 +90,7 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(es, ap, gs)
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
       "should return 200 if the client is in at least an access groups and the user has been assigned the client" in {
@@ -112,7 +109,7 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(es, ap, gs)
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
     }
@@ -128,7 +125,7 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val relationshipsService = new CheckRelationshipsService(es, ap, gs, metrics)
+        val relationshipsService = new CheckRelationshipsService(es, ap, gs)
         relationshipsService.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
@@ -149,7 +146,7 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some("someOtherUserId")))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(es, ap, gs)
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
@@ -168,7 +165,7 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(es, ap, gs)
         crs.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe true
       }
     }
@@ -184,7 +181,7 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val relationshipsService = new CheckRelationshipsService(es, ap, gs, metrics)
+        val relationshipsService = new CheckRelationshipsService(es, ap, gs)
         relationshipsService.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe false
       }
     }

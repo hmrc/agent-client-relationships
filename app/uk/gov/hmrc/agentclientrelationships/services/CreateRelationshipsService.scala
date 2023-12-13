@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -24,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
@@ -40,10 +39,8 @@ class CreateRelationshipsService @Inject()(
   lockService: RecoveryLockService,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
-  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  val metrics: Metrics)
-    extends Monitoring
-    with Logging {
+  agentUserClientDetailsConnector: AgentUserClientDetailsConnector)
+    extends Logging {
 
   //noinspection ScalaStyle
   def createRelationship(

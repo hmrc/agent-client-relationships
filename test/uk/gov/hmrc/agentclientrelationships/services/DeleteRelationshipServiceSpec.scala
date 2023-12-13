@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -508,7 +507,6 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     val auditService: AuditService = mock[AuditService]
     val checkService: CheckRelationshipsService = mock[CheckRelationshipsService]
     val agentUserService: AgentUserService = mock[AgentUserService]
-    val metrics: Metrics = mock[Metrics]
     val ifConnector: IFConnector = mock[IFConnector]
     val aca: AgentClientAuthorisationConnector = mock[AgentClientAuthorisationConnector]
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
@@ -532,8 +530,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       lockService,
       checkService,
       agentUserService,
-      auditService,
-      metrics)
+      auditService)
 
     def givenAgentExists =
       when(

@@ -1,21 +1,16 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, MtdItId, Service, Vrn}
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{AgentCode, Nino}
-import uk.gov.hmrc.http
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -25,7 +20,6 @@ class EnrolmentStoreProxyConnectorSpec
     with WireMockSupport
     with EnrolmentStoreProxyStubs
     with DataStreamStub
-    with MetricTestSupport
     with MockitoSugar {
 
   override implicit lazy val app: Application = appBuilder
@@ -55,11 +49,7 @@ class EnrolmentStoreProxyConnectorSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val httpClient: HttpClient = app.injector.instanceOf[http.HttpClient]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-
-  val connector =
-    new EnrolmentStoreProxyConnector(httpClient, app.injector.instanceOf[Metrics])
+  val connector = app.injector.instanceOf[EnrolmentStoreProxyConnector]
 
   "EnrolmentStoreProxy" should {
 

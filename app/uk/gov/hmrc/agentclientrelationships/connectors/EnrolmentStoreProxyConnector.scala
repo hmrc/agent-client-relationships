@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, JsObject, Json, OWrites}
@@ -53,10 +52,10 @@ object ES20Request {
 }
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, override val kenshooRegistry: MetricRegistry)(
+  implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
   val teBaseUrl = new URL(appConfig.taxEnrolmentsUrl)

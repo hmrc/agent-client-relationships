@@ -16,14 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
-
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -31,13 +28,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class FindRelationshipsService @Inject()(
-  des: DesConnector,
-  ifConnector: IFConnector,
-  appConfig: AppConfig,
-  val metrics: Metrics)
-    extends Monitoring
-    with Logging {
+class FindRelationshipsService @Inject()(des: DesConnector, ifConnector: IFConnector, appConfig: AppConfig)
+    extends Logging {
 
   def getItsaRelationshipForClient(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =

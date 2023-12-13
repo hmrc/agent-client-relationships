@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
 import com.github.blemale.scaffeine.Scaffeine
-import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
@@ -47,11 +46,9 @@ class DoNotCache[T] extends Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = body
 }
 
-class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit metrics: Metrics)
+class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit val kenshooRegistry: MetricRegistry)
     extends KenshooCacheMetrics
     with Cache[T] {
-
-  val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private val underlying: com.github.blemale.scaffeine.Cache[String, T] =
     Scaffeine()
@@ -77,7 +74,7 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
 
 @Singleton
 class AgentCacheProvider @Inject()(val environment: Environment, configuration: Configuration)(
-  implicit metrics: Metrics) {
+  implicit val kenshooRegistry: MetricRegistry) {
 
   private val cacheSize = configuration.underlying.getInt("agent.cache.size")
   private val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))

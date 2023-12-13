@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import akka.Done
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -28,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.{NoRequest, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -48,10 +47,8 @@ class DeleteRelationshipsService @Inject()(
   lockService: RecoveryLockService,
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
-  val auditService: AuditService,
-  val metrics: Metrics)(implicit val appConfig: AppConfig)
-    extends Monitoring
-    with Logging {
+  val auditService: AuditService)(implicit val appConfig: AppConfig)
+    extends Logging {
 
   val recoveryTimeout: Int = appConfig.recoveryTimeout
 

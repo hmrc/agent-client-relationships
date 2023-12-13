@@ -1,6 +1,5 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -10,7 +9,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, MappingStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -25,7 +24,6 @@ class MappingConnectorSpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpClient = app.injector.instanceOf[HttpClient]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -52,10 +50,7 @@ class MappingConnectorSpec
 
   private implicit val hc = HeaderCarrier()
 
-  val mappingConnector = new MappingConnector(
-    httpClient,
-    app.injector.instanceOf[Metrics]
-  )
+  val mappingConnector = app.injector.instanceOf[MappingConnector]
 
   "MappingConnector" should {
 

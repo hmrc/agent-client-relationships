@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
@@ -34,12 +33,11 @@ import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, RegistrationRel
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar}
+import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -79,14 +77,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val ugs = resettingMock[UsersGroupsSearchConnector]
   val aca = resettingMock[AgentClientAuthorisationConnector]
   val auditService = resettingMock[AuditService]
-  val metrics = resettingMock[Metrics]
-  val monitoring = resettingMock[Monitoring]
   val deleteRecordRepository = resettingMock[DeleteRecordRepository]
   val agentUserService = resettingMock[AgentUserService]
   val servicesConfig = resettingMock[ServicesConfig]
   val configuration = resettingMock[Configuration]
   val agentCacheProvider = resettingMock[AgentCacheProvider]
   val aucdConnector = resettingMock[AgentUserClientDetailsConnector]
+  def metricRegistry = new MetricRegistry
 
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
@@ -121,10 +118,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -133,7 +129,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipExists()
         adminUserExistsForArn()
         relationshipWillBeCreated(mtdItEnrolmentKey)
-        metricsStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
@@ -167,10 +162,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -178,7 +172,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItEnrolmentKey)
-        metricsStub()
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
           relationshipsService
@@ -214,10 +207,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -262,10 +254,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -275,7 +266,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         previousRelationshipWillBeRemoved(mtdItEnrolmentKey)
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItEnrolmentKey)
-        metricsStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItId)(ec, hc, request, auditData)
@@ -310,10 +300,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -321,7 +310,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItEnrolmentKey)
-        metricsStub()
 
         val maybeCheck = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
           relationshipsService
@@ -358,10 +346,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -401,10 +388,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -412,7 +398,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItEnrolmentKey)
-        metricsStub()
         auditStub()
 
         val check = relationshipsService
@@ -452,10 +437,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -490,10 +474,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -526,10 +509,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
@@ -571,10 +553,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
@@ -612,17 +593,15 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
       val request = FakeRequest()
 
       cesaRelationshipExists()
-      metricsStub()
 
       val check = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
         relationshipsService
@@ -655,10 +634,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
@@ -666,7 +644,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
       oldESRelationshipExists()
       vrnIsKnownInETMP(vrn, true)
-      metricsStub()
       auditStub()
 
       val check = await(lockService.tryLock(arn, vatEnrolmentKey) {
@@ -700,10 +677,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
@@ -738,10 +714,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -751,7 +726,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         vrnIsKnownInETMP(vrn, true)
         adminUserExistsForArn()
         relationshipWillBeCreated(vatEnrolmentKey)
-        metricsStub()
         auditStub()
 
         val check = relationshipsService
@@ -787,10 +761,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -799,7 +772,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
         relationshipWillBeCreated(vatEnrolmentKey)
-        metricsStub()
         auditStub()
 
         val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vatEnrolmentKey) {
@@ -836,10 +808,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -873,10 +844,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
@@ -919,10 +889,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -933,7 +902,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         vrnIsKnownInETMP(vrn, true)
         previousRelationshipWillBeRemoved(vatEnrolmentKey)
         relationshipWillBeCreated(vatEnrolmentKey)
-        metricsStub()
         auditStub()
 
         val check = relationshipsService
@@ -969,10 +937,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
         await(relationshipCopyRepository.create(record))
         val auditData = new AuditData()
@@ -981,7 +948,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         oldESRelationshipExists()
         relationshipWillBeCreated(vatEnrolmentKey)
         vrnIsKnownInETMP(vrn, true)
-        metricsStub()
         auditStub()
 
         val maybeCheck = await(lockService.tryLock(arn, vatEnrolmentKey) {
@@ -1019,10 +985,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -1062,16 +1027,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
         val request = FakeRequest()
 
-        metricsStub()
         auditStub()
         oldESRelationshipExists()
         vrnIsKnownInETMP(vrn, true)
@@ -1114,10 +1077,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             lockService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics),
+            aucdConnector),
           auditService,
-          metrics
+          metricRegistry
         )
 
         val auditData = new AuditData()
@@ -1152,10 +1114,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -1188,10 +1149,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
@@ -1233,10 +1193,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
 
       val auditData = new AuditData()
@@ -1275,10 +1234,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -1310,10 +1268,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           lockService,
           deleteRecordRepository,
           agentUserService,
-          aucdConnector,
-          metrics),
+          aucdConnector),
         auditService,
-        metrics
+        metricRegistry
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -1363,10 +1320,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               lockService,
               deleteRecordRepository,
               agentUserService,
-              aucdConnector,
-              metrics),
+              aucdConnector),
             auditService,
-            metrics
+            metricRegistry
           )(appConfig)
 
         val auditData = new AuditData()
@@ -1467,9 +1423,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   private def tryCreateRelationshipFromAltItsa(created: Boolean = false): OngoingStubbing[Future[Boolean]] =
     when(aca.updateAltItsaFor(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful created)
-
-  private def metricsStub(): OngoingStubbing[MetricRegistry] =
-    when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
 
   private def auditStub(): OngoingStubbing[Future[Unit]] =
     when(

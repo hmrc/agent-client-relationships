@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.{NOT_FOUND, NO_CONTENT}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
@@ -31,11 +30,10 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentUserClientDetailsConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class AgentUserClientDetailsConnector @Inject()(http: HttpClient, override val kenshooRegistry: MetricRegistry)(
+  implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with Logging {
-
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val baseUrl = new URL(appConfig.agentUserClientDetailsUrl)
 

@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
@@ -50,10 +49,10 @@ object AgentCodeMappings {
 }
 
 @Singleton
-class MappingConnector @Inject()(httpClient: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class MappingConnector @Inject()(httpClient: HttpClient, override val kenshooRegistry: MetricRegistry)(
+  implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getSaAgentReferencesFor(
     arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {

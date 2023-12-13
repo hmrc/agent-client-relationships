@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
+import com.codahale.metrics.MetricRegistry
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -26,7 +26,8 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.util._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -34,7 +35,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import uk.gov.hmrc.agentclientrelationships.util._
 
 sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
@@ -90,12 +90,14 @@ class CheckAndCopyRelationshipsService @Inject()(
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
   val auditService: AuditService,
-  val metrics: Metrics)(implicit val appConfig: AppConfig)
-    extends Monitoring
-    with Logging {
+  kenshooRegistry: MetricRegistry)(implicit val appConfig: AppConfig)
+    extends Logging {
 
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
+
+  def mark[T](name: String): Unit =
+    kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
 
   def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier)(
     implicit ec: ExecutionContext,
