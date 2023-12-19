@@ -25,8 +25,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class FakeLockService extends RecoveryLockService {
   val locked: mutable.Set[(Arn, EnrolmentKey)] = mutable.Set.empty[(Arn, EnrolmentKey)]
 
-  override def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(
-    implicit ec: ExecutionContext): Future[Option[T]] =
+  override def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
+    body: => Future[T]
+  )(implicit ec: ExecutionContext): Future[Option[T]] =
     if (locked.contains((arn, enrolmentKey))) Future.successful(None)
     else {
       locked.add((arn, enrolmentKey))

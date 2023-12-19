@@ -66,18 +66,18 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
         record("Count-" + name + "-from-cache")
         Future.successful(v)
       case None =>
-        body.andThen {
-          case Success(v) =>
-            logger.info(s"Missing $name cache hit, storing new value.")
-            record("Count-" + name + "-from-source")
-            underlying.put(key, v)
+        body.andThen { case Success(v) =>
+          logger.info(s"Missing $name cache hit, storing new value.")
+          record("Count-" + name + "-from-source")
+          underlying.put(key, v)
         }
     }
 }
 
 @Singleton
-class AgentCacheProvider @Inject()(val environment: Environment, configuration: Configuration)(
-  implicit metrics: Metrics) {
+class AgentCacheProvider @Inject() (val environment: Environment, configuration: Configuration)(implicit
+  metrics: Metrics
+) {
 
   private val cacheSize = configuration.underlying.getInt("agent.cache.size")
   private val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))
@@ -105,6 +105,7 @@ class AgentCacheProvider @Inject()(val environment: Environment, configuration: 
       new LocalCaffeineCache[Seq[InactiveRelationship]](
         "agent-trackPage-cache",
         agentTrackCacheSize,
-        agentTrackCacheExpires)
+        agentTrackCacheExpires
+      )
     else new DoNotCache[Seq[InactiveRelationship]]
 }

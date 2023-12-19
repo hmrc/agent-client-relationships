@@ -28,7 +28,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
-  //noinspection ScalaStyle
+  // noinspection ScalaStyle
   def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
       EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
@@ -46,7 +46,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       def doRequest = doAgentGetRequest(requestPath)
 
-      //HAPPY PATH :-)
+      // HAPPY PATH :-)
 
       "return 200 when relationship exists in es" in {
         givenPrincipalAgentUser(arn, "foo")
@@ -62,7 +62,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         await(repo.findBy(arn, enrolmentKey)) shouldBe empty
       }
 
-      //UNHAPPY PATHS
+      // UNHAPPY PATHS
 
       "return 404 when credentials are not found in es" in {
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
@@ -92,7 +92,10 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
               arn.value,
               Some(enrolmentKey),
               syncToETMPStatus = Some(SyncStatus.Success),
-              syncToESStatus = Some(SyncStatus.Failed))))
+              syncToESStatus = Some(SyncStatus.Failed)
+            )
+          )
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -101,7 +104,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         await(deleteRecordRepository.remove(arn, enrolmentKey))
       }
 
-      //FAILURE CASES
+      // FAILURE CASES
 
       "return 502 when ES1/delegated returns 5xx" in {
         givenPrincipalAgentUser(arn, "foo")
@@ -127,7 +130,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     }
   }
 
-  //noinspection ScalaStyle
+  // noinspection ScalaStyle
   def relationshipsControllerPutISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
       EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
@@ -201,12 +204,18 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenUserIsSubscribedClient(clientId)
         extraSetup(serviceId)
 
-        await(mongoLockRepository.collection.insertOne(
-          Lock(
-            id = s"recovery-${arn.value}-${enrolmentKey.tag}",
-            owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
-            expiryTime = Instant.now().plusSeconds(2),
-            timeCreated = Instant.now().minusMillis(500))).toFuture())
+        await(
+          mongoLockRepository.collection
+            .insertOne(
+              Lock(
+                id = s"recovery-${arn.value}-${enrolmentKey.tag}",
+                owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
+                expiryTime = Instant.now().plusSeconds(2),
+                timeCreated = Instant.now().minusMillis(500)
+              )
+            )
+            .toFuture()
+        )
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe LOCKED
@@ -255,11 +264,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenGroupInfo(groupId = "foo", agentCode = "bar")
         givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey)
         givenAgentCanBeAllocatedInIF(clientId, arn)
-        givenEnrolmentAllocationFailsWith(503)(
-          groupId = "foo",
-          clientUserId = "user1",
-          enrolmentKey,
-          agentCode = "bar")
+        givenEnrolmentAllocationFailsWith(503)(groupId = "foo", clientUserId = "user1", enrolmentKey, agentCode = "bar")
         givenAdminUser("foo", "user1")
         extraSetup(serviceId)
 
@@ -316,7 +321,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     }
   }
 
-  //noinspection ScalaStyle
+  // noinspection ScalaStyle
   def relationshipsControllerDeleteISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
       EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
@@ -333,30 +338,32 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
 
       def verifyClientRemovedAgentServiceAuthorisationAuditSent(
-                                                                 arn: String,
-                                                                 clientId: String,
-                                                                 service: String,
-                                                                 authProviderId: String,
-                                                                 authProviderIdType: String): Unit =
+        arn: String,
+        clientId: String,
+        service: String,
+        authProviderId: String,
+        authProviderIdType: String
+      ): Unit =
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
           detail = Map(
-            "agentReferenceNumber"     -> arn,
-            "clientId"                 -> clientId,
-            "service"                  -> service,
-            "authProviderId"           -> authProviderId,
-            "authProviderIdType"       -> authProviderIdType
+            "agentReferenceNumber" -> arn,
+            "clientId"             -> clientId,
+            "service"              -> service,
+            "authProviderId"       -> authProviderId,
+            "authProviderIdType"   -> authProviderIdType
           ),
           tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
         )
 
       def verifyHmrcRemovedAgentServiceAuthorisation(
-                                                      arn: String,
-                                                      clientId: String,
-                                                      service: String,
-                                                      authProviderId: String,
-                                                      authProviderIdType: String):Unit =
+        arn: String,
+        clientId: String,
+        service: String,
+        authProviderId: String,
+        authProviderIdType: String
+      ): Unit =
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
@@ -376,7 +383,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
           givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
-          givenPrincipalGroupIdExistsFor(enrolmentKey,"foo")
+          givenPrincipalGroupIdExistsFor(enrolmentKey, "foo")
           givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
           givenAgentCanBeDeallocatedInIF(clientId, arn)
           givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
@@ -396,7 +403,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             serviceId,
             "ggUserId-agent",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -420,7 +428,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             serviceId,
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -447,7 +456,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             serviceId,
             "strideId-1234456",
-            "PrivilegedApplication")
+            "PrivilegedApplication"
+          )
         }
       }
 
@@ -470,7 +480,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             serviceId,
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -493,7 +504,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             serviceId,
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -517,13 +529,13 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             serviceId,
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
-      /**
-       * Agent's Unhappy paths
-       */
+      /** Agent's Unhappy paths
+        */
       "agent has a mismatched arn" should {
         "return 403 and not send the audit event ClientRemovedAgentServiceAuthorisation" in {
           givenUserIsSubscribedAgent(Arn("unmatched"))
@@ -591,9 +603,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         }
       }
 
-      /**
-       * Client's Unhappy paths
-       */
+      /** Client's Unhappy paths
+        */
 
       "client has a mismatched clientId" should {
         val dummyClientId: TaxIdentifier = Service.forId(serviceId).supportedClientIdType.createUnderlying("unmatched")
@@ -623,7 +634,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           givenAgentCanBeDeallocatedInIF(clientId, arn)
           givenAuditConnector()
           extraSetup(serviceId)
-          //givenPrincipalGroupIdNotExistsFor(clientId)
+          // givenPrincipalGroupIdNotExistsFor(clientId)
         }
 
         "return 500 and not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
@@ -639,7 +650,14 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 404 for any call" in {
 
-        await(repo.create(RelationshipCopyRecord(arn.value, Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value))))))) shouldBe 1
+        await(
+          repo.create(
+            RelationshipCopyRecord(
+              arn.value,
+              Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value))))
+            )
+          )
+        ) shouldBe 1
         val result = doAgentDeleteRequest(requestPath)
         result.status shouldBe 404
       }
@@ -647,11 +665,12 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   }
 
-  //noinspection ScalaStyle
-  def strideEndpointISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String) = {
+  // noinspection ScalaStyle
+  def strideEndpointISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String) =
     s"GET /relationships/service/$serviceId/client/$clientIdType/:clientId" should {
 
-      val requestPath: String = s"/agent-client-relationships/relationships/service/$serviceId/client/$clientIdType/${clientId.value}"
+      val requestPath: String =
+        s"/agent-client-relationships/relationships/service/$serviceId/client/$clientIdType/${clientId.value}"
 
       def doRequest = doAgentGetRequest(requestPath)
       val req = FakeRequest()
@@ -740,5 +759,4 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         result.status shouldBe 404
       }
     }
-  }
 }

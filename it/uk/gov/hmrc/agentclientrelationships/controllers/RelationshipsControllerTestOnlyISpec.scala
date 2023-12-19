@@ -62,9 +62,9 @@ class RelationshipsControllerTestOnlyISpec
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
-  override def beforeEach() {
+  override def beforeEach() = {
     super.beforeEach()
-    await(repo.ensureIndexes)
+    await(repo.ensureIndexes())
     ()
   }
 
@@ -86,7 +86,9 @@ class RelationshipsControllerTestOnlyISpec
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780")))))) shouldBe 1
+      await(
+        repo.create(RelationshipCopyRecord(arn, Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780")))))
+      ) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 404
     }

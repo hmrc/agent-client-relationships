@@ -1,3 +1,4 @@
+import sbt.IntegrationTest
 
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
@@ -17,12 +18,12 @@ lazy val root = (project in file("."))
     organization := "uk.gov.hmrc",
     PlayKeys.playDefaultPort := 9434,
     majorVersion := 1,
-    scalaVersion := "2.12.15",
+    scalaVersion := "2.13.10",
     scalacOptions ++= Seq(
       "-Yrangepos",
       "-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
-      "-Yno-adapted-args",
+//      "-Yno-adapted-args",
       "-Ywarn-value-discard",
       "-Ywarn-dead-code",
       "-deprecation",
@@ -47,9 +48,13 @@ lazy val root = (project in file("."))
     IntegrationTest / Keys.fork := false,
     Defaults.itSettings,
     IntegrationTest / unmanagedSourceDirectories += baseDirectory(_ / "it").value,
-    IntegrationTest / parallelExecution := false
+    IntegrationTest / parallelExecution := false,
+    IntegrationTest / scalafmtOnCompile := true
+  )
+  .settings(
+    //fix for scoverage compile errors for scala 2.13.10
+    libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always)
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
 
-inConfig(IntegrationTest)(scalafmtCoreSettings)
 

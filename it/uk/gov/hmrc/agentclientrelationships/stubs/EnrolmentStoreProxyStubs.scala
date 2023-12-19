@@ -21,25 +21,29 @@ trait EnrolmentStoreProxyStubs extends Eventually {
   def agentEnrolmentKey(arn: Arn): EnrolmentKey = EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}")
 
   // ES1
-  def givenPrincipalGroupIdExistsFor(enrolmentKey: EnrolmentKey, groupId: String): StubMapping = {
+  def givenPrincipalGroupIdExistsFor(enrolmentKey: EnrolmentKey, groupId: String): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=principal"))
-        .willReturn(aResponse()
-          .withBody(s"""
-                       |{
-                       |    "principalGroupIds":[
-                       |        "$groupId"
-                       |    ]
-                       |}
-          """.stripMargin)))
-  }
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |    "principalGroupIds":[
+                         |        "$groupId"
+                         |    ]
+                         |}
+          """.stripMargin)
+        )
+    )
 
-  def givenPrincipalGroupIdNotExistsFor(enrolmentKey: EnrolmentKey): StubMapping = {
+  def givenPrincipalGroupIdNotExistsFor(enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=principal"))
-        .willReturn(aResponse()
-          .withStatus(204)))
-  }
+        .willReturn(
+          aResponse()
+            .withStatus(204)
+        )
+    )
 
   private def urlContains(str: String): UrlPattern = new UrlPattern(containing(str), false) {
     override def `match`(url: String): MatchResult = pattern.`match`(url)
@@ -48,60 +52,72 @@ trait EnrolmentStoreProxyStubs extends Eventually {
   def givenPrincipalGroupIdRequestFailsWith(status: Int): StubMapping =
     stubFor(
       get(urlContains("/groups?type=principal"))
-        .willReturn(aResponse().withStatus(status).withBody("FAILED_ESP")))
+        .willReturn(aResponse().withStatus(status).withBody("FAILED_ESP"))
+    )
 
   def givenDelegatedGroupIdsExistFor(enrolmentKey: EnrolmentKey, groupIds: Set[String]): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"))
-        .willReturn(aResponse()
-          .withBody(s"""
-                       |{
-                       |    "delegatedGroupIds":[
-                       |        ${groupIds.map(s => s""""$s\"""").mkString(",")}
-                       |    ]
-                       |}
-          """.stripMargin)))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |    "delegatedGroupIds":[
+                         |        ${groupIds.map(s => s""""$s\"""").mkString(",")}
+                         |    ]
+                         |}
+          """.stripMargin)
+        )
+    )
 
   def givenDelegatedGroupIdsNotExistFor(enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"))
-        .willReturn(aResponse()
-          .withStatus(204)))
+        .willReturn(
+          aResponse()
+            .withStatus(204)
+        )
+    )
 
   def givenDelegatedGroupIdRequestFailsWith(status: Int): StubMapping =
     stubFor(
       get(urlContains("/groups?type=delegated"))
-        .willReturn(aResponse().withStatus(status)))
+        .willReturn(aResponse().withStatus(status))
+    )
 
-  def givenPrincipalUserIdExistFor(enrolmentKey: EnrolmentKey, userId: String): StubMapping = {
+  def givenPrincipalUserIdExistFor(enrolmentKey: EnrolmentKey, userId: String): StubMapping =
     givenPrincipalUserIdsExistFor(enrolmentKey, List(userId))
-  }
 
-  def givenPrincipalUserIdsExistFor(enrolmentKey: EnrolmentKey, userIds: Seq[String]): StubMapping = {
+  def givenPrincipalUserIdsExistFor(enrolmentKey: EnrolmentKey, userIds: Seq[String]): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/users?type=principal"))
-        .willReturn(aResponse()
-          .withBody(s"""
-                       |{
-                       |    "principalUserIds":[
-                       |        ${userIds.map('"' + _ + '"').mkString(", ")}
-                       |    ]
-                       |}
-          """.stripMargin)))
-  }
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |    "principalUserIds":[
+                         |        ${userIds.map(x => s"\"$x\"").mkString(", ")}
+                         |    ]
+                         |}
+          """.stripMargin)
+        )
+    )
 
-  def givenPrincipalUserIdNotExistFor(enrolmentKey: EnrolmentKey): StubMapping = {
+  def givenPrincipalUserIdNotExistFor(enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/users?type=principal"))
-        .willReturn(aResponse()
-          .withStatus(204)))
-  }
+        .willReturn(
+          aResponse()
+            .withStatus(204)
+        )
+    )
 
   def givenEnrolmentAllocationSucceeds(
     groupId: String,
     clientUserId: String,
     enrolmentKey: EnrolmentKey,
-    agentCode: String): StubMapping =
+    agentCode: String
+  ): StubMapping =
     stubFor(
       post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(s"""
@@ -111,13 +127,21 @@ trait EnrolmentStoreProxyStubs extends Eventually {
                                           |}
                                           |""".stripMargin))
         .withHeader("Content-Type", containing("application/json"))
-        .willReturn(aResponse().withStatus(201)))
+        .willReturn(aResponse().withStatus(201))
+    )
 
-  def verifyEnrolmentAllocationAttempt(groupId: String, clientUserId: String, enrolmentKey: EnrolmentKey, agentCode: String): Unit =
+  def verifyEnrolmentAllocationAttempt(
+    groupId: String,
+    clientUserId: String,
+    enrolmentKey: EnrolmentKey,
+    agentCode: String
+  ): Unit =
     eventually {
       verify(
         1,
-        postRequestedFor(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
+        postRequestedFor(
+          urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode")
+        )
           .withRequestBody(similarToJson(s"""
                                             |{
                                             |   "userId":"$clientUserId",
@@ -132,11 +156,9 @@ trait EnrolmentStoreProxyStubs extends Eventually {
       verify(0, postRequestedFor(urlContains(s"$teBaseUrl/groups/")))
     }
 
-  def givenEnrolmentAllocationFailsWith(responseStatus: Int)(
-    groupId: String,
-    clientUserId: String,
-    enrolmentKey: EnrolmentKey,
-    agentCode: String): StubMapping =
+  def givenEnrolmentAllocationFailsWith(
+    responseStatus: Int
+  )(groupId: String, clientUserId: String, enrolmentKey: EnrolmentKey, agentCode: String): StubMapping =
     stubFor(
       post(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode"))
         .withRequestBody(similarToJson(s"""
@@ -145,7 +167,8 @@ trait EnrolmentStoreProxyStubs extends Eventually {
                                           |   "type":"delegated"
                                           |}
                                           |""".stripMargin))
-        .willReturn(aResponse().withStatus(responseStatus)))
+        .willReturn(aResponse().withStatus(responseStatus))
+    )
 
   def verifyEnrolmentDeallocationAttempt(groupId: String, enrolmentKey: EnrolmentKey): Unit =
     eventually {
@@ -160,24 +183,29 @@ trait EnrolmentStoreProxyStubs extends Eventually {
   def givenEnrolmentDeallocationSucceeds(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}"))
-        .willReturn(aResponse().withStatus(204)))
-  
+        .willReturn(aResponse().withStatus(204))
+    )
+
   def givenEnrolmentDeallocationFailsWith(
-    responseStatus: Int)(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
+    responseStatus: Int
+  )(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       delete(urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}"))
-        .willReturn(aResponse().withStatus(responseStatus)))
+        .willReturn(aResponse().withStatus(responseStatus))
+    )
 
   def givenEsIsUnavailable(): StubMapping = {
     stubFor(
       any(urlMatching(s"$esBaseUrl/.*"))
-        .willReturn(aResponse().withStatus(503)))
+        .willReturn(aResponse().withStatus(503))
+    )
     stubFor(
       any(urlMatching(s"$teBaseUrl/.*"))
-        .willReturn(aResponse().withStatus(503)))
+        .willReturn(aResponse().withStatus(503))
+    )
   }
 
-  def givenEnrolmentExistsForGroupId(groupId: String, enrolmentKey: EnrolmentKey): StubMapping = {
+  def givenEnrolmentExistsForGroupId(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
         .willReturn(
@@ -204,63 +232,76 @@ trait EnrolmentStoreProxyStubs extends Eventually {
                          |        }
                          |    ]
                          |}
-             """.stripMargin)))
-  }
+             """.stripMargin)
+        )
+    )
 
   def givenEnrolmentNotExistsForGroupId(groupId: String): StubMapping =
     stubFor(
       get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"))
-        .willReturn(aResponse()
-          .withStatus(204)))
+        .willReturn(
+          aResponse()
+            .withStatus(204)
+        )
+    )
 
-  //ES20 - QueryKnownFactsByVerifiersAndIdentifiers
-  def givenKnownFactsQuery(service: Service, taxIdentifier: TaxIdentifier, expectedIdentifiers: Option[Seq[Identifier]]): StubMapping = {
+  // ES20 - QueryKnownFactsByVerifiersAndIdentifiers
+  def givenKnownFactsQuery(
+    service: Service,
+    taxIdentifier: TaxIdentifier,
+    expectedIdentifiers: Option[Seq[Identifier]]
+  ): StubMapping = {
     val response = expectedIdentifiers match {
       case None => aResponse().withStatus(Status.NO_CONTENT)
-      case Some(identifiers) => aResponse().withStatus(Status.OK).withBody(
-        s"""
-           |{
-           |    "service": "${service.id}",
-           |    "enrolments": [
-           |        {
-           |            "identifiers": ${Json.prettyPrint(Json.toJson(identifiers))},
-           |            "verifiers": [
-           |                {
-           |                    "key": "Email",
-           |                    "value": "placeholder.email@gov.uk"
-           |                }
-           |            ]
-           |        }
-           |    ]
-           |}
-           |""".stripMargin)
+      case Some(identifiers) =>
+        aResponse()
+          .withStatus(Status.OK)
+          .withBody(s"""
+                       |{
+                       |    "service": "${service.id}",
+                       |    "enrolments": [
+                       |        {
+                       |            "identifiers": ${Json.prettyPrint(Json.toJson(identifiers))},
+                       |            "verifiers": [
+                       |                {
+                       |                    "key": "Email",
+                       |                    "value": "placeholder.email@gov.uk"
+                       |                }
+                       |            ]
+                       |        }
+                       |    ]
+                       |}
+                       |""".stripMargin)
     }
     stubFor(
       post(urlEqualTo(s"$esBaseUrl/enrolments"))
         .withRequestBody(similarToJson(s"""
-                            |{
-                            |    "service": "${service.id}",
-                            |    "knownFacts": [
-                            |        {
-                            |            "key": "${ClientIdentifier(taxIdentifier).enrolmentId}",
-                            |            "value": "${taxIdentifier.value}"
-                            |        }
-                            |    ]
-                            |}
+                                          |{
+                                          |    "service": "${service.id}",
+                                          |    "knownFacts": [
+                                          |        {
+                                          |            "key": "${ClientIdentifier(taxIdentifier).enrolmentId}",
+                                          |            "value": "${taxIdentifier.value}"
+                                          |        }
+                                          |    ]
+                                          |}
              """.stripMargin))
         .willReturn(response)
     )
   }
 
   def givenCbcUkExistsInES(cbcId: CbcId, expectedUtr: String): StubMapping =
-    givenKnownFactsQuery(Service.Cbc, cbcId, Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", expectedUtr))))
+    givenKnownFactsQuery(
+      Service.Cbc,
+      cbcId,
+      Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", expectedUtr)))
+    )
   def givenCbcUkDoesNotExistInES(cbcId: CbcId): StubMapping =
     givenKnownFactsQuery(Service.Cbc, cbcId, None)
   def givenCbcNonUkExistsInES(cbcId: CbcId): StubMapping =
     givenKnownFactsQuery(Service.CbcNonUk, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
   def givenCbcNonUkDoesNotExistInES(cbcId: CbcId): StubMapping =
     givenKnownFactsQuery(Service.CbcNonUk, cbcId, None)
-
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
 

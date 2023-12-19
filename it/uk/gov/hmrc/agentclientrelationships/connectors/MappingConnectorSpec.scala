@@ -45,9 +45,9 @@ class MappingConnectorSpec
         "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
         "agent.cache.enabled"                              -> true,
-        "agent.trackPage.cache.size"                                 -> 1,
-        "agent.trackPage.cache.expires"                              -> "1 millis",
-        "agent.trackPage.cache.enabled"                              -> true
+        "agent.trackPage.cache.size"                       -> 1,
+        "agent.trackPage.cache.expires"                    -> "1 millis",
+        "agent.trackPage.cache.enabled"                    -> true
       )
 
   private implicit val hc = HeaderCarrier()

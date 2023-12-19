@@ -18,19 +18,35 @@ trait AuthStub {
     this
   }
 
-  //VIA Client
+  // VIA Client
 
-  def givenLoginClientIndAll(mtdItId: MtdItId, vrn: Vrn, nino: Nino, cgtRef: CgtRef, pptRef: PptRef, withThisGgUserId: String = "12345-credId") = {
+  def givenLoginClientIndAll(
+    mtdItId: MtdItId,
+    vrn: Vrn,
+    nino: Nino,
+    cgtRef: CgtRef,
+    pptRef: PptRef,
+    withThisGgUserId: String = "12345-credId"
+  ) = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(givenLoginClientIndAllJsonResponseBody(mtdItId, vrn, nino, cgtRef, pptRef, withThisGgUserId))))
+            .withBody(givenLoginClientIndAllJsonResponseBody(mtdItId, vrn, nino, cgtRef, pptRef, withThisGgUserId))
+        )
+    )
     this
   }
 
-  private def givenLoginClientIndAllJsonResponseBody(mtdItId: MtdItId, vrn: Vrn, nino: Nino, cgtRef: CgtRef, pptRef: PptRef, withThisGgUserId: String) =
+  private def givenLoginClientIndAllJsonResponseBody(
+    mtdItId: MtdItId,
+    vrn: Vrn,
+    nino: Nino,
+    cgtRef: CgtRef,
+    pptRef: PptRef,
+    withThisGgUserId: String
+  ) =
     s"""
        |{
        |"affinityGroup": "Individual",
@@ -78,17 +94,39 @@ trait AuthStub {
        |}
        """.stripMargin
 
-  def givenLoginClientBusinessAll(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, plrId: PlrId, withThisGgUserId: String = "12345-credId") = {
+  def givenLoginClientBusinessAll(
+    vrn: Vrn,
+    utr: Utr,
+    urn: Urn,
+    cgtRef: CgtRef,
+    pptRef: PptRef,
+    cbcId: CbcId,
+    plrId: PlrId,
+    withThisGgUserId: String = "12345-credId"
+  ) = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId, withThisGgUserId))))
+            .withBody(
+              givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId, withThisGgUserId)
+            )
+        )
+    )
     this
   }
 
-  private def givenLoginClientBusinessAllJsonResponseBody(vrn: Vrn, utr: Utr,  urn: Urn, cgtRef: CgtRef, pptRef: PptRef, cbcId: CbcId, plrId: PlrId, withThisGgUserId: String) =
+  private def givenLoginClientBusinessAllJsonResponseBody(
+    vrn: Vrn,
+    utr: Utr,
+    urn: Urn,
+    cgtRef: CgtRef,
+    pptRef: PptRef,
+    cbcId: CbcId,
+    plrId: PlrId,
+    withThisGgUserId: String
+  ) =
     s"""
        |{
        |"affinityGroup": "Organisation",
@@ -160,7 +198,7 @@ trait AuthStub {
        |}
        """.stripMargin
 
-  //VIA Stride
+  // VIA Stride
 
   def givenUserIsAuthenticatedWithStride(strideRole: String, strideUserId: String) = {
     stubFor(
@@ -179,13 +217,20 @@ trait AuthStub {
                          |    "providerType": "PrivilegedApplication"
                          |  }
                          |}
-       """.stripMargin)))
+       """.stripMargin)
+        )
+    )
     this
   }
 
-  //VIA Agent
-  //Applies to Endpoints that allow more than one different kind of user
-  def givenUserIsSubscribedAgent(withThisArn: Arn, withThisGgUserId: String = "12345-credId", withThisGroupId: String = "foo", withThisAgentCode: String = "12345"): AuthStub = {
+  // VIA Agent
+  // Applies to Endpoints that allow more than one different kind of user
+  def givenUserIsSubscribedAgent(
+    withThisArn: Arn,
+    withThisGgUserId: String = "12345-credId",
+    withThisGroupId: String = "foo",
+    withThisAgentCode: String = "12345"
+  ): AuthStub = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
@@ -209,7 +254,9 @@ trait AuthStub {
                          |  "agentCode": "$withThisAgentCode",
                          |  "groupIdentifier": "$withThisGroupId"
                          |}
-       """.stripMargin)))
+       """.stripMargin)
+        )
+    )
     this
   }
 
@@ -235,7 +282,9 @@ trait AuthStub {
                          |    "providerType": "GovernmentGateway"
                          |  }
                          |}
-       """.stripMargin)))
+       """.stripMargin)
+        )
+    )
     this
   }
 
@@ -261,12 +310,14 @@ trait AuthStub {
                          |    "providerType": "GovernmentGateway"
                          |  }
                          |}
-       """.stripMargin)))
+       """.stripMargin)
+        )
+    )
     this
   }
 
-  //noinspection ScalaStyle
-  //TODO To be replaced with givenLoginClientIndAll OR givenLoginClientBusinessAll TBC
+  // noinspection ScalaStyle
+  // TODO To be replaced with givenLoginClientIndAll OR givenLoginClientBusinessAll TBC
   def givenUserIsSubscribedClient(identifier: TaxIdentifier, withThisGgUserId: String = "12345-credId"): AuthStub = {
     val (service, key, value) = identifier match {
       case Nino(v)    => ("HMRC-NI", "NINO", v)
@@ -278,6 +329,7 @@ trait AuthStub {
       case PptRef(v)  => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
       case CbcId(v)   => ("HMRC-CBC-ORG", "cbcId", v)
       case PlrId(v)   => ("HMRC-PILLAR2-ORG", "PLRID", v)
+      case x          => throw new IllegalArgumentException(s"Tax identifier not supported $x")
     }
 
     stubFor(
@@ -287,7 +339,7 @@ trait AuthStub {
             .withStatus(200)
             .withBody(s"""
                          |{
-                         |"affinityGroup": "${if(key == "URN")"Organisation" else "Individual"}",
+                         |"affinityGroup": "${if (key == "URN") "Organisation" else "Individual"}",
                          |"allEnrolments": [{
                          |  "key": "$service",
                          |  "identifiers": [{
@@ -322,11 +374,21 @@ trait AuthStub {
                          |    "providerType": "GovernmentGateway"
                          |  }
                          |}
-       """.stripMargin)))
+       """.stripMargin)
+        )
+    )
     this
   }
 
-  def givenAuthorisedAsClient[A](request: FakeRequest[A], mtdItId: MtdItId, vrn: Vrn, utr: Utr, urn: Urn, pptRef: PptRef, cgtRef: CgtRef): FakeRequest[A] = {
+  def givenAuthorisedAsClient[A](
+    request: FakeRequest[A],
+    mtdItId: MtdItId,
+    vrn: Vrn,
+    utr: Utr,
+    urn: Urn,
+    pptRef: PptRef,
+    cgtRef: CgtRef
+  ): FakeRequest[A] = {
     val enrolments =
       Seq(
         Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value),
@@ -334,7 +396,8 @@ trait AuthStub {
         Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value),
         Enrolment("HMRC-TERSNT-ORG", "URN", urn.value),
         Enrolment("HMRC-PPT-ORG", "EtmpRegistrationNumber", pptRef.value),
-        Enrolment("HMRC-CGT-PD", "CGTPDRef", cgtRef.value))
+        Enrolment("HMRC-CGT-PD", "CGTPDRef", cgtRef.value)
+      )
 
     givenAuthorisedFor(
       s"""
@@ -346,9 +409,10 @@ trait AuthStub {
          |{
          |"allEnrolments": [
          |  ${enrolments
-           .map(enrolment =>
-             s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}""")
-           .mkString(", ")}
+        .map(enrolment =>
+          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+        )
+        .mkString(", ")}
          |]}
           """.stripMargin
     )
@@ -388,7 +452,9 @@ trait AuthStub {
         .willReturn(
           aResponse()
             .withStatus(401)
-            .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")))
+            .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")
+        )
+    )
 
   def authenticated[A](request: FakeRequest[A], enrolments: Seq[Enrolment], isAgent: Boolean): FakeRequest[A] = {
     givenAuthorisedFor(
@@ -405,9 +471,10 @@ trait AuthStub {
          |{
          |"authorisedEnrolments": [
          |  ${enrolments
-           .map(enrolment =>
-             s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}""")
-           .mkString(", ")}
+        .map(enrolment =>
+          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+        )
+        .mkString(", ")}
          |]}
           """.stripMargin
     )
@@ -436,24 +503,29 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenAuthorisedFor(payload: String, responseBody: String): Seq[StubMapping] = {
-    List(stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .atPriority(1)
-        .withRequestBody(equalToJson(payload, true, true))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/json")
-            .withBody(responseBody))),
-    stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .atPriority(2)
-        .willReturn(aResponse()
-          .withStatus(401)
-          .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
+  def givenAuthorisedFor(payload: String, responseBody: String): Seq[StubMapping] =
+    List(
+      stubFor(
+        post(urlEqualTo("/auth/authorise"))
+          .atPriority(1)
+          .withRequestBody(equalToJson(payload, true, true))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/json")
+              .withBody(responseBody)
+          )
+      ),
+      stubFor(
+        post(urlEqualTo("/auth/authorise"))
+          .atPriority(2)
+          .willReturn(
+            aResponse()
+              .withStatus(401)
+              .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
+          )
+      )
     )
-  }
 
   case class Enrolment(serviceName: String, identifierName: String, identifierValue: String)
 }

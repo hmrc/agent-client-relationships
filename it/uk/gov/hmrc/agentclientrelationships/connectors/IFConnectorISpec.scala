@@ -20,9 +20,12 @@ import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class IFConnectorISpec
-  extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with IFStubs with DataStreamStub
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with IFStubs
+    with DataStreamStub
     with MetricTestSupport {
-
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -35,26 +38,26 @@ class IFConnectorISpec
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.if.port"                    -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.if.environment"            -> "stub",
-        "microservice.services.if.authorization-token"    -> "token",
+        "microservice.services.enrolment-store-proxy.port"     -> wireMockPort,
+        "microservice.services.tax-enrolments.port"            -> wireMockPort,
+        "microservice.services.users-groups-search.port"       -> wireMockPort,
+        "microservice.services.if.port"                        -> wireMockPort,
+        "microservice.services.auth.port"                      -> wireMockPort,
+        "microservice.services.if.environment"                 -> "stub",
+        "microservice.services.if.authorization-token"         -> "token",
         "microservice.services.if.authorization-api1171-token" -> "token",
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.copy-relationship.mtd-it"                -> true,
-        "features.copy-relationship.mtd-vat"               -> true,
-        "features.recovery-enable"                         -> false,
-        "agent.cache.size"                                 -> 1,
-        "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> false,
-        "agent.trackPage.cache.size"                       -> 1,
-        "agent.trackPage.cache.expires"                    -> "1 millis",
-        "agent.trackPage.cache.enabled"                    -> false
+        "microservice.services.agent-mapping.port"             -> wireMockPort,
+        "auditing.consumer.baseUri.host"                       -> wireMockHost,
+        "auditing.consumer.baseUri.port"                       -> wireMockPort,
+        "features.copy-relationship.mtd-it"                    -> true,
+        "features.copy-relationship.mtd-vat"                   -> true,
+        "features.recovery-enable"                             -> false,
+        "agent.cache.size"                                     -> 1,
+        "agent.cache.expires"                                  -> "1 millis",
+        "agent.cache.enabled"                                  -> false,
+        "agent.trackPage.cache.size"                           -> 1,
+        "agent.trackPage.cache.expires"                        -> "1 millis",
+        "agent.trackPage.cache.enabled"                        -> false
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -79,6 +82,7 @@ class IFConnectorISpec
     case Urn(_)     => Urn("XXTRUST12345678")
     case PptRef(_)  => PptRef("XAPPT0004567890")
     case PlrId(_)   => PlrId("XMPLR0012345678")
+    case x          => x
   }
 
   "IfConnector GetBusinessDetails" should {
@@ -159,13 +163,19 @@ class IFConnectorISpec
       verify(
         1,
         postRequestedFor(urlPathEqualTo("/registration/relationship"))
-          .withRequestBody(equalToJson(
-            s"""
-               |{
-               |"regime": "ITSA",
-               |"authProfile": "ALL00001",
-               |"relationshipType": "ZA01"
-               |}""".stripMargin, true, true)))
+          .withRequestBody(
+            equalToJson(
+              s"""
+                 |{
+                 |"regime": "ITSA",
+                 |"authProfile": "ALL00001",
+                 |"relationshipType": "ZA01"
+                 |}""".stripMargin,
+              true,
+              true
+            )
+          )
+      )
     }
 
     "request body contains regime as VATC and idType as VRN when client Id is a Vrn" in {
@@ -177,16 +187,18 @@ class IFConnectorISpec
       verify(
         1,
         postRequestedFor(urlPathEqualTo("/registration/relationship"))
-          .withRequestBody(equalToJson(
-            s"""{
-               |"regime": "VATC",
-               |"idType" : "VRN",
-               |"relationshipType" : "ZA01",
-               |"authProfile" : "ALL00001"
-               |}""".stripMargin,
-            true,
-            true
-          ))
+          .withRequestBody(
+            equalToJson(
+              s"""{
+                 |"regime": "VATC",
+                 |"idType" : "VRN",
+                 |"relationshipType" : "ZA01",
+                 |"authProfile" : "ALL00001"
+                 |}""".stripMargin,
+              true,
+              true
+            )
+          )
       )
     }
 
@@ -207,7 +219,8 @@ class IFConnectorISpec
                  |}""".stripMargin,
               true,
               true
-            ))
+            )
+          )
       )
     }
 
@@ -228,7 +241,8 @@ class IFConnectorISpec
                  |}""".stripMargin,
               true,
               true
-            ))
+            )
+          )
       )
     }
 
@@ -249,7 +263,8 @@ class IFConnectorISpec
                  |}""".stripMargin,
               true,
               true
-            ))
+            )
+          )
       )
     }
 
@@ -270,12 +285,15 @@ class IFConnectorISpec
                  |}""".stripMargin,
               true,
               true
-            ))
+            )
+          )
       )
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(ifConnector.createAgentRelationship(Eori("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(
+        ifConnector.createAgentRelationship(Eori("foo"), Arn("bar"))
+      )
     }
 
     "return nothing when IF is throwing errors" in {
@@ -326,7 +344,6 @@ class IFConnectorISpec
       await(ifConnector.deleteAgentRelationship(PlrId("foo"), Arn("bar"))).get.processingDate should not be null
     }
 
-
     "not delete relationship between agent and client and return nothing for ItSa service" in {
       givenAgentCanNotBeDeallocatedInIF(status = 404)
       givenAuditConnector()
@@ -340,7 +357,9 @@ class IFConnectorISpec
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy await(ifConnector.deleteAgentRelationship(Eori("foo"), Arn("bar")))
+      an[IllegalArgumentException] should be thrownBy await(
+        ifConnector.deleteAgentRelationship(Eori("foo"), Arn("bar"))
+      )
     }
 
     "return nothing when IF is throwing errors" in {
@@ -407,7 +426,6 @@ class IFConnectorISpec
       val result = await(ifConnector.getActiveClientRelationships(plrId))
       result.get.arn shouldBe agentARN
     }
-
 
     "return None if IF returns 404 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 404)
@@ -589,7 +607,14 @@ class IFConnectorISpec
 
   "isInactive" should {
     val noEndRelationship =
-      InactiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")), "123456789", "personal", "HMRC-MTD-VAT")
+      InactiveRelationship(
+        Arn("foo"),
+        None,
+        Some(LocalDate.parse("1111-11-11")),
+        "123456789",
+        "personal",
+        "HMRC-MTD-VAT"
+      )
     val endsBeforeCurrentDate =
       InactiveRelationship(
         Arn("foo"),
@@ -597,7 +622,8 @@ class IFConnectorISpec
         Some(LocalDate.parse("1111-11-11")),
         "123456789",
         "personal",
-        "HMRC-MTD-VAT")
+        "HMRC-MTD-VAT"
+      )
     val endsAtCurrentDateRelationship =
       InactiveRelationship(
         Arn("foo"),
@@ -605,7 +631,8 @@ class IFConnectorISpec
         Some(LocalDate.parse("1111-11-11")),
         "123456789",
         "personal",
-        "HMRC-MTD-VAT")
+        "HMRC-MTD-VAT"
+      )
 
     "return false when the relationship is active" in {
       givenAuditConnector()
@@ -749,7 +776,13 @@ class IFConnectorISpec
     }
 
     "return empty Seq if IF returns 403 and body AGENT_SUSPENDED" in {
-      getFailInactiveRelationshipsForClient(mtdItId, 403, Some(s""""{"code":"AGENT_SUSPENDED","reason":"The remote endpoint has indicated that the agent is suspended"}"""))
+      getFailInactiveRelationshipsForClient(
+        mtdItId,
+        403,
+        Some(
+          s""""{"code":"AGENT_SUSPENDED","reason":"The remote endpoint has indicated that the agent is suspended"}"""
+        )
+      )
       givenAuditConnector()
       val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
@@ -762,4 +795,3 @@ class IFConnectorISpec
     }
   }
 }
-

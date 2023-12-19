@@ -7,8 +7,9 @@ import scala.reflect.ClassTag
 
 trait JsonMatchers {
 
-  def haveProperty[T: Reads](name: String, matcher: Matcher[T] = null)(
-    implicit classTag: ClassTag[T]): Matcher[JsObject] =
+  def haveProperty[T: Reads](name: String, matcher: Matcher[T] = null)(implicit
+    classTag: ClassTag[T]
+  ): Matcher[JsObject] =
     new Matcher[JsObject] {
       override def apply(obj: JsObject): MatchResult =
         (obj \ name).asOpt[T] match {
@@ -21,7 +22,8 @@ trait JsonMatchers {
                   rawFailureMessage = s"at `$name` ${x.rawFailureMessage}",
                   rawMidSentenceFailureMessage = s"at `$name` ${x.rawMidSentenceFailureMessage}"
                 )
-            } else MatchResult(true, "", s"JSON have property `$name`")
+            }
+            else MatchResult(true, "", s"JSON have property `$name`")
           case _ =>
             MatchResult(
               false,
@@ -33,8 +35,9 @@ trait JsonMatchers {
         }
     }
 
-  def havePropertyArrayOf[T: Reads](name: String, matcher: Matcher[T] = null)(
-    implicit classTag: ClassTag[T]): Matcher[JsObject] =
+  def havePropertyArrayOf[T: Reads](name: String, matcher: Matcher[T] = null)(implicit
+    classTag: ClassTag[T]
+  ): Matcher[JsObject] =
     new Matcher[JsObject] {
       override def apply(obj: JsObject): MatchResult =
         (obj \ name).asOpt[JsArray] match {
@@ -84,7 +87,8 @@ trait JsonMatchers {
       MatchResult(
         values.contains(left),
         s"$left is an unexpected value, should be one of ${values.mkString("[", ",", "]")}",
-        s"$left was expected")
+        s"$left was expected"
+      )
   }
 
 }

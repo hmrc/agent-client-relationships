@@ -29,20 +29,19 @@ import scala.concurrent.{ExecutionContext, Future}
 case class AgentUser(userId: String, groupId: String, agentCode: AgentCode, arn: Arn)
 
 @Singleton
-class AgentUserService @Inject()(
+class AgentUserService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ugs: UsersGroupsSearchConnector,
-  agentCacheProvider: AgentCacheProvider)
-    extends Logging {
+  agentCacheProvider: AgentCacheProvider
+) extends Logging {
 
   val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache
   val groupInfoCache = agentCacheProvider.ugsGroupInfoCache
 
-  def getAgentAdminUserFor(arn: Arn)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Either[String, AgentUser]] =
+  def getAgentAdminUserFor(
+    arn: Arn
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, AgentUser]] =
     for {
       agentGroupId   <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
       firstAdminUser <- firstGroupAdminCache(agentGroupId)(ugs.getFirstGroupAdminUser(agentGroupId))
@@ -51,17 +50,16 @@ class AgentUserService @Inject()(
       groupInfo <- groupInfoCache(agentGroupId)(ugs.getGroupInfo(agentGroupId))
       agentCode = groupInfo.flatMap(_.agentCode)
       _ = agentCode.foreach(auditData.set("agentCode", _))
-    } yield
-      (adminUserId, groupInfo, agentCode) match {
-        case (Some(userId), Some(_), Some(code)) => Right(AgentUser(userId, agentGroupId, code, arn))
-        case (None, _, _) =>
-          logger.warn(s"Admin user had no userId for Arn: $arn")
-          Left("NO_ADMIN_USER")
-        case (Some(userId), None, _) =>
-          logger.warn(s"Missing Group for Arn: $arn and admin user: $userId")
-          Left("MISSING_GROUP")
-        case (_, Some(groupInfo), None) =>
-          logger.warn(s"Missing AgentCode for Arn: $arn and group: ${groupInfo.groupId}")
-          Left("NO_AGENT_CODE")
-      }
+    } yield (adminUserId, groupInfo, agentCode) match {
+      case (Some(userId), Some(_), Some(code)) => Right(AgentUser(userId, agentGroupId, code, arn))
+      case (None, _, _) =>
+        logger.warn(s"Admin user had no userId for Arn: $arn")
+        Left("NO_ADMIN_USER")
+      case (Some(userId), None, _) =>
+        logger.warn(s"Missing Group for Arn: $arn and admin user: $userId")
+        Left("MISSING_GROUP")
+      case (_, Some(groupInfo), None) =>
+        logger.warn(s"Missing AgentCode for Arn: $arn and group: ${groupInfo.groupId}")
+        Left("NO_AGENT_CODE")
+    }
 }

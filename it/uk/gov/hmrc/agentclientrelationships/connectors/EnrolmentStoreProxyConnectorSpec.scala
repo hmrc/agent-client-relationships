@@ -35,22 +35,22 @@ class EnrolmentStoreProxyConnectorSpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "microservice.services.users-groups-search.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "features.copy-relationship.mtd-it" -> true,
-        "features.copy-relationship.mtd-vat" -> true,
-        "features.recovery-enable" -> false,
-        "agent.cache.size" -> 1,
-        "agent.cache.expires" -> "1 millis",
-        "agent.cache.enabled" -> true,
-        "agent.trackPage.cache.size" -> 1,
-        "agent.trackPage.cache.expires" -> "1 millis",
-        "agent.trackPage.cache.enabled" -> true
+        "microservice.services.tax-enrolments.port"        -> wireMockPort,
+        "microservice.services.users-groups-search.port"   -> wireMockPort,
+        "microservice.services.des.port"                   -> wireMockPort,
+        "microservice.services.auth.port"                  -> wireMockPort,
+        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "auditing.consumer.baseUri.host"                   -> wireMockHost,
+        "auditing.consumer.baseUri.port"                   -> wireMockPort,
+        "features.copy-relationship.mtd-it"                -> true,
+        "features.copy-relationship.mtd-vat"               -> true,
+        "features.recovery-enable"                         -> false,
+        "agent.cache.size"                                 -> 1,
+        "agent.cache.expires"                              -> "1 millis",
+        "agent.cache.enabled"                              -> true,
+        "agent.trackPage.cache.size"                       -> 1,
+        "agent.trackPage.cache.expires"                    -> "1 millis",
+        "agent.trackPage.cache.enabled"                    -> true
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -138,14 +138,18 @@ class EnrolmentStoreProxyConnectorSpec
       val cbcId = CbcId("XACBC4940653845")
       val expectedUtr = "1172123849"
       givenCbcUkExistsInES(cbcId, expectedUtr)
-      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain (Identifier("UTR", expectedUtr))
+      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain(
+        Identifier("UTR", expectedUtr)
+      )
     }
 
     "return some utr for plrId (known fact)" in {
       val cbcId = CbcId("XACBC4940653845")
       val expectedUtr = "1172123849"
       givenCbcUkExistsInES(cbcId, expectedUtr)
-      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain (Identifier("UTR", expectedUtr))
+      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain(
+        Identifier("UTR", expectedUtr)
+      )
     }
   }
 

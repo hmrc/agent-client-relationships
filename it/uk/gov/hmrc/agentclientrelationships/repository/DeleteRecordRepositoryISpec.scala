@@ -30,7 +30,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    await(repo.ensureIndexes)
+    await(repo.ensureIndexes())
     ()
   }
 
@@ -61,7 +61,8 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
 
       val findResult3 = await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey))
       findResult3 shouldBe Some(
-        deleteRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToESStatus = Some(SyncStatus.Success)))
+        deleteRecord.copy(syncToETMPStatus = Some(SyncStatus.Success), syncToESStatus = Some(SyncStatus.Success))
+      )
 
       val removeResult = await(repo.remove(Arn("TARN0000001"), vatEnrolmentKey))
       removeResult shouldBe 1
@@ -131,7 +132,8 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
         Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000002"))),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
-        lastRecoveryAttempt = None)
+        lastRecoveryAttempt = None
+      )
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
         Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
@@ -194,7 +196,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       clientIdentifier = Some("ABCDEF0000000001"),
       clientIdentifierType = Some("MTDITID"),
       syncToETMPStatus = Some(Failed),
-      syncToESStatus = Some(Failed),
+      syncToESStatus = Some(Failed)
     )
     val deleteRecord2 = DeleteRecord(
       "TARN0000001",
@@ -202,7 +204,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       clientIdentifier = Some("123456789"),
       clientIdentifierType = Some("VRN"),
       syncToETMPStatus = Some(Failed),
-      syncToESStatus = Some(Failed),
+      syncToESStatus = Some(Failed)
     )
     val deleteRecord3 = DeleteRecord(
       "TARN0000002",
@@ -210,7 +212,7 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       clientIdentifier = Some("ABCDEF0000000001"),
       clientIdentifierType = Some("MTDITID"),
       syncToETMPStatus = Some(Failed),
-      syncToESStatus = Some(Failed),
+      syncToESStatus = Some(Failed)
     )
 
     val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))
@@ -232,9 +234,15 @@ class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAp
       await(repo.collection.insertOne(deleteRecord3).toFuture())
       await(repo.updateEsSyncStatus(Arn("TARN0000001"), mtdItEnrolmentKey, Success))
       await(repo.updateEtmpSyncStatus(Arn("TARN0000001"), vatEnrolmentKey, Success))
-      await(repo.updateEsSyncStatus(Arn("TARN0000002"), vatEnrolmentKey, Success)) // This one should do nothing as the record does not exist
-      await(repo.findBy(Arn("TARN0000001"), mtdItEnrolmentKey)) shouldBe Some(deleteRecord1.copy(syncToESStatus = Some(Success)))
-      await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey)) shouldBe Some(deleteRecord2.copy(syncToETMPStatus = Some(Success)))
+      await(
+        repo.updateEsSyncStatus(Arn("TARN0000002"), vatEnrolmentKey, Success)
+      ) // This one should do nothing as the record does not exist
+      await(repo.findBy(Arn("TARN0000001"), mtdItEnrolmentKey)) shouldBe Some(
+        deleteRecord1.copy(syncToESStatus = Some(Success))
+      )
+      await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey)) shouldBe Some(
+        deleteRecord2.copy(syncToETMPStatus = Some(Success))
+      )
       await(repo.findBy(Arn("TARN0000002"), mtdItEnrolmentKey)) shouldBe Some(deleteRecord3)
     }
 

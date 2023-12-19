@@ -40,9 +40,9 @@ import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCacheProvider: AgentCacheProvider)(
-  implicit val appConfig: AppConfig)
-    extends HttpAPIMonitor
+class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCacheProvider: AgentCacheProvider)(implicit
+  val appConfig: AppConfig
+) extends HttpAPIMonitor
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -65,7 +65,8 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     case None => false
     case Some(d) =>
       d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) || d.equals(
-        Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
+        Instant.now().atZone(ZoneOffset.UTC).toLocalDate
+      )
   }
 
   private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {
@@ -73,36 +74,45 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+        )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+        )
       case Utr(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
       case Urn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+        )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+        )
       case CbcId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}")
+          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 
     }
   }
 
   // IF API #1168
-  def getActiveClientRelationships(taxIdentifier: TaxIdentifier)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+  def getActiveClientRelationships(
+    taxIdentifier: TaxIdentifier
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
     val url = getActiveClientRelationshipsUrl(taxIdentifier)
     getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
@@ -119,9 +129,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
   }
 
   // IF API #1168
-  def getInactiveClientRelationships(taxIdentifier: TaxIdentifier)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+  def getInactiveClientRelationships(
+    taxIdentifier: TaxIdentifier
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
 
     val url = inactiveClientRelationshipIFUrl(taxIdentifier, encodedClientId)
@@ -142,13 +152,15 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
 
   // IF API #1168 (for agent)
   def getInactiveRelationships(
-    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+    arn: Arn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDays).toString
     val regime = "AGSV"
     val url = new URL(
-      s"$ifBaseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=$regime&from=$from&to=$now")
+      s"$ifBaseUrl/registration/relationship?arn=$encodedAgentId&agent=true&active-only=false&regime=$regime&from=$from&to=$now"
+    )
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
@@ -168,9 +180,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
   }
 
   // IF API #1167 Create/Update Agent Relationship
-  def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Option[RegistrationRelationshipResponse]] = {
+  def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$ifBaseUrl/registration/relationship")
     val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, clientId)
@@ -187,9 +200,10 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
   }
 
   // IF API #1167 Create/Update Agent Relationship
-  def deleteAgentRelationship(clientId: TaxIdentifier, arn: Arn)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Option[RegistrationRelationshipResponse]] = {
+  def deleteAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$ifBaseUrl/registration/relationship")
     postWithIFHeaders(
@@ -197,7 +211,8 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
       url,
       deleteAgentRelationshipInputJson(clientId.value, arn.value, clientId),
       ifAuthToken,
-      ifEnv).map { response =>
+      ifEnv
+    ).map { response =>
       response.status match {
         case Status.OK => Option(response.json.as[RegistrationRelationshipResponse])
         case other: Int =>
@@ -250,56 +265,60 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+        )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+        )
       case Utr(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now")
+          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+        )
       case Urn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now")
+          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+        )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+        )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001")
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+        )
       case CbcId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now")
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+        )
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier)}&from=$from&to=$now")
+          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+        )
+      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 
     }
   }
 
-  private def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] =
+  private def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
       httpClient.GET(url.toString, Nil, ifHeaders(authToken, env))(implicitly[HttpReads[HttpResponse]], hc, ec)
     }
 
-  private def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] =
+  private def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-POST") {
       httpClient.POST(url.toString, body, ifHeaders(authToken, env))(
         implicitly[Writes[JsValue]],
         implicitly[HttpReads[HttpResponse]],
         hc,
-        ec)
+        ec
+      )
     }
 
   private def ifHeaders(authToken: String, env: String) = Seq(
@@ -322,7 +341,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
     }
 
   private def createAgentRelationshipInputJson(referenceNumber: String, agentRefNum: String, clientId: TaxIdentifier) =
-    includeIdTypeIfNeeded(clientId)(Json.parse(s"""{
+    includeIdTypeIfNeeded(clientId)(
+      Json
+        .parse(s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "agentReferenceNumber": "$agentRefNum",
           "refNumber": "$referenceNumber",
@@ -331,10 +352,14 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
             "action": "Authorise",
             "isExclusiveAgent": true
           }
-       }""").as[JsObject])
+       }""")
+        .as[JsObject]
+    )
 
   private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String, clientId: TaxIdentifier) =
-    includeIdTypeIfNeeded(clientId)(Json.parse(s"""{
+    includeIdTypeIfNeeded(clientId)(
+      Json
+        .parse(s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
           "refNumber": "$refNum",
           "agentReferenceNumber": "$agentRefNum",
@@ -342,7 +367,9 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
           "authorisation": {
             "action": "De-Authorise"
           }
-     }""").as[JsObject])
+     }""")
+        .as[JsObject]
+    )
 
   private val includeIdTypeIfNeeded: TaxIdentifier => JsObject => JsObject = (clientId: TaxIdentifier) => { request =>
     (request \ "regime").asOpt[String] match {

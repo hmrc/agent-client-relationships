@@ -31,29 +31,32 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class FindRelationshipsService @Inject()(
+class FindRelationshipsService @Inject() (
   des: DesConnector,
   ifConnector: IFConnector,
   appConfig: AppConfig,
-  val metrics: Metrics)
-    extends Monitoring
+  val metrics: Metrics
+) extends Monitoring
     with Logging {
 
   def getItsaRelationshipForClient(
-    nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
+    nino: Nino
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     for {
       mtdItId <- ifConnector.getMtdIdFor(nino)
-      relationships <- mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
-                        ifConnector.getActiveClientRelationships(_))
+      relationships <-
+        mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(ifConnector.getActiveClientRelationships(_))
     } yield relationships
 
-  def getActiveRelationshipsForClient(taxIdentifier: TaxIdentifier)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Option[ActiveRelationship]] =
+  def getActiveRelationshipsForClient(
+    taxIdentifier: TaxIdentifier
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     // If the tax id type is among one of the supported ones...
-    if (appConfig.supportedServices
-          .map(_.supportedClientIdType.enrolmentId)
-          .contains(ClientIdentifier(taxIdentifier).enrolmentId))
+    if (
+      appConfig.supportedServices
+        .map(_.supportedClientIdType.enrolmentId)
+        .contains(ClientIdentifier(taxIdentifier).enrolmentId)
+    )
       ifConnector.getActiveClientRelationships(taxIdentifier)
     else {
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
@@ -61,12 +64,13 @@ class FindRelationshipsService @Inject()(
     }
 
   def getInactiveRelationshipsForAgent(
-    arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+    arn: Arn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     ifConnector.getInactiveRelationships(arn)
 
-  def getActiveRelationshipsForClient(identifiers: Map[Service, TaxIdentifier])(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Map[Service, Seq[Arn]]] =
+  def getActiveRelationshipsForClient(
+    identifiers: Map[Service, TaxIdentifier]
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Map[Service, Seq[Arn]]] =
     Future
       .traverse(appConfig.supportedServices) { service =>
         identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
@@ -75,11 +79,11 @@ class FindRelationshipsService @Inject()(
           case None => Future.successful(None)
         }
       }
-      .map(_.collect { case Some(x) => x }.groupBy(_._1).mapValues(_.map(_._2)))
+      .map(_.collect { case Some(x) => x }.groupBy(_._1).map { case (k, v) => (k, v.map(_._2)) })
 
-  def getInactiveRelationshipsForClient(identifiers: Map[Service, TaxIdentifier])(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+  def getInactiveRelationshipsForClient(
+    identifiers: Map[Service, TaxIdentifier]
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     Future
       .traverse(appConfig.supportedServices) { service =>
         identifiers.get(service) match {
@@ -90,10 +94,14 @@ class FindRelationshipsService @Inject()(
       .map(_.flatten)
 
   def getInactiveRelationshipsForClient(
-    taxIdentifier: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+    taxIdentifier: TaxIdentifier
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     // if it is one of the tax ids that we support...
-    if (appConfig.supportedServices.exists(
-          _.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId)) {
+    if (
+      appConfig.supportedServices.exists(
+        _.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId
+      )
+    ) {
       ifConnector.getInactiveClientRelationships(taxIdentifier)
     } else { // otherwise...
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")

@@ -26,14 +26,14 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @Singleton
-class CreateRelationshipsService @Inject()(
+class CreateRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ifConnector: IFConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
@@ -41,20 +41,18 @@ class CreateRelationshipsService @Inject()(
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  val metrics: Metrics)
-    extends Monitoring
+  val metrics: Metrics
+) extends Monitoring
     with Logging {
 
-  //noinspection ScalaStyle
+  // noinspection ScalaStyle
   def createRelationship(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     oldReferences: Set[RelationshipReference],
     failIfCreateRecordFails: Boolean,
-    failIfAllocateAgentInESFails: Boolean)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Option[DbUpdateStatus]] =
+    failIfAllocateAgentInESFails: Boolean
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
       .tryLock(arn, enrolmentKey) {
         auditData.set("AgentDBRecord", false)
@@ -65,19 +63,19 @@ class CreateRelationshipsService @Inject()(
           val record = RelationshipCopyRecord(
             arn.value,
             Some(enrolmentKey), // APB-7215 added to accommodate multiple identifiers
-            references = Some(oldReferences))
+            references = Some(oldReferences)
+          )
           relationshipCopyRepository
             .create(record)
-            .map(count => {
+            .map { count =>
               auditData.set("AgentDBRecord", true)
               convertDbUpdateStatus(count)
-            })
-            .recoverWith {
-              case NonFatal(ex) =>
-                logger
-                  .warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${enrolmentKey.tag}", ex)
-                if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
-                else Future.successful(DbUpdateFailed)
+            }
+            .recoverWith { case NonFatal(ex) =>
+              logger
+                .warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${enrolmentKey.tag}", ex)
+              if (failIfCreateRecordFails) Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
+              else Future.successful(DbUpdateFailed)
             }
         }
 
@@ -91,10 +89,11 @@ class CreateRelationshipsService @Inject()(
         } yield esRecordCreationStatus
       }
 
-  private def createEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
+  private def createEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[DbUpdateStatus] = {
+    auditData: AuditData
+  ): Future[DbUpdateStatus] = {
     val updateEtmpSyncStatus = relationshipCopyRepository
       .updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus)
       .map(convertDbUpdateStatus)
@@ -107,30 +106,32 @@ class CreateRelationshipsService @Inject()(
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- ifConnector.createAgentRelationship(enrolmentKey.oneTaxIdentifier(), arn) // TODO DG this may not return what we want
+      maybeResponse <-
+        ifConnector
+          .createAgentRelationship(enrolmentKey.oneTaxIdentifier(), arn) // TODO DG this may not return what we want
       if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipCreated", true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)
       .recoverWith {
-        case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
+        case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, headers)
+            if e.statusCode >= 500 && e.statusCode < 600 =>
           recoverFromException(
             e,
-            UpstreamErrorResponse(s"RELATIONSHIP_CREATE_FAILED_IF", upstreamCode, reportAs, headers))
+            UpstreamErrorResponse(s"RELATIONSHIP_CREATE_FAILED_IF", upstreamCode, reportAs, headers)
+          )
         case NonFatal(ex) =>
           recoverFromException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_IF"))
       }
   }
 
-  //noinspection ScalaStyle
+  // noinspection ScalaStyle
   private def createEsRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     agentUser: AgentUser,
-    failIfAllocateAgentInESFails: Boolean)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[DbUpdateStatus] = {
+    failIfAllocateAgentInESFails: Boolean
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[DbUpdateStatus] = {
 
     def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
       relationshipCopyRepository
@@ -149,18 +150,18 @@ class CreateRelationshipsService @Inject()(
       case RelationshipNotFound(errorCode) =>
         logger.warn(
           s"Creating ES record for ${arn.value}, ${enrolmentKey.tag} " +
-            s"not possible because of incomplete data: $errorCode")
+            s"not possible because of incomplete data: $errorCode"
+        )
         updateEsSyncStatus(IncompleteInputParams).map(_ => DbUpdateFailed)
     }
 
     val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case e @ Upstream5xxResponse(_, upstreamCode, reportAs, headers) =>
+      case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, headers) if e.statusCode >= 500 && e.statusCode < 600 =>
         logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_CREATE_FAILED_ES", upstreamCode, reportAs, headers))
     }
 
-    val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case NonFatal(ex) =>
-        logAndMaybeFail(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
+    val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = { case NonFatal(ex) =>
+      logAndMaybeFail(ex, new Exception("RELATIONSHIP_CREATE_FAILED_ES"))
     }
 
     (for {
@@ -175,72 +176,75 @@ class CreateRelationshipsService @Inject()(
       .recoverWith(
         recoverAgentUserRelationshipNotFound
           .orElse(recoverUpstream5xx)
-          .orElse(recoverNonFatal))
+          .orElse(recoverNonFatal)
+      )
   }
 
-  //noinspection ScalaStyle
-  def deallocatePreviousRelationship(newArn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Unit] =
+  // noinspection ScalaStyle
+  def deallocatePreviousRelationship(newArn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit] =
     for {
       existingAgents <- es.getDelegatedGroupIdsFor(enrolmentKey)
       _ <- Future.sequence(existingAgents.map { groupId =>
-            (for {
-              maybeArn <- es.getAgentReferenceNumberFor(groupId)
-              _ <- maybeArn match {
-                    case None =>
-                      logger.warn(s"Arn not found for provided groupId: $groupId")
-                      Future.successful(())
-                    case Some(arnToRemove) =>
-                      val deleteRecord = DeleteRecord(
-                        arnToRemove.value,
-                        Some(enrolmentKey),
-                        syncToETMPStatus = Some(Success),
-                        headerCarrier = Some(hc)
-                      )
-                      deleteRecordRepository
-                        .create(deleteRecord)
-                        .map(convertDbUpdateStatus)
-                        .recover {
-                          case NonFatal(ex) =>
+             (for {
+               maybeArn <- es.getAgentReferenceNumberFor(groupId)
+               _ <- maybeArn match {
+                      case None =>
+                        logger.warn(s"Arn not found for provided groupId: $groupId")
+                        Future.successful(())
+                      case Some(arnToRemove) =>
+                        val deleteRecord = DeleteRecord(
+                          arnToRemove.value,
+                          Some(enrolmentKey),
+                          syncToETMPStatus = Some(Success),
+                          headerCarrier = Some(hc)
+                        )
+                        deleteRecordRepository
+                          .create(deleteRecord)
+                          .map(convertDbUpdateStatus)
+                          .recover { case NonFatal(ex) =>
                             logger.warn(
                               s"Inserting delete record into mongo failed for ${newArn.value}, ${enrolmentKey.tag}",
-                              ex)
+                              ex
+                            )
                             DbUpdateFailed
-                        }
-                  }
-              _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)
-              _ <- maybeArn match {
-                    case None => Future successful (())
-                    case Some(removedArn) =>
-                      deleteRecordRepository
-                        .remove(removedArn, enrolmentKey)
-                        .map(_ > 0)
-                        .recoverWith {
-                          case NonFatal(ex) =>
+                          }
+                    }
+               _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)
+               _ <- maybeArn match {
+                      case None => Future successful (())
+                      case Some(removedArn) =>
+                        deleteRecordRepository
+                          .remove(removedArn, enrolmentKey)
+                          .map(_ > 0)
+                          .recoverWith { case NonFatal(ex) =>
                             logger.warn(
                               s"Removing delete record from mongo failed for ${removedArn.value}, ${enrolmentKey.tag}",
-                              ex)
+                              ex
+                            )
                             Future.successful(false)
-                        }
-                  }
-            } yield ()).recover {
-              case NonFatal(ex) =>
-                logger.error(s"Could not deallocate previous relationship because of: $ex. Will try later.")
-            }
-          })
+                          }
+                    }
+             } yield ()).recover { case NonFatal(ex) =>
+               logger.error(s"Could not deallocate previous relationship because of: $ex. Will try later.")
+             }
+           })
     } yield ()
 
   private def retrieveAgentUser(
-    arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
+    arn: Arn
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
     agentUserService.getAgentAdminUserFor(arn).map {
-      _.right.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
+      _.toOption.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
     }
 
-  def resumeRelationshipCreation(relationshipCopyRecord: RelationshipCopyRecord, arn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Option[DbUpdateStatus]] =
+  def resumeRelationshipCreation(
+    relationshipCopyRecord: RelationshipCopyRecord,
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
       .tryLock(arn, enrolmentKey) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
@@ -259,11 +263,13 @@ class CreateRelationshipsService @Inject()(
           case (true, false) =>
             logger.warn(
               s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
-                s"This should not happen because we always create the ETMP relationship first,")
+                s"This should not happen because we always create the ETMP relationship first,"
+            )
             createEtmpRecord(arn, enrolmentKey)
           case (false, false) =>
             logger.warn(
-              s"recoverRelationshipCreation called for ${arn.value}, ${enrolmentKey.tag} when no recovery needed")
+              s"recoverRelationshipCreation called for ${arn.value}, ${enrolmentKey.tag} when no recovery needed"
+            )
             Future.successful(DbUpdateFailed)
         }
       }

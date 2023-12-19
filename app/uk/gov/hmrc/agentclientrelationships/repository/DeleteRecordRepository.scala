@@ -48,7 +48,8 @@ case class DeleteRecord(
   lastRecoveryAttempt: Option[LocalDateTime] = None,
   numberOfAttempts: Int = 0,
   headerCarrier: Option[HeaderCarrier] = None,
-  relationshipEndedBy: Option[String] = None) {
+  relationshipEndedBy: Option[String] = None
+) {
 
   // Legacy records use client id & client id type. Newer records use enrolment key.
   require(enrolmentKey.isDefined || (clientIdentifier.isDefined && clientIdentifierType.isDefined))
@@ -72,9 +73,10 @@ object DeleteRecord {
           "authorization" -> hc.authorization.map(_.value),
           "sessionId"     -> hc.sessionId.map(_.value),
           "gaToken"       -> hc.gaToken
-        ).collect {
-          case (key, Some(value)) => (key, JsString(value))
-        })
+        ).collect { case (key, Some(value)) =>
+          (key, JsString(value))
+        }
+      )
   }
 
   import play.api.libs.functional.syntax._
@@ -102,7 +104,7 @@ trait DeleteRecordRepository {
 }
 
 @Singleton
-class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[DeleteRecord](
       mongoComponent = mongoComponent,
       collectionName = "delete-record",
@@ -141,7 +143,8 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
         else {
           logger.warn("Creating DeleteRecord failed.")
           INDICATE_ERROR_DURING_DB_UPDATE
-      })
+        }
+      )
 
   override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]] =
     collection.find(filter(arn, enrolmentKey)).headOption()
@@ -150,19 +153,19 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
     collection
       .updateOne(filter(arn, enrolmentKey), set("syncToETMPStatus", status.toString), UpdateOptions().upsert(false))
       .toFuture()
-      .map(updateResult => {
+      .map { updateResult =>
         if (updateResult.getModifiedCount != 1L) logger.warn(s"Updating ETMP sync status ($status) failed")
         updateResult.getModifiedCount.toInt
-      })
+      }
 
   override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
     collection
       .updateOne(filter(arn, enrolmentKey), set("syncToESStatus", status.toString), UpdateOptions().upsert(false))
       .toFuture()
-      .map(updateResult => {
+      .map { updateResult =>
         if (updateResult.getModifiedCount != 1L) logger.warn(s"Updating ES sync status ($status) failed")
         updateResult.getModifiedCount.toInt
-      })
+      }
 
   override def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit] =
     collection
@@ -170,7 +173,8 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
         filter(arn, enrolmentKey),
         combine(
           set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
-          inc("numberOfAttempts", 1))
+          inc("numberOfAttempts", 1)
+        )
       )
       .toFuture()
       .map(_ => ())
@@ -192,8 +196,8 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
       .deleteMany(equal("arn", arn.value))
       .toFuture()
       .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
-      .recover {
-        case e: MongoWriteException => Left(e.getMessage)
+      .recover { case e: MongoWriteException =>
+        Left(e.getMessage)
       }
 
   private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
@@ -208,7 +212,7 @@ class MongoDeleteRecordRepository @Inject()(mongoComponent: MongoComponent)(impl
         Filters.equal("arn", arn.value),
         Filters.equal("clientIdentifier", identifier),
         Filters.equal("clientIdentifierType", identifierType)
-      ),
+      )
     )
   }
 }

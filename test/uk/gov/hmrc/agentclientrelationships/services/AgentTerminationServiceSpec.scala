@@ -47,7 +47,10 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
       TerminationResponse(
         Seq(
           DeletionCount("agent-client-relationships", "delete-record", 1),
-          DeletionCount("agent-client-relationships", "relationship-copy-record", 1))))
+          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)
+        )
+      )
+    )
   }
 
   it should "handle error from DeleteRecordRepository" in {

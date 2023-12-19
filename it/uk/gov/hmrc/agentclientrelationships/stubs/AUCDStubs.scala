@@ -11,7 +11,10 @@ trait AUCDStubs {
   def givenCacheRefresh(arn: Arn, response: Int = 204) =
     stubFor(
       get(urlEqualTo(s"/agent-user-client-details/arn/${arn.value}/cache-refresh"))
-        .willReturn(aResponse()
-          .withStatus(response)))
+        .willReturn(
+          aResponse()
+            .withStatus(response)
+        )
+    )
 
 }

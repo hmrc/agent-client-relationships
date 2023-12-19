@@ -48,7 +48,7 @@ trait RecoveryScheduleRepository {
 }
 
 @Singleton
-class MongoRecoveryScheduleRepository @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class MongoRecoveryScheduleRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[RecoveryRecord](
       mongoComponent = mongoComponent,
       collectionName = "recovery-schedule",
@@ -64,15 +64,15 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: MongoComponent)(
   override def read: Future[RecoveryRecord] =
     collection.find().headOption().flatMap {
       case Some(record) => Future successful record
-      case None => {
-        val record =
-          RecoveryRecord(UUID.randomUUID().toString, LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime)
-        collection.insertOne(record).toFuture.map(_ => record)
-      }.recoverWith {
-        case NonFatal(error) =>
+      case None =>
+        {
+          val record =
+            RecoveryRecord(UUID.randomUUID().toString, LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime)
+          collection.insertOne(record).toFuture().map(_ => record)
+        }.recoverWith { case NonFatal(error) =>
           logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
           Future.failed(error)
-      }
+        }
     }
 
   override def write(newUid: String, newRunAt: LocalDateTime): Future[Unit] =
@@ -80,7 +80,8 @@ class MongoRecoveryScheduleRepository @Inject()(mongoComponent: MongoComponent)(
       .findOneAndUpdate(
         Filters.exists("uid"),
         Updates.combine(set("uid", newUid), set("runAt", newRunAt)),
-        FindOneAndUpdateOptions().upsert(true))
+        FindOneAndUpdateOptions().upsert(true)
+      )
       .toFuture()
       .map(_ => ())
 

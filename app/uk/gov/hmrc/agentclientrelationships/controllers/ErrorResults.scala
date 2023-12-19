@@ -29,7 +29,9 @@ object ErrorResults {
   }
 
   val GenericUnauthorized = Unauthorized(
-    toJson(ErrorBody("UNAUTHENTICATED", "Bearer token is missing or not authorized.")))
+    toJson(ErrorBody("UNAUTHENTICATED", "Bearer token is missing or not authorized."))
+  )
   val NoPermissionToPerformOperation = Forbidden(
-    toJson(ErrorBody("NO_PERMISSION", "The logged in user is not permitted to perform the operation.")))
+    toJson(ErrorBody("NO_PERMISSION", "The logged in user is not permitted to perform the operation."))
+  )
 }

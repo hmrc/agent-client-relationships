@@ -37,7 +37,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class TestRelationshipCopyRecordRepository @Inject()(moduleComponent: MongoComponent)
+class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
     extends MongoRelationshipCopyRecordRepository(moduleComponent) {
   override def create(record: RelationshipCopyRecord): Future[Int] =
     Future.failed(new Exception("Could not connect the mongo db."))
@@ -50,7 +50,7 @@ class RelationshipsControllerWithoutMongoISpec
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
-      with IFStubs
+    with IFStubs
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
@@ -63,21 +63,21 @@ class RelationshipsControllerWithoutMongoISpec
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
-        "microservice.services.if.port"                     -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
+        "microservice.services.tax-enrolments.port"             -> wireMockPort,
+        "microservice.services.users-groups-search.port"        -> wireMockPort,
+        "microservice.services.des.port"                        -> wireMockPort,
+        "microservice.services.if.port"                         -> wireMockPort,
+        "microservice.services.auth.port"                       -> wireMockPort,
+        "microservice.services.agent-mapping.port"              -> wireMockPort,
         "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.recovery-enable"                         -> false,
-        "agent.cache.size"                                 -> 1,
-        "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> true,
-        "mongodb.uri"                                      -> mongoUri
+        "auditing.consumer.baseUri.host"                        -> wireMockHost,
+        "auditing.consumer.baseUri.port"                        -> wireMockPort,
+        "features.recovery-enable"                              -> false,
+        "agent.cache.size"                                      -> 1,
+        "agent.cache.expires"                                   -> "1 millis",
+        "agent.cache.enabled"                                   -> true,
+        "mongodb.uri"                                           -> mongoUri
       )
       .overrides(new AbstractModule {
         override def configure(): Unit = {
@@ -91,7 +91,7 @@ class RelationshipsControllerWithoutMongoISpec
 
   def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
-  override def beforeEach() {
+  override def beforeEach() = {
     super.beforeEach()
     prepareDatabase()
     ()
@@ -153,11 +153,7 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map(
-          "arn"                      -> arn.value,
-          "nino"                     -> nino.value,
-          "saAgentRef"               -> "foo",
-          "CESARelationship"         -> "true"),
+        detail = Map("arn" -> arn.value, "nino" -> nino.value, "saAgentRef" -> "foo", "CESARelationship" -> "true"),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }
@@ -207,11 +203,8 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
-        detail = Map(
-          "arn"                      -> arn.value,
-          "ESRelationship"           -> "true",
-          "vrn"                      -> vrn.value,
-          "oldAgentCodes"            -> oldAgentCode),
+        detail =
+          Map("arn" -> arn.value, "ESRelationship" -> "true", "vrn" -> vrn.value, "oldAgentCodes" -> oldAgentCode),
         tags = Map("transactionName" -> "check-es", "path" -> requestPath)
       )
     }
@@ -241,7 +234,7 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "foo", "CESARelationship" -> "true"),
+        detail = Map("arn" -> arn.value, "nino" -> nino.value, "saAgentRef" -> "foo", "CESARelationship" -> "true"),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }
@@ -264,7 +257,13 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "", "CESARelationship" -> "false", "partialAuth" -> "true"),
+        detail = Map(
+          "arn"              -> arn.value,
+          "nino"             -> nino.value,
+          "saAgentRef"       -> "",
+          "CESARelationship" -> "false",
+          "partialAuth"      -> "true"
+        ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }
@@ -287,7 +286,13 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "", "CESARelationship" -> "false", "partialAuth" -> "false"),
+        detail = Map(
+          "arn"              -> arn.value,
+          "nino"             -> nino.value,
+          "saAgentRef"       -> "",
+          "CESARelationship" -> "false",
+          "partialAuth"      -> "false"
+        ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }
@@ -310,7 +315,13 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map("arn"           -> arn.value, "nino"    -> nino.value, "saAgentRef" -> "", "CESARelationship" -> "false", "partialAuth" -> "false"),
+        detail = Map(
+          "arn"              -> arn.value,
+          "nino"             -> nino.value,
+          "saAgentRef"       -> "",
+          "CESARelationship" -> "false",
+          "partialAuth"      -> "false"
+        ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }

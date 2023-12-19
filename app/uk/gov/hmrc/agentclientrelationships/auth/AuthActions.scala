@@ -44,46 +44,47 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   val supportedServices: Seq[Service]
 
   def authorisedUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(
-    body: CurrentUser => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
-    authorised().retrieve(allEnrolments and affinityGroup and credentials) {
-      case enrolments ~ affinity ~ optCreds =>
-        optCreds
-          .collect {
-            case creds @ Credentials(_, "GovernmentGateway")
-                if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, Some(arn), clientId) =>
-              creds
-            case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-              creds
-          }
-          .map { creds =>
-            body(CurrentUser(creds, affinity))
-          }
-          .getOrElse(Future successful NoPermissionToPerformOperation)
+    body: CurrentUser => Future[Result]
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
+      optCreds
+        .collect {
+          case creds @ Credentials(_, "GovernmentGateway")
+              if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, Some(arn), clientId) =>
+            creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+            creds
+        }
+        .map { creds =>
+          body(CurrentUser(creds, affinity))
+        }
+        .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
   def authorisedClientOrStrideUserOrAgent(clientId: TaxIdentifier, strideRoles: Seq[String])(
-    body: CurrentUser => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
-    authorised().retrieve(allEnrolments and affinityGroup and credentials) {
-      case enrolments ~ affinity ~ optCreds =>
-        optCreds
-          .collect {
-            case creds @ Credentials(_, "GovernmentGateway")
-                if isAgent(affinity) | hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
-              creds
-            case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-              creds
-          }
-          .map { creds =>
-            body(CurrentUser(creds, affinity))
-          }
-          .getOrElse(Future successful NoPermissionToPerformOperation)
+    body: CurrentUser => Future[Result]
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
+      optCreds
+        .collect {
+          case creds @ Credentials(_, "GovernmentGateway")
+              if isAgent(affinity) | hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
+            creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+            creds
+        }
+        .map { creds =>
+          body(CurrentUser(creds, affinity))
+        }
+        .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
   private def hasRequiredEnrolmentMatchingIdentifier(
     enrolments: Enrolments,
     affinity: Option[AffinityGroup],
     arn: Option[Arn],
-    clientId: TaxIdentifier): Boolean =
+    clientId: TaxIdentifier
+  ): Boolean =
     affinity
       .flatMap {
         case AffinityGroup.Agent => arn
@@ -94,10 +95,10 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         requiredIdentifier match {
           // need to handle Arn separately as it is not one of our managed services
           case Arn(arn) =>
-            enrolments.enrolments.exists(
-              enrolment =>
-                enrolment.key == "HMRC-AS-AGENT" && enrolment.identifiers.contains(
-                  EnrolmentIdentifier("AgentReferenceNumber", arn)))
+            enrolments.enrolments.exists(enrolment =>
+              enrolment.key == "HMRC-AS-AGENT" && enrolment.identifiers
+                .contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
+            )
           case taxId: TaxIdentifier =>
             val requiredTaxIdType = ClientIdentifier(taxId).enrolmentId
             enrolments.enrolments
@@ -119,29 +120,29 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     enrolment.getIdentifier(clientIdType.enrolmentId).map(eid => clientIdType.createUnderlying(eid.value))
   }
 
-  def authorisedAsClient[A](serviceKey: String)(
-    body: TaxIdentifier => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  def authorisedAsClient[A](
+    serviceKey: String
+  )(body: TaxIdentifier => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised(Enrolment(serviceKey) and AuthProviders(GovernmentGateway))
-      .retrieve(authorisedEnrolments and affinityGroup) {
-        case enrolments ~ affinityG =>
-          affinityG match {
-            case Some(Individual) | Some(Organisation) =>
-              val id = if (supportedServices.exists(_.id == serviceKey)) {
-                enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
-              } else None
+      .retrieve(authorisedEnrolments and affinityGroup) { case enrolments ~ affinityG =>
+        affinityG match {
+          case Some(Individual) | Some(Organisation) =>
+            val id = if (supportedServices.exists(_.id == serviceKey)) {
+              enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
+            } else None
 
-              id match {
-                case Some(i) => body(i)
-                case _       => Future.successful(NoPermissionToPerformOperation)
-              }
-            case _ => Future.successful(NoPermissionToPerformOperation)
-          }
+            id match {
+              case Some(i) => body(i)
+              case _       => Future.successful(NoPermissionToPerformOperation)
+            }
+          case _ => Future.successful(NoPermissionToPerformOperation)
+        }
       }
 
-  //BTA & PTA Call
-  def withAuthorisedAsClient[A, T](body: Map[Service, TaxIdentifier] => Future[Result])(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier): Future[Result] =
+  // BTA & PTA Call
+  def withAuthorisedAsClient[A, T](
+    body: Map[Service, TaxIdentifier] => Future[Result]
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
         val identifiers: Map[Service, TaxIdentifier] = (for {
@@ -157,7 +158,8 @@ trait AuthActions extends AuthorisedFunctions with Logging {
       }
 
   protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
-    body: String => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    body: String => Future[Result]
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
         case Some(Credentials(strideId, _)) => body(strideId)
@@ -168,14 +170,15 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   val decodedAuth: Regex = "(.+):(.+)".r
 
   private def decodeFromBase64(encodedString: String): String =
-    try {
+    try
       new String(Base64.getDecoder.decode(encodedString), UTF_8)
-    } catch {
+    catch {
       case _: Throwable => ""
     }
 
-  def withBasicAuth(expectedAuth: BasicAuthentication)(body: => Future[Result])(
-    implicit request: Request[_]): Future[Result] =
+  def withBasicAuth(
+    expectedAuth: BasicAuthentication
+  )(body: => Future[Result])(implicit request: Request[_]): Future[Result] =
     request.headers.get(HeaderNames.authorisation) match {
       case Some(basicAuthHeader(encodedAuthHeader)) =>
         decodeFromBase64(encodedAuthHeader) match {
@@ -196,19 +199,22 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     }
 
   protected def withAuthorisedAsAgent[A](
-    body: Arn => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+    body: Arn => Future[Result]
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
       case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
-    } recoverWith {
-      case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments())
+    } recoverWith { case _: InsufficientEnrolments =>
+      Future.failed(InsufficientEnrolments())
     }
 
   protected def withEnrolledAsAgent[A](
-    body: Option[String] => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+    body: Option[String] => Future[Result]
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     authorised(
       Enrolment("HMRC-AS-AGENT")
-        and AuthProviders(GovernmentGateway))
+        and AuthProviders(GovernmentGateway)
+    )
       .retrieve(authorisedEnrolments) { enrolments =>
         val id = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
         body(id)

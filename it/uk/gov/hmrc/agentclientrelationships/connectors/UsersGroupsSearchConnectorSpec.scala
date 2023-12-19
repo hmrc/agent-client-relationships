@@ -46,9 +46,9 @@ class UsersGroupsSearchConnectorSpec
         "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
         "agent.cache.enabled"                              -> true,
-        "agent.trackPage.cache.size"                                 -> 1,
-        "agent.trackPage.cache.expires"                              -> "1 millis",
-        "agent.trackPage.cache.enabled"                              -> true
+        "agent.trackPage.cache.size"                       -> 1,
+        "agent.trackPage.cache.expires"                    -> "1 millis",
+        "agent.trackPage.cache.enabled"                    -> true
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -62,7 +62,9 @@ class UsersGroupsSearchConnectorSpec
       "return some agentCode for a given agent's groupId" in {
         givenAuditConnector()
         givenAgentGroupExistsFor("foo")
-        await(connector.getGroupInfo("foo")) shouldBe Some(GroupInfo("foo", Some("Agent"), Some(AgentCode("NQJUEJCWT14"))))
+        await(connector.getGroupInfo("foo")) shouldBe Some(
+          GroupInfo("foo", Some("Agent"), Some(AgentCode("NQJUEJCWT14")))
+        )
       }
 
       "return none agentCode for a given non-agent groupId" in {
@@ -79,7 +81,5 @@ class UsersGroupsSearchConnectorSpec
     }
 
   }
-
-
 
 }

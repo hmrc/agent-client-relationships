@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
-import uk.gov.hmrc.http.{HeaderCarrier, Upstream5xxResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @Singleton
-class DeleteRelationshipsService @Inject()(
+class DeleteRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ifConnector: IFConnector,
   aca: AgentClientAuthorisationConnector,
@@ -49,18 +49,20 @@ class DeleteRelationshipsService @Inject()(
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   val auditService: AuditService,
-  val metrics: Metrics)(implicit val appConfig: AppConfig)
+  val metrics: Metrics
+)(implicit val appConfig: AppConfig)
     extends Monitoring
     with Logging {
 
   val recoveryTimeout: Int = appConfig.recoveryTimeout
 
-  //noinspection ScalaStyle
-  def deleteRelationship(arn: Arn, enrolmentKey: EnrolmentKey, affinityGroup: Option[AffinityGroup])(
-    implicit ec: ExecutionContext,
+  // noinspection ScalaStyle
+  def deleteRelationship(arn: Arn, enrolmentKey: EnrolmentKey, affinityGroup: Option[AffinityGroup])(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    currentUser: CurrentUser): Future[Unit] = {
+    currentUser: CurrentUser
+  ): Future[Unit] = {
 
     implicit val auditData: AuditData = setAuditDataForUser(currentUser, arn, enrolmentKey)
 
@@ -71,14 +73,13 @@ class DeleteRelationshipsService @Inject()(
     def createDeleteRecord(record: DeleteRecord): Future[DbUpdateStatus] =
       deleteRecordRepository
         .create(record)
-        .map(count => {
+        .map { count =>
           auditData.set("AgentDBRecord", true)
           convertDbUpdateStatus(count)
-        })
-        .recoverWith {
-          case NonFatal(ex) =>
-            logger.warn(s"Inserting delete record into mongo failed for ${arn.value}, $enrolmentKey: ${ex.getMessage}")
-            Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
+        }
+        .recoverWith { case NonFatal(ex) =>
+          logger.warn(s"Inserting delete record into mongo failed for ${arn.value}, $enrolmentKey: ${ex.getMessage}")
+          Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
         }
 
     def delete: Future[Unit] = {
@@ -105,35 +106,37 @@ class DeleteRelationshipsService @Inject()(
     for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
       _ <- recordOpt match {
-            case Some(record) =>
-              for {
-                isDone <- resumeRelationshipRemoval(record)
-                _ <- if (isDone) removeDeleteRecord(arn, enrolmentKey).andThen {
-                      case scala.util.Success(true) =>
-                        auditData.set("deleteStatus", "success of retry")
-                        sendDeleteRelationshipAuditEvent(currentUser)
-                      case scala.util.Failure(e) =>
-                        auditData.set("deleteStatus", s"exception when retried: $e")
-                        sendDeleteRelationshipAuditEvent(currentUser)
-                    } else Future.successful(())
-              } yield isDone
-            case None =>
-              delete.andThen {
-                case scala.util.Success(_) =>
-                  auditData.set("deleteStatus", "success")
-                  sendDeleteRelationshipAuditEvent(currentUser)
-                case scala.util.Failure(e) =>
-                  auditData.set("deleteStatus", s"exception: $e")
-                  sendDeleteRelationshipAuditEvent(currentUser)
-              }
-          }
+             case Some(record) =>
+               for {
+                 isDone <- resumeRelationshipRemoval(record)
+                 _ <- if (isDone) removeDeleteRecord(arn, enrolmentKey).andThen {
+                        case scala.util.Success(true) =>
+                          auditData.set("deleteStatus", "success of retry")
+                          sendDeleteRelationshipAuditEvent(currentUser)
+                        case scala.util.Failure(e) =>
+                          auditData.set("deleteStatus", s"exception when retried: $e")
+                          sendDeleteRelationshipAuditEvent(currentUser)
+                      }
+                      else Future.successful(())
+               } yield isDone
+             case None =>
+               delete.andThen {
+                 case scala.util.Success(_) =>
+                   auditData.set("deleteStatus", "success")
+                   sendDeleteRelationshipAuditEvent(currentUser)
+                 case scala.util.Failure(e) =>
+                   auditData.set("deleteStatus", s"exception: $e")
+                   sendDeleteRelationshipAuditEvent(currentUser)
+               }
+           }
     } yield ()
   }
 
-  private def deleteEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
+  private def deleteEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[DbUpdateStatus] = {
+    auditData: AuditData
+  ): Future[DbUpdateStatus] = {
     val updateEtmpSyncStatus = deleteRecordRepository
       .updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus)
       .map(convertDbUpdateStatus)
@@ -146,13 +149,16 @@ class DeleteRelationshipsService @Inject()(
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- ifConnector.deleteAgentRelationship(enrolmentKey.oneTaxIdentifier(), arn) // TODO DG oneTaxIdentifier may not return what we want for CBC!
+      maybeResponse <- ifConnector.deleteAgentRelationship(
+                         enrolmentKey.oneTaxIdentifier(),
+                         arn
+                       ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
       if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipDeAuthorised", true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)
       .recoverWith {
-        case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
+        case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, _) if e.statusCode >= 500 && e.statusCode < 600 =>
           recoverFromException(e, UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_IF", upstreamCode, reportAs))
         case NonFatal(ex) =>
           recoverFromException(ex, new Exception(s"RELATIONSHIP_DELETE_FAILED_IF"))
@@ -160,11 +166,12 @@ class DeleteRelationshipsService @Inject()(
 
   }
 
-  //noinspection ScalaStyle
-  def deleteEsRecord(arn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
+  // noinspection ScalaStyle
+  def deleteEsRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
-    auditData: AuditData): Future[DbUpdateStatus] = {
+    auditData: AuditData
+  ): Future[DbUpdateStatus] = {
 
     val updateEsSyncStatus = deleteRecordRepository
       .updateEsSyncStatus(arn, enrolmentKey, _: SyncStatus)
@@ -180,12 +187,13 @@ class DeleteRelationshipsService @Inject()(
       case RelationshipNotFound(errorCode) =>
         logger.warn(
           s"De-allocating ES record for ${arn.value}, ${enrolmentKey.tag} " +
-            s"not possible because of incomplete data: $errorCode")
+            s"not possible because of incomplete data: $errorCode"
+        )
         updateEsSyncStatus(IncompleteInputParams).map(_ => DbUpdateFailed)
     }
 
     lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case e @ Upstream5xxResponse(_, upstreamCode, reportAs, _) =>
+      case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, _) if e.statusCode >= 500 && e.statusCode < 600 =>
         logAndMaybeFail(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_ES", upstreamCode, reportAs))
     }
 
@@ -194,9 +202,8 @@ class DeleteRelationshipsService @Inject()(
         logAndMaybeFail(ex, ex)
     }
 
-    lazy val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case NonFatal(ex) =>
-        logAndMaybeFail(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ES"))
+    lazy val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = { case NonFatal(ex) =>
+      logAndMaybeFail(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ES"))
     }
 
     (for {
@@ -205,11 +212,11 @@ class DeleteRelationshipsService @Inject()(
       maybeAgentUser <- agentUserService.getAgentAdminUserFor(arn)
       agentUser = maybeAgentUser.fold(error => throw RelationshipNotFound(error), identity)
       _ <- checkService
-            .checkForRelationship(arn, None, enrolmentKey)
-            .flatMap {
-              case true  => es.deallocateEnrolmentFromAgent(agentUser.groupId, enrolmentKey)
-              case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
-            }
+             .checkForRelationship(arn, None, enrolmentKey)
+             .flatMap {
+               case true  => es.deallocateEnrolmentFromAgent(agentUser.groupId, enrolmentKey)
+               case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+             }
       _ = auditData.set("enrolmentDeAllocated", true)
       _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)
       esSyncStatusSuccess <- updateEsSyncStatus(Success)
@@ -217,17 +224,17 @@ class DeleteRelationshipsService @Inject()(
       recoverAgentUserRelationshipNotFound
         .orElse(recoverUpstream5xx)
         .orElse(recoverUnauthorized)
-        .orElse(recoverNonFatal))
+        .orElse(recoverNonFatal)
+    )
   }
 
   def removeDeleteRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit ec: ExecutionContext): Future[Boolean] =
     deleteRecordRepository
       .remove(arn, enrolmentKey)
       .map(_ > 0)
-      .recoverWith {
-        case NonFatal(ex) =>
-          logger.warn(s"Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")
-          Future.successful(false)
+      .recoverWith { case NonFatal(ex) =>
+        logger.warn(s"Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")
+        Future.successful(false)
       }
 
   def tryToResume(implicit ec: ExecutionContext, auditData: AuditData): Future[Boolean] =
@@ -242,39 +249,42 @@ class DeleteRelationshipsService @Inject()(
         Future.successful(true)
     }
 
-  def checkDeleteRecordAndEventuallyResume(arn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData,
-    request: Request[_]): Future[Boolean] =
+  def checkDeleteRecordAndEventuallyResume(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData, request: Request[_]): Future[Boolean] =
     (for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
       isComplete <- recordOpt match {
-                     case Some(record) =>
-                       auditData.set("initialDeleteDateTime", record.dateTime)
-                       auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
-                       if (record.dateTime
-                             .plusSeconds(recoveryTimeout)
-                             .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)) {
-                         for {
-                           isDone <- resumeRelationshipRemoval(record)
-                           _ <- if (isDone) removeDeleteRecord(arn, enrolmentKey)
-                               else Future.successful(())
-                         } yield isDone
-                       } else {
-                         logger.error(
-                           s"Terminating recovery of failed de-authorisation $record because timeout has passed.")
-                         auditData.set("abandonmentReason", "timeout")
-                         auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
-                         removeDeleteRecord(arn, enrolmentKey).map(_ => true)
-                       }
-                     case None => Future.successful(true)
-                   }
+                      case Some(record) =>
+                        auditData.set("initialDeleteDateTime", record.dateTime)
+                        auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
+                        if (
+                          record.dateTime
+                            .plusSeconds(recoveryTimeout)
+                            .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
+                        ) {
+                          for {
+                            isDone <- resumeRelationshipRemoval(record)
+                            _ <- if (isDone) removeDeleteRecord(arn, enrolmentKey)
+                                 else Future.successful(())
+                          } yield isDone
+                        } else {
+                          logger.error(
+                            s"Terminating recovery of failed de-authorisation $record because timeout has passed."
+                          )
+                          auditData.set("abandonmentReason", "timeout")
+                          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
+                          removeDeleteRecord(arn, enrolmentKey).map(_ => true)
+                        }
+                      case None => Future.successful(true)
+                    }
     } yield isComplete)
       .recoverWith {
         case e: UpstreamErrorResponse if e.statusCode == 401 =>
           logger.error(
-            s"Terminating recovery of failed de-authorisation ($arn, $enrolmentKey) because auth token is invalid")
+            s"Terminating recovery of failed de-authorisation ($arn, $enrolmentKey) because auth token is invalid"
+          )
           auditData.set("abandonmentReason", "unauthorised")
           auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
           removeDeleteRecord(arn, enrolmentKey).map(_ => true)
@@ -282,16 +292,16 @@ class DeleteRelationshipsService @Inject()(
           Future.successful(false)
       }
 
-  def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    auditData: AuditData): Future[Boolean] = {
+  def resumeRelationshipRemoval(
+    deleteRecord: DeleteRecord
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] = {
     val arn = Arn(deleteRecord.arn)
     val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey.getOrElse(enrolmentKeyFallback(deleteRecord))
     lockService
       .tryLock(arn, enrolmentKey) {
         logger.info(
-          s"Resuming unfinished removal of the relationship between ${arn.value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}")
+          s"Resuming unfinished removal of the relationship between ${arn.value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}"
+        )
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
             for {
@@ -303,7 +313,8 @@ class DeleteRelationshipsService @Inject()(
           case (false, true) =>
             logger.warn(
               s"ES relationship existed without ETMP relationship for ${arn.value}, $enrolmentKey. " +
-                s"This should not happen because we always remove the ES relationship first.")
+                s"This should not happen because we always remove the ES relationship first."
+            )
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, enrolmentKey)
               _ <- deleteEsRecord(arn, enrolmentKey)
@@ -344,11 +355,12 @@ class DeleteRelationshipsService @Inject()(
     } else throw new IllegalStateException("No providerType found")
   }
 
-  protected def sendDeleteRelationshipAuditEvent(currentUser: CurrentUser)(
-    implicit headerCarrier: HeaderCarrier,
+  protected def sendDeleteRelationshipAuditEvent(currentUser: CurrentUser)(implicit
+    headerCarrier: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     if (currentUser.credentials.providerType == "GovernmentGateway")
       auditService.sendDeleteRelationshipAuditEvent
     else if (currentUser.credentials.providerType == "PrivilegedApplication")
@@ -362,13 +374,14 @@ class DeleteRelationshipsService @Inject()(
       clientIdTypeStr <- deleteRecord.clientIdentifierType
       clientIdStr     <- deleteRecord.clientIdentifier
       service         <- appConfig.supportedServices.find(_.supportedClientIdType.enrolmentId == clientIdTypeStr)
-    } yield {
-      EnrolmentKey(
-        service.id,
-        Seq(Identifier(clientIdTypeStr, clientIdStr))
+    } yield EnrolmentKey(
+      service.id,
+      Seq(Identifier(clientIdTypeStr, clientIdStr))
+    )).getOrElse(
+      throw new RuntimeException(
+        s"Fallback determination of enrolment key failed for ${deleteRecord.clientIdentifierType}"
       )
-    }).getOrElse(throw new RuntimeException(
-      s"Fallback determination of enrolment key failed for ${deleteRecord.clientIdentifierType}"))
+    )
   }
 
   private def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
@@ -378,16 +391,17 @@ class DeleteRelationshipsService @Inject()(
       case _                                                                 => Some("HMRC")
     }
 
-  private def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Done] =
+  private def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Done] =
     aca
       .setRelationshipEnded(arn, enrolmentKey, endedBy)
-      .map(
-        success =>
-          if (success) Done
-          else {
-            logger.warn("setRelationshipEnded failed")
-            Done
-        })
+      .map(success =>
+        if (success) Done
+        else {
+          logger.warn("setRelationshipEnded failed")
+          Done
+        }
+      )
 }
