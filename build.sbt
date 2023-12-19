@@ -51,6 +51,10 @@ lazy val root = (project in file("."))
     IntegrationTest / parallelExecution := false,
     IntegrationTest / scalafmtOnCompile := true
   )
+  .settings(
+    //fix for scoverage compile errors for scala 2.13.10
+    libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always)
+  )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
 
 

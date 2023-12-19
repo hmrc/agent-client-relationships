@@ -421,13 +421,13 @@ trait IFStubs {
                                                                                                                 |{
                                                                                                                 | "referenceNumber" : "${taxIdentifier.value}",
                                                                                                                 |  "agentReferenceNumber" : "ABCDE777777", """.stripMargin + individualOrOrganisationJson + s"""
-                                                                                                                                                                                                                   |  "dateFrom" : "2019-09-09",
-                                                                                                                                                                                                                   |  "dateTo" : "2050-09-09",
-                                                                                                                                                                                                                   |  "contractAccountCategory" : "01",
-                                                                                                                                                                                                                   |  "activity" : "09"
-                                                                                                                                                                                                                   |  }
-                                                                                                                                                                                                                   |]
-                                                                                                                                                                                                                   |}""".stripMargin
+                                                                                                                                                                                                               |  "dateFrom" : "2019-09-09",
+                                                                                                                                                                                                               |  "dateTo" : "2050-09-09",
+                                                                                                                                                                                                               |  "contractAccountCategory" : "01",
+                                                                                                                                                                                                               |  "activity" : "09"
+                                                                                                                                                                                                               |  }
+                                                                                                                                                                                                               |]
+                                                                                                                                                                                                               |}""".stripMargin
             )
         )
     )
