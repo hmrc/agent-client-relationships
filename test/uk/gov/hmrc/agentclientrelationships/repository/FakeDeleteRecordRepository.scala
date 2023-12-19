@@ -86,7 +86,7 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}"))
   }
 
-  override def selectNextToRecover: Future[Option[DeleteRecord]] =
+  override def selectNextToRecover(): Future[Option[DeleteRecord]] =
     Future.successful(
       data.toSeq
         .map(_._2)

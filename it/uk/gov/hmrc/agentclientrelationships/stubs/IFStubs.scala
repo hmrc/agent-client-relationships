@@ -27,6 +27,7 @@ trait IFStubs {
       s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
     case PlrId(ref) =>
       s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
+    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino) =
@@ -336,6 +337,7 @@ trait IFStubs {
          |  "activity" : "09"
          |}
        """.stripMargin
+    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   private def inactiveUrl(arn: Arn) = s"/registration/relationship?arn=${arn.value}" +
@@ -356,6 +358,7 @@ trait IFStubs {
       s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=false&regime=PPT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case PlrId(ref) =>
       s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=false&regime=PLR&from=2015-01-01&to=${LocalDate.now().toString}"
+    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {

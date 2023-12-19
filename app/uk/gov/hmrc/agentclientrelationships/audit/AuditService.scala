@@ -28,7 +28,7 @@ import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 
-import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters.MapHasAsScala
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
@@ -48,7 +48,7 @@ class AuditData {
   }
 
   def getDetails: Map[String, Any] =
-    JavaConverters.mapAsScalaMapConverter(details).asScala.toMap
+    details.asScala.toMap
 
 }
 

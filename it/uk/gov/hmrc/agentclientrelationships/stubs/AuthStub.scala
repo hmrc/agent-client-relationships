@@ -278,6 +278,7 @@ trait AuthStub {
       case PptRef(v)  => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
       case CbcId(v)   => ("HMRC-CBC-ORG", "cbcId", v)
       case PlrId(v)   => ("HMRC-PILLAR2-ORG", "PLRID", v)
+      case x          => throw new IllegalArgumentException(s"Tax identifier not supported $x")
     }
 
     stubFor(

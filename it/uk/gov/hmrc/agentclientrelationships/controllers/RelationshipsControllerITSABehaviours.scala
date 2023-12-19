@@ -98,11 +98,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         result.status shouldBe 200
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
-          'arn (arn.value),
-          'enrolmentKey (Some(mtdItEnrolmentKey)),
-          'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-          'syncToETMPStatus (Some(SyncStatus.Success)),
-          'syncToESStatus (Some(SyncStatus.Success))
+          Symbol("arn") (arn.value),
+          Symbol("enrolmentKey") (Some(mtdItEnrolmentKey)),
+          Symbol("references") (Some(Set(SaRef(SaAgentReference("foo"))))),
+          Symbol("syncToETMPStatus") (Some(SyncStatus.Success)),
+          Symbol("syncToESStatus") (Some(SyncStatus.Success))
         )
 
         verifyAuditRequestSent(
@@ -195,11 +195,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         result.status shouldBe 200
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
-          'arn (arn.value),
-          'enrolmentKey (Some(mtdItEnrolmentKey)),
-          'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-          'syncToETMPStatus (Some(SyncStatus.Failed)),
-          'syncToESStatus (None)
+          Symbol("arn") (arn.value),
+          Symbol("enrolmentKey") (Some(mtdItEnrolmentKey)),
+          Symbol("references") (Some(Set(SaRef(SaAgentReference("foo"))))),
+          Symbol("syncToETMPStatus") (Some(SyncStatus.Failed)),
+          Symbol("syncToESStatus") (None)
         )
 
       }
@@ -223,11 +223,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         result.status shouldBe 200
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
-          'arn (arn.value),
-          'enrolmentKey (Some(mtdItEnrolmentKey)),
-          'references (Some(Set(SaRef(SaAgentReference("foo"))))),
-          'syncToETMPStatus (Some(SyncStatus.Success)),
-          'syncToESStatus (Some(SyncStatus.Failed))
+          Symbol("arn") (arn.value),
+          Symbol("enrolmentKey") (Some(mtdItEnrolmentKey)),
+          Symbol("references") (Some(Set(SaRef(SaAgentReference("foo"))))),
+          Symbol("syncToETMPStatus") (Some(SyncStatus.Success)),
+          Symbol("syncToESStatus") (Some(SyncStatus.Failed))
         )
 
         verifyAuditRequestSent(

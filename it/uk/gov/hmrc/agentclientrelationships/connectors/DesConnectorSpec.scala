@@ -11,7 +11,7 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IFStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -63,13 +63,6 @@ class DesConnectorSpec
   val agentARN = Arn("ABCDE123456")
   val utr = Utr("1704066305")
   val cgt = CgtRef("XMCGTP837878749")
-
-  val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
-    case MtdItId(_) => MtdItId("ABCDE1234567890")
-    case Vrn(_)     => Vrn("101747641")
-    case Utr(_)     => Utr("2134514321")
-    case Urn(_)     => Urn("AAAAA6426901067")
-  }
 
   "DesConnector GetStatusAgentRelationship" should {
 

@@ -16,6 +16,7 @@ trait DesStubsGet {
   private val agentRecordUrl: TaxIdentifier => String = {
     case Arn(arn) => s"/registration/personal-details/arn/$arn"
     case Utr(utr) => s"/registration/personal-details/utr/$utr"
+    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   def getAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping = {

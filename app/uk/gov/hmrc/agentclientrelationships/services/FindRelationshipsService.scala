@@ -75,7 +75,7 @@ class FindRelationshipsService @Inject()(
           case None => Future.successful(None)
         }
       }
-      .map(_.collect { case Some(x) => x }.groupBy(_._1).mapValues(_.map(_._2)))
+      .map(_.collect { case Some(x) => x }.groupBy(_._1).map { case (k, v) => (k, v.map(_._2)) })
 
   def getInactiveRelationshipsForClient(identifiers: Map[Service, TaxIdentifier])(
     implicit hc: HeaderCarrier,

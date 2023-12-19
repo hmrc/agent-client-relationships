@@ -91,7 +91,7 @@ trait RelationshipsBaseControllerISpec
   def repo: MongoRelationshipCopyRecordRepository = new MongoRelationshipCopyRecordRepository(mongoComponent)
   def deleteRecordRepository: MongoDeleteRecordRepository = new MongoDeleteRecordRepository(mongoComponent)
 
-  override def beforeEach() {
+  override def beforeEach() = {
     super.beforeEach()
     givenAuditConnector()
     await(mongoComponent.database.drop().toFuture())
@@ -137,6 +137,7 @@ trait RelationshipsBaseControllerISpec
     case CgtRef(_) => cgtRef
     case PptRef(_) => pptRef
     case PlrId(_) => plrId
+    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()

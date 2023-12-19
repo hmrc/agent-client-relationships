@@ -91,7 +91,7 @@ class RelationshipsControllerWithoutMongoISpec
 
   def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
-  override def beforeEach() {
+  override def beforeEach() = {
     super.beforeEach()
     prepareDatabase()
     ()

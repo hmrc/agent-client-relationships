@@ -84,7 +84,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
           .withBody(s"""
                        |{
                        |    "principalUserIds":[
-                       |        ${userIds.map('"' + _ + '"').mkString(", ")}
+                       |        ${userIds.map(x=> s"\"$x\"").mkString(", ")}
                        |    ]
                        |}
           """.stripMargin)))

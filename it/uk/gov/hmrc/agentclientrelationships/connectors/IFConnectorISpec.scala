@@ -79,6 +79,7 @@ class IFConnectorISpec
     case Urn(_)     => Urn("XXTRUST12345678")
     case PptRef(_)  => PptRef("XAPPT0004567890")
     case PlrId(_)   => PlrId("XMPLR0012345678")
+    case x          => x
   }
 
   "IfConnector GetBusinessDetails" should {

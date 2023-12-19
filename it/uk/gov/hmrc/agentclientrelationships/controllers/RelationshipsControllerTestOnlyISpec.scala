@@ -62,9 +62,9 @@ class RelationshipsControllerTestOnlyISpec
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
-  override def beforeEach() {
+  override def beforeEach() = {
     super.beforeEach()
-    await(repo.ensureIndexes)
+    await(repo.ensureIndexes())
     ()
   }
 
