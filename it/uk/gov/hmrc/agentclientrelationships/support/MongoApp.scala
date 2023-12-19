@@ -10,7 +10,6 @@ trait MongoApp extends MongoSupport with ResetMongoBeforeTest {
 
 }
 
-
 trait ResetMongoBeforeTest extends BeforeAndAfterEach {
   me: Suite with MongoSupport =>
 
@@ -19,4 +18,3 @@ trait ResetMongoBeforeTest extends BeforeAndAfterEach {
     prepareDatabase()
   }
 }
-

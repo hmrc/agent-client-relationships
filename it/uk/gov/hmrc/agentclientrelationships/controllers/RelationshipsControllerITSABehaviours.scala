@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 
 trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerISpec =>
 
-  //noinspection ScalaStyle
+  // noinspection ScalaStyle
   def relationshipControllerITSASpecificBehaviours(): Unit = {
     val requestPath: String =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
@@ -25,12 +25,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       arn.value,
       Some(mtdItEnrolmentKey),
       syncToETMPStatus = Some(SyncStatus.Success),
-      syncToESStatus = Some(SyncStatus.Success))
+      syncToESStatus = Some(SyncStatus.Success)
+    )
 
     def doRequest = doAgentGetRequest(requestPath)
 
     "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
-      //CESA CHECK UNHAPPY PATHS
+      // CESA CHECK UNHAPPY PATHS
 
       "return 404 when agent not allocated to client in es nor identifier not found in des" in {
         givenPrincipalAgentUser(arn, "foo")
@@ -77,7 +78,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
       }
 
-      //HAPPY PATHS WHEN CHECKING CESA
+      // HAPPY PATHS WHEN CHECKING CESA
 
       "return 200 when agent not allocated to client in es but relationship exists in cesa" in {
         givenPrincipalAgentUser(arn, "foo")
@@ -98,11 +99,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         result.status shouldBe 200
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
-          Symbol("arn") (arn.value),
-          Symbol("enrolmentKey") (Some(mtdItEnrolmentKey)),
-          Symbol("references") (Some(Set(SaRef(SaAgentReference("foo"))))),
-          Symbol("syncToETMPStatus") (Some(SyncStatus.Success)),
-          Symbol("syncToESStatus") (Some(SyncStatus.Success))
+          Symbol("arn")(arn.value),
+          Symbol("enrolmentKey")(Some(mtdItEnrolmentKey)),
+          Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
+          Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
+          Symbol("syncToESStatus")(Some(SyncStatus.Success))
         )
 
         verifyAuditRequestSent(
@@ -130,12 +131,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"                      -> arn.value,
-            "credId"                   -> "any",
-            "agentCode"                -> "bar",
-            "nino"                     -> nino.value,
-            "saAgentRef"               -> "foo",
-            "CESARelationship"         -> "true"),
+            "arn"              -> arn.value,
+            "credId"           -> "any",
+            "agentCode"        -> "bar",
+            "nino"             -> nino.value,
+            "saAgentRef"       -> "foo",
+            "CESARelationship" -> "true"
+          ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
       }
@@ -174,7 +176,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         result.status shouldBe 404
       }
 
-      //HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
+      // HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
       "return 200 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
         givenPrincipalAgentUser(arn, "foo")
@@ -195,11 +197,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         result.status shouldBe 200
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
-          Symbol("arn") (arn.value),
-          Symbol("enrolmentKey") (Some(mtdItEnrolmentKey)),
-          Symbol("references") (Some(Set(SaRef(SaAgentReference("foo"))))),
-          Symbol("syncToETMPStatus") (Some(SyncStatus.Failed)),
-          Symbol("syncToESStatus") (None)
+          Symbol("arn")(arn.value),
+          Symbol("enrolmentKey")(Some(mtdItEnrolmentKey)),
+          Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
+          Symbol("syncToETMPStatus")(Some(SyncStatus.Failed)),
+          Symbol("syncToESStatus")(None)
         )
 
       }
@@ -223,11 +225,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         result.status shouldBe 200
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
-          Symbol("arn") (arn.value),
-          Symbol("enrolmentKey") (Some(mtdItEnrolmentKey)),
-          Symbol("references") (Some(Set(SaRef(SaAgentReference("foo"))))),
-          Symbol("syncToETMPStatus") (Some(SyncStatus.Success)),
-          Symbol("syncToESStatus") (Some(SyncStatus.Failed))
+          Symbol("arn")(arn.value),
+          Symbol("enrolmentKey")(Some(mtdItEnrolmentKey)),
+          Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
+          Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
+          Symbol("syncToESStatus")(Some(SyncStatus.Failed))
         )
 
         verifyAuditRequestSent(
@@ -255,12 +257,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"                      -> arn.value,
-            "credId"                   -> "any",
-            "agentCode"                -> "bar",
-            "nino"                     -> nino.value,
-            "saAgentRef"               -> "foo",
-            "CESARelationship"         -> "true"),
+            "arn"              -> arn.value,
+            "credId"           -> "any",
+            "agentCode"        -> "bar",
+            "nino"             -> nino.value,
+            "saAgentRef"       -> "foo",
+            "CESARelationship" -> "true"
+          ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
       }
@@ -280,26 +283,26 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       "return 404 when relationship was previously copied from CESA to ETMP & ES but has since been deleted from ETMP & ES " +
         "(even though the relationship upon which the copy was based still exists in CESA)" in {
-        givenPrincipalAgentUser(arn, "foo")
-        givenGroupInfo("foo", "bar")
-        givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
-        givenAdminUser("foo", "any")
+          givenPrincipalAgentUser(arn, "foo")
+          givenGroupInfo("foo", "bar")
+          givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+          givenAdminUser("foo", "any")
 
-        givenNinoIsKnownFor(mtdItId, nino)
-        givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenArnIsKnownFor(arn, SaAgentReference("foo"))
-        givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+          givenNinoIsKnownFor(mtdItId, nino)
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+          givenArnIsKnownFor(arn, SaAgentReference("foo"))
+          givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
-        givenAgentCanBeAllocatedInIF(mtdItId, arn)
-        givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+          givenAgentCanBeAllocatedInIF(mtdItId, arn)
+          givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+          givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
-        await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
-        val result = doRequest
-        result.status shouldBe 404
-        (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
-      }
+          await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
+          val result = doRequest
+          result.status shouldBe 404
+          (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+        }
 
       "return 404 when mapping service is unavailable" in {
         givenPrincipalAgentUser(arn, "foo")
@@ -322,7 +325,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       def doRequest = doAgentGetRequest(requestPath)
 
-      //HAPPY PATH :-)
+      // HAPPY PATH :-)
 
       "return 200 when relationship exists in es" in {
         givenPrincipalAgentUser(arn, "foo")
@@ -357,7 +360,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       def doRequest = doAgentGetRequest(requestPath)
 
-      //CESA CHECK UNHAPPY PATHS
+      // CESA CHECK UNHAPPY PATHS
 
       "return 404 when agent not allocated to client in es nor identifier not found in des" in {
         getAgentRecordForClient(arn)
@@ -432,12 +435,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"                      -> arn.value,
-            "credId"                   -> "",
-            "agentCode"                -> "",
-            "nino"                     -> nino.value,
-            "saAgentRef"               -> "foo",
-            "CESARelationship"         -> "true"),
+            "arn"              -> arn.value,
+            "credId"           -> "",
+            "agentCode"        -> "",
+            "nino"             -> nino.value,
+            "saAgentRef"       -> "foo",
+            "CESARelationship" -> "true"
+          ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
       }
@@ -460,12 +464,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"                      -> arn.value,
-            "credId"                   -> "",
-            "agentCode"                -> "",
-            "nino"                     -> nino.value,
-            "saAgentRef"               -> "foo",
-            "CESARelationship"         -> "true"),
+            "arn"              -> arn.value,
+            "credId"           -> "",
+            "agentCode"        -> "",
+            "nino"             -> nino.value,
+            "saAgentRef"       -> "foo",
+            "CESARelationship" -> "true"
+          ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
       }
@@ -475,7 +480,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       val requestPath: String =
         s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
-      
+
       "the relationship exists and the Arn matches that of current Agent user" should {
 
         trait StubsForThisScenario {
@@ -497,7 +502,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 Some(mtdItEnrolmentKey),
                 dateTime = LocalDateTime.now.minusMinutes(1),
                 syncToETMPStatus = Some(SyncStatus.Success),
-                syncToESStatus = Some(SyncStatus.Failed))))
+                syncToESStatus = Some(SyncStatus.Failed)
+              )
+            )
+          )
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
         }
@@ -510,7 +518,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 Some(mtdItEnrolmentKey),
                 dateTime = LocalDateTime.now.minusMinutes(1),
                 syncToETMPStatus = Some(SyncStatus.Failed)
-              )))
+              )
+            )
+          )
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
         }
@@ -522,7 +532,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 arn.value,
                 Some(mtdItEnrolmentKey),
                 dateTime = LocalDateTime.now.minusMinutes(1)
-              )))
+              )
+            )
+          )
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
         }
@@ -551,7 +563,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 arn.value,
                 Some(mtdItEnrolmentKey),
                 dateTime = LocalDateTime.now.minusMinutes(1)
-              )))
+              )
+            )
+          )
           doAgentDeleteRequest(requestPath).status shouldBe 500
           verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
         }
@@ -564,13 +578,14 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
       def verifyClientRemovedAgentServiceAuthorisationAuditSent(
-                                                                 arn: String,
-                                                                 clientId: String,
-                                                                 clientIdType: String,
-                                                                 service: String,
-                                                                 currentUserAffinityGroup: String,
-                                                                 authProviderId: String,
-                                                                 authProviderIdType: String) =
+        arn: String,
+        clientId: String,
+        clientIdType: String,
+        service: String,
+        currentUserAffinityGroup: String,
+        authProviderId: String,
+        authProviderIdType: String
+      ) =
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
@@ -587,11 +602,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         )
 
       def verifyHmrcRemovedAgentServiceAuthorisation(
-                                                      arn: String,
-                                                      clientId: String,
-                                                      service: String,
-                                                      authProviderId: String,
-                                                      authProviderIdType: String) =
+        arn: String,
+        clientId: String,
+        service: String,
+        authProviderId: String,
+        authProviderIdType: String
+      ) =
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
@@ -633,7 +649,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "HMRC-MTD-IT",
             "Agent",
             "ggUserId-agent",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -664,7 +681,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -693,7 +711,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             mtdItId.value,
             "HMRC-MTD-IT",
             "strideId-1234456",
-            "PrivilegedApplication")
+            "PrivilegedApplication"
+          )
         }
       }
 
@@ -723,7 +742,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -753,7 +773,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
@@ -784,13 +805,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "HMRC-MTD-IT",
             "Individual",
             "ggUserId-client",
-            "GovernmentGateway")
+            "GovernmentGateway"
+          )
         }
       }
 
-      /**
-       * Agent's Unhappy paths
-       */
+      /** Agent's Unhappy paths
+        */
       "agent has a mismatched arn" should {
         "return 403" in {
           givenUserIsSubscribedAgent(Arn("unmatched"))
@@ -885,9 +906,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         }
       }
 
-      /**
-       * Client's Unhappy paths
-       */
+      /** Client's Unhappy paths
+        */
       "client has a mismatched MtdItId" should {
 
         "return 403" in {

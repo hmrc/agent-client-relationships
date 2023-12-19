@@ -1,3 +1,4 @@
+import sbt.IntegrationTest
 
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
@@ -47,9 +48,9 @@ lazy val root = (project in file("."))
     IntegrationTest / Keys.fork := false,
     Defaults.itSettings,
     IntegrationTest / unmanagedSourceDirectories += baseDirectory(_ / "it").value,
-    IntegrationTest / parallelExecution := false
+    IntegrationTest / parallelExecution := false,
+    IntegrationTest / scalafmtOnCompile := true
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
 
-inConfig(IntegrationTest)(scalafmtCoreSettings)
 

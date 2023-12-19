@@ -30,17 +30,16 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
 
   /** Note: unsafe (i.e. can throw exceptions)
     *
-    * Supplying no key assumes the service has a single 'supported' identifier!
-    * For other enrolments with multiple identifiers you should try and specify which one, or it will grab the first.
-   **/
+    * Supplying no key assumes the service has a single 'supported' identifier! For other enrolments with multiple
+    * identifiers you should try and specify which one, or it will grab the first.
+    */
   def oneIdentifier(key: Option[String] = None): Identifier =
     identifiers
-      .find(
-        i =>
-          i.key == key.getOrElse(
-            if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
-              Service.forId(service).supportedClientIdType.enrolmentId
-            } else identifiers.head.key // fallback to old behaviour
+      .find(i =>
+        i.key == key.getOrElse(
+          if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
+            Service.forId(service).supportedClientIdType.enrolmentId
+          } else identifiers.head.key // fallback to old behaviour
         )
       )
       .getOrElse(throw new IllegalArgumentException(s"No identifier for $key with $service"))

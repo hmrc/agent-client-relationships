@@ -31,14 +31,14 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
 
   // the provided DeleteCopyRecord must use an enrolment key
   override def create(record: DeleteRecord): Future[Int] =
-    findBy(Arn(record.arn), record.enrolmentKey.get).map(
-      result =>
-        if (result.isDefined)
-          throw new MongoException("duplicate key error collection")
-        else {
-          data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
-          1
-      })
+    findBy(Arn(record.arn), record.enrolmentKey.get).map(result =>
+      if (result.isDefined)
+        throw new MongoException("duplicate key error collection")
+      else {
+        data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
+        1
+      }
+    )
 
   override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
@@ -46,7 +46,8 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
       if (maybeValue.isDefined)
         maybeValue
       else
-        None)
+        None
+    )
   }
 
   override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = {
@@ -56,7 +57,8 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
         1
       } else
-        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}"))
+        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
+    )
 
   }
 
@@ -67,7 +69,8 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
         1
       } else
-        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}"))
+        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
+    )
   }
 
   override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] = {
@@ -83,7 +86,8 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         data((arn, enrolmentKey)) =
           maybeValue.get.copy(lastRecoveryAttempt = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       else
-        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}"))
+        throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
+    )
   }
 
   override def selectNextToRecover(): Future[Option[DeleteRecord]] =
@@ -93,8 +97,10 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
         .sortBy(
           _.lastRecoveryAttempt
             .map(_.toEpochSecond(ZoneOffset.UTC))
-            .getOrElse(0L))
-        .headOption)
+            .getOrElse(0L)
+        )
+        .headOption
+    )
 
   def reset() =
     data.clear()

@@ -81,7 +81,7 @@ case object VrnNotFoundInEtmp extends CheckAndCopyResult {
 }
 
 @Singleton
-class CheckAndCopyRelationshipsService @Inject()(
+class CheckAndCopyRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ifConnector: IFConnector,
   des: DesConnector,
@@ -91,18 +91,20 @@ class CheckAndCopyRelationshipsService @Inject()(
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
   val auditService: AuditService,
-  val metrics: Metrics)(implicit val appConfig: AppConfig)
+  val metrics: Metrics
+)(implicit val appConfig: AppConfig)
     extends Monitoring
     with Logging {
 
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
 
-  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier)(
-    implicit ec: ExecutionContext,
+  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    auditData: AuditData): Future[CheckAndCopyResult] = {
+    auditData: AuditData
+  ): Future[CheckAndCopyResult] = {
 
     def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
       if (copyRelationshipFlag) {
@@ -121,11 +123,12 @@ class CheckAndCopyRelationshipsService @Inject()(
     }
   }
 
-  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId)(
-    implicit ec: ExecutionContext,
+  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    auditData: AuditData): Future[CheckAndCopyResult] = {
+    auditData: AuditData
+  ): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
     auditData.set("service", "mtd-it")
@@ -139,35 +142,37 @@ class CheckAndCopyRelationshipsService @Inject()(
       case maybeRelationshipCopyRecord @ _ =>
         for {
           nino <- ifConnector.getNinoFor(mtdItId)
-          references <- nino.fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(
-                         lookupCesaForOldRelationship(arn, _))
+          references <-
+            nino.fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(lookupCesaForOldRelationship(arn, _))
           result <- if (references.nonEmpty)
-                     findOrCreateRelationshipCopyRecordAndCopy(
-                       references.map(SaRef.apply),
-                       maybeRelationshipCopyRecord,
-                       arn,
-                       EnrolmentKey(Service.MtdIt, mtdItId))
-                       .map {
-                         case Some(_) =>
-                           auditService.sendCreateRelationshipAuditEvent
-                           mark("Count-CopyRelationship-ITSA-FoundAndCopied")
-                           FoundAndCopied
-                         case None =>
-                           auditService.sendCreateRelationshipAuditEvent
-                           mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
-                           logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
-                           FoundButLockedCouldNotCopy
-                       }
-                       .recover {
-                         case NonFatal(ex) =>
-                           logger.warn(
-                             s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})",
-                             ex)
-                           auditService.sendCreateRelationshipAuditEvent
-                           mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
-                           FoundAndFailedToCopy
-                       } else
-                     nino.fold[Future[CheckAndCopyResult]](Future(NotFound))(tryCreateRelationshipFromAltItsa(_))
+                      findOrCreateRelationshipCopyRecordAndCopy(
+                        references.map(SaRef.apply),
+                        maybeRelationshipCopyRecord,
+                        arn,
+                        EnrolmentKey(Service.MtdIt, mtdItId)
+                      )
+                        .map {
+                          case Some(_) =>
+                            auditService.sendCreateRelationshipAuditEvent
+                            mark("Count-CopyRelationship-ITSA-FoundAndCopied")
+                            FoundAndCopied
+                          case None =>
+                            auditService.sendCreateRelationshipAuditEvent
+                            mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
+                            logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
+                            FoundButLockedCouldNotCopy
+                        }
+                        .recover { case NonFatal(ex) =>
+                          logger.warn(
+                            s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})",
+                            ex
+                          )
+                          auditService.sendCreateRelationshipAuditEvent
+                          mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
+                          FoundAndFailedToCopy
+                        }
+                    else
+                      nino.fold[Future[CheckAndCopyResult]](Future(NotFound))(tryCreateRelationshipFromAltItsa(_))
         } yield result
     }
   }
@@ -194,57 +199,59 @@ class CheckAndCopyRelationshipsService @Inject()(
           enrolmentKey,
           references,
           failIfCreateRecordFails = true,
-          failIfAllocateAgentInESFails = false)
+          failIfAllocateAgentInESFails = false
+        )
     }
 
-  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn)(
-    implicit ec: ExecutionContext,
+  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    auditData: AuditData): Future[CheckAndCopyResult] = {
+    auditData: AuditData
+  ): Future[CheckAndCopyResult] = {
     auditData.set("Journey", "CopyExistingESRelationship")
     auditData.set("service", "mtd-vat")
     auditData.set("vrn", vrn)
     relationshipCopyRepository.findBy(arn, EnrolmentKey(Service.Vat, vrn)).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-        //logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
+        // logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
           references <- lookupESForOldRelationship(arn, vrn)
           result <- if (references.nonEmpty) checkVrnExistsInEtmp(vrn).flatMap {
-                     case true => {
-                       findOrCreateRelationshipCopyRecordAndCopy(
-                         references.map(VatRef.apply),
-                         maybeRelationshipCopyRecord,
-                         arn,
-                         EnrolmentKey(Service.Vat, vrn))
-                         .map {
-                           case Some(_) =>
-                             auditService.sendCreateRelationshipAuditEventForMtdVat
-                             mark("Count-CopyRelationship-VAT-FoundAndCopied")
-                             FoundAndCopied
-                           case None =>
-                             auditService.sendCreateRelationshipAuditEventForMtdVat
-                             mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
-                             logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
-                             FoundButLockedCouldNotCopy
-                         }
-                         .recover {
-                           case NonFatal(ex) =>
-                             logger.warn(
-                               s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
-                               ex)
-                             auditService.sendCreateRelationshipAuditEventForMtdVat
-                             mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
-                             FoundAndFailedToCopy
-                         }
-                     }
-                     case false => {
-                       auditService.sendCreateRelationshipAuditEventForMtdVat
-                       Future.successful(VrnNotFoundInEtmp)
-                     }
-                   } else Future.successful(NotFound)
+                      case true =>
+                        findOrCreateRelationshipCopyRecordAndCopy(
+                          references.map(VatRef.apply),
+                          maybeRelationshipCopyRecord,
+                          arn,
+                          EnrolmentKey(Service.Vat, vrn)
+                        )
+                          .map {
+                            case Some(_) =>
+                              auditService.sendCreateRelationshipAuditEventForMtdVat
+                              mark("Count-CopyRelationship-VAT-FoundAndCopied")
+                              FoundAndCopied
+                            case None =>
+                              auditService.sendCreateRelationshipAuditEventForMtdVat
+                              mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
+                              logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
+                              FoundButLockedCouldNotCopy
+                          }
+                          .recover { case NonFatal(ex) =>
+                            logger.warn(
+                              s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
+                              ex
+                            )
+                            auditService.sendCreateRelationshipAuditEventForMtdVat
+                            mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
+                            FoundAndFailedToCopy
+                          }
+                      case false =>
+                        auditService.sendCreateRelationshipAuditEventForMtdVat
+                        Future.successful(VrnNotFoundInEtmp)
+                    }
+                    else Future.successful(NotFound)
         } yield result
     }
   }
@@ -252,22 +259,23 @@ class CheckAndCopyRelationshipsService @Inject()(
   private def checkVrnExistsInEtmp(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext, auditData: AuditData) =
     des
       .vrnIsKnownInEtmp(vrn)
-      .map(result => {
+      .map { result =>
         auditData.set("vrnExistsInEtmp", result)
         result
-      })
+      }
 
-  def lookupCesaForOldRelationship(arn: Arn, nino: Nino)(
-    implicit ec: ExecutionContext,
+  def lookupCesaForOldRelationship(arn: Arn, nino: Nino)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    auditData: AuditData): Future[Set[SaAgentReference]] = {
+    auditData: AuditData
+  ): Future[Set[SaAgentReference]] = {
     auditData.set("nino", nino)
     for {
       references <- des.getClientSaAgentSaReferences(nino)
       matching <- intersection(references) {
-                   mapping.getSaAgentReferencesFor(arn)
-                 }
+                    mapping.getSaAgentReferencesFor(arn)
+                  }
       _ = auditData.set("saAgentRef", matching.mkString(","))
       _ = auditData.set("CESARelationship", matching.nonEmpty)
     } yield {
@@ -276,11 +284,10 @@ class CheckAndCopyRelationshipsService @Inject()(
     }
   }
 
-  def hasLegacyRelationshipInCesaOrHasPartialAuth(arn: Arn, nino: Nino)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData): Future[Boolean] =
+  def hasLegacyRelationshipInCesaOrHasPartialAuth(
+    arn: Arn,
+    nino: Nino
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
         aca.getPartialAuthExistsFor(nino, arn, Service.MtdIt.id).map { hasPartialAuth =>
@@ -288,45 +295,45 @@ class CheckAndCopyRelationshipsService @Inject()(
           auditService.sendCheckCESAAuditEvent
           hasPartialAuth
         }
-      } else Future successful true)
+      } else Future successful true
+    )
 
-  def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(
-    implicit
+  def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    auditData: AuditData): Future[Set[AgentCode]] = {
+    auditData: AuditData
+  ): Future[Set[AgentCode]] = {
     auditData.set("vrn", clientVrn)
 
     for {
       agentGroupIds <- es.getDelegatedGroupIdsForHMCEVATDECORG(clientVrn)
       groupInfos = agentGroupIds.map(ugs.getGroupInfo)
       agentCodes <- Future
-                     .sequence(groupInfos)
-                     .map { setOptions: Set[Option[GroupInfo]] =>
-                       setOptions
-                         .flatMap { maybeGroup =>
-                           maybeGroup.map(_.agentCode)
-                         }
-                         .collect { case Some(ac) => ac }
-                     }
+                      .sequence(groupInfos)
+                      .map { setOptions: Set[Option[GroupInfo]] =>
+                        setOptions
+                          .flatMap { maybeGroup =>
+                            maybeGroup.map(_.agentCode)
+                          }
+                          .collect { case Some(ac) => ac }
+                      }
       matching <- intersection[AgentCode](agentCodes.toSeq) {
-                   mapping.getAgentCodesFor(arn)
-                 }
+                    mapping.getAgentCodesFor(arn)
+                  }
       _ = auditData.set("oldAgentCodes", matching.map(_.value).mkString(","))
       _ = auditData.set("ESRelationship", matching.nonEmpty)
       _ <- auditService.sendCheckESAuditEvent
-    } yield {
-      matching
-    }
+    } yield matching
   }
 
-  def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(
-    implicit ec: ExecutionContext): Future[Set[A]] = {
+  def intersection[A](
+    referenceIds: Seq[A]
+  )(mappingServiceCall: => Future[Seq[A]])(implicit ec: ExecutionContext): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
-      //logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
+      // logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
       returnValue(Set.empty)
     } else
       mappingServiceCall.map { mappingServiceIds =>
@@ -334,7 +341,8 @@ class CheckAndCopyRelationshipsService @Inject()(
         logger.info(
           s"The CESA SA references have been found, " +
             s"${if (intersected.isEmpty) "but no previous relationship exists"
-            else "and will attempt to copy existing relationship"}")
+            else "and will attempt to copy existing relationship"}"
+        )
         intersected
       }
   }

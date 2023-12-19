@@ -29,35 +29,36 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class CheckRelationshipsService @Inject()(
+class CheckRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ap: AgentPermissionsConnector,
   groupSearch: UsersGroupsSearchConnector,
-  val metrics: Metrics)
-    extends Monitoring
+  val metrics: Metrics
+) extends Monitoring
     with Logging {
 
-  def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier): Future[Boolean] = userId match {
+  def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Boolean] = userId match {
     case None         => checkForRelationshipAgencyLevel(arn, enrolmentKey).map(_._1)
     case Some(userId) => checkForRelationshipUserLevel(arn, userId, enrolmentKey)
   }
 
-  def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier): Future[(Boolean, String)] =
+  def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[(Boolean, String)] =
     for {
       groupId           <- es.getPrincipalGroupIdFor(arn)
       allocatedGroupIds <- es.getDelegatedGroupIdsFor(enrolmentKey)
       groupHasAssignedEnrolment = allocatedGroupIds.contains(groupId)
-    } yield {
-      (groupHasAssignedEnrolment, groupId)
-    }
+    } yield (groupHasAssignedEnrolment, groupId)
 
-  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, enrolmentKey: EnrolmentKey)(
-    implicit ec: ExecutionContext,
-    hc: HeaderCarrier): Future[Boolean] =
+  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, enrolmentKey: EnrolmentKey)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Boolean] =
     // 1. Check that the agency with the given Arn has a relationship with the client.
     checkForRelationshipAgencyLevel(arn, enrolmentKey).flatMap {
       case (false, _) =>
@@ -76,15 +77,14 @@ class CheckRelationshipsService @Inject()(
             for {
               // if the client is unassigned (not yet put into any access groups), behave as if granular permissions were disabled for that client
               isClientUnassigned <- ap.clientIsUnassigned(arn, enrolmentKey)
-              isEnrolmentAssignedToUser <- es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId)).map {
-                                            usersAssignedEnrolments =>
-                                              usersAssignedEnrolments.exists(enrolment =>
-                                                enrolmentKeys(enrolment)
-                                                  .contains(enrolmentKey.tag))
-                                          }
-            } yield {
-              isClientUnassigned || isEnrolmentAssignedToUser
-            }
+              isEnrolmentAssignedToUser <-
+                es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId)).map { usersAssignedEnrolments =>
+                  usersAssignedEnrolments.exists(enrolment =>
+                    enrolmentKeys(enrolment)
+                      .contains(enrolmentKey.tag)
+                  )
+                }
+            } yield isClientUnassigned || isEnrolmentAssignedToUser
           }
         }
     }

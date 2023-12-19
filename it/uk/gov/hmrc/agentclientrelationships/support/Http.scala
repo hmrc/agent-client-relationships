@@ -33,9 +33,7 @@ object Http {
     request.get()
   }
 
-  def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(
-    implicit
-    ws: WSClient): HttpResponse =
+  def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(implicit ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.addHttpHeaders(headers: _*).post(body)
     }
@@ -44,7 +42,7 @@ object Http {
     request.post(EmptyBody)
   }
 
-  def putEmpty(url: String)(implicit  ws: WSClient): HttpResponse = perform(url) { request =>
+  def putEmpty(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
     request.put(EmptyBody)
   }
 
@@ -52,10 +50,8 @@ object Http {
     request.delete()
   }
 
-  private def perform(url: String)(
-    fun: WSRequest => Future[WSResponse])(implicit ws: WSClient): HttpResponse =
-    await(
-      fun(ws.url(url).withHttpHeaders(authHeader).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
+  private def perform(url: String)(fun: WSRequest => Future[WSResponse])(implicit ws: WSClient): HttpResponse =
+    await(fun(ws.url(url).withHttpHeaders(authHeader).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
 
   private def await[A](future: Future[A]) = Await.result(future, Duration(10, SECONDS))
 
@@ -73,6 +69,6 @@ class Resource(path: String, port: Int) {
   def postEmpty()(implicit ws: WSClient): HttpResponse =
     Http.postEmpty(url())
 
-  def putEmpty()(implicit  ws: WSClient): HttpResponse =
+  def putEmpty()(implicit ws: WSClient): HttpResponse =
     Http.putEmpty(url())
 }

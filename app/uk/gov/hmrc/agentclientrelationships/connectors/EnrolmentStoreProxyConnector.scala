@@ -53,7 +53,7 @@ object ES20Request {
 }
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
@@ -89,7 +89,8 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
 
   // ES1 - delegated
   def getDelegatedGroupIdsFor(
-    enrolmentKey: EnrolmentKey)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] = {
+    enrolmentKey: EnrolmentKey
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] = {
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=delegated")
     monitor(s"ConsumedAPI-ES-getDelegatedGroupIdsFor-${enrolmentKey.service}-GET") {
@@ -105,17 +106,20 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
   }
 
   def getDelegatedGroupIdsForHMCEVATDECORG(
-    vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] =
+    vrn: Vrn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] =
     getDelegatedGroupIdsFor(EnrolmentKey("HMCE-VATDEC-ORG", Seq(Identifier("VATRegNo", vrn.value))))
 
-  //ES2 - delegated
-  def getEnrolmentsAssignedToUser(userId: String, service: Option[String])(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Seq[Enrolment]] = {
+  // ES2 - delegated
+  def getEnrolmentsAssignedToUser(userId: String, service: Option[String])(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Seq[Enrolment]] = {
 
     val url: String =
       s"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated" + service.fold("")(
-        svc => s"&service=$svc")
+        svc => s"&service=$svc"
+      )
     monitor(s"ConsumedAPI-ES-getEnrolmentsAssignedToUser-GET") {
       http.GET[HttpResponse](url).map { response =>
         response.status match {
@@ -133,13 +137,15 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
     }
   }
 
-  //ES3 - Query Enrolments allocated to a Group
+  // ES3 - Query Enrolments allocated to a Group
   def getAgentReferenceNumberFor(
-    groupId: String)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Arn]] = {
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Arn]] = {
     val url =
       new URL(
         espBaseUrl,
-        s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT")
+        s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"
+      )
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
       http.GET[HttpResponse](url.toString).map { response =>
         response.status match {
@@ -159,18 +165,22 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
 
   // ES8
   def allocateEnrolmentToAgent(groupId: String, userId: String, enrolmentKey: EnrolmentKey, agentCode: AgentCode)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Unit] = {
+    implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit] = {
     val url = new URL(
       teBaseUrl,
-      s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}")
+      s"/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
+    )
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKey.service}-POST") {
       http.POST[ES8Request, HttpResponse](url.toString, ES8Request(userId, "delegated")).map { response =>
         response.status match {
           case Status.CREATED => ()
           case Status.CONFLICT =>
             logger.warn(
-              s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one.")
+              s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one."
+            )
             ()
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
@@ -180,9 +190,10 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
   }
 
   // ES9
-  def deallocateEnrolmentFromAgent(groupId: String, enrolmentKey: EnrolmentKey)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Unit] = {
+  def deallocateEnrolmentFromAgent(groupId: String, enrolmentKey: EnrolmentKey)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit] = {
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/${enrolmentKey.tag}")
     monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKey.service}-DELETE") {
       http.DELETE[HttpResponse](url.toString).map { response =>
@@ -196,9 +207,10 @@ class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, metrics: Metrics)
   }
 
   // ES20 - query known facts by verifiers or identifiers
-  def queryKnownFacts(service: Service, knownFacts: Seq[Identifier])(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Option[Seq[Identifier]]] = {
+  def queryKnownFacts(service: Service, knownFacts: Seq[Identifier])(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[Seq[Identifier]]] = {
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments")
     val request = ES20Request(service.id, knownFacts)
     monitor("ConsumedAPI-ES-queryKnownFactsByIdentifiersOrVerifiers-POST") {

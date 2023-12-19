@@ -31,7 +31,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentUserClientDetailsConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class AgentUserClientDetailsConnector @Inject() (http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with Logging {
 
@@ -39,7 +39,7 @@ class AgentUserClientDetailsConnector @Inject()(http: HttpClient, metrics: Metri
 
   val baseUrl = new URL(appConfig.agentUserClientDetailsUrl)
 
-  //update the cache in Granular Permissions (returns 404 if no cache currently in use)
+  // update the cache in Granular Permissions (returns 404 if no cache currently in use)
   def cacheRefresh(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
     val url = s"$baseUrl/agent-user-client-details/arn/${arn.value}/cache-refresh"
     monitor("ConsumedAPI-GranPermsCacheRefresh-GET") {
@@ -49,7 +49,8 @@ class AgentUserClientDetailsConnector @Inject()(http: HttpClient, metrics: Metri
           response.status match {
             case NOT_FOUND | NO_CONTENT => ()
             case other                  => logger.warn(s"cache refresh returned status $other")
-        })
+          }
+        )
     }
   }
 }

@@ -174,7 +174,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Success))
+          syncToESStatus = Some(Success)
+        )
       await(repo.create(deleteRecord))
 
       val result: Boolean =
@@ -191,7 +192,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Failed),
-          syncToESStatus = Some(Success))
+          syncToESStatus = Some(Success)
+        )
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
@@ -214,7 +216,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(InProgress),
-          syncToESStatus = Some(Success))
+          syncToESStatus = Some(Success)
+        )
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
 
@@ -236,7 +239,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed))
+          syncToESStatus = Some(Failed)
+        )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -262,7 +266,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(InProgress))
+          syncToESStatus = Some(InProgress)
+        )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -311,7 +316,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Failed),
-          syncToESStatus = Some(Success))
+          syncToESStatus = Some(Success)
+        )
       await(repo.create(deleteRecord))
       givenETMPDeAuthFails
 
@@ -333,7 +339,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed))
+          syncToESStatus = Some(Failed)
+        )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -366,7 +373,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed))
+          syncToESStatus = Some(Failed)
+        )
       await(repo.create(deleteRecord))
       givenRelationshipBetweenAgentAndClientExists
       givenAgentExists
@@ -385,7 +393,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed))
+          syncToESStatus = Some(Failed)
+        )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -404,7 +413,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           arn.value,
           Some(mtdItEnrolmentKey),
           syncToETMPStatus = Some(Failed),
-          syncToESStatus = Some(Success))
+          syncToESStatus = Some(Success)
+        )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -533,11 +543,13 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       checkService,
       agentUserService,
       auditService,
-      metrics)
+      metrics
+    )
 
     def givenAgentExists =
       when(
-        agentUserService.getAgentAdminUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData]))
+        agentUserService.getAgentAdminUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+      )
         .thenReturn(Future.successful(Right(agentUser)))
 
     def givenRelationshipBetweenAgentAndClientExists =
@@ -545,7 +557,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         checkService
           .checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(
             any[ExecutionContext],
-            any[HeaderCarrier]))
+            any[HeaderCarrier]
+          )
+      )
         .thenReturn(Future.successful(true))
 
     def givenETMPDeAuthSucceeds =
@@ -560,31 +574,47 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       when(
         es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(
           any[HeaderCarrier],
-          any[ExecutionContext]))
+          any[ExecutionContext]
+        )
+      )
         .thenReturn(Future.successful(()))
 
     def givenESDeAllocationFails =
       when(
         es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(
           any[HeaderCarrier],
-          any[ExecutionContext]))
+          any[ExecutionContext]
+        )
+      )
         .thenReturn(Future.failed(new Exception))
 
     def givenESDeAllocationFailsWith(ex: Exception) =
       when(
         es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(
           any[HeaderCarrier],
-          any[ExecutionContext]))
+          any[ExecutionContext]
+        )
+      )
         .thenReturn(Future.failed(ex))
 
     def givenSetRelationshipEndedSucceeds =
-      when(aca
-        .setRelationshipEnded(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[HeaderCarrier], any[ExecutionContext]))
+      when(
+        aca
+          .setRelationshipEnded(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(
+            any[HeaderCarrier],
+            any[ExecutionContext]
+          )
+      )
         .thenReturn(Future.successful(true))
 
     def givenSetRelationshipEndedFails =
-      when(aca
-        .setRelationshipEnded(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[HeaderCarrier], any[ExecutionContext]))
+      when(
+        aca
+          .setRelationshipEnded(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(
+            any[HeaderCarrier],
+            any[ExecutionContext]
+          )
+      )
         .thenReturn(Future.successful(false))
 
     def givenAucdCacheRefresh =

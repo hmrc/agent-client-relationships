@@ -42,7 +42,8 @@ class DeleteRecordSpec extends UnitSpec with Inside {
             authorization = Some(Authorization("foo1")),
             sessionId = Some(SessionId("foo2")),
             gaToken = Some("foo4")
-          ))
+          )
+        )
       )
 
       val json = Json.toJson(deleteRecord)
@@ -58,11 +59,10 @@ class DeleteRecordSpec extends UnitSpec with Inside {
       result.lastRecoveryAttempt shouldBe deleteRecord.lastRecoveryAttempt
       result.numberOfAttempts shouldBe deleteRecord.numberOfAttempts
 
-      inside(result.headerCarrier) {
-        case Some(hc: HeaderCarrier) =>
-          hc.authorization.map(_.value) shouldBe Some("foo1")
-          hc.sessionId.map(_.value) shouldBe Some("foo2")
-          hc.gaToken.get shouldBe "foo4"
+      inside(result.headerCarrier) { case Some(hc: HeaderCarrier) =>
+        hc.authorization.map(_.value) shouldBe Some("foo1")
+        hc.sessionId.map(_.value) shouldBe Some("foo2")
+        hc.gaToken.get shouldBe "foo4"
       }
     }
   }

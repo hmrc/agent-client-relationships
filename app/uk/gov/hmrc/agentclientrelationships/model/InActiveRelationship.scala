@@ -27,7 +27,8 @@ case class InactiveRelationship(
   dateFrom: Option[LocalDate],
   clientId: String,
   clientType: String,
-  service: String)
+  service: String
+)
 
 object InactiveRelationship {
 

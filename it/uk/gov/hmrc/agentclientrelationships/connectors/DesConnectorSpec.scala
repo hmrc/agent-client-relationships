@@ -17,7 +17,13 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DesConnectorSpec
-    extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub with IFStubs
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with DesStubs
+    with DesStubsGet
+    with DataStreamStub
+    with IFStubs
     with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
@@ -36,8 +42,8 @@ class DesConnectorSpec
         "microservice.services.users-groups-search.port"   -> wireMockPort,
         "microservice.services.des.port"                   -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.des.environment"                  -> "stub",
-        "microservice.services.des.authorization-token" -> "token",
+        "microservice.services.des.environment"            -> "stub",
+        "microservice.services.des.authorization-token"    -> "token",
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
@@ -79,7 +85,9 @@ class DesConnectorSpec
       val agentIds = Seq("001", "002", "003", "004", "005", "005", "007")
       givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
       givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
+      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(
+        SaAgentReference.apply
+      )
     }
 
     "return empty seq when client has no active relationship with an agent" in {
@@ -144,7 +152,9 @@ class DesConnectorSpec
     "get agentRecord detail should retrieve agent record from DES" in {
       getAgentRecordForClient(agentARN)
 
-      await(desConnector.getAgentRecord(agentARN)) should be (Some(AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty))))))
+      await(desConnector.getAgentRecord(agentARN)) should be(
+        Some(AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty)))))
+      )
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {

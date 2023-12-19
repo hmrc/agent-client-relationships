@@ -31,10 +31,11 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 
 @Singleton
-class RecoveryScheduler @Inject()(
+class RecoveryScheduler @Inject() (
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
   deleteRelationshipsService: DeleteRelationshipsService,
-  actorSystem: ActorSystem)(implicit appConfig: AppConfig, ec: ExecutionContext)
+  actorSystem: ActorSystem
+)(implicit appConfig: AppConfig, ec: ExecutionContext)
     extends Logging {
 
   val recoveryInterval = appConfig.recoveryInterval
@@ -55,34 +56,34 @@ class RecoveryScheduler @Inject()(
 class TaskActor(
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
   recoveryInterval: Int,
-  recover: => Future[Unit])(implicit ec: ExecutionContext)
+  recover: => Future[Unit]
+)(implicit ec: ExecutionContext)
     extends Actor
     with Logging {
 
-  def receive: PartialFunction[Any, Unit] = {
-    case uid: String =>
-      mongoRecoveryScheduleRepository.read.foreach {
-        case RecoveryRecord(recordUid, runAt) =>
-          val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
-          if (uid == recordUid) {
-            val newUid = UUID.randomUUID().toString
-            val nextRunAt = (if (runAt.isBefore(now)) now else runAt)
-              .plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
-            val delay = nextRunAt.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)
-            mongoRecoveryScheduleRepository
-              .write(newUid, nextRunAt)
-              .map(_ => {
-                context.system.scheduler.scheduleOnce(delay.seconds, self, newUid)
-                logger.info("About to start recovery job.")
-                recover
-              })
-          } else {
-            val dateTime = if (runAt.isBefore(now)) now else runAt
-            val delay = (dateTime.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)) + Random.nextInt(
-              Math.min(60, recoveryInterval))
-            context.system.scheduler.scheduleOnce(delay.seconds, self, recordUid)
-            Future.successful(())
+  def receive: PartialFunction[Any, Unit] = { case uid: String =>
+    mongoRecoveryScheduleRepository.read.foreach { case RecoveryRecord(recordUid, runAt) =>
+      val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
+      if (uid == recordUid) {
+        val newUid = UUID.randomUUID().toString
+        val nextRunAt = (if (runAt.isBefore(now)) now else runAt)
+          .plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
+        val delay = nextRunAt.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)
+        mongoRecoveryScheduleRepository
+          .write(newUid, nextRunAt)
+          .map { _ =>
+            context.system.scheduler.scheduleOnce(delay.seconds, self, newUid)
+            logger.info("About to start recovery job.")
+            recover
           }
+      } else {
+        val dateTime = if (runAt.isBefore(now)) now else runAt
+        val delay = (dateTime.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)) + Random.nextInt(
+          Math.min(60, recoveryInterval)
+        )
+        context.system.scheduler.scheduleOnce(delay.seconds, self, recordUid)
+        Future.successful(())
       }
+    }
   }
 }

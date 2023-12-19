@@ -86,7 +86,9 @@ class RelationshipsControllerTestOnlyISpec
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780")))))) shouldBe 1
+      await(
+        repo.create(RelationshipCopyRecord(arn, Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780")))))
+      ) shouldBe 1
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 404
     }

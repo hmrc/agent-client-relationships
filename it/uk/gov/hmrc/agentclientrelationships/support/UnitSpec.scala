@@ -20,13 +20,11 @@ trait UnitSpec extends AnyWordSpecLike with Matchers with OptionValues with Scal
   def redirectLocation(result: Result) = Helpers.redirectLocation(Future.successful(result))
   def contentAsString(result: Result): String = Helpers.contentAsString(Future.successful(result))
   def contentAsJson(result: Result): JsValue = Helpers.contentAsJson(Future.successful(result))
-  def contentType(result: Result): Option[String] = {
+  def contentType(result: Result): Option[String] =
     result.body.contentType.map(_.split(";").take(1).mkString.trim)
-  }
-  def charset(result: Result): Option[String] = {
+  def charset(result: Result): Option[String] =
     result.body.contentType match {
       case Some(s) if s.contains("charset=") => Some(s.split("; *charset=").drop(1).mkString.trim)
-      case _ => None
+      case _                                 => None
     }
-  }
 }

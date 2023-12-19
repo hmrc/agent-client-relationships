@@ -32,16 +32,17 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentPermissionsConnector @Inject()(http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class AgentPermissionsConnector @Inject() (http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val agentPermissionsBaseUrl = new URL(appConfig.agentPermissionsUrl)
 
-  def clientIsUnassigned(arn: Arn, enrolmentKey: EnrolmentKey)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Boolean] = {
+  def clientIsUnassigned(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean] = {
     val url = s"$agentPermissionsBaseUrl/agent-permissions/arn/${arn.value}/client/${enrolmentKey.tag}/groups"
     monitor("ConsumedAPI-GetGroupSummariesForClient-GET") {
       http.GET[HttpResponse](url).map { response =>

@@ -46,7 +46,8 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
         sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id")))
+        requestId = Some(RequestId("dummy request id"))
+      )
 
       val auditData = new AuditData()
       auditData.set("arn", Arn("1234").value)
@@ -65,7 +66,8 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
       await(
         service
-          .sendCreateRelationshipAuditEvent(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext]))
+          .sendCreateRelationshipAuditEvent(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext])
+      )
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
@@ -105,7 +107,8 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
         sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id")))
+        requestId = Some(RequestId("dummy request id"))
+      )
 
       val auditData = new AuditData()
       auditData.set("arn", Arn("1234").value)

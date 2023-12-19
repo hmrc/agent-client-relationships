@@ -38,9 +38,9 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCacheProvider: AgentCacheProvider)(
-  implicit val appConfig: AppConfig)
-    extends HttpAPIMonitor
+class DesConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCacheProvider: AgentCacheProvider)(implicit
+  val appConfig: AppConfig
+) extends HttpAPIMonitor
     with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -52,7 +52,8 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
   private val CorrelationId = "CorrelationId"
 
   def getClientSaAgentSaReferences(
-    nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
+    nino: Nino
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
     val url = new URL(s"${appConfig.desUrl}/registration/relationship/nino/${encodePathSegment(nino.value)}")
 
     getWithDesHeaders("GetStatusAgentRelationship", url).map { response =>
@@ -71,7 +72,8 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
   }
 
   def getAgentRecord(
-    agentId: TaxIdentifier)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentRecord]] =
+    agentId: TaxIdentifier
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentRecord]] =
     getWithDesHeaders("GetAgentRecord", new URL(getAgentRecordUrl(agentId))).map { response =>
       response.status match {
         case Status.OK =>
@@ -94,7 +96,7 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
         throw new Exception(s"The client identifier $agentId is not supported.")
     }
 
-  //DES API #1363  Get Vat Customer Information
+  // DES API #1363  Get Vat Customer Information
   def vrnIsKnownInEtmp(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
     val url = new URL(s"$desBaseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information")
     getWithDesHeaders("GetVatCustomerInformation", url, desAuthToken, desEnv).map { response =>
@@ -116,8 +118,10 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
   )
 
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] =
+    implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
       httpClient.GET(url.toString, Nil, desHeaders(authToken, env))(implicitly[HttpReads[HttpResponse]], hc, ec)
     }

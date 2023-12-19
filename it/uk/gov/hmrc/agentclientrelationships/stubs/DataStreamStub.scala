@@ -14,7 +14,8 @@ trait DataStreamStub extends Eventually {
     count: Int,
     event: AgentClientRelationshipEvent,
     tags: Map[String, String] = Map.empty,
-    detail: Map[String, String] = Map.empty) =
+    detail: Map[String, String] = Map.empty
+  ) =
     eventually {
       verify(
         count,
@@ -43,12 +44,18 @@ trait DataStreamStub extends Eventually {
   def givenAuditConnector() = {
     stubFor(
       post(urlEqualTo("/write/audit/merged"))
-        .willReturn(aResponse()
-          .withStatus(204)))
+        .willReturn(
+          aResponse()
+            .withStatus(204)
+        )
+    )
     stubFor(
       post(urlEqualTo("/write/audit"))
-        .willReturn(aResponse()
-          .withStatus(204)))
+        .willReturn(
+          aResponse()
+            .withStatus(204)
+        )
+    )
   }
 
   private def auditUrl = "/write/audit"

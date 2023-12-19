@@ -9,7 +9,6 @@ import java.time.LocalDate
 
 trait IFStubs {
 
-
   val url: TaxIdentifier => String = {
     case MtdItId(mtdItId) =>
       s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=true&regime=ITSA&relationship=ZA01&auth-profile=ALL00001"
@@ -27,7 +26,7 @@ trait IFStubs {
       s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
     case PlrId(ref) =>
       s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
-    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino) =
@@ -36,46 +35,55 @@ trait IFStubs {
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}""")))
+            .withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}""")
+        )
+    )
 
   def givenNinoIsUnknownFor(mtdId: MtdItId) =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
-        .willReturn(aResponse().withStatus(404)))
+        .willReturn(aResponse().withStatus(404))
+    )
 
   def givenmtdIdIsInvalid(mtdId: MtdItId) =
     stubFor(
       get(urlMatching(s"/registration/.*?/mtdId/${mtdId.value}"))
-        .willReturn(aResponse().withStatus(400)))
+        .willReturn(aResponse().withStatus(400))
+    )
 
   def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId) =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
-        .willReturn(aResponse()
-          .withStatus(200)
-          .withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}""")))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}""")
+        )
+    )
 
   def givenMtdItIdIsUnKnownFor(nino: Nino) =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(404)))
+        .willReturn(aResponse().withStatus(404))
+    )
 
   def givenNinoIsInvalid(nino: Nino) =
     stubFor(
       get(urlMatching(s"/registration/.*?/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(400)))
-
+        .willReturn(aResponse().withStatus(400))
+    )
 
   def givenIFReturnsServerError() =
     stubFor(
       any(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(500)))
+        .willReturn(aResponse().withStatus(500))
+    )
 
   def givenIFReturnsServiceUnavailable() =
     stubFor(
       any(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(503)))
-
+        .willReturn(aResponse().withStatus(503))
+    )
 
   def givenAgentCanBeAllocatedInIF(taxIdentifier: TaxIdentifier, arn: Arn) =
     stubFor(
@@ -83,17 +91,23 @@ trait IFStubs {
         .withRequestBody(containing(taxIdentifier.value))
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(200)
-          .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}""")))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}""")
+        )
+    )
 
   def givenAgentCanNotBeAllocatedInIF(status: Int) =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(status)
-          .withBody(s"""{"reason": "Service unavailable"}""")))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withBody(s"""{"reason": "Service unavailable"}""")
+        )
+    )
 
   def givenAgentCanBeDeallocatedInIF(taxIdentifier: TaxIdentifier, arn: Arn) =
     stubFor(
@@ -101,9 +115,12 @@ trait IFStubs {
         .withRequestBody(containing(taxIdentifier.value))
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"De-Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(200)
-          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")
+        )
+    )
 
   def givenAgentHasNoActiveRelationshipInIF(taxIdentifier: TaxIdentifier, arn: Arn) =
     stubFor(
@@ -111,62 +128,71 @@ trait IFStubs {
         .withRequestBody(containing(taxIdentifier.value))
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"De-Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(200)
-          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")
+        )
+    )
 
   def givenAgentCanNotBeDeallocatedInIF(status: Int) =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"De-Authorise\""))
-        .willReturn(aResponse()
-          .withStatus(status)
-          .withBody(s"""{"reason": "Service unavailable"}""")))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withBody(s"""{"reason": "Service unavailable"}""")
+        )
+    )
 
-  def getActiveRelationshipFailsWith(taxIdentifier: TaxIdentifier,
-                                     status: Int): StubMapping =
+  def getActiveRelationshipFailsWith(taxIdentifier: TaxIdentifier, status: Int): StubMapping =
     stubFor(
-      get(
-        urlEqualTo(url(taxIdentifier)))
-        .willReturn(aResponse()
-          .withStatus(status)))
+      get(urlEqualTo(url(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+        )
+    )
 
   def getActiveRelationshipFailsWithSuspended(taxIdentifier: TaxIdentifier): StubMapping =
     stubFor(
-      get(
-        urlEqualTo(url(taxIdentifier)))
-        .willReturn(aResponse()
-          .withStatus(403).withBody("AGENT_SUSPENDED")))
+      get(urlEqualTo(url(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(403)
+            .withBody("AGENT_SUSPENDED")
+        )
+    )
 
-  def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn) = {
-    stubFor(get(urlEqualTo(url(taxIdentifier)))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(
-          s"""
-             |{
-             |"relationship" :[
-             |{
-             |  "referenceNumber" : "${taxIdentifier.value}",
-             |  "agentReferenceNumber" : "${arn.value}",
-             |  "organisation" : {
-             |    "organisationName": "someOrganisationName"
-             |  },
-             |  "dateFrom" : "2015-09-10",
-             |  "dateTo" : "9999-12-31",
-             |  "contractAccountCategory" : "01",
-             |  "activity" : "09"
-             |}
-             |]
-             |}""".stripMargin)))
-
-  }
-
-  def getInactiveRelationshipViaClient(taxIdentifier: TaxIdentifier,
-                                       agentArn: String): StubMapping =
+  def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn) =
     stubFor(
-      get(
-        urlEqualTo(url(taxIdentifier)))
+      get(urlEqualTo(url(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationship" :[
+                         |{
+                         |  "referenceNumber" : "${taxIdentifier.value}",
+                         |  "agentReferenceNumber" : "${arn.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
+
+  def getInactiveRelationshipViaClient(taxIdentifier: TaxIdentifier, agentArn: String): StubMapping =
+    stubFor(
+      get(urlEqualTo(url(taxIdentifier)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -185,15 +211,18 @@ trait IFStubs {
                          |  "activity" : "09"
                          |}
                          |]
-                         |}""".stripMargin)))
+                         |}""".stripMargin)
+        )
+    )
 
-  def getSomeActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier,
-                                          agentArn1: String,
-                                          agentArn2: String,
-                                          agentArn3: String): StubMapping =
+  def getSomeActiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    agentArn1: String,
+    agentArn2: String,
+    agentArn3: String
+  ): StubMapping =
     stubFor(
-      get(
-        urlEqualTo(url(taxIdentifier)))
+      get(urlEqualTo(url(taxIdentifier)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -234,110 +263,105 @@ trait IFStubs {
                          |  "activity" : "11"
                          |}
                          |]
-                         |}""".stripMargin)))
+                         |}""".stripMargin)
+        )
+    )
 
-  //VIA Agent
+  // VIA Agent
 
   val otherInactiveRelationship: TaxIdentifier => Arn => String = {
-    case MtdItId(clientId) => arn =>
-      s"""
-         |{
-         |  "referenceNumber" : "$clientId",
-         |  "agentReferenceNumber" : "${arn.value}",
-         |  "individual" : {
-         |    "firstName": "someName"
-         |  },
-         |  "dateFrom" : "2015-09-10",
-         |  "dateTo" : "2015-09-21",
-         |  "contractAccountCategory" : "01",
-         |  "activity" : "09"
-         |}
+    case MtdItId(clientId) => arn => s"""
+                                        |{
+                                        |  "referenceNumber" : "$clientId",
+                                        |  "agentReferenceNumber" : "${arn.value}",
+                                        |  "individual" : {
+                                        |    "firstName": "someName"
+                                        |  },
+                                        |  "dateFrom" : "2015-09-10",
+                                        |  "dateTo" : "2015-09-21",
+                                        |  "contractAccountCategory" : "01",
+                                        |  "activity" : "09"
+                                        |}
        """.stripMargin
-    case Vrn(clientId) => arn =>
-      s"""
-         |{
-         |  "referenceNumber" : "$clientId",
-         |  "agentReferenceNumber" : "${arn.value}",
-         |  "organisation" : {
-         |    "organisationName": "someOrganisationName"
-         |  },
-         |  "dateFrom" : "2015-09-10",
-         |  "dateTo" : "2015-09-21",
-         |  "contractAccountCategory" : "01",
-         |  "activity" : "09"
-         |}
+    case Vrn(clientId) => arn => s"""
+                                    |{
+                                    |  "referenceNumber" : "$clientId",
+                                    |  "agentReferenceNumber" : "${arn.value}",
+                                    |  "organisation" : {
+                                    |    "organisationName": "someOrganisationName"
+                                    |  },
+                                    |  "dateFrom" : "2015-09-10",
+                                    |  "dateTo" : "2015-09-21",
+                                    |  "contractAccountCategory" : "01",
+                                    |  "activity" : "09"
+                                    |}
        """.stripMargin
-    case Utr(clientId) => arn =>
-      s"""
-         |{
-         |  "referenceNumber" : "$clientId",
-         |  "agentReferenceNumber" : "${arn.value}",
-         |  "organisation" : {
-         |    "organisationName": "someOrganisationName"
-         |  },
-         |  "dateFrom" : "2015-09-10",
-         |  "dateTo" : "2015-09-21",
-         |  "contractAccountCategory" : "01",
-         |  "activity" : "09"
-         |}
+    case Utr(clientId) => arn => s"""
+                                    |{
+                                    |  "referenceNumber" : "$clientId",
+                                    |  "agentReferenceNumber" : "${arn.value}",
+                                    |  "organisation" : {
+                                    |    "organisationName": "someOrganisationName"
+                                    |  },
+                                    |  "dateFrom" : "2015-09-10",
+                                    |  "dateTo" : "2015-09-21",
+                                    |  "contractAccountCategory" : "01",
+                                    |  "activity" : "09"
+                                    |}
        """.stripMargin
-    case Urn(clientId) => arn =>
-      s"""
-         |{
-         |  "referenceNumber" : "$clientId",
-         |  "agentReferenceNumber" : "${arn.value}",
-         |  "organisation" : {
-         |    "organisationName": "someOrganisationName"
-         |  },
-         |  "dateFrom" : "2015-09-10",
-         |  "dateTo" : "2015-09-21",
-         |  "contractAccountCategory" : "01",
-         |  "activity" : "09"
-         |}
+    case Urn(clientId) => arn => s"""
+                                    |{
+                                    |  "referenceNumber" : "$clientId",
+                                    |  "agentReferenceNumber" : "${arn.value}",
+                                    |  "organisation" : {
+                                    |    "organisationName": "someOrganisationName"
+                                    |  },
+                                    |  "dateFrom" : "2015-09-10",
+                                    |  "dateTo" : "2015-09-21",
+                                    |  "contractAccountCategory" : "01",
+                                    |  "activity" : "09"
+                                    |}
        """.stripMargin
-    case PptRef(clientId) => arn =>
-      s"""
-         |{
-         |  "referenceNumber" : "$clientId",
-         |  "agentReferenceNumber" : "${arn.value}",
-         |  "organisation" : {
-         |    "organisationName": "someOrganisationName"
-         |  },
-         |  "dateFrom" : "2015-09-10",
-         |  "dateTo" : "2015-09-21",
-         |  "contractAccountCategory" : "01",
-         |  "activity" : "09"
-         |}
+    case PptRef(clientId) => arn => s"""
+                                       |{
+                                       |  "referenceNumber" : "$clientId",
+                                       |  "agentReferenceNumber" : "${arn.value}",
+                                       |  "organisation" : {
+                                       |    "organisationName": "someOrganisationName"
+                                       |  },
+                                       |  "dateFrom" : "2015-09-10",
+                                       |  "dateTo" : "2015-09-21",
+                                       |  "contractAccountCategory" : "01",
+                                       |  "activity" : "09"
+                                       |}
        """.stripMargin
-    case CgtRef(clientId) => arn =>
-      s"""
-         |{
-         |  "referenceNumber" : "$clientId",
-         |  "agentReferenceNumber" : "${arn.value}",
-         |  "organisation" : {
-         |    "organisationName": "someOrganisationName"
-         |  },
-         |  "dateFrom" : "2015-09-10",
-         |  "dateTo" : "2015-09-21",
-         |  "contractAccountCategory" : "01",
-         |  "activity" : "09"
-         |}
+    case CgtRef(clientId) => arn => s"""
+                                       |{
+                                       |  "referenceNumber" : "$clientId",
+                                       |  "agentReferenceNumber" : "${arn.value}",
+                                       |  "organisation" : {
+                                       |    "organisationName": "someOrganisationName"
+                                       |  },
+                                       |  "dateFrom" : "2015-09-10",
+                                       |  "dateTo" : "2015-09-21",
+                                       |  "contractAccountCategory" : "01",
+                                       |  "activity" : "09"
+                                       |}
        """.stripMargin
-    case PlrId(clientId) => arn =>
-      s"""
-         |{
-         |  "referenceNumber" : "$clientId",
-         |  "agentReferenceNumber" : "${arn.value}",
-         |  "organisation" : {
-         |    "organisationName": "someOrganisationName"
-         |  },
-         |  "dateFrom" : "2015-09-10",
-         |  "dateTo" : "2015-09-21",
-         |  "contractAccountCategory" : "01",
-         |  "activity" : "09"
-         |}
+    case PlrId(clientId) => arn => s"""
+                                      |{
+                                      |  "referenceNumber" : "$clientId",
+                                      |  "agentReferenceNumber" : "${arn.value}",
+                                      |  "organisation" : {
+                                      |    "organisationName": "someOrganisationName"
+                                      |  },
+                                      |  "dateFrom" : "2015-09-10",
+                                      |  "dateTo" : "2015-09-21",
+                                      |  "contractAccountCategory" : "01",
+                                      |  "activity" : "09"
+                                      |}
        """.stripMargin
-    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   private def inactiveUrl(arn: Arn) = s"/registration/relationship?arn=${arn.value}" +
@@ -358,79 +382,93 @@ trait IFStubs {
       s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=false&regime=PPT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case PlrId(ref) =>
       s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=false&regime=PLR&from=2015-01-01&to=${LocalDate.now().toString}"
-    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {
 
-    val individualOrOrganisationJson = if(taxIdentifier.isInstanceOf[MtdItId])
-      s"""
-         | "individual" : {
-         |  "firstName" : "someName"
-         |  },
-         |""".stripMargin
-    else
-      s"""
-         | "organisation" : {
-         | "organisationName" : "someOrgName"
-         | },
-         |""".stripMargin
+    val individualOrOrganisationJson =
+      if (taxIdentifier.isInstanceOf[MtdItId])
+        s"""
+           | "individual" : {
+           |  "firstName" : "someName"
+           |  },
+           |""".stripMargin
+      else
+        s"""
+           | "organisation" : {
+           | "organisationName" : "someOrgName"
+           | },
+           |""".stripMargin
 
-    stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     |{
-                     |"relationship" :[
-                     |{
-                     |  "referenceNumber" : "${taxIdentifier.value}",
-                     |  "agentReferenceNumber" : "ABCDE123456", """.stripMargin + individualOrOrganisationJson + s"""
-                                                                                                                    |  "dateFrom" : "2015-09-10",
-                                                                                                                    |  "dateTo" : "2018-09-09",
-                                                                                                                    |  "contractAccountCategory" : "01",
-                                                                                                                    |  "activity" : "09"
-                                                                                                                    |},
-                                                                                                                    |{
-                                                                                                                    | "referenceNumber" : "${taxIdentifier.value}",
-                                                                                                                    |  "agentReferenceNumber" : "ABCDE777777", """.stripMargin + individualOrOrganisationJson + s"""
+    stubFor(
+      get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(
+              s"""
+                 |{
+                 |"relationship" :[
+                 |{
+                 |  "referenceNumber" : "${taxIdentifier.value}",
+                 |  "agentReferenceNumber" : "ABCDE123456", """.stripMargin + individualOrOrganisationJson + s"""
+                                                                                                                |  "dateFrom" : "2015-09-10",
+                                                                                                                |  "dateTo" : "2018-09-09",
+                                                                                                                |  "contractAccountCategory" : "01",
+                                                                                                                |  "activity" : "09"
+                                                                                                                |},
+                                                                                                                |{
+                                                                                                                | "referenceNumber" : "${taxIdentifier.value}",
+                                                                                                                |  "agentReferenceNumber" : "ABCDE777777", """.stripMargin + individualOrOrganisationJson + s"""
                                                                                                                                                                                                                    |  "dateFrom" : "2019-09-09",
                                                                                                                                                                                                                    |  "dateTo" : "2050-09-09",
                                                                                                                                                                                                                    |  "contractAccountCategory" : "01",
                                                                                                                                                                                                                    |  "activity" : "09"
                                                                                                                                                                                                                    |  }
                                                                                                                                                                                                                    |]
-                                                                                                                                                                                                                   |}""".stripMargin)))
+                                                                                                                                                                                                                   |}""".stripMargin
+            )
+        )
+    )
   }
 
-  def getNoInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping = {
-
-    stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     |{
-                     |"relationship" :[
-                     |{
-                     |  "referenceNumber" : "${taxIdentifier.value}",
-                     |  "agentReferenceNumber" : "ABCDE123456",
-                     |  "individual" : {
-                     |    "firstName": "someName"
-                     |  },
-                     |  "dateFrom" : "2015-09-10",
-                     |  "dateTo" : "2050-09-09",
-                     |  "contractAccountCategory" : "01",
-                     |  "activity" : "09"
-                     |}
-                     |]
-                     |}""".stripMargin)))
-  }
-
-  def getFailInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, status: Int, body: Option[String] = None) =
-    stubFor(get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
-      .willReturn(aResponse().withStatus(status).withBody(body.getOrElse("")))
+  def getNoInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier): StubMapping =
+    stubFor(
+      get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationship" :[
+                         |{
+                         |  "referenceNumber" : "${taxIdentifier.value}",
+                         |  "agentReferenceNumber" : "ABCDE123456",
+                         |  "individual" : {
+                         |    "firstName": "someName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "2050-09-09",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
     )
 
-  def getInactiveRelationshipsViaAgent(arn: Arn, otherTaxIdentifier: TaxIdentifier, taxIdentifier: TaxIdentifier): StubMapping = {
+  def getFailInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, status: Int, body: Option[String] = None) =
+    stubFor(
+      get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
+        .willReturn(aResponse().withStatus(status).withBody(body.getOrElse("")))
+    )
+
+  def getInactiveRelationshipsViaAgent(
+    arn: Arn,
+    otherTaxIdentifier: TaxIdentifier,
+    taxIdentifier: TaxIdentifier
+  ): StubMapping = {
 
     val individualOrOrganisation: TaxIdentifier => String = {
       case MtdItId(_) =>
@@ -443,81 +481,107 @@ trait IFStubs {
            |    },""".stripMargin
     }
 
-    stubFor(get(urlEqualTo(inactiveUrl(arn)))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     |{
-                     |"relationship" : [
-                     |${otherInactiveRelationship(otherTaxIdentifier)(arn)},
-                     |{
-                     |  "referenceNumber" : "${taxIdentifier.value}",
-                     |  "agentReferenceNumber" : "${arn.value}",""".stripMargin +
-          individualOrOrganisation(taxIdentifier) +
-          s"""  "dateFrom" : "2015-09-10",
-             |  "dateTo" : "${LocalDate.now().toString}",
-             |  "contractAccountCategory" : "01",
-             |  "activity" : "09"
-             |}
-             |]
-             |}""".stripMargin)))
+    stubFor(
+      get(urlEqualTo(inactiveUrl(arn)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(
+              s"""
+                 |{
+                 |"relationship" : [
+                 |${otherInactiveRelationship(otherTaxIdentifier)(arn)},
+                 |{
+                 |  "referenceNumber" : "${taxIdentifier.value}",
+                 |  "agentReferenceNumber" : "${arn.value}",""".stripMargin +
+                individualOrOrganisation(taxIdentifier) +
+                s"""  "dateFrom" : "2015-09-10",
+                   |  "dateTo" : "${LocalDate.now().toString}",
+                   |  "contractAccountCategory" : "01",
+                   |  "activity" : "09"
+                   |}
+                   |]
+                   |}""".stripMargin
+            )
+        )
+    )
   }
 
   def getAgentInactiveRelationshipsButActive(encodedArn: String, agentArn: String, clientId: String): StubMapping =
-    stubFor(get(urlEqualTo(inactiveUrl(Arn(agentArn))))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     |{
-                     |"relationship" :[
-                     |{
-                     |  "referenceNumber" : "$clientId",
-                     |  "agentReferenceNumber" : "$agentArn",
-                     |  "organisation" : {
-                     |    "organisationName": "someOrganisationName"
-                     |  },
-                     |  "dateFrom" : "2015-09-10",
-                     |  "dateTo" : "9999-09-21",
-                     |  "contractAccountCategory" : "01",
-                     |  "activity" : "09"
-                     |}
-                     |]
-                     |}""".stripMargin)))
+    stubFor(
+      get(urlEqualTo(inactiveUrl(Arn(agentArn))))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationship" :[
+                         |{
+                         |  "referenceNumber" : "$clientId",
+                         |  "agentReferenceNumber" : "$agentArn",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-09-21",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
 
   def getFailAgentInactiveRelationships(encodedArn: String, status: Int) =
-    stubFor(get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
-      .willReturn(aResponse()
-        .withStatus(status)))
+    stubFor(
+      get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+        )
+    )
 
   def getFailWithSuspendedAgentInactiveRelationships(encodedArn: String) =
-    stubFor(get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
-      .willReturn(aResponse()
-        .withStatus(403).withBody("AGENT_SUSPENDED")))
+    stubFor(
+      get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
+        .willReturn(
+          aResponse()
+            .withStatus(403)
+            .withBody("AGENT_SUSPENDED")
+        )
+    )
 
   def getFailWithInvalidAgentInactiveRelationships(encodedArn: String) =
-    stubFor(get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
-      .willReturn(aResponse()
-        .withStatus(503)))
+    stubFor(
+      get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
+        .willReturn(
+          aResponse()
+            .withStatus(503)
+        )
+    )
 
   def getAgentInactiveRelationshipsNoDateTo(arn: Arn, clientId: String): StubMapping =
-    stubFor(get(urlEqualTo(inactiveUrl(arn)))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     |{
-                     |"relationship" :[
-                     |{
-                     |  "referenceNumber" : "${clientId}",
-                     |  "agentReferenceNumber" : "${arn.value}",
-                     |  "organisation" : {
-                     |    "organisationName": "someOrganisationName"
-                     |  },
-                     |  "dateFrom" : "2015-09-10",
-                     |  "contractAccountCategory" : "01",
-                     |  "activity" : "09"
-                     |}
-                     |]
-                     |}""".stripMargin)))
-
+    stubFor(
+      get(urlEqualTo(inactiveUrl(arn)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationship" :[
+                         |{
+                         |  "referenceNumber" : "$clientId",
+                         |  "agentReferenceNumber" : "${arn.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
 
 }

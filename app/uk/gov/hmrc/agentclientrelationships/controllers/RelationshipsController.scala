@@ -38,7 +38,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @Singleton
-class RelationshipsController @Inject()(
+class RelationshipsController @Inject() (
   override val authConnector: AuthConnector,
   val appConfig: AppConfig,
   checkService: CheckRelationshipsService,
@@ -54,8 +54,8 @@ class RelationshipsController @Inject()(
   esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
   auditService: AuditService,
-  override val controllerComponents: ControllerComponents)
-    extends BackendController(controllerComponents)
+  override val controllerComponents: ControllerComponents
+) extends BackendController(controllerComponents)
     with AuthActions {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
@@ -69,7 +69,8 @@ class RelationshipsController @Inject()(
     service: String,
     clientIdType: String,
     clientId: String,
-    userId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    userId: Option[String]
+  ): Action[AnyContent] = Action.async { implicit request =>
     val tUserId = userId.map(UserId)
     (service, clientIdType, clientId) match {
       // "special" cases
@@ -81,13 +82,14 @@ class RelationshipsController @Inject()(
         ifConnector
           .getMtdIdFor(Nino(clientId))
           .flatMap(
-            _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(
-              mtdItId =>
-                checkWithTaxIdentifier(
-                  arn,
-                  tUserId,
-                  EnrolmentKey(Service.MtdIt, mtdItId)
-              )))
+            _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(mtdItId =>
+              checkWithTaxIdentifier(
+                arn,
+                tUserId,
+                EnrolmentKey(Service.MtdIt, mtdItId)
+              )
+            )
+          )
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // "normal" cases
       case (svc, idType, id) =>
@@ -101,8 +103,9 @@ class RelationshipsController @Inject()(
     }
   }
 
-  private def withIrSaSuspensionCheck(agentId: Arn)(
-    proceed: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+  private def withIrSaSuspensionCheck(
+    agentId: Arn
+  )(proceed: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     des.getAgentRecord(agentId).flatMap {
       case None => Future.successful(BadRequest)
       case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
@@ -111,8 +114,9 @@ class RelationshipsController @Inject()(
       case _ => proceed
     }
 
-  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(
-    implicit request: Request[_]) = {
+  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
+    request: Request[_]
+  ) = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
@@ -128,10 +132,8 @@ class RelationshipsController @Inject()(
          and not scattered throughout lots of methods in different classes. */
       isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
       res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
-            else Future.failed(RelationshipDeletePending())
-    } yield {
-      if (res) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
-    }
+             else Future.failed(RelationshipDeletePending())
+    } yield if (res) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
 
     result
       .recoverWith {
@@ -150,11 +152,12 @@ class RelationshipsController @Inject()(
       }
   }
 
-  private def checkOldRelationship(arn: Arn, taxIdentifier: TaxIdentifier, errorCode: String)(
-    implicit ec: ExecutionContext,
+  private def checkOldRelationship(arn: Arn, taxIdentifier: TaxIdentifier, errorCode: String)(implicit
+    ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    auditData: AuditData): Future[Either[String, Boolean]] =
+    auditData: AuditData
+  ): Future[Either[String, Boolean]] =
     checkOldAndCopyService
       .checkForOldRelationshipAndCopy(arn, taxIdentifier)
       .map {
@@ -168,7 +171,8 @@ class RelationshipsController @Inject()(
           throw upS
         case NonFatal(ex) =>
           logger.warn(
-            s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}")
+            s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
+          )
           Left(errorCode)
       }
 
@@ -186,7 +190,8 @@ class RelationshipsController @Inject()(
         case upS: UpstreamErrorResponse => throw upS
         case NonFatal(ex) =>
           logger.warn(
-            s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}")
+            s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}"
+          )
           NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
   }
@@ -226,10 +231,11 @@ class RelationshipsController @Inject()(
       }
   }
 
-  //noinspection ScalaStyle
-  private def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
+  // noinspection ScalaStyle
+  private def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
       case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) =>
@@ -240,21 +246,21 @@ class RelationshipsController @Inject()(
         Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
       case (Service.Cbc.id, CbcIdType.enrolmentId) =>
         makeSanitisedCbcEnrolmentKey(CbcId(clientId))
-      //"normal" cases
+      // "normal" cases
       case (serviceKey, _) =>
         if (appConfig.supportedServices.exists(_.id == serviceKey)) {
           validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
         } else Future.successful(Left(s"Unknown service $serviceKey"))
     }
 
-  /**
-    * This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be
-    * HMRC-CBC-NONUK-ORG (if the caller has no way of knowing). We check and correct the enrolment key as needed.
-    * Also, if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId) as required by specs.
-    * First, query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
+  /** This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be
+    * HMRC-CBC-NONUK-ORG (if the caller has no way of knowing). We check and correct the enrolment key as needed. Also,
+    * if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId) as required by specs. First,
+    * query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
     */
   private[controllers] def makeSanitisedCbcEnrolmentKey(
-    cbcId: CbcId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
+    cbcId: CbcId
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
     // Try as HMRC-CBC-ORG (UK version)
     esConnector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))).flatMap {
       case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
@@ -269,13 +275,16 @@ class RelationshipsController @Inject()(
             EnrolmentKey(
               Service.Cbc.id,
               identifiers
-            )))
+            )
+          )
+        )
     }
 
   private def validateSupportedServiceForEnrolmentKey(
     serviceKey: String,
     taxIdType: String,
-    clientId: String): Future[Either[String, EnrolmentKey]] = {
+    clientId: String
+  ): Future[Either[String, EnrolmentKey]] = {
     val service: Service = Service.forId(serviceKey)
     val clientIdType: ClientIdType[TaxIdentifier] = service.supportedClientIdType
     if (taxIdType == clientIdType.enrolmentId) {
@@ -283,7 +292,8 @@ class RelationshipsController @Inject()(
         Future.successful(Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId))))
       else
         Future.successful(
-          Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation"))
+          Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
+        )
     } else
       Future.successful(Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey"))
   }
@@ -297,17 +307,17 @@ class RelationshipsController @Inject()(
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
               maybeEk <- taxIdentifier match {
-                          // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
-                          case nino @ Nino(_) =>
-                            ifConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
-                          case _ => Future.successful(Some(enrolmentKey))
-                        }
+                           // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
+                           case nino @ Nino(_) =>
+                             ifConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
+                           case _ => Future.successful(Some(enrolmentKey))
+                         }
               _ <- maybeEk.fold {
-                    Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
-                  } { ek =>
-                    deleteService
-                      .deleteRelationship(arn, ek, currentUser.affinityGroup)
-                  }
+                     Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
+                   } { ek =>
+                     deleteService
+                       .deleteRelationship(arn, ek, currentUser.affinityGroup)
+                   }
             } yield NoContent)
               .recover {
                 case upS: UpstreamErrorResponse =>
@@ -392,8 +402,8 @@ class RelationshipsController @Inject()(
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
-      .recover {
-        case ex: RelationshipNotFound => NotFound(ex.getMessage)
+      .recover { case ex: RelationshipNotFound =>
+        NotFound(ex.getMessage)
       }
   }
 
@@ -414,9 +424,8 @@ class RelationshipsController @Inject()(
           error => {
             logger.warn(s"unexpected error during agent termination: $arn, error = $error")
             InternalServerError
-          }, { result =>
-            Ok(Json.toJson(result))
-          }
+          },
+          result => Ok(Json.toJson(result))
         )
     }
   }
