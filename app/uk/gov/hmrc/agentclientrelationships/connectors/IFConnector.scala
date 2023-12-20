@@ -55,6 +55,8 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
+  private val SessionId = "x-session-id"
+  private val RequestId = "x-request-id"
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
@@ -302,10 +304,12 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         ec)
     }
 
-  private def ifHeaders(authToken: String, env: String) = Seq(
+  def ifHeaders(authToken: String, env: String)(implicit hc: HeaderCarrier) = Seq(
     HeaderNames.authorisation -> s"Bearer $authToken",
     Environment               -> env,
-    CorrelationId             -> UUID.randomUUID().toString
+    CorrelationId             -> UUID.randomUUID().toString,
+    SessionId                 -> hc.sessionId.map(_.value).getOrElse(""),
+    RequestId                 -> hc.requestId.map(_.value).getOrElse("")
   )
 
   private def getRegimeFor(clientId: TaxIdentifier): String =

@@ -50,6 +50,8 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
+  private val SessionId = "x-session-id"
+  private val RequestId = "x-request-id"
 
   def getClientSaAgentSaReferences(
     nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
@@ -109,10 +111,12 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     }
   }
 
-  private def desHeaders(authToken: String, env: String) = Seq(
+  def desHeaders(authToken: String, env: String)(implicit hc: HeaderCarrier): Seq[(String, String)] = Seq(
     HeaderNames.authorisation -> s"Bearer $authToken",
     Environment               -> env,
-    CorrelationId             -> UUID.randomUUID().toString
+    CorrelationId             -> UUID.randomUUID().toString,
+    SessionId                 -> hc.sessionId.map(_.value).getOrElse(""),
+    RequestId                 -> hc.requestId.map(_.value).getOrElse("")
   )
 
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(

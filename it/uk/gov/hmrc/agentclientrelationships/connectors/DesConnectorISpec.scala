@@ -16,7 +16,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-class DesConnectorSpec
+class DesConnectorISpec
     extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub with IFStubs
     with MetricTestSupport {
 
