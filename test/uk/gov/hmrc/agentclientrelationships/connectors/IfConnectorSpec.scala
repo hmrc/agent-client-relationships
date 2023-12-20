@@ -34,20 +34,37 @@ class IfConnectorSpec extends UnitSpec with MockitoSugar {
 
   val underTest = new IFConnector(httpClient, metrics, agentCacheProvider)(appConfig)
 
-  when(hc.sessionId).thenReturn(Option(SessionId("testSession")))
-  when(hc.requestId).thenReturn(Option(RequestId("testRequestId")))
-
   "ifHeaders" should {
-    "contain correct headers" in {
-      val authToken: String = "testAuthToken"
-      val env: String = "testEnv"
+    "contain correct headers" when {
+      "sessionId and requestId found" in {
+        when(hc.sessionId).thenReturn(Option(SessionId("testSession")))
+        when(hc.requestId).thenReturn(Option(RequestId("testRequestId")))
 
-      val headersMap = underTest.ifHeaders(authToken, env)(hc).toMap
+        val authToken: String = "testAuthToken"
+        val env: String = "testEnv"
 
-      headersMap should contain("Authorization" -> "Bearer testAuthToken")
-      headersMap should contain("Environment"   -> "testEnv")
-      headersMap should contain("x-session-id"  -> "testSession")
-      headersMap should contain("x-request-id"  -> "testRequestId")
+        val headersMap = underTest.ifHeaders(authToken, env)(hc).toMap
+
+        headersMap should contain("Authorization" -> "Bearer testAuthToken")
+        headersMap should contain("Environment"   -> "testEnv")
+        headersMap should contain("x-session-id"  -> "testSession")
+        headersMap should contain("x-request-id"  -> "testRequestId")
+      }
+
+      "sessionId and requestId not found" in {
+        when(hc.sessionId).thenReturn(None)
+        when(hc.requestId).thenReturn(None)
+
+        val authToken: String = "testAuthToken"
+        val env: String = "testEnv"
+
+        val headersMap = underTest.ifHeaders(authToken, env)(hc).toMap
+
+        headersMap should contain("Authorization" -> "Bearer testAuthToken")
+        headersMap should contain("Environment"   -> "testEnv")
+        headersMap.contains("x-session-id") shouldBe false
+        headersMap.contains("x-request-id") shouldBe false
+      }
     }
   }
 }

@@ -304,13 +304,14 @@ class IFConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCache
         ec)
     }
 
-  def ifHeaders(authToken: String, env: String)(implicit hc: HeaderCarrier) = Seq(
-    HeaderNames.authorisation -> s"Bearer $authToken",
-    Environment               -> env,
-    CorrelationId             -> UUID.randomUUID().toString,
-    SessionId                 -> hc.sessionId.map(_.value).getOrElse(""),
-    RequestId                 -> hc.requestId.map(_.value).getOrElse("")
-  )
+  def ifHeaders(authToken: String, env: String)(implicit hc: HeaderCarrier): Seq[(String, String)] =
+    Seq(
+      HeaderNames.authorisation -> s"Bearer $authToken",
+      Environment               -> env,
+      CorrelationId             -> UUID.randomUUID().toString
+    ) ++
+      (if (hc.sessionId.map(_.value).nonEmpty) Seq(SessionId -> hc.sessionId.map(_.value).get) else Seq.empty) ++
+      (if (hc.requestId.map(_.value).nonEmpty) Seq(RequestId -> hc.requestId.map(_.value).get) else Seq.empty)
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {

@@ -111,13 +111,14 @@ class DesConnector @Inject()(httpClient: HttpClient, metrics: Metrics, agentCach
     }
   }
 
-  def desHeaders(authToken: String, env: String)(implicit hc: HeaderCarrier): Seq[(String, String)] = Seq(
-    HeaderNames.authorisation -> s"Bearer $authToken",
-    Environment               -> env,
-    CorrelationId             -> UUID.randomUUID().toString,
-    SessionId                 -> hc.sessionId.map(_.value).getOrElse(""),
-    RequestId                 -> hc.requestId.map(_.value).getOrElse("")
-  )
+  def desHeaders(authToken: String, env: String)(implicit hc: HeaderCarrier): Seq[(String, String)] =
+    Seq(
+      HeaderNames.authorisation -> s"Bearer $authToken",
+      Environment               -> env,
+      CorrelationId             -> UUID.randomUUID().toString
+    ) ++
+      (if (hc.sessionId.map(_.value).nonEmpty) Seq(SessionId -> hc.sessionId.map(_.value).get) else Seq.empty) ++
+      (if (hc.requestId.map(_.value).nonEmpty) Seq(RequestId -> hc.requestId.map(_.value).get) else Seq.empty)
 
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
     implicit hc: HeaderCarrier,
