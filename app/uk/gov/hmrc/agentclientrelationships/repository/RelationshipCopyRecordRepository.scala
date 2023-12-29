@@ -44,7 +44,8 @@ case class RelationshipCopyRecord(
   references: Option[Set[RelationshipReference]] = None,
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS),
   syncToETMPStatus: Option[SyncStatus] = None,
-  syncToESStatus: Option[SyncStatus] = None) {
+  syncToESStatus: Option[SyncStatus] = None
+) {
 
   // Legacy records use client id & client id type. Newer records use enrolment key.
   require(enrolmentKey.isDefined || (clientIdentifier.isDefined && clientIdentifierType.isDefined))
@@ -72,7 +73,7 @@ trait RelationshipCopyRecordRepository {
 }
 
 @Singleton
-class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class MongoRelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[RelationshipCopyRecord](
       mongoComponent = mongoComponent,
       collectionName = "relationship-copy-record",
@@ -92,7 +93,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
           IndexOptions()
             .name("arnAndEnrolmentKeyPartial")
             .partialFilterExpression(Filters.exists("enrolmentKey"))
-            .unique(true))
+            .unique(true)
+        )
       ),
       replaceIndexes = true
     )
@@ -104,7 +106,10 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
   override def create(record: RelationshipCopyRecord): Future[Int] =
     collection
       .findOneAndReplace(
-        filter(Arn(record.arn), record.enrolmentKey.get), // we assume that all newly created records WILL have an enrolment key
+        filter(
+          Arn(record.arn),
+          record.enrolmentKey.get
+        ), // we assume that all newly created records WILL have an enrolment key
         record,
         FindOneAndReplaceOptions().upsert(true)
       )
@@ -119,9 +124,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
       .updateMany(filter(arn, enrolmentKey), Updates.set("syncToETMPStatus", status.toString))
       .toFuture()
       .map(res => res.getModifiedCount.toInt)
-      .recover {
-        case e: MongoWriteException =>
-          logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
+      .recover { case e: MongoWriteException =>
+        logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
       }
 
   override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
@@ -129,9 +133,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
       .updateMany(filter(arn, enrolmentKey), Updates.set("syncToESStatus", status.toString))
       .toFuture()
       .map(res => res.getModifiedCount.toInt)
-      .recover {
-        case e: MongoWriteException =>
-          logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
+      .recover { case e: MongoWriteException =>
+        logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}"); INDICATE_ERROR_DURING_DB_UPDATE
       }
 
   override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] =
@@ -145,8 +148,8 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
       .deleteMany(Filters.equal("arn", arn.value))
       .toFuture()
       .map(res => Right(res.getDeletedCount.toInt))
-      .recover {
-        case ex: MongoWriteException => Left(ex.getMessage)
+      .recover { case ex: MongoWriteException =>
+        Left(ex.getMessage)
       }
 
   private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
@@ -161,7 +164,7 @@ class MongoRelationshipCopyRecordRepository @Inject()(mongoComponent: MongoCompo
         Filters.equal("arn", arn.value),
         Filters.equal("clientIdentifier", identifier),
         Filters.equal("clientIdentifierType", identifierType)
-      ),
+      )
     )
   }
 }

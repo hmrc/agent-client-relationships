@@ -22,9 +22,9 @@ class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with GuiceO
 
   private lazy val repo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
 
-  override def beforeEach() {
+  override def beforeEach() = {
     super.beforeEach()
-    await(repo.ensureIndexes)
+    await(repo.ensureIndexes())
     ()
   }
 

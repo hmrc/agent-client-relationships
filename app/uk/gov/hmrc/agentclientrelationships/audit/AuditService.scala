@@ -28,13 +28,13 @@ import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 
-import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters.MapHasAsScala
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
   val CreateRelationship, CheckCESA, CheckES, ClientTerminatedAgentServiceAuthorisation,
-  RecoveryOfDeleteRelationshipHasBeenAbandoned, HmrcRemovedAgentServiceAuthorisation = Value
+    RecoveryOfDeleteRelationshipHasBeenAbandoned, HmrcRemovedAgentServiceAuthorisation = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -48,12 +48,12 @@ class AuditData {
   }
 
   def getDetails: Map[String, Any] =
-    JavaConverters.mapAsScalaMapConverter(details).asScala.toMap
+    details.asScala.toMap
 
 }
 
 @Singleton
-class AuditService @Inject()(val auditConnector: AuditConnector) {
+class AuditService @Inject() (val auditConnector: AuditConnector) {
 
   private def collectDetails(data: Map[String, Any], fields: Seq[String]): Seq[(String, Any)] = fields.map { f =>
     (f, data.getOrElse(f, ""))
@@ -104,7 +104,8 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       "currentUserAffinityGroup",
       "authProviderId",
       "authProviderIdType",
-      "deleteStatus")
+      "deleteStatus"
+    )
 
   val hmrcDeleteRelationshipDetailsFields: Seq[String] =
     Seq(
@@ -129,73 +130,84 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     "abandonmentReason"
   )
 
-  def sendCreateRelationshipAuditEvent(
-    implicit hc: HeaderCarrier,
+  def sendCreateRelationshipAuditEvent(implicit
+    hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreateRelationship,
       "create-relationship",
-      collectDetails(auditData.getDetails, createRelationshipDetailsFields))
+      collectDetails(auditData.getDetails, createRelationshipDetailsFields)
+    )
 
-  def sendCreateRelationshipAuditEventForMtdVat(
-    implicit hc: HeaderCarrier,
+  def sendCreateRelationshipAuditEventForMtdVat(implicit
+    hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreateRelationship,
       "create-relationship",
-      collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat))
+      collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat)
+    )
 
-  def sendCheckCESAAuditEvent(
-    implicit hc: HeaderCarrier,
+  def sendCheckCESAAuditEvent(implicit
+    hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CheckCESA,
       "check-cesa",
-      collectDetails(auditData.getDetails, CheckCESADetailsFields))
+      collectDetails(auditData.getDetails, CheckCESADetailsFields)
+    )
 
-  def sendCheckESAuditEvent(
-    implicit hc: HeaderCarrier,
+  def sendCheckESAuditEvent(implicit
+    hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CheckES,
       "check-es",
-      collectDetails(auditData.getDetails, CheckESDetailsFields))
+      collectDetails(auditData.getDetails, CheckESDetailsFields)
+    )
 
-  def sendDeleteRelationshipAuditEvent(
-    implicit hc: HeaderCarrier,
+  def sendDeleteRelationshipAuditEvent(implicit
+    hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
       "client terminated agent:service authorisation",
       collectDetails(auditData.getDetails, deleteRelationshipDetailsFields)
     )
 
-  def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent(
-    implicit hc: HeaderCarrier,
+  def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent(implicit
+    hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
       "recovery-of-delete-relationship-abandoned",
       collectDetails(auditData.getDetails, recoveryOfDeleteRelationshipDetailsFields)
     )
 
-  def sendHmrcLedDeleteRelationshipAuditEvent(
-    implicit headerCarrier: HeaderCarrier,
+  def sendHmrcLedDeleteRelationshipAuditEvent(implicit
+    headerCarrier: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
-    ec: ExecutionContext): Future[Unit] =
+    ec: ExecutionContext
+  ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
       "hmrc remove agent:service authorisation",
@@ -205,15 +217,15 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   private[audit] def auditEvent(
     event: AgentClientRelationshipEvent,
     transactionName: String,
-    details: Seq[(String, Any)] = Seq.empty)(
-    implicit hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext): Future[Unit] =
+    details: Seq[(String, Any)] = Seq.empty
+  )(implicit hc: HeaderCarrier, request: Request[Any], ec: ExecutionContext): Future[Unit] =
     send(createEvent(event, transactionName, details: _*))
 
-  private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, details: (String, Any)*)(
-    implicit hc: HeaderCarrier,
-    request: Request[Any]): DataEvent = {
+  private def createEvent(
+    event: AgentClientRelationshipEvent,
+    transactionName: String,
+    details: (String, Any)*
+  )(implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
 
     def toString(x: Any): String = x match {
       case t: TaxIdentifier => t.value

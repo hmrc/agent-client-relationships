@@ -11,13 +11,19 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IFStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DesConnectorISpec
-    extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DesStubs with DesStubsGet with DataStreamStub with IFStubs
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with DesStubs
+    with DesStubsGet
+    with DataStreamStub
+    with IFStubs
     with MetricTestSupport {
 
   override implicit lazy val app: Application = appBuilder
@@ -36,8 +42,8 @@ class DesConnectorISpec
         "microservice.services.users-groups-search.port"   -> wireMockPort,
         "microservice.services.des.port"                   -> wireMockPort,
         "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.des.environment"                  -> "stub",
-        "microservice.services.des.authorization-token" -> "token",
+        "microservice.services.des.environment"            -> "stub",
+        "microservice.services.des.authorization-token"    -> "token",
         "microservice.services.agent-mapping.port"         -> wireMockPort,
         "auditing.consumer.baseUri.host"                   -> wireMockHost,
         "auditing.consumer.baseUri.port"                   -> wireMockPort,
@@ -64,13 +70,6 @@ class DesConnectorISpec
   val utr = Utr("1704066305")
   val cgt = CgtRef("XMCGTP837878749")
 
-  val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
-    case MtdItId(_) => MtdItId("ABCDE1234567890")
-    case Vrn(_)     => Vrn("101747641")
-    case Utr(_)     => Utr("2134514321")
-    case Urn(_)     => Urn("AAAAA6426901067")
-  }
-
   "DesConnector GetStatusAgentRelationship" should {
 
     val nino = Nino("AB123456C")
@@ -86,7 +85,9 @@ class DesConnectorISpec
       val agentIds = Seq("001", "002", "003", "004", "005", "005", "007")
       givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
       givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(SaAgentReference.apply)
+      await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(
+        SaAgentReference.apply
+      )
     }
 
     "return empty seq when client has no active relationship with an agent" in {
@@ -151,7 +152,9 @@ class DesConnectorISpec
     "get agentRecord detail should retrieve agent record from DES" in {
       getAgentRecordForClient(agentARN)
 
-      await(desConnector.getAgentRecord(agentARN)) should be (Some(AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty))))))
+      await(desConnector.getAgentRecord(agentARN)) should be(
+        Some(AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty)))))
+      )
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {

@@ -46,9 +46,9 @@ class IfConnectorSpec extends UnitSpec with MockitoSugar {
         val headersMap = underTest.ifHeaders(authToken, env)(hc).toMap
 
         headersMap should contain("Authorization" -> "Bearer testAuthToken")
-        headersMap should contain("Environment"   -> "testEnv")
-        headersMap should contain("x-session-id"  -> "testSession")
-        headersMap should contain("x-request-id"  -> "testRequestId")
+        headersMap should contain("Environment" -> "testEnv")
+        headersMap should contain("x-session-id" -> "testSession")
+        headersMap should contain("x-request-id" -> "testRequestId")
       }
 
       "sessionId and requestId not found" in {
@@ -61,7 +61,7 @@ class IfConnectorSpec extends UnitSpec with MockitoSugar {
         val headersMap = underTest.ifHeaders(authToken, env)(hc).toMap
 
         headersMap should contain("Authorization" -> "Bearer testAuthToken")
-        headersMap should contain("Environment"   -> "testEnv")
+        headersMap should contain("Environment" -> "testEnv")
         headersMap.contains("x-session-id") shouldBe false
         headersMap.contains("x-request-id") shouldBe false
       }

@@ -28,15 +28,17 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[MongoRecoveryLockService])
 trait RecoveryLockService {
 
-  def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(
-    implicit ec: ExecutionContext): Future[Option[T]]
+  def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(implicit
+    ec: ExecutionContext
+  ): Future[Option[T]]
 }
 
 @Singleton
-class MongoRecoveryLockService @Inject()(lockRepository: MongoLockRepository) extends RecoveryLockService {
+class MongoRecoveryLockService @Inject() (lockRepository: MongoLockRepository) extends RecoveryLockService {
 
-  override def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(
-    implicit ec: ExecutionContext): Future[Option[T]] = {
+  override def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
+    body: => Future[T]
+  )(implicit ec: ExecutionContext): Future[Option[T]] = {
     val recoveryLock =
       LockService(lockRepository, lockId = s"recovery-${arn.value}-${enrolmentKey.tag}", ttl = 5.minutes)
     recoveryLock.withLock(body)

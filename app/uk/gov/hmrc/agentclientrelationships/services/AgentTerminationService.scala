@@ -26,9 +26,10 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentTerminationService @Inject()(
+class AgentTerminationService @Inject() (
   deleteRecordRepository: DeleteRecordRepository,
-  relationshipCopyRecordRepository: RelationshipCopyRecordRepository)(implicit ec: ExecutionContext) {
+  relationshipCopyRecordRepository: RelationshipCopyRecordRepository
+)(implicit ec: ExecutionContext) {
 
   def terminateAgent(arn: Arn): EitherT[Future, String, TerminationResponse] = {
     val drr = deleteRecordRepository.terminateAgent(arn)
@@ -37,11 +38,15 @@ class AgentTerminationService @Inject()(
       drrResult  <- EitherT(drr)
       rcrrResult <- EitherT(rcrr)
       result <- EitherT.fromEither[Future](
-                 Right(
-                   TerminationResponse(Seq(
-                     DeletionCount("agent-client-relationships", "delete-record", drrResult),
-                     DeletionCount("agent-client-relationships", "relationship-copy-record", rcrrResult)
-                   ))))
+                  Right(
+                    TerminationResponse(
+                      Seq(
+                        DeletionCount("agent-client-relationships", "delete-record", drrResult),
+                        DeletionCount("agent-client-relationships", "relationship-copy-record", rcrrResult)
+                      )
+                    )
+                  )
+                )
     } yield result
   }
 

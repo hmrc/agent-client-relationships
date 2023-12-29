@@ -3,7 +3,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 class RelationshipsControllerServiceISpec
-  extends RelationshipsBaseControllerISpec
+    extends RelationshipsBaseControllerISpec
     with RelationshipsControllerGenericBehaviours
     with RelationshipsControllerVATBehaviours
     with RelationshipsControllerITSABehaviours {

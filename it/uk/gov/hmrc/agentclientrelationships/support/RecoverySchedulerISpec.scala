@@ -24,34 +24,33 @@ import scala.concurrent.duration.DurationInt
 class RecoverySchedulerISpec
     extends TestKit(ActorSystem("testSystem"))
     with UnitSpec
-      with MongoSupport
+    with MongoSupport
     with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
     with DataStreamStub
-      with IFStubs
-      with ACAStubs
-      with AUCDStubs
-      with BeforeAndAfterEach
-   {
+    with IFStubs
+    with ACAStubs
+    with AUCDStubs
+    with BeforeAndAfterEach {
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-                        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-                        "microservice.services.tax-enrolments.port"               -> wireMockPort,
-                        "microservice.services.users-groups-search.port"          -> wireMockPort,
-                        "microservice.services.if.port"                          -> wireMockPort,
-                        "auditing.consumer.baseUri.host"                          -> wireMockHost,
-                        "auditing.consumer.baseUri.port"                          -> wireMockPort,
-                        "features.copy-relationship.mtd-it"                       -> true,
-                        "features.copy-relationship.mtd-vat"                      -> true,
-                         "microservice.services.agent-client-authorisation.port"  -> wireMockPort,
-        "microservice.services.agent-user-client-details.port"                    -> wireMockPort,
-        "features.recovery-enable" -> false,
-        "auditing.enabled" -> true,
-        "metrics.enabled" -> true,
-        "mongodb.uri" -> mongoUri
+        "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
+        "microservice.services.tax-enrolments.port"             -> wireMockPort,
+        "microservice.services.users-groups-search.port"        -> wireMockPort,
+        "microservice.services.if.port"                         -> wireMockPort,
+        "auditing.consumer.baseUri.host"                        -> wireMockHost,
+        "auditing.consumer.baseUri.port"                        -> wireMockPort,
+        "features.copy-relationship.mtd-it"                     -> true,
+        "features.copy-relationship.mtd-vat"                    -> true,
+        "microservice.services.agent-client-authorisation.port" -> wireMockPort,
+        "microservice.services.agent-user-client-details.port"  -> wireMockPort,
+        "features.recovery-enable"                              -> false,
+        "auditing.enabled"                                      -> true,
+        "metrics.enabled"                                       -> true,
+        "mongodb.uri"                                           -> mongoUri
       )
 
   override implicit lazy val app: Application = appBuilder.build()
@@ -60,35 +59,36 @@ class RecoverySchedulerISpec
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
   private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
+  override implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
 
   private val arn: Arn = Arn("AARN0000002")
   private val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   private val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
 
-     override def beforeEach(): Unit = {
-       super.beforeEach()
-       deleteRepo.collection.drop().toFuture().futureValue
-       ()
-     }
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    deleteRepo.collection.drop().toFuture().futureValue
+    ()
+  }
 
-     override def afterAll() = {
-       super.afterAll()
-       TestKit.shutdownActorSystem(system)
-     }
+  override def afterAll() = {
+    super.afterAll()
+    TestKit.shutdownActorSystem(system)
+  }
 
-     val testKit = ActorTestKit()
-     val actorRef = system.actorOf(
-       Props(
-         new TaskActor(recoveryRepo, 2,
-           deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ()))))
+  val testKit = ActorTestKit()
+  val actorRef = system.actorOf(
+    Props(new TaskActor(recoveryRepo, 2, deleteRelationshipService.tryToResume(global, new AuditData()).map(_ => ())))
+  )
 
-     testKit.scheduler.scheduleOnce(1.second, new Runnable {
-       def run = {
-         actorRef ! "uid"
-       }
-     })
-
+  testKit.scheduler.scheduleOnce(
+    1.second,
+    new Runnable {
+      def run =
+        actorRef ! "uid"
+    }
+  )
 
   "Recovery Scheduler" should {
 
@@ -229,9 +229,7 @@ class RecoverySchedulerISpec
         givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.MtdIt, iMtdItId), Set("foo"))
 
         if (index == 0)
-          givenEnrolmentDeallocationFailsWith(503)(
-            "foo",
-            deleteRecord.enrolmentKey.get)
+          givenEnrolmentDeallocationFailsWith(503)("foo", deleteRecord.enrolmentKey.get)
         else {
           givenAgentCanBeDeallocatedInIF(iMtdItId, arn)
           givenSetRelationshipEnded(iMtdItId, arn)

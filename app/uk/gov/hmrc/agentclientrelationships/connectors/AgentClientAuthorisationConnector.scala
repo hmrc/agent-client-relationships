@@ -35,18 +35,19 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metrics: Metrics)(
-  implicit val appConfig: AppConfig)
-    extends HttpAPIMonitor
+class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient, metrics: Metrics)(implicit
+  val appConfig: AppConfig
+) extends HttpAPIMonitor
     with Logging {
 
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val acaBaseUrl: URL = new URL(appConfig.agentClientAuthorisationUrl)
 
-  def getPartialAuthExistsFor(clientId: TaxIdentifier, arn: Arn, service: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Boolean] = {
+  def getPartialAuthExistsFor(clientId: TaxIdentifier, arn: Arn, service: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean] = {
     val url: URL = new URL(
       acaBaseUrl,
       s"/agent-client-authorisation/agencies/${encodePathSegment(arn.value)}/invitations/sent"
@@ -56,7 +57,8 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
       httpClient
         .GET[HttpResponse](
           url = url.toString,
-          queryParams = List("status" -> "PartialAuth", "clientId" -> clientId.value, "service" -> service))
+          queryParams = List("status" -> "PartialAuth", "clientId" -> clientId.value, "service" -> service)
+        )
         .map { response =>
           response.status match {
             case Status.OK => !(response.json \ "_embedded" \ "invitations").as[JsArray].equals(JsArray.empty)
@@ -88,9 +90,10 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
   /*
   Updates the invitation record to Deauthorised.
    */
-  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Boolean] = {
+  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean] = {
     val url: URL = new URL(
       acaBaseUrl,
       "/agent-client-authorisation/invitations/set-relationship-ended"
@@ -99,7 +102,8 @@ class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClient, metric
       arn = arn,
       clientId = enrolmentKey.oneIdentifier().value,
       service = enrolmentKey.service,
-      endedBy = Some(endedBy))
+      endedBy = Some(endedBy)
+    )
     monitor(s"ConsumedAPI-ACA-setRelationshipEnded-PUT") {
       httpClient
         .PUT[SetRelationshipEndedPayload, HttpResponse](url = url.toString, payload)

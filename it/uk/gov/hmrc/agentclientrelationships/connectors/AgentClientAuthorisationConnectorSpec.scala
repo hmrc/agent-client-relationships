@@ -16,12 +16,13 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AgentClientAuthorisationConnectorSpec  extends UnitSpec
-  with GuiceOneServerPerSuite
-  with WireMockSupport
-  with ACAStubs
-  with MetricTestSupport
-  with MockitoSugar {
+class AgentClientAuthorisationConnectorSpec
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with ACAStubs
+    with MetricTestSupport
+    with MockitoSugar {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -48,7 +49,7 @@ class AgentClientAuthorisationConnectorSpec  extends UnitSpec
   "getPartialAuthExistsFor" should {
 
     "return true when a record exists with status PartialAuth for client" in {
-      givenPartialAuthExistsFor(agentARN , nino)
+      givenPartialAuthExistsFor(agentARN, nino)
       givenCleanMetricRegistry()
       val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN, "HMRC-MTD-IT"))
       result shouldBe true
@@ -56,7 +57,7 @@ class AgentClientAuthorisationConnectorSpec  extends UnitSpec
     }
 
     "return false when no record exists with PartialAuth for client" in {
-      givenPartialAuthNotExistsFor(agentARN , nino)
+      givenPartialAuthNotExistsFor(agentARN, nino)
       givenCleanMetricRegistry()
       val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN, "HMRC-MTD-IT"))
       result shouldBe false
@@ -64,7 +65,7 @@ class AgentClientAuthorisationConnectorSpec  extends UnitSpec
     }
 
     "return false when there is a problem with the upstream service" in {
-      givenAgentClientAuthorisationReturnsError(agentARN , nino, 503)
+      givenAgentClientAuthorisationReturnsError(agentARN, nino, 503)
       givenCleanMetricRegistry()
       val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN, "HMRC-MTD-IT"))
       result shouldBe false
@@ -72,7 +73,5 @@ class AgentClientAuthorisationConnectorSpec  extends UnitSpec
     }
 
   }
-
-
 
 }

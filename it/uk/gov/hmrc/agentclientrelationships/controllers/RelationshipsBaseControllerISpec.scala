@@ -48,7 +48,7 @@ trait RelationshipsBaseControllerISpec
   val mongoRecoveryLockService = new MongoRecoveryLockService(mongoLockRepository)
   def mongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport)
 
-  val moduleWithOverrides = new AbstractModule{
+  val moduleWithOverrides = new AbstractModule {
     override def configure(): Unit = {
       bind(classOf[MongoComponent]).toInstance(mongoComponent)
       bind(classOf[MongoRecoveryLockService]).toInstance(mongoRecoveryLockService)
@@ -58,29 +58,29 @@ trait RelationshipsBaseControllerISpec
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
-        "microservice.services.if.port"                    -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
+        "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
+        "microservice.services.tax-enrolments.port"             -> wireMockPort,
+        "microservice.services.users-groups-search.port"        -> wireMockPort,
+        "microservice.services.des.port"                        -> wireMockPort,
+        "microservice.services.if.port"                         -> wireMockPort,
+        "microservice.services.auth.port"                       -> wireMockPort,
+        "microservice.services.agent-mapping.port"              -> wireMockPort,
         "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-        "microservice.services.agent-permissions.port"     -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "microservice.services.agent-user-client-details.port" -> wireMockPort,
-        "features.copy-relationship.mtd-it"                -> true,
-        "features.copy-relationship.mtd-vat"               -> true,
-        "features.recovery-enable"                         -> false,
-        "agent.cache.size"                                 -> 1,
-        "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> true,
-        "agent.trackPage.cache.size"                                 -> 1,
-        "agent.trackPage.cache.expires"                              -> "1 millis",
-        "agent.trackPage.cache.enabled"                              -> true,
+        "microservice.services.agent-permissions.port"          -> wireMockPort,
+        "auditing.consumer.baseUri.host"                        -> wireMockHost,
+        "auditing.consumer.baseUri.port"                        -> wireMockPort,
+        "microservice.services.agent-user-client-details.port"  -> wireMockPort,
+        "features.copy-relationship.mtd-it"                     -> true,
+        "features.copy-relationship.mtd-vat"                    -> true,
+        "features.recovery-enable"                              -> false,
+        "agent.cache.size"                                      -> 1,
+        "agent.cache.expires"                                   -> "1 millis",
+        "agent.cache.enabled"                                   -> true,
+        "agent.trackPage.cache.size"                            -> 1,
+        "agent.trackPage.cache.expires"                         -> "1 millis",
+        "agent.trackPage.cache.enabled"                         -> true,
         "alt-itsa.enabled"                                      -> true,
-        "mongodb.uri" -> mongoUri
+        "mongodb.uri"                                           -> mongoUri
       )
       .overrides(moduleWithOverrides)
       .configure(additionalConfig)
@@ -91,7 +91,7 @@ trait RelationshipsBaseControllerISpec
   def repo: MongoRelationshipCopyRecordRepository = new MongoRelationshipCopyRecordRepository(mongoComponent)
   def deleteRecordRepository: MongoDeleteRecordRepository = new MongoDeleteRecordRepository(mongoComponent)
 
-  override def beforeEach() {
+  override def beforeEach() = {
     super.beforeEach()
     givenAuditConnector()
     await(mongoComponent.database.drop().toFuture())
@@ -131,12 +131,13 @@ trait RelationshipsBaseControllerISpec
   val plrId = PlrId("XAPLR2222222222")
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
-    case Vrn(_) => Vrn("101747641")
-    case Utr(_) => Utr("2134514321")
-    case Urn(_) => Urn("XXTRUST12345678")
-    case CgtRef(_) => cgtRef
-    case PptRef(_) => pptRef
-    case PlrId(_) => plrId
+    case Vrn(_)     => Vrn("101747641")
+    case Utr(_)     => Utr("2134514321")
+    case Urn(_)     => Urn("XXTRUST12345678")
+    case CgtRef(_)  => cgtRef
+    case PptRef(_)  => pptRef
+    case PlrId(_)   => plrId
+    case x          => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
@@ -146,14 +147,15 @@ trait RelationshipsBaseControllerISpec
   protected def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
   protected def verifyDeleteRecordHasStatuses(
-                                               etmpStatus: Option[SyncStatus.Value],
-                                               esStatus: Option[SyncStatus.Value]) =
+    etmpStatus: Option[SyncStatus.Value],
+    esStatus: Option[SyncStatus.Value]
+  ) =
     await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
-      case Some(DeleteRecord(arn.value, Some(ek), _, _, _, `etmpStatus`, `esStatus`, _, _, _, _)) if ek == EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789"))=>
+      case Some(DeleteRecord(arn.value, Some(ek), _, _, _, `etmpStatus`, `esStatus`, _, _, _, _))
+          if ek == EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789")) =>
     }
 
   protected def verifyDeleteRecordNotExists =
     await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe None
-
 
 }

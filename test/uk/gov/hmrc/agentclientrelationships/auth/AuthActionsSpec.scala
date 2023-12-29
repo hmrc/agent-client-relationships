@@ -77,52 +77,71 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   def mockAgentAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     enrolment: Set[Enrolment],
-    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")): OngoingStubbing[Future[Enrolments ~
-    Option[AffinityGroup] ~
-    Option[Credentials]]] =
+    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
+  ): OngoingStubbing[Future[
+    Enrolments ~
+      Option[AffinityGroup] ~
+      Option[Credentials]
+  ]] =
     when(
       mockAuthConnector
         .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
           any[HeaderCarrier](),
-          any[ExecutionContext]()))
+          any[ExecutionContext]()
+        )
+    )
       .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockClientAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment],
-    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")): OngoingStubbing[Future[Enrolments ~
-    Option[AffinityGroup] ~
-    Option[Credentials]]] =
+    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
+  ): OngoingStubbing[Future[
+    Enrolments ~
+      Option[AffinityGroup] ~
+      Option[Credentials]
+  ]] =
     when(
       mockAuthConnector
         .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
           any[HeaderCarrier](),
-          any[ExecutionContext]()))
+          any[ExecutionContext]()
+        )
+    )
       .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockStrideAuth(
     strideRole: String,
-    credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication"))
-    : OngoingStubbing[Future[Enrolments ~
+    credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication")
+  ): OngoingStubbing[Future[
+    Enrolments ~
       Option[AffinityGroup] ~
-      Option[Credentials]]] =
+      Option[Credentials]
+  ]] =
     when(
       mockAuthConnector
         .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
           any[HeaderCarrier](),
-          any[ExecutionContext]()))
+          any[ExecutionContext]()
+        )
+    )
       .thenReturn(
         Future successful new ~(
           new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
-          Some(credentials)))
+          Some(credentials)
+        )
+      )
 
   def mockClientAuthWithoutCredRetrieval(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
-    enrolment: Set[Enrolment]): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup]]] =
+    enrolment: Set[Enrolment]
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup]]] =
     when(
       mockAuthConnector.authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(
         any[HeaderCarrier](),
-        any[ExecutionContext]()))
+        any[ExecutionContext]()
+      )
+    )
       .thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")
@@ -215,20 +234,27 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   "hasRequiredStrideRole" should {
     "return true if enrolments contains required stride role" in {
       testAuthImpl
-        .hasRequiredStrideRole(Enrolments(Set(new Enrolment("FOO", Seq.empty, "", None))), Seq("FOO", "BAR")) shouldBe true
+        .hasRequiredStrideRole(
+          Enrolments(Set(new Enrolment("FOO", Seq.empty, "", None))),
+          Seq("FOO", "BAR")
+        ) shouldBe true
       testAuthImpl.hasRequiredStrideRole(
         Enrolments(
           Set(
             new Enrolment("BOO", Seq.empty, "", None),
             new Enrolment("FOO", Seq.empty, "", None),
-            new Enrolment("WOO", Seq.empty, "", None))),
-        Seq("FOO", "BAR")) shouldBe true
+            new Enrolment("WOO", Seq.empty, "", None)
+          )
+        ),
+        Seq("FOO", "BAR")
+      ) shouldBe true
     }
 
     "return false if enrolments does not contain required stride role" in {
       testAuthImpl.hasRequiredStrideRole(
         Enrolments(Set(new Enrolment("woo", Seq.empty, "", None), new Enrolment("boo", Seq.empty, "", None))),
-        Seq("foo", "bar")) shouldBe false
+        Seq("foo", "bar")
+      ) shouldBe false
       testAuthImpl.hasRequiredStrideRole(Enrolments(Set.empty), Seq("foo", "bar")) shouldBe false
     }
 

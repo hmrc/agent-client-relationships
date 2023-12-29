@@ -20,12 +20,10 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     arn.value,
     Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToESStatus = Some(SyncStatus.Success))
+    syncToESStatus = Some(SyncStatus.Success)
+  )
 
-  case class TestClient(
-                         service: String,
-                         regime: String,
-                         clientId: TaxIdentifier)
+  case class TestClient(service: String, regime: String, clientId: TaxIdentifier)
 
   val itsaClient: TestClient = TestClient(Service.MtdIt.id, "ITSA", mtdItId)
   val vatClient: TestClient = TestClient(Service.Vat.id, "VATC", vrn)
@@ -38,19 +36,19 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val pillar2Client: TestClient = TestClient(Service.Pillar2.id, "PLRID", plrId)
 
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
-  val businessList = List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
+  val businessList =
+    List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
 
   val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
 
   val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
 
   class LoggedInUser(isLoggedInClientStride: Boolean, isLoggedInClientInd: Boolean, isLoggedInClientBusiness: Boolean) {
-    if(isLoggedInClientStride) {
-      givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE,"strideId-1234456")
-      givenUserIsAuthenticatedWithStride(STRIDE_ROLE,"strideId-1234456")
-    }
-    else if(isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
-    else if(isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId)
+    if (isLoggedInClientStride) {
+      givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE, "strideId-1234456")
+      givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
+    } else if (isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
+    else if (isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId)
     else requestIsNotAuthenticated()
   }
 
@@ -72,12 +70,17 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     }
   }
 
-  def runActiveRelationshipsScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean): Unit = {
+  def runActiveRelationshipsScenario(
+    testClient: TestClient,
+    isLoggedInClientInd: Boolean,
+    isLoggedInBusiness: Boolean
+  ): Unit = {
     val requestPath: String = s"/agent-client-relationships/client/relationships/service/${testClient.service}"
 
     def doRequest() = doAgentGetRequest(requestPath)
 
-    s"find relationship for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+    s"find relationship for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual"
+    else "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipsViaClient(testClient.clientId, arn)
@@ -87,56 +90,59 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
         (result.json \ "arn").get.as[String] shouldBe arn.value
         (result.json \ "dateTo").get.as[LocalDate].toString shouldBe "9999-12-31"
-    }
+      }
 
     s"find multiple relationships for service ${testClient.service} " +
-      s"but filter out active and ended relationships for user ${if(isLoggedInClientInd) "Individual" else "Business"}"in
+      s"but filter out active and ended relationships for user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
-      getSomeActiveRelationshipsViaClient(testClient.clientId, arn.value, arn2.value, arn3.value)
+        getSomeActiveRelationshipsViaClient(testClient.clientId, arn.value, arn2.value, arn3.value)
 
-      val result: HttpResponse = doRequest()
-      result.status shouldBe 200
-      (result.json \ "arn").get.as[String] shouldBe arn3.value
-      (result.json \ "dateTo").get.as[LocalDate].toString shouldBe "9999-12-31"
-    }
+        val result: HttpResponse = doRequest()
+        result.status shouldBe 200
+        (result.json \ "arn").get.as[String] shouldBe arn3.value
+        (result.json \ "dateTo").get.as[LocalDate].toString shouldBe "9999-12-31"
+      }
   }
 
-  def runActiveRelationshipsErrorScenario(testClient: TestClient, isLoggedInClientInd: Boolean, isLoggedInBusiness: Boolean): Unit = {
+  def runActiveRelationshipsErrorScenario(
+    testClient: TestClient,
+    isLoggedInClientInd: Boolean,
+    isLoggedInBusiness: Boolean
+  ): Unit = {
     val requestPath: String = s"/agent-client-relationships/relationships/service/${testClient.service}"
 
     def doRequest() = doAgentGetRequest(requestPath)
 
     "find relationship but filter out if the end date has been changed from 9999-12-31 " +
-    s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
-      getInactiveRelationshipViaClient(testClient.clientId, arn.value)
+        getInactiveRelationshipViaClient(testClient.clientId, arn.value)
 
-      val result: HttpResponse = doRequest()
-      result.status shouldBe 404
-    }
+        val result: HttpResponse = doRequest()
+        result.status shouldBe 404
+      }
 
     "return 404 when DES returns 404 relationship not found " +
-      s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
-      getActiveRelationshipFailsWith(testClient.clientId, 404)
+        getActiveRelationshipFailsWith(testClient.clientId, 404)
 
-      val result: HttpResponse = doRequest()
-      result.status shouldBe 404
-    }
-
+        val result: HttpResponse = doRequest()
+        result.status shouldBe 404
+      }
 
     "return 404 when IF returns 400 (treated as relationship not found) " +
-      s"for service ${testClient.service} and user ${if(isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
-      getActiveRelationshipFailsWith(testClient.clientId, 400)
+        getActiveRelationshipFailsWith(testClient.clientId, 400)
 
-      val result: HttpResponse = doRequest()
-      result.status shouldBe 404
-    }
+        val result: HttpResponse = doRequest()
+        result.status shouldBe 404
+      }
 
   }
 
@@ -159,7 +165,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      val clientType = if(testClient.clientId.isInstanceOf[MtdItId]) "personal" else "business"
+      val clientType = if (testClient.clientId.isInstanceOf[MtdItId]) "personal" else "business"
 
       val otherId: TaxIdentifier = otherTaxIdentifier(testClient.clientId)
 
@@ -205,7 +211,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       result.status shouldBe 404
     }
 
-    s"find relationships and filter out relationships that have no dateTo ${testClient.service}"  in {
+    s"find relationships and filter out relationships that have no dateTo ${testClient.service}" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       getAgentInactiveRelationshipsNoDateTo(arn, testClient.clientId.value)
@@ -243,7 +249,6 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     def doRequest(): HttpResponse = doAgentGetRequest(requestPath)
     val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/client/relationships/active")
 
-
     "return 200 with a map of relationships and filter only on active ones" in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
@@ -253,7 +258,6 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       getActiveRelationshipsViaClient(urn, arn)
       getActiveRelationshipsViaClient(pptRef, arn)
       getActiveRelationshipsViaClient(cgtRef, arn)
-
 
       val result = doRequest()
       result.status shouldBe 200
@@ -304,13 +308,15 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/terminate"
     def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
-    def doRequest() = ws.url(s"http://localhost:$port$requestPath")
-      .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}").delete()
+    def doRequest() = ws
+      .url(s"http://localhost:$port$requestPath")
+      .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}")
+      .delete()
 
     "return 200 after successful termination" in {
 
-      //insert records first to have some state initially
-      //insert delete-record document
+      // insert records first to have some state initially
+      // insert delete-record document
       await(
         deleteRecordRepository.create(
           DeleteRecord(
@@ -318,10 +324,13 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
             Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
-            syncToESStatus = Some(SyncStatus.Failed))))
+            syncToESStatus = Some(SyncStatus.Failed)
+          )
+        )
+      )
 
-      //insert copy-relationship document
-       await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
+      // insert copy-relationship document
+      await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
 
       val result = await(doRequest())
       result.status shouldBe 200
@@ -330,9 +339,11 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       response shouldBe TerminationResponse(
         Seq(
           DeletionCount("agent-client-relationships", "delete-record", 1),
-          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)))
+          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)
+        )
+      )
 
-      //verify termination has deleted all record for that agent
+      // verify termination has deleted all record for that agent
       await(deleteRecordRepository.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
       await(repo.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
     }
@@ -397,7 +408,6 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       getNoInactiveRelationshipsForClient(pptRef)
       getNoInactiveRelationshipsForClient(cgtRef)
 
-
       val result = doRequest()
       result.status shouldBe 200
 
@@ -425,8 +435,7 @@ class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       val controller = app.injector.instanceOf[RelationshipsController]
       givenCbcUkDoesNotExistInES(cbcId)
       givenCbcNonUkDoesNotExistInES(cbcId)
-      await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern {
-        case Left(_) =>
+      await(controller.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern { case Left(_) =>
       }
     }
   }

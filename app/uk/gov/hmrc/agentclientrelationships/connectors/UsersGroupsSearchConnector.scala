@@ -44,10 +44,8 @@ object CredentialRole {
   implicit val formats: Format[CredentialRole] = Json.format
 }
 
-/**
-  * Cut down version of UserDetails from users-groups-search, with only the data we
-  * are interested in
-  * */
+/** Cut down version of UserDetails from users-groups-search, with only the data we are interested in
+  */
 case class UserDetails(userId: Option[String] = None, credentialRole: Option[String] = None)
 
 object UserDetails {
@@ -55,7 +53,7 @@ object UserDetails {
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class UsersGroupsSearchConnector @Inject() (httpGet: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends HttpAPIMonitor
     with HttpErrorFunctions
     with Logging {
@@ -79,13 +77,13 @@ class UsersGroupsSearchConnector @Inject()(httpGet: HttpClient, metrics: Metrics
   }
 
   def getFirstGroupAdminUser(
-    groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UserDetails]] =
+    groupId: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UserDetails]] =
     getGroupUsers(groupId)
       .map(_.find(_.credentialRole.exists(_ == "Admin")))
-      .recover {
-        case e =>
-          logger.error(s"Could not find admin user for groupId $groupId due to: $e")
-          None
+      .recover { case e =>
+        logger.error(s"Could not find admin user for groupId $groupId due to: $e")
+        None
       }
 
   def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[GroupInfo]] = {

@@ -43,9 +43,8 @@ class CheckRelationshipServiceSpec
 
   val arn: Arn = Arn("AARN0000002")
   private val taxIdentifier: TaxIdentifier = Vrn("101747641")
-  private val enrolment: Enrolment = {
+  private val enrolment: Enrolment =
     Enrolment("HMRC-MTD-VAT", "activated", "Edward Stone", Seq(Identifier("VRN", taxIdentifier.value)))
-  }
   private val enrolmentKeyStr: String = "HMRC-MTD-VAT~VRN~101747641"
   private val enrolmentKey: EnrolmentKey = EnrolmentKey(enrolmentKeyStr)
   val userId = UserId("testUserId")
@@ -63,7 +62,8 @@ class CheckRelationshipServiceSpec
         when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
-          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
+          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext])
+        )
           .thenReturn(Future.successful(Seq.empty))
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
@@ -82,7 +82,8 @@ class CheckRelationshipServiceSpec
         when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
-          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
+          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext])
+        )
           .thenReturn(Future.successful(Seq.empty))
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
@@ -101,7 +102,8 @@ class CheckRelationshipServiceSpec
         when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
-          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
+          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext])
+        )
           .thenReturn(Future.successful(Seq(enrolment)))
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
@@ -138,7 +140,8 @@ class CheckRelationshipServiceSpec
         when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(Set(groupId)))
         when(
-          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext]))
+          es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[HeaderCarrier], any[ExecutionContext])
+        )
           .thenReturn(Future.successful(Seq.empty))
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(groupId))
