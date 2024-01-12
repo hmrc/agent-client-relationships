@@ -385,33 +385,38 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
           (("authProfile", JsString("ALL00001")))
       case Some("TRS") =>
         clientId match {
-          case Utr(_) => request + (("idType", JsString("UTR")))
-          case Urn(_) => request + (("idType", JsString("URN")))
+          case Utr(_) => request + ((idTypeHeader, JsString("UTR")))
+          case Urn(_) => request + ((idTypeHeader, JsString("URN")))
           case e      => throw new Exception(s"unsupported tax identifier $e for regime TRS")
         }
       case Some("CGT") =>
         request +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001"))) +
-          (("idType", JsString("ZCGT")))
+          ((relationshipTypeHeader, JsString("ZA01"))) +
+          ((authProfileHeader, JsString("ALL00001"))) +
+          ((idTypeHeader, JsString("ZCGT")))
       case Some("PPT") =>
         request +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001"))) +
-          (("idType", JsString("ZPPT")))
+          ((relationshipTypeHeader, JsString("ZA01"))) +
+          ((authProfileHeader, JsString("ALL00001"))) +
+          ((idTypeHeader, JsString("ZPPT")))
       case Some("ITSA") =>
         request +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001")))
+          ((relationshipTypeHeader, JsString("ZA01"))) +
+          ((authProfileHeader, JsString("ALL00001"))) +
+          ((idTypeHeader, JsString("MTDBSA")))
       case Some("CBC") =>
         request +
-          (("idType", JsString("CBC")))
+          ((idTypeHeader, JsString("CBC")))
       case Some("PLR") =>
         request +
-          (("idType", JsString("PLR")))
+          ((idTypeHeader, JsString("PLR")))
       case _ =>
         request
     }
   }
+
+  private val idTypeHeader = "idType"
+  private val authProfileHeader = "authProfile"
+  private val relationshipTypeHeader = "relationshipType"
 
 }
