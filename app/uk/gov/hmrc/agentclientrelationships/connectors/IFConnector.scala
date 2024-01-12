@@ -385,38 +385,38 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
           (("authProfile", JsString("ALL00001")))
       case Some("TRS") =>
         clientId match {
-          case Utr(_) => request + ((idTypeHeader, JsString("UTR")))
-          case Urn(_) => request + ((idTypeHeader, JsString("URN")))
+          case Utr(_) => request + ((idType, JsString("UTR")))
+          case Urn(_) => request + ((idType, JsString("URN")))
           case e      => throw new Exception(s"unsupported tax identifier $e for regime TRS")
         }
       case Some("CGT") =>
         request +
-          ((relationshipTypeHeader, JsString("ZA01"))) +
-          ((authProfileHeader, JsString("ALL00001"))) +
-          ((idTypeHeader, JsString("ZCGT")))
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001"))) +
+          ((idType, JsString("ZCGT")))
       case Some("PPT") =>
         request +
-          ((relationshipTypeHeader, JsString("ZA01"))) +
-          ((authProfileHeader, JsString("ALL00001"))) +
-          ((idTypeHeader, JsString("ZPPT")))
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001"))) +
+          ((idType, JsString("ZPPT")))
       case Some("ITSA") =>
         request +
-          ((relationshipTypeHeader, JsString("ZA01"))) +
-          ((authProfileHeader, JsString("ALL00001"))) +
-          ((idTypeHeader, JsString("MTDBSA")))
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001"))) +
+          ((idType, JsString("MTDBSA")))
       case Some("CBC") =>
         request +
-          ((idTypeHeader, JsString("CBC")))
+          ((idType, JsString("CBC")))
       case Some("PLR") =>
         request +
-          ((idTypeHeader, JsString("PLR")))
+          ((idType, JsString("ZPLR")))
       case _ =>
         request
     }
   }
 
-  private val idTypeHeader = "idType"
-  private val authProfileHeader = "authProfile"
-  private val relationshipTypeHeader = "relationshipType"
+  private val idType = "idType"
+  private val authProfile = "authProfile"
+  private val relationshipType = "relationshipType"
 
 }
