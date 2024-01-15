@@ -63,7 +63,7 @@ class IfConnectorSpec extends UnitSpec with MockitoSugar {
         headersMap should contain("Authorization" -> "Bearer testAuthToken")
         headersMap should contain("Environment" -> "testEnv")
         headersMap.contains("x-session-id") shouldBe false
-        headersMap.contains("x-request-id") shouldBe false
+        headersMap.contains("x-request-id") shouldBe true
       }
     }
   }
