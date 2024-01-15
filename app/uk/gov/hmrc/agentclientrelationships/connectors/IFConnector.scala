@@ -385,33 +385,38 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
           (("authProfile", JsString("ALL00001")))
       case Some("TRS") =>
         clientId match {
-          case Utr(_) => request + (("idType", JsString("UTR")))
-          case Urn(_) => request + (("idType", JsString("URN")))
+          case Utr(_) => request + ((idType, JsString("UTR")))
+          case Urn(_) => request + ((idType, JsString("URN")))
           case e      => throw new Exception(s"unsupported tax identifier $e for regime TRS")
         }
       case Some("CGT") =>
         request +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001"))) +
-          (("idType", JsString("ZCGT")))
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001"))) +
+          ((idType, JsString("ZCGT")))
       case Some("PPT") =>
         request +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001"))) +
-          (("idType", JsString("ZPPT")))
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001"))) +
+          ((idType, JsString("ZPPT")))
       case Some("ITSA") =>
         request +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001")))
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001"))) +
+          ((idType, JsString("MTDBSA")))
       case Some("CBC") =>
         request +
-          (("idType", JsString("CBC")))
+          ((idType, JsString("CBC")))
       case Some("PLR") =>
         request +
-          (("idType", JsString("PLR")))
+          ((idType, JsString("ZPLR")))
       case _ =>
         request
     }
   }
+
+  private val idType = "idType"
+  private val authProfile = "authProfile"
+  private val relationshipType = "relationshipType"
 
 }
