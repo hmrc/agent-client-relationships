@@ -328,9 +328,8 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
       HeaderNames.authorisation -> s"Bearer $authToken",
       Environment               -> env,
       CorrelationId             -> UUID.randomUUID().toString
-    ) ++
-      (if (hc.sessionId.map(_.value).nonEmpty) Seq(SessionId -> hc.sessionId.map(_.value).get) else Seq.empty) ++
-      (if (hc.requestId.map(_.value).nonEmpty) Seq(RequestId -> hc.requestId.map(_.value).get) else Seq.empty)
+    ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(SessionId -> x.value)) ++
+      hc.requestId.fold(Seq(RequestId -> UUID.randomUUID().toString))(x => Seq(RequestId -> x.value))
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {

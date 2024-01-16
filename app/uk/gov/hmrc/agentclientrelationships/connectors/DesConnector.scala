@@ -118,9 +118,8 @@ class DesConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCac
       HeaderNames.authorisation -> s"Bearer $authToken",
       Environment               -> env,
       CorrelationId             -> UUID.randomUUID().toString
-    ) ++
-      (if (hc.sessionId.map(_.value).nonEmpty) Seq(SessionId -> hc.sessionId.map(_.value).get) else Seq.empty) ++
-      (if (hc.requestId.map(_.value).nonEmpty) Seq(RequestId -> hc.requestId.map(_.value).get) else Seq.empty)
+    ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(SessionId -> x.value)) ++
+      hc.requestId.fold(Seq(RequestId -> UUID.randomUUID().toString))(x => Seq(RequestId -> x.value))
 
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
     implicit
