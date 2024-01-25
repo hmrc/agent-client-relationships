@@ -104,7 +104,7 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
         )
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
         )
       case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 
@@ -295,7 +295,7 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
         )
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=PLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
         )
       case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 
