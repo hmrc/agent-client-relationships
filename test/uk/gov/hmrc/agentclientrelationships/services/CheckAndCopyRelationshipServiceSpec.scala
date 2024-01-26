@@ -23,7 +23,7 @@ import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
-import play.api.Configuration
+import play.api.{ConfigLoader, Configuration}
 import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -95,6 +95,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
   when(servicesConfig.getBoolean(eqs("alt-itsa.enabled"))).thenReturn(true)
+  when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]]))
+    .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
   implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
   val appConfig1: AppConfig = new AppConfig(configuration, servicesConfig)
 

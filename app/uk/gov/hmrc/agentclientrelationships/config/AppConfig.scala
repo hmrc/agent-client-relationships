@@ -23,6 +23,8 @@ import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import scala.util.matching.Regex
+
 case class ConfigNotFoundException(message: String) extends RuntimeException(message)
 
 @Singleton
@@ -97,5 +99,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val supportedServices: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
   // TODO: Keeping this list in appConfig to enable reading it from config in future if necessary
   // If this is not needed, could be moved somewhere else where constants are kept
+
+  val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 
 }
