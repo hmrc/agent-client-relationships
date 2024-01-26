@@ -20,7 +20,7 @@ import com.kenshoo.play.metrics.Metrics
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.scalatestplus.mockito.MockitoSugar.mock
-import play.api.Configuration
+import play.api.{ConfigLoader, Configuration}
 import play.api.mvc.{AnyContentAsEmpty, Request}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -531,6 +531,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     when(servicesConfig.getInt(eqs("recovery-timeout"))).thenReturn(100)
     when(servicesConfig.getString(any[String])).thenReturn("")
+    when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]]))
+      .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
     implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
     val underTest = new DeleteRelationshipsService(
