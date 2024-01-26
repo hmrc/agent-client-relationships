@@ -146,7 +146,7 @@ class DesConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCac
       httpClient
         .GET(url.toString, Nil, desHeaders(authToken, env, isInternalHost))(
           implicitly[HttpReads[HttpResponse]],
-          if (isInternalHost) hc else hc.copy(authorization = Some(Authorization(desAuthToken))),
+          if (isInternalHost) hc.copy(authorization = Some(Authorization(s"Bearer $desAuthToken"))) else hc,
           ec
         )
     }
