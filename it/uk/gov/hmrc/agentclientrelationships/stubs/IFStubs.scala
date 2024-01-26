@@ -25,11 +25,11 @@ trait IFStubs {
     case CbcId(ref) =>
       s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
     case PlrId(ref) =>
-      s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
+      s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
     case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
-  def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino) =
+  def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
         .willReturn(
@@ -39,19 +39,19 @@ trait IFStubs {
         )
     )
 
-  def givenNinoIsUnknownFor(mtdId: MtdItId) =
+  def givenNinoIsUnknownFor(mtdId: MtdItId): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
         .willReturn(aResponse().withStatus(404))
     )
 
-  def givenmtdIdIsInvalid(mtdId: MtdItId) =
+  def givenmtdIdIsInvalid(mtdId: MtdItId): StubMapping =
     stubFor(
       get(urlMatching(s"/registration/.*?/mtdId/${mtdId.value}"))
         .willReturn(aResponse().withStatus(400))
     )
 
-  def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId) =
+  def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
         .willReturn(
@@ -61,31 +61,31 @@ trait IFStubs {
         )
     )
 
-  def givenMtdItIdIsUnKnownFor(nino: Nino) =
+  def givenMtdItIdIsUnKnownFor(nino: Nino): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(404))
     )
 
-  def givenNinoIsInvalid(nino: Nino) =
+  def givenNinoIsInvalid(nino: Nino): StubMapping =
     stubFor(
       get(urlMatching(s"/registration/.*?/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(400))
     )
 
-  def givenIFReturnsServerError() =
+  def givenIFReturnsServerError(): StubMapping =
     stubFor(
       any(urlMatching(s"/registration/.*"))
         .willReturn(aResponse().withStatus(500))
     )
 
-  def givenIFReturnsServiceUnavailable() =
+  def givenIFReturnsServiceUnavailable(): StubMapping =
     stubFor(
       any(urlMatching(s"/registration/.*"))
         .willReturn(aResponse().withStatus(503))
     )
 
-  def givenAgentCanBeAllocatedInIF(taxIdentifier: TaxIdentifier, arn: Arn) =
+  def givenAgentCanBeAllocatedInIF(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing(taxIdentifier.value))
@@ -98,7 +98,7 @@ trait IFStubs {
         )
     )
 
-  def givenAgentCanNotBeAllocatedInIF(status: Int) =
+  def givenAgentCanNotBeAllocatedInIF(status: Int): StubMapping =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"Authorise\""))
@@ -109,7 +109,7 @@ trait IFStubs {
         )
     )
 
-  def givenAgentCanBeDeallocatedInIF(taxIdentifier: TaxIdentifier, arn: Arn) =
+  def givenAgentCanBeDeallocatedInIF(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing(taxIdentifier.value))
@@ -122,7 +122,7 @@ trait IFStubs {
         )
     )
 
-  def givenAgentHasNoActiveRelationshipInIF(taxIdentifier: TaxIdentifier, arn: Arn) =
+  def givenAgentHasNoActiveRelationshipInIF(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing(taxIdentifier.value))
@@ -135,7 +135,7 @@ trait IFStubs {
         )
     )
 
-  def givenAgentCanNotBeDeallocatedInIF(status: Int) =
+  def givenAgentCanNotBeDeallocatedInIF(status: Int): StubMapping =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"De-Authorise\""))
@@ -165,7 +165,7 @@ trait IFStubs {
         )
     )
 
-  def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn) =
+  def getActiveRelationshipsViaClient(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
       get(urlEqualTo(url(taxIdentifier)))
         .willReturn(
@@ -381,7 +381,7 @@ trait IFStubs {
     case PptRef(ref) =>
       s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=false&regime=PPT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=ALL00001"
     case PlrId(ref) =>
-      s"/registration/relationship?idType=PLR&referenceNumber=$ref&agent=false&active-only=false&regime=PLR&from=2015-01-01&to=${LocalDate.now().toString}"
+      s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=false&regime=PLR&from=2015-01-01&to=${LocalDate.now().toString}"
     case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
@@ -458,7 +458,11 @@ trait IFStubs {
         )
     )
 
-  def getFailInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, status: Int, body: Option[String] = None) =
+  def getFailInactiveRelationshipsForClient(
+    taxIdentifier: TaxIdentifier,
+    status: Int,
+    body: Option[String] = None
+  ): StubMapping =
     stubFor(
       get(urlEqualTo(inactiveUrlClient(taxIdentifier)))
         .willReturn(aResponse().withStatus(status).withBody(body.getOrElse("")))
@@ -532,7 +536,7 @@ trait IFStubs {
         )
     )
 
-  def getFailAgentInactiveRelationships(encodedArn: String, status: Int) =
+  def getFailAgentInactiveRelationships(encodedArn: String, status: Int): StubMapping =
     stubFor(
       get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
         .willReturn(
@@ -541,7 +545,7 @@ trait IFStubs {
         )
     )
 
-  def getFailWithSuspendedAgentInactiveRelationships(encodedArn: String) =
+  def getFailWithSuspendedAgentInactiveRelationships(encodedArn: String): StubMapping =
     stubFor(
       get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
         .willReturn(
@@ -551,7 +555,7 @@ trait IFStubs {
         )
     )
 
-  def getFailWithInvalidAgentInactiveRelationships(encodedArn: String) =
+  def getFailWithInvalidAgentInactiveRelationships(encodedArn: String): StubMapping =
     stubFor(
       get(urlEqualTo(inactiveUrl(Arn(encodedArn))))
         .willReturn(
