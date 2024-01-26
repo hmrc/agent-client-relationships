@@ -17,17 +17,15 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import com.kenshoo.play.metrics.Metrics
-import org.mockito.Mockito.when
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, RequestId, SessionId}
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HttpClient, RequestId, SessionId}
 
 class DesConnectorSpec extends UnitSpec with MockitoSugar {
 
   val appConfig: AppConfig = mock[AppConfig]
-  val hc: HeaderCarrier = mock[HeaderCarrier]
   val httpClient: HttpClient = mock[HttpClient]
   val metrics: Metrics = mock[Metrics]
   val agentCacheProvider: AgentCacheProvider = mock[AgentCacheProvider]
@@ -36,35 +34,44 @@ class DesConnectorSpec extends UnitSpec with MockitoSugar {
 
   "desHeaders" should {
     "contain correct headers" when {
-      "sessionId and requestId found" in {
-        when(hc.sessionId).thenReturn(Option(SessionId("testSession")))
-        when(hc.requestId).thenReturn(Option(RequestId("testRequestId")))
+      "internally hosted service" in {
+
+        val hc = HeaderCarrier(
+          authorization = Some(Authorization("auth-123")),
+          sessionId = Some(SessionId("session-123")),
+          requestId = Some(RequestId("request-123"))
+        )
 
         val authToken: String = "testAuthToken"
         val env: String = "testEnv"
 
-        val headersMap = underTest.desHeaders(authToken, env)(hc).toMap
+        val headersMap = underTest.desHeaders(authToken, env, isInternalHost = true)(hc).toMap
 
-        headersMap should contain("Authorization" -> "Bearer testAuthToken")
         headersMap should contain("Environment" -> "testEnv")
-        headersMap should contain("x-session-id" -> "testSession")
-        headersMap should contain("x-request-id" -> "testRequestId")
+        headersMap.contains("CorrelationId") shouldBe true
       }
 
-      "sessionId and requestId not found" in {
-        when(hc.sessionId).thenReturn(None)
-        when(hc.requestId).thenReturn(None)
+      "externally hosted service" in {
+
+        val hc = HeaderCarrier(
+          authorization = Some(Authorization("auth-123")),
+          sessionId = Some(SessionId("session-123")),
+          requestId = Some(RequestId("request-123"))
+        )
 
         val authToken: String = "testAuthToken"
         val env: String = "testEnv"
 
-        val headersMap = underTest.desHeaders(authToken, env)(hc).toMap
+        val headersMap = underTest.desHeaders(authToken, env, isInternalHost = false)(hc).toMap
 
         headersMap should contain("Authorization" -> "Bearer testAuthToken")
         headersMap should contain("Environment" -> "testEnv")
-        headersMap.contains("x-session-id") shouldBe false
-        headersMap.contains("x-request-id") shouldBe true
+        headersMap should contain("X-Session-ID" -> "session-123")
+        headersMap.contains("CorrelationId") shouldBe true
+        headersMap.contains("X-Request-ID") shouldBe true
       }
     }
   }
+
+  // when(appConfig.internalHostPatterns).thenReturn(Seq("^.*\\.service$".r, "^.*\\.mdtp$".r, "^localhost$".r))
 }
