@@ -72,6 +72,4 @@ class DesConnectorSpec extends UnitSpec with MockitoSugar {
       }
     }
   }
-
-  // when(appConfig.internalHostPatterns).thenReturn(Seq("^.*\\.service$".r, "^.*\\.mdtp$".r, "^localhost$".r))
 }

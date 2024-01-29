@@ -1,6 +1,6 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, postRequestedFor, urlPathEqualTo, verify}
+import com.github.tomakehurst.wiremock.client.WireMock.{containing, equalToJson, postRequestedFor, urlPathEqualTo, verify}
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -163,6 +163,8 @@ class IFConnectorISpec
       verify(
         1,
         postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withHeader("Authorization", containing("Bearer token"))
+          .withHeader("Environment", containing("stub"))
           .withRequestBody(
             equalToJson(
               s"""

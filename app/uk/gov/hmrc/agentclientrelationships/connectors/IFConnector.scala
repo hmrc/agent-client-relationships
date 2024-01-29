@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import javax.inject.{Inject, Singleton}
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
@@ -27,16 +26,17 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, ActiveRelationshipResponse, InactiveRelationship, InactiveRelationshipResponse, RegistrationRelationshipResponse}
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PlrId, PptRef, Urn, Utr, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
 
 import java.net.URL
 import java.time.{Instant, LocalDate, ZoneOffset}
 import java.util.UUID
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -55,8 +55,6 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
-  private val SessionId = "x-session-id"
-  private val RequestId = "x-request-id"
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
@@ -302,34 +300,62 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
     }
   }
 
+  private def isInternalHost(url: URL): Boolean =
+    appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+
   private def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[HttpResponse] =
+  ): Future[HttpResponse] = {
+
+    val isInternal = isInternalHost(url)
+
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env))(implicitly[HttpReads[HttpResponse]], hc, ec)
+      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env, isInternal))(
+        implicitly[HttpReads[HttpResponse]],
+        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
+        ec
+      )
     }
+  }
 
   private def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[HttpResponse] =
+  ): Future[HttpResponse] = {
+
+    val isInternal = isInternalHost(url)
+
     monitor(s"ConsumedAPI-IF-$apiName-POST") {
-      httpClient.POST(url.toString, body, ifHeaders(authToken, env))(
+      httpClient.POST(url.toString, body, ifHeaders(authToken, env, isInternal))(
         implicitly[Writes[JsValue]],
         implicitly[HttpReads[HttpResponse]],
-        hc,
+        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
         ec
       )
     }
+  }
 
-  def ifHeaders(authToken: String, env: String)(implicit hc: HeaderCarrier): Seq[(String, String)] =
-    Seq(
-      HeaderNames.authorisation -> s"Bearer $authToken",
-      Environment               -> env,
-      CorrelationId             -> UUID.randomUUID().toString
-    ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(SessionId -> x.value)) ++
-      hc.requestId.fold(Seq(RequestId -> UUID.randomUUID().toString))(x => Seq(RequestId -> x.value))
+  /*
+   * If the service being called is external (e.g. DES/IF in QA or Prod):
+   * headers from HeaderCarrier are removed (except user-agent header).
+   * Therefore, required headers must be explicitly set.
+   * See https://github.com/hmrc/http-verbs?tab=readme-ov-file#propagation-of-headers
+   * */
+  def ifHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
+    hc: HeaderCarrier
+  ): Seq[(String, String)] = {
+
+    val additionalHeaders =
+      if (isInternalHost) Seq.empty
+      else
+        Seq(
+          HeaderNames.authorisation -> s"Bearer $authToken",
+          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
+        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
+    val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
+    commonHeaders ++ additionalHeaders
+  }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {
