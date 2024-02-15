@@ -83,13 +83,14 @@ The provided error code is to help diagnose potential issues in production and w
 
 ## Running the tests
 
-    sbt test it:test
+    ./check.sh
+
 
 ## Running the app locally
 
-    sm --start AGENT_AUTHORISATION -r
-    sm --stop AGENT_CLIENT_RELATIONSHIPS
-    ./run-local
+    sm2 --start AGENT_AUTHORISATION -r
+    sm2 --stop AGENT_CLIENT_RELATIONSHIPS
+    ./run.sh
 
 ### License
 

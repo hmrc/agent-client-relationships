@@ -73,6 +73,7 @@ class RelationshipsControllerWithoutMongoISpec
         "microservice.services.agent-client-authorisation.port" -> wireMockPort,
         "auditing.consumer.baseUri.host"                        -> wireMockHost,
         "auditing.consumer.baseUri.port"                        -> wireMockPort,
+        "features.copy-relationship.mtd-vat"                    -> true,
         "features.recovery-enable"                              -> false,
         "agent.cache.size"                                      -> 1,
         "agent.cache.expires"                                   -> "1 millis",
