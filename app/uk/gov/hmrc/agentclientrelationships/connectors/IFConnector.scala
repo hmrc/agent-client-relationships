@@ -405,9 +405,9 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
     (request \ "regime").asOpt[String] match {
       case Some("VATC") =>
         request +
-          (("idType", JsString("VRN"))) +
-          (("relationshipType", JsString("ZA01"))) +
-          (("authProfile", JsString("ALL00001")))
+          ((idType, JsString("VRN"))) +
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001")))
       case Some("TRS") =>
         clientId match {
           case Utr(_) => request + ((idType, JsString("UTR")))
@@ -434,6 +434,8 @@ class IFConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCach
           ((idType, JsString("CBC")))
       case Some("PLR") =>
         request +
+          ((relationshipType, JsString("ZA01"))) +
+          ((authProfile, JsString("ALL00001"))) +
           ((idType, JsString("ZPLR")))
       case _ =>
         request
