@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig

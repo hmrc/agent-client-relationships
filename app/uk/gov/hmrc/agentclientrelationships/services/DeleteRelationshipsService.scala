@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import akka.Done
-import com.kenshoo.play.metrics.Metrics
+import org.apache.pekko.Done
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -50,15 +50,14 @@ class DeleteRelationshipsService @Inject() (
   agentUserService: AgentUserService,
   val auditService: AuditService,
   val metrics: Metrics
-)(implicit val appConfig: AppConfig)
+)(implicit val appConfig: AppConfig, ec: ExecutionContext)
     extends Monitoring
     with Logging {
 
-  val recoveryTimeout: Int = appConfig.recoveryTimeout
+  private val recoveryTimeout: Int = appConfig.recoveryTimeout
 
   // noinspection ScalaStyle
   def deleteRelationship(arn: Arn, enrolmentKey: EnrolmentKey, affinityGroup: Option[AffinityGroup])(implicit
-    ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
     currentUser: CurrentUser
@@ -133,7 +132,6 @@ class DeleteRelationshipsService @Inject() (
   }
 
   private def deleteEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
@@ -168,7 +166,6 @@ class DeleteRelationshipsService @Inject() (
 
   // noinspection ScalaStyle
   def deleteEsRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    ec: ExecutionContext,
     hc: HeaderCarrier,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
@@ -228,7 +225,7 @@ class DeleteRelationshipsService @Inject() (
     )
   }
 
-  def removeDeleteRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit ec: ExecutionContext): Future[Boolean] =
+  def removeDeleteRecord(arn: Arn, enrolmentKey: EnrolmentKey): Future[Boolean] =
     deleteRecordRepository
       .remove(arn, enrolmentKey)
       .map(_ > 0)
@@ -242,7 +239,7 @@ class DeleteRelationshipsService @Inject() (
       case Some(record) =>
         val headerCarrier = record.headerCarrier.getOrElse(HeaderCarrier())
         val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
-        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(ec, headerCarrier, auditData, NoRequest)
+        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(headerCarrier, auditData, NoRequest, ec)
 
       case None =>
         logger.info("No Delete Record Found")
@@ -252,7 +249,7 @@ class DeleteRelationshipsService @Inject() (
   def checkDeleteRecordAndEventuallyResume(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData, request: Request[_]): Future[Boolean] =
+  )(implicit hc: HeaderCarrier, auditData: AuditData, request: Request[_], ec: ExecutionContext): Future[Boolean] =
     (for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
       isComplete <- recordOpt match {

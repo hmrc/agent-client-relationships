@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._

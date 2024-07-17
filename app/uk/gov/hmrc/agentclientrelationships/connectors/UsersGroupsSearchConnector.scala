@@ -17,14 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import java.net.URL
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -53,13 +52,14 @@ object UserDetails {
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject() (httpGet: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
-    extends HttpAPIMonitor
+class UsersGroupsSearchConnector @Inject() (httpGet: HttpClient)(implicit
+  val metrics: Metrics,
+  val appConfig: AppConfig,
+  val ec: ExecutionContext
+) extends HttpAPIMonitor
     with HttpErrorFunctions
     with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
-
-  def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]] = {
+  def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier): Future[Seq[UserDetails]] = {
     val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
       httpGet.GET[HttpResponse](url.toString).map { response =>
@@ -78,7 +78,7 @@ class UsersGroupsSearchConnector @Inject() (httpGet: HttpClient, metrics: Metric
 
   def getFirstGroupAdminUser(
     groupId: String
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[UserDetails]] =
+  )(implicit hc: HeaderCarrier): Future[Option[UserDetails]] =
     getGroupUsers(groupId)
       .map(_.find(_.credentialRole.exists(_ == "Admin")))
       .recover { case e =>
@@ -86,7 +86,7 @@ class UsersGroupsSearchConnector @Inject() (httpGet: HttpClient, metrics: Metric
         None
       }
 
-  def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[GroupInfo]] = {
+  def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier): Future[Option[GroupInfo]] = {
     val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
     monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
       httpGet.GET[HttpResponse](url.toString).map { response =>

@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
+import org.mockito.stubbing.OngoingStubbing
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.{ConfigLoader, Configuration}
 import play.api.mvc.{AnyContentAsEmpty, Request}
@@ -39,10 +40,9 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class DeleteRelationshipServiceSpec extends UnitSpec {
+class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitSpec {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val testAuditData: AuditData = new AuditData
@@ -133,8 +133,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      implicit val request = FakeRequest()
-      implicit val currentUser =
+      implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+      implicit val currentUser: CurrentUser =
         CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
@@ -464,7 +464,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
 
-      val result: Boolean = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
+      val result: Boolean = await(underTest.tryToResume(ec, testAuditData))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
@@ -505,7 +505,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result: Boolean = await(underTest.tryToResume(concurrent.ExecutionContext.Implicits.global, testAuditData))
+      val result: Boolean = await(underTest.tryToResume(ec, testAuditData))
 
       result shouldBe true
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
@@ -548,13 +548,13 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       metrics
     )
 
-    def givenAgentExists =
+    def givenAgentExists: OngoingStubbing[Future[Either[String, AgentUser]]] =
       when(
         agentUserService.getAgentAdminUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
       )
         .thenReturn(Future.successful(Right(agentUser)))
 
-    def givenRelationshipBetweenAgentAndClientExists =
+    def givenRelationshipBetweenAgentAndClientExists: OngoingStubbing[Future[Boolean]] =
       when(
         checkService
           .checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(
@@ -564,42 +564,39 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       )
         .thenReturn(Future.successful(true))
 
-    def givenETMPDeAuthSucceeds =
+    def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
 
-    def givenETMPDeAuthFails =
+    def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
         .thenReturn(Future.failed(new Exception))
 
-    def givenESDeAllocationSucceeds =
+    def givenESDeAllocationSucceeds: OngoingStubbing[Future[Unit]] =
       when(
         es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(
-          any[HeaderCarrier],
-          any[ExecutionContext]
+          any[HeaderCarrier]
         )
       )
         .thenReturn(Future.successful(()))
 
-    def givenESDeAllocationFails =
+    def givenESDeAllocationFails: OngoingStubbing[Future[Unit]] =
       when(
         es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(
-          any[HeaderCarrier],
-          any[ExecutionContext]
+          any[HeaderCarrier]
         )
       )
         .thenReturn(Future.failed(new Exception))
 
-    def givenESDeAllocationFailsWith(ex: Exception) =
+    def givenESDeAllocationFailsWith(ex: Exception): OngoingStubbing[Future[Unit]] =
       when(
         es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(
-          any[HeaderCarrier],
-          any[ExecutionContext]
+          any[HeaderCarrier]
         )
       )
         .thenReturn(Future.failed(ex))
 
-    def givenSetRelationshipEndedSucceeds =
+    def givenSetRelationshipEndedSucceeds: OngoingStubbing[Future[Boolean]] =
       when(
         aca
           .setRelationshipEnded(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(
@@ -609,7 +606,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       )
         .thenReturn(Future.successful(true))
 
-    def givenSetRelationshipEndedFails =
+    def givenSetRelationshipEndedFails: OngoingStubbing[Future[Boolean]] =
       when(
         aca
           .setRelationshipEnded(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(
@@ -619,24 +616,24 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       )
         .thenReturn(Future.successful(false))
 
-    def givenAucdCacheRefresh =
+    def givenAucdCacheRefresh: OngoingStubbing[Future[Unit]] =
       when(
         aucdConnector.cacheRefresh(eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       ).thenReturn(Future.successful(()))
 
-    def verifyESDeAllocateHasBeenPerformed =
+    def verifyESDeAllocateHasBeenPerformed: Future[Unit] =
       verify(es, times(1))
-        .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[HeaderCarrier], any[ExecutionContext])
+        .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[HeaderCarrier])
 
-    def verifyESDeAllocateHasNOTBeenPerformed =
+    def verifyESDeAllocateHasNOTBeenPerformed: Future[Unit] =
       verify(es, never)
-        .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[HeaderCarrier], any[ExecutionContext])
+        .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[HeaderCarrier])
 
-    def verifyETMPDeAuthorisationHasBeenPerformed =
+    def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
       verify(ifConnector, times(1))
         .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
-    def verifyETMPDeAuthorisationHasNOTBeenPerformed =
+    def verifyETMPDeAuthorisationHasNOTBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
       verify(ifConnector, never)
         .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 

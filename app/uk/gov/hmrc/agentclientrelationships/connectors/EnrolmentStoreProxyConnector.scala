@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, JsObject, Json, OWrites}
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
@@ -53,16 +52,20 @@ object ES20Request {
 }
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
-    extends HttpAPIMonitor
+class EnrolmentStoreProxyConnector @Inject() (http: HttpClient)(implicit
+  val metrics: Metrics,
+  val appConfig: AppConfig,
+  val ec: ExecutionContext
+) extends HttpAPIMonitor
     with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
   val teBaseUrl = new URL(appConfig.taxEnrolmentsUrl)
 
   // ES1 - principal
-  def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[String] = {
+  def getPrincipalGroupIdFor(
+    arn: Arn
+  )(implicit hc: HeaderCarrier): Future[String] = {
     val enrolmentKey = EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}")
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
@@ -90,7 +93,7 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics
   // ES1 - delegated
   def getDelegatedGroupIdsFor(
     enrolmentKey: EnrolmentKey
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] = {
+  )(implicit hc: HeaderCarrier): Future[Set[String]] = {
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=delegated")
     monitor(s"ConsumedAPI-ES-getDelegatedGroupIdsFor-${enrolmentKey.service}-GET") {
@@ -107,13 +110,12 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics
 
   def getDelegatedGroupIdsForHMCEVATDECORG(
     vrn: Vrn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Set[String]] =
+  )(implicit hc: HeaderCarrier): Future[Set[String]] =
     getDelegatedGroupIdsFor(EnrolmentKey("HMCE-VATDEC-ORG", Seq(Identifier("VATRegNo", vrn.value))))
 
   // ES2 - delegated
   def getEnrolmentsAssignedToUser(userId: String, service: Option[String])(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    hc: HeaderCarrier
   ): Future[Seq[Enrolment]] = {
 
     val url: String =
@@ -140,7 +142,7 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics
   // ES3 - Query Enrolments allocated to a Group
   def getAgentReferenceNumberFor(
     groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Arn]] = {
+  )(implicit hc: HeaderCarrier): Future[Option[Arn]] = {
     val url =
       new URL(
         espBaseUrl,
@@ -165,9 +167,7 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics
 
   // ES8
   def allocateEnrolmentToAgent(groupId: String, userId: String, enrolmentKey: EnrolmentKey, agentCode: AgentCode)(
-    implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    implicit hc: HeaderCarrier
   ): Future[Unit] = {
     val url = new URL(
       teBaseUrl,
@@ -191,8 +191,7 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics
 
   // ES9
   def deallocateEnrolmentFromAgent(groupId: String, enrolmentKey: EnrolmentKey)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    hc: HeaderCarrier
   ): Future[Unit] = {
     val url = new URL(teBaseUrl, s"/tax-enrolments/groups/$groupId/enrolments/${enrolmentKey.tag}")
     monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKey.service}-DELETE") {
@@ -208,8 +207,7 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient, metrics: Metrics
 
   // ES20 - query known facts by verifiers or identifiers
   def queryKnownFacts(service: Service, knownFacts: Seq[Identifier])(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    hc: HeaderCarrier
   ): Future[Option[Seq[Identifier]]] = {
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments")
     val request = ES20Request(service.id, knownFacts)

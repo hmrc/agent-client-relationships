@@ -15,10 +15,10 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.model
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Reads}
 
 case class RegistrationRelationshipResponse(processingDate: String)
 
 object RegistrationRelationshipResponse {
-  implicit val reads = Json.reads[RegistrationRelationshipResponse]
+  implicit val reads: Reads[RegistrationRelationshipResponse] = Json.reads[RegistrationRelationshipResponse]
 }

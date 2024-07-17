@@ -16,37 +16,38 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HttpClient, RequestId, SessionId}
 
-class IfConnectorSpec extends UnitSpec with MockitoSugar {
+import scala.concurrent.ExecutionContext
 
+class IfConnectorSpec extends UnitSpec with MockitoSugar {
+  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   val appConfig: AppConfig = mock[AppConfig]
   val hc: HeaderCarrier = mock[HeaderCarrier]
   val httpClient: HttpClient = mock[HttpClient]
   val metrics: Metrics = mock[Metrics]
   val agentCacheProvider: AgentCacheProvider = mock[AgentCacheProvider]
 
-  val underTest = new IFConnector(httpClient, metrics, agentCacheProvider)(appConfig)
+  val underTest = new IFConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
 
   "ifHeaders" should {
     "contain correct headers" when {
       "internally hosted service" in {
 
-        val hc = HeaderCarrier(
-          authorization = Some(Authorization("auth-123")),
-          sessionId = Some(SessionId("session-123")),
-          requestId = Some(RequestId("request-123"))
-        )
-
-        val authToken: String = "testAuthToken"
-        val env: String = "testEnv"
-
-        val headersMap = underTest.ifHeaders(authToken, env, isInternalHost = true)(hc).toMap
+        val headersMap = underTest
+          .ifHeaders("testAuthToken", "testEnv", isInternalHost = true)(
+            HeaderCarrier(
+              authorization = Some(Authorization("auth-123")),
+              sessionId = Some(SessionId("session-123")),
+              requestId = Some(RequestId("request-123"))
+            )
+          )
+          .toMap
 
         headersMap should contain("Environment" -> "testEnv")
         headersMap.contains("CorrelationId") shouldBe true
@@ -54,16 +55,15 @@ class IfConnectorSpec extends UnitSpec with MockitoSugar {
 
       "externally hosted service" in {
 
-        val hc = HeaderCarrier(
-          authorization = Some(Authorization("auth-123")),
-          sessionId = Some(SessionId("session-123")),
-          requestId = Some(RequestId("request-123"))
-        )
-
-        val authToken: String = "testAuthToken"
-        val env: String = "testEnv"
-
-        val headersMap = underTest.ifHeaders(authToken, env, isInternalHost = false)(hc).toMap
+        val headersMap = underTest
+          .ifHeaders("testAuthToken", "testEnv", isInternalHost = false)(
+            HeaderCarrier(
+              authorization = Some(Authorization("auth-123")),
+              sessionId = Some(SessionId("session-123")),
+              requestId = Some(RequestId("request-123"))
+            )
+          )
+          .toMap
 
         headersMap should contain("Authorization" -> "Bearer testAuthToken")
         headersMap should contain("Environment" -> "testEnv")

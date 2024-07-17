@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -38,11 +37,12 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DesConnector @Inject() (httpClient: HttpClient, metrics: Metrics, agentCacheProvider: AgentCacheProvider)(implicit
+class DesConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCacheProvider, val ec: ExecutionContext)(
+  implicit
+  val metrics: Metrics,
   val appConfig: AppConfig
 ) extends HttpAPIMonitor
     with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private val desBaseUrl = appConfig.desUrl
   private val desAuthToken = appConfig.desToken

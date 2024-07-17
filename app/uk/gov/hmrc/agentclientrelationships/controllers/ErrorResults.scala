@@ -18,20 +18,18 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
-import play.api.mvc.Results.{Forbidden, Unauthorized}
+import play.api.mvc.Result
+import play.api.mvc.Results.Forbidden
 
 object ErrorResults {
 
   case class ErrorBody(code: String, message: String)
 
-  implicit val errorBodyWrites = new Writes[ErrorBody] {
+  implicit val errorBodyWrites: Writes[ErrorBody] = new Writes[ErrorBody] {
     override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
   }
 
-  val GenericUnauthorized = Unauthorized(
-    toJson(ErrorBody("UNAUTHENTICATED", "Bearer token is missing or not authorized."))
-  )
-  val NoPermissionToPerformOperation = Forbidden(
+  val NoPermissionToPerformOperation: Result = Forbidden(
     toJson(ErrorBody("NO_PERMISSION", "The logged in user is not permitted to perform the operation."))
   )
 }

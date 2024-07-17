@@ -22,5 +22,5 @@ object SyncStatus extends Enumeration {
   type SyncStatus = Value
   val InProgress, IncompleteInputParams, Success, Failed = Value
 
-  implicit val formats = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes.enumNameWrites)
+  implicit val formats: Format[SyncStatus] = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes.enumNameWrites)
 }

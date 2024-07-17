@@ -37,7 +37,7 @@ case class RecoveryRecord(uid: String, runAt: LocalDateTime)
 
 object RecoveryRecord {
 
-  implicit val localDateTimeFormat = MongoLocalDateTimeFormat.localDateTimeFormat
+  implicit val localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
 }
 

@@ -36,7 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
-  implicit val patience = PatienceConfig(timeout = scaled(Span(500, Millis)), interval = scaled(Span(200, Millis)))
+  implicit val patience: PatienceConfig =
+    PatienceConfig(timeout = scaled(Span(500, Millis)), interval = scaled(Span(200, Millis)))
 
   "auditEvent" should {
     "send an CreateRelationship event with the correct fields" in {
