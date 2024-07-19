@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.JsArray
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, SetRelationshipEndedPayload}
@@ -35,18 +34,17 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient, metrics: Metrics)(implicit
-  val appConfig: AppConfig
+class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(implicit
+  val metrics: Metrics,
+  val appConfig: AppConfig,
+  val ec: ExecutionContext
 ) extends HttpAPIMonitor
     with Logging {
 
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
-
-  val acaBaseUrl: URL = new URL(appConfig.agentClientAuthorisationUrl)
+  private val acaBaseUrl: URL = new URL(appConfig.agentClientAuthorisationUrl)
 
   def getPartialAuthExistsFor(clientId: TaxIdentifier, arn: Arn, service: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    hc: HeaderCarrier
   ): Future[Boolean] = {
     val url: URL = new URL(
       acaBaseUrl,

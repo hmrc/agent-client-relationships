@@ -16,17 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -36,8 +35,8 @@ case class SaMappings(mappings: Seq[SaMapping])
 case class SaMapping(arn: Arn, saAgentReference: SaAgentReference)
 
 object SaMappings {
-  implicit val mappingReads = Json.reads[SaMapping]
-  implicit val reads = Json.reads[SaMappings]
+  implicit val mappingReads: Reads[SaMapping] = Json.reads[SaMapping]
+  implicit val reads: Reads[SaMappings] = Json.reads[SaMappings]
 }
 
 case class AgentCodeMappings(mappings: Seq[AgentCodeMapping])
@@ -45,19 +44,21 @@ case class AgentCodeMappings(mappings: Seq[AgentCodeMapping])
 case class AgentCodeMapping(arn: Arn, agentCode: AgentCode)
 
 object AgentCodeMappings {
-  implicit val mappingReads = Json.reads[AgentCodeMapping]
-  implicit val reads = Json.reads[AgentCodeMappings]
+  implicit val mappingReads: Reads[AgentCodeMapping] = Json.reads[AgentCodeMapping]
+  implicit val reads: Reads[AgentCodeMappings] = Json.reads[AgentCodeMappings]
 }
 
 @Singleton
-class MappingConnector @Inject() (httpClient: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
-    extends HttpAPIMonitor
+class MappingConnector @Inject() (httpClient: HttpClient)(implicit
+  val metrics: Metrics,
+  val appConfig: AppConfig,
+  val ec: ExecutionContext
+) extends HttpAPIMonitor
     with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getSaAgentReferencesFor(
     arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
+  )(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
     val url = new URL(s"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {
       httpClient.GET[HttpResponse](url.toString).map { response =>
@@ -71,7 +72,7 @@ class MappingConnector @Inject() (httpClient: HttpClient, metrics: Metrics)(impl
     }
   }
 
-  def getAgentCodesFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[AgentCode]] = {
+  def getAgentCodesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[AgentCode]] = {
     val url = new URL(s"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {
       httpClient.GET[HttpResponse](url.toString).map { response =>

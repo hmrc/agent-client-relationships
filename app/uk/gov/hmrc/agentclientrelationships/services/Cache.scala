@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
 import com.github.blemale.scaffeine.Scaffeine
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}

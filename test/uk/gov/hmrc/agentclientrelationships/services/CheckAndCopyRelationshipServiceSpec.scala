@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
@@ -1452,50 +1452,50 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq())
   }
 
   private def oldESRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
       .thenReturn(Future successful Set.empty[String])
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Seq.empty))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
       .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
   private def mappingServiceUnavailableForMtdVat(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
       .thenReturn(Future successful Set(agentGroupId))
-    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
+    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc)))
       .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc)))
       .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
       .thenReturn(Future successful Seq(saAgentRef))
   }
 
   private def oldESRelationshipExists(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc), eqs(ec)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
       .thenReturn(Future successful Set("test2", "foo", agentGroupId, "ABC-123"))
-    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc), eqs(ec)))
+    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc)))
       .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
-    when(ugs.getGroupInfo(eqs("foo"))(eqs(hc), eqs(ec)))
+    when(ugs.getGroupInfo(eqs("foo"))(eqs(hc)))
       .thenReturn(Future successful Some(GroupInfo("foo", Some("Agent"), Some(AgentCode("foo")))))
-    when(ugs.getGroupInfo(eqs("ABC-123"))(eqs(hc), eqs(ec)))
+    when(ugs.getGroupInfo(eqs("ABC-123"))(eqs(hc)))
       .thenReturn(Future successful Some(GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123")))))
-    when(ugs.getGroupInfo(eqs("test2"))(eqs(hc), eqs(ec)))
+    when(ugs.getGroupInfo(eqs("test2"))(eqs(hc)))
       .thenReturn(Future successful Some(GroupInfo("test2", Some("Agent"), None)))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc), any[ExecutionContext]()))
+    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc)))
       .thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
 
@@ -1504,16 +1504,16 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future.successful(agentUserForAsAgent))
 
   private def arnExistsForGroupId(): OngoingStubbing[Future[Option[Arn]]] = {
-    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("fooArn"))))
-    when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc), eqs(ec))).thenReturn(Future.successful(Some(Arn("barArn"))))
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc))).thenReturn(Future.successful(Some(Arn("fooArn"))))
+    when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc))).thenReturn(Future.successful(Some(Arn("barArn"))))
   }
 
   private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[HeaderCarrier](), any[ExecutionContext]()))
+    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[HeaderCarrier]()))
       .thenReturn(Future.successful(Set("foo", "bar")))
-    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[HeaderCarrier](), any[ExecutionContext]()))
+    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[HeaderCarrier]()))
       .thenReturn(Future.successful(()))
-    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(enrolmentKey))(any[HeaderCarrier](), any[ExecutionContext]()))
+    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(enrolmentKey))(any[HeaderCarrier]()))
       .thenReturn(Future.successful(()))
   }
 
@@ -1525,8 +1525,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
-        eqs(hc),
-        eqs(ec)
+        eqs(hc)
       )
     )
       .thenReturn(Future.successful(()))
@@ -1566,7 +1565,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentUserId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc), eqs(ec))
+    )(eqs(hc))
 
   def verifyEsRecordNotCreated(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
@@ -1574,7 +1573,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentGroupId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc), eqs(ec))
+    )(eqs(hc))
 
   def verifyEsRecordCreatedForMtdVat(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(
@@ -1582,7 +1581,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentUserId),
       eqs(vatEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc), eqs(ec))
+    )(eqs(hc))
 
   def verifyEsRecordNotCreatedMtdVat(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
@@ -1590,7 +1589,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentGroupId),
       eqs(vatEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc), eqs(ec))
+    )(eqs(hc))
 
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])

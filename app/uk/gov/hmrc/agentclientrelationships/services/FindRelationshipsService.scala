@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.kenshoo.play.metrics.Metrics
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
