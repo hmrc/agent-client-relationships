@@ -90,6 +90,18 @@ class RelationshipsController @Inject() (
               )
             )
           )
+      case (Service.MtdItSupp.id, "ni" | "NI", _) if Nino.isValid(clientId) =>
+        ifConnector
+          .getMtdIdFor(Nino(clientId))
+          .flatMap(
+            _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(mtdItId =>
+              checkWithTaxIdentifier(
+                arn,
+                tUserId,
+                EnrolmentKey(Service.MtdItSupp, mtdItId)
+              )
+            )
+          )
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // "normal" cases
       case (svc, idType, id) =>
@@ -242,6 +254,8 @@ class RelationshipsController @Inject() (
         Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
       case (Service.MtdIt.id, "ni" | "NI") if Nino.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId))))
+      case (Service.MtdItSupp.id, "ni" | "NI") if Nino.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey(Service.MtdItSupp.id, Nino(clientId))))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
       case (Service.Cbc.id, CbcIdType.enrolmentId) =>
