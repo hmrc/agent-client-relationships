@@ -148,7 +148,7 @@ class DeleteRelationshipsService @Inject() (
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
       maybeResponse <- ifConnector.deleteAgentRelationship(
-                         enrolmentKey.oneTaxIdentifier(),
+                         enrolmentKey,
                          arn
                        ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
       if maybeResponse.nonEmpty
