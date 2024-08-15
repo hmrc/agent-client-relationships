@@ -565,11 +565,15 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
         .thenReturn(Future.successful(true))
 
     def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
-      when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
+      when(
+        ifConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
+      )
         .thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
 
     def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
-      when(ifConnector.deleteAgentRelationship(eqs(mtdItId), eqs(arn))(any[HeaderCarrier], any[ExecutionContext]))
+      when(
+        ifConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
+      )
         .thenReturn(Future.failed(new Exception))
 
     def givenESDeAllocationSucceeds: OngoingStubbing[Future[Unit]] =
@@ -631,11 +635,11 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
     def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
       verify(ifConnector, times(1))
-        .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
+        .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
     def verifyETMPDeAuthorisationHasNOTBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
       verify(ifConnector, never)
-        .deleteAgentRelationship(any[TaxIdentifier], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
+        .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
   }
 

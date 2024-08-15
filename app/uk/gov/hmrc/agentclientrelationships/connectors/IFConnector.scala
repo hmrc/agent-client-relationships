@@ -16,21 +16,22 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.http.Status.{NOT_FOUND, OK}
 import play.api.libs.json._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.time.{Instant, LocalDate, ZoneOffset}
@@ -180,13 +181,13 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
   }
 
   // IF API #1167 Create/Update Agent Relationship
-  def createAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit
+  def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$ifBaseUrl/registration/relationship")
-    val requestBody = createAgentRelationshipInputJson(clientId.value, arn.value, clientId)
+    val requestBody = createAgentRelationshipInputJson(enrolmentKey, arn.value)
 
     postWithIFHeaders("CreateAgentRelationship", url, requestBody, ifAuthToken, ifEnv)
       .map { response =>
@@ -200,7 +201,7 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
   }
 
   // IF API #1167 Create/Update Agent Relationship
-  def deleteAgentRelationship(clientId: TaxIdentifier, arn: Arn)(implicit
+  def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[RegistrationRelationshipResponse]] = {
@@ -209,7 +210,7 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
     postWithIFHeaders(
       "DeleteAgentRelationship",
       url,
-      deleteAgentRelationshipInputJson(clientId.value, arn.value, clientId),
+      deleteAgentRelationshipInputJson(enrolmentKey: EnrolmentKey, arn.value),
       ifAuthToken,
       ifEnv
     ).map { response =>
@@ -370,14 +371,14 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
-  private def createAgentRelationshipInputJson(referenceNumber: String, agentRefNum: String, clientId: TaxIdentifier) =
-    includeIdTypeIfNeeded(clientId)(
+  private def createAgentRelationshipInputJson(enrolmentKey: EnrolmentKey, arn: String) =
+    includeIdTypeIfNeeded(enrolmentKey)(
       Json
         .parse(s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
-          "agentReferenceNumber": "$agentRefNum",
-          "refNumber": "$referenceNumber",
-          "regime": "${getRegimeFor(clientId)}",
+          "agentReferenceNumber": "$arn",
+          "refNumber": "${enrolmentKey.oneIdentifier().value}",
+          "regime": "${getRegimeFor(enrolmentKey.oneTaxIdentifier())}",
           "authorisation": {
             "action": "Authorise",
             "isExclusiveAgent": true
@@ -386,14 +387,14 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
         .as[JsObject]
     )
 
-  private def deleteAgentRelationshipInputJson(refNum: String, agentRefNum: String, clientId: TaxIdentifier) =
-    includeIdTypeIfNeeded(clientId)(
+  private def deleteAgentRelationshipInputJson(enrolmentKey: EnrolmentKey, arn: String) =
+    includeIdTypeIfNeeded(enrolmentKey)(
       Json
         .parse(s"""{
          "acknowledgmentReference": "${java.util.UUID.randomUUID().toString.replace("-", "").take(32)}",
-          "refNumber": "$refNum",
-          "agentReferenceNumber": "$agentRefNum",
-          "regime": "${getRegimeFor(clientId)}",
+          "refNumber": "${enrolmentKey.oneIdentifier().value}",
+          "agentReferenceNumber": "$arn",
+          "regime": "${getRegimeFor(enrolmentKey.oneTaxIdentifier())}",
           "authorisation": {
             "action": "De-Authorise"
           }
@@ -401,13 +402,19 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
         .as[JsObject]
     )
 
-  private val includeIdTypeIfNeeded: TaxIdentifier => JsObject => JsObject = (clientId: TaxIdentifier) => { request =>
+  private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject = (enrolmentKey: EnrolmentKey) => { request =>
+    val clientId = enrolmentKey.oneTaxIdentifier()
+    val authProfileForService = enrolmentKey.service match {
+      case HMRCMTDITSUPP => "ALL00002"
+      case _             => "ALL00001"
+    }
+
     (request \ "regime").asOpt[String] match {
       case Some("VATC") =>
         request +
           ((idType, JsString("VRN"))) +
           ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString("ALL00001")))
+          ((authProfile, JsString(authProfileForService)))
       case Some("TRS") =>
         clientId match {
           case Utr(_) => request + ((idType, JsString("UTR")))
@@ -417,17 +424,17 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
       case Some("CGT") =>
         request +
           ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString("ALL00001"))) +
+          ((authProfile, JsString(authProfileForService))) +
           ((idType, JsString("ZCGT")))
       case Some("PPT") =>
         request +
           ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString("ALL00001"))) +
+          ((authProfile, JsString(authProfileForService))) +
           ((idType, JsString("ZPPT")))
       case Some("ITSA") =>
         request +
           ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString("ALL00001"))) +
+          ((authProfile, JsString(authProfileForService))) +
           ((idType, JsString("MTDBSA")))
       case Some("CBC") =>
         request +
@@ -435,13 +442,12 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
       case Some("PLR") =>
         request +
           ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString("ALL00001"))) +
+          ((authProfile, JsString(authProfileForService))) +
           ((idType, JsString("ZPLR")))
       case _ =>
         request
     }
   }
-
   private val idType = "idType"
   private val authProfile = "authProfile"
   private val relationshipType = "relationshipType"

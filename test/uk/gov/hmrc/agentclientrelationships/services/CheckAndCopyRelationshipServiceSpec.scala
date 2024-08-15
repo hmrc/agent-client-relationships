@@ -1521,7 +1521,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(ifConnector.createAgentRelationship(eqs(enrolmentKey.oneTaxIdentifier()), eqs(arn))(eqs(hc), eqs(ec)))
+    when(ifConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
@@ -1548,16 +1548,16 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future.successful(()))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector, never()).createAgentRelationship(eqs(mtdItId), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector, never()).createAgentRelationship(eqs(vrn), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEsRecordCreated(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(

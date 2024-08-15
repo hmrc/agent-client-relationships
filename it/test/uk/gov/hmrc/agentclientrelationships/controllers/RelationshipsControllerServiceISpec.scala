@@ -30,6 +30,9 @@ class RelationshipsControllerServiceISpec
   behave like strideEndpointISpec(Service.MtdIt.id, nino, "NI")
   behave like relationshipControllerITSASpecificBehaviours()
 
+  behave like relationshipsControllerPutISpec(Service.MtdItSupp.id, mtdItId, "MTDITID")
+  behave like relationshipsControllerDeleteISpec(Service.MtdItSupp.id, mtdItId, "MTDITID")
+
   // VAT
   behave like relationshipsControllerGetISpec(Service.Vat.id, vrn, "VRN")
   behave like relationshipsControllerPutISpec(Service.Vat.id, vrn, "VRN")

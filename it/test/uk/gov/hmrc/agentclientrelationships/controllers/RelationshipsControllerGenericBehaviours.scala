@@ -185,6 +185,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
+        if (enrolmentKey.service == Service.HMRCMTDITSUPP) verifyNoEnrolmentHasBeenDeallocated()
+        else verifyEnrolmentDeallocationAttempt(groupId = "zoo", enrolmentKey = enrolmentKey)
       }
 
       "return 201 when the relationship exists and the clientId matches that of current Client user" in new StubsForThisScenario {

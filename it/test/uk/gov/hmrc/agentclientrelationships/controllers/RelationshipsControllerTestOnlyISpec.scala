@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -35,7 +36,8 @@ class RelationshipsControllerTestOnlyISpec
     with WireMockSupport
     with DesStubs
     with MappingStubs
-    with DataStreamStub {
+    with DataStreamStub
+    with IntegrationPatience {
 
   override implicit lazy val app: Application = appBuilder
     .build()
