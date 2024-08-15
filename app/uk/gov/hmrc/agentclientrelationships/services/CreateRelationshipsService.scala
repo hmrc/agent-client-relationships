@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbU
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import javax.inject.{Inject, Singleton}
@@ -167,7 +167,8 @@ class CreateRelationshipsService @Inject() (
     (for {
       esSyncStatusInProgress <- updateEsSyncStatus(InProgress)
       if esSyncStatusInProgress == DbUpdateSucceeded
-      _ <- deallocatePreviousRelationship(arn, enrolmentKey)
+      _ <- if (enrolmentKey.service == Service.HMRCMTDITSUPP) Future.successful(())
+           else deallocatePreviousRelationship(arn, enrolmentKey)
       _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, enrolmentKey, agentUser.agentCode)
       _ = auditData.set("enrolmentDelegated", true)
       _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)

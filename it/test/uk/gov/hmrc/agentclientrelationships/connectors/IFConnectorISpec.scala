@@ -81,12 +81,6 @@ class IFConnectorISpec
   val ifConnector =
     new IFConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
 
-  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
-  val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
-  val trustEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCTERSORG, utr)
-  val trustNTEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCTERSNTORG, urn)
-  val pptEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCPPTORG, pptRef)
-  val plrEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCPILLAR2ORG, plrId)
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
   val agentARN: Arn = Arn("ABCDE123456")
@@ -95,6 +89,13 @@ class IFConnectorISpec
   val cgt: CgtRef = CgtRef("XMCGTP837878749")
   val pptRef: PptRef = PptRef("XAPPT0004567890")
   val plrId: PlrId = PlrId("XMPLR0012345678")
+  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
+  val mtdItSuppEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdItSupp, mtdItId)
+  val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
+  val trustEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCTERSORG, utr)
+  val trustNTEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCTERSNTORG, urn)
+  val pptEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCPPTORG, pptRef)
+  val plrEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.HMRCPILLAR2ORG, plrId)
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
@@ -164,7 +165,7 @@ class IFConnectorISpec
 
   "IFConnector CreateAgentRelationship" should {
     "create relationship between agent and client and return 200" in {
-      givenAgentCanBeAllocatedInIF(MtdItId("foo"), Arn("bar"))
+      givenAgentCanBeAllocatedInIF(mtdItId, Arn("bar"))
       givenAuditConnector()
       await(ifConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
@@ -176,7 +177,7 @@ class IFConnectorISpec
     }
 
     "request body contains regime as ITSA when client Id is an MtdItId" in {
-      givenAgentCanBeAllocatedInIF(MtdItId("foo"), Arn("someArn"))
+      givenAgentCanBeAllocatedInIF(mtdItId, Arn("someArn"))
       givenAuditConnector()
 
       await(ifConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("someArn")))
@@ -201,8 +202,34 @@ class IFConnectorISpec
       )
     }
 
+    "request body contains regime as ITSA for Supporting Agent when client Id is an MtdItId" in {
+      givenAgentCanBeAllocatedInIF(mtdItId, Arn("someArn"))
+      givenAuditConnector()
+
+      await(ifConnector.createAgentRelationship(mtdItSuppEnrolmentKey, Arn("someArn")))
+
+      verify(
+        1,
+        postRequestedFor(urlPathEqualTo("/registration/relationship"))
+          .withHeader("Authorization", containing("Bearer token"))
+          .withHeader("Environment", containing("stub"))
+          .withRequestBody(
+            equalToJson(
+              s"""
+                 |{
+                 |"regime": "ITSA",
+                 |"authProfile": "ALL00002",
+                 |"relationshipType": "ZA01"
+                 |}""".stripMargin,
+              true,
+              true
+            )
+          )
+      )
+    }
+
     "request body contains regime as VATC and idType as VRN when client Id is a Vrn" in {
-      givenAgentCanBeAllocatedInIF(Vrn("someVrn"), Arn("someArn"))
+      givenAgentCanBeAllocatedInIF(vrn, Arn("someArn"))
       givenAuditConnector()
 
       await(ifConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn")))
@@ -226,7 +253,7 @@ class IFConnectorISpec
     }
 
     "request body contains regime as TRS and idType as UTR when client Id is a UTR" in {
-      givenAgentCanBeAllocatedInIF(Utr("someUtr"), Arn("someArn"))
+      givenAgentCanBeAllocatedInIF(utr, Arn("someArn"))
       givenAuditConnector()
 
       await(ifConnector.createAgentRelationship(trustEnrolmentKey, Arn("someArn")))
@@ -248,7 +275,7 @@ class IFConnectorISpec
     }
 
     "request body contains regime as TRS and idType as URN when client Id is a URN" in {
-      givenAgentCanBeAllocatedInIF(Urn("someUrn"), Arn("someArn"))
+      givenAgentCanBeAllocatedInIF(urn, Arn("someArn"))
       givenAuditConnector()
 
       await(ifConnector.createAgentRelationship(trustNTEnrolmentKey, Arn("someArn")))
@@ -270,7 +297,7 @@ class IFConnectorISpec
     }
 
     "request body contains regime as PPT and idType as ZPPT when client Id is a PptRef" in {
-      givenAgentCanBeAllocatedInIF(PptRef("somePpt"), Arn("someArn"))
+      givenAgentCanBeAllocatedInIF(pptRef, Arn("someArn"))
       givenAuditConnector()
 
       await(ifConnector.createAgentRelationship(pptEnrolmentKey, Arn("someArn")))
@@ -282,7 +309,7 @@ class IFConnectorISpec
             equalToJson(
               s"""{
                  |"regime": "PPT",
-                 |"refNumber" : "somePpt"
+                 |"refNumber" : "XAPPT0004567890"
                  |}""".stripMargin,
               true,
               true
@@ -292,7 +319,7 @@ class IFConnectorISpec
     }
 
     "request body contains regime as PLR and idType as PLR when client Id is a PlrId" in {
-      givenAgentCanBeAllocatedInIF(PlrId("somePlrId"), Arn("someArn"))
+      givenAgentCanBeAllocatedInIF(plrId, Arn("someArn"))
       givenAuditConnector()
 
       await(ifConnector.createAgentRelationship(plrEnrolmentKey, Arn("someArn")))
@@ -304,7 +331,7 @@ class IFConnectorISpec
             equalToJson(
               s"""{
                  |"regime": "PLR",
-                 |"refNumber" : "somePlrId"
+                 |"refNumber" : "XMPLR0012345678"
                  |}""".stripMargin,
               true,
               true
@@ -332,37 +359,45 @@ class IFConnectorISpec
 
   "IFConnector DeleteAgentRelationship" should {
     "delete relationship between agent and client and return 200 for ItSa service" in {
-      givenAgentCanBeDeallocatedInIF(MtdItId("foo"), Arn("bar"))
+      givenAgentCanBeDeallocatedInIF(mtdItId, Arn("bar"))
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
+    "delete relationship between agent and client and return 200 for ItSa Supp service" in {
+      givenAgentCanBeDeallocatedInIF(mtdItId, Arn("bar"))
+      givenAuditConnector()
+      await(
+        ifConnector.deleteAgentRelationship(mtdItSuppEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
+    }
+
     "delete relationship between agent and client and return 200 for Vat service" in {
-      givenAgentCanBeDeallocatedInIF(Vrn("foo"), Arn("bar"))
+      givenAgentCanBeDeallocatedInIF(vrn, Arn("bar"))
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service" in {
-      givenAgentCanBeDeallocatedInIF(Utr("foo"), Arn("bar"))
+      givenAgentCanBeDeallocatedInIF(utr, Arn("bar"))
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(trustEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service with URN" in {
-      givenAgentCanBeDeallocatedInIF(Urn("foo"), Arn("bar"))
+      givenAgentCanBeDeallocatedInIF(urn, Arn("bar"))
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(trustNTEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for PPT service with PptRef" in {
-      givenAgentCanBeDeallocatedInIF(PptRef("foo"), Arn("bar"))
+      givenAgentCanBeDeallocatedInIF(pptRef, Arn("bar"))
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(pptEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Pillar2 service with PlrId" in {
-      givenAgentCanBeDeallocatedInIF(PlrId("foo"), Arn("bar"))
+      givenAgentCanBeDeallocatedInIF(plrId, Arn("bar"))
       givenAuditConnector()
       await(ifConnector.deleteAgentRelationship(plrEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
