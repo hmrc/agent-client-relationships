@@ -44,13 +44,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
+  def isItsaNino(clientIdType: String, serviceId: String): Boolean =
+    clientIdType.toUpperCase == "NI" &&
+      (serviceId == Service.MtdIt.id || serviceId == Service.MtdItSupp.id)
+
   // noinspection ScalaStyle
   def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     val enrolmentKey = if (serviceId == Service.Cbc.id) {
       EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
-    } else if (
-      clientIdType.toUpperCase() == "NI" && (serviceId == Service.MtdIt.id || serviceId == Service.MtdItSupp.id)
-    ) {
+    } else if (isItsaNino(clientIdType, serviceId)) {
       EnrolmentKey(Service.forId(serviceId), mtdItId)
     } else {
       EnrolmentKey(Service.forId(serviceId), clientId)
@@ -58,7 +60,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     def extraSetup(serviceId: String, clientIdType: String): Unit = {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
-      if (clientIdType.toUpperCase() == "NI" && (serviceId == Service.MtdIt.id || serviceId == Service.MtdItSupp.id)) {
+      if (isItsaNino(clientIdType, serviceId)) {
         givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
         getActiveRelationshipsViaClient(mtdItId, arn)
       }
@@ -163,7 +165,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
     def extraSetup(serviceId: String, clientIdType: String): Unit = {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
-      if (clientIdType.toUpperCase() == "NI" && (serviceId == Service.MtdIt.id || serviceId == Service.MtdItSupp.id)) {
+      if (isItsaNino(clientIdType, serviceId)) {
         givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
         getActiveRelationshipsViaClient(mtdItId, arn)
       }

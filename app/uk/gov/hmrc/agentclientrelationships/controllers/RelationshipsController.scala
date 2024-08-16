@@ -72,6 +72,19 @@ class RelationshipsController @Inject() (
     userId: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
     val tUserId = userId.map(UserId)
+    def useMtdIdInEnrolmentKey(serviceId: String): Future[Result] =
+      ifConnector
+        .getMtdIdFor(Nino(clientId))
+        .flatMap(
+          _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(mtdItId =>
+            checkWithTaxIdentifier(
+              arn,
+              tUserId,
+              EnrolmentKey(serviceId, mtdItId)
+            )
+          )
+        )
+
     (service, clientIdType, clientId) match {
       // "special" cases
       case ("IR-SA", _, _) if Nino.isValid(clientId) =>
@@ -79,29 +92,9 @@ class RelationshipsController @Inject() (
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
       case (Service.MtdIt.id, "ni" | "NI", _) if Nino.isValid(clientId) =>
-        ifConnector
-          .getMtdIdFor(Nino(clientId))
-          .flatMap(
-            _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(mtdItId =>
-              checkWithTaxIdentifier(
-                arn,
-                tUserId,
-                EnrolmentKey(Service.MtdIt, mtdItId)
-              )
-            )
-          )
+        useMtdIdInEnrolmentKey(Service.MtdIt.id)
       case (Service.MtdItSupp.id, "ni" | "NI", _) if Nino.isValid(clientId) =>
-        ifConnector
-          .getMtdIdFor(Nino(clientId))
-          .flatMap(
-            _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(mtdItId =>
-              checkWithTaxIdentifier(
-                arn,
-                tUserId,
-                EnrolmentKey(Service.MtdItSupp, mtdItId)
-              )
-            )
-          )
+        useMtdIdInEnrolmentKey(Service.MtdItSupp.id)
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // "normal" cases
       case (svc, idType, id) =>
