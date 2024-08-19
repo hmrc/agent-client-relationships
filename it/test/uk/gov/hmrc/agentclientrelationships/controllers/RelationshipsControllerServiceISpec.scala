@@ -25,11 +25,14 @@ class RelationshipsControllerServiceISpec
     with RelationshipsControllerITSABehaviours {
   // Income Tax
   behave like relationshipsControllerGetISpec(Service.MtdIt.id, mtdItId, "MTDITID")
+  behave like relationshipsControllerGetISpec(Service.MtdIt.id, nino, "NI")
   behave like relationshipsControllerPutISpec(Service.MtdIt.id, mtdItId, "MTDITID")
   behave like relationshipsControllerDeleteISpec(Service.MtdIt.id, mtdItId, "MTDITID")
   behave like strideEndpointISpec(Service.MtdIt.id, nino, "NI")
   behave like relationshipControllerITSASpecificBehaviours()
 
+  behave like relationshipsControllerGetISpec(Service.MtdItSupp.id, mtdItId, "MTDITID")
+  behave like relationshipsControllerGetISpec(Service.MtdItSupp.id, nino, "NI")
   behave like relationshipsControllerPutISpec(Service.MtdItSupp.id, mtdItId, "MTDITID")
   behave like relationshipsControllerDeleteISpec(Service.MtdItSupp.id, mtdItId, "MTDITID")
 
