@@ -290,7 +290,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
-        aca.getPartialAuthExistsFor(nino, arn, Service.MtdIt.id).map { hasPartialAuth =>
+        aca.getPartialAuthExistsFor(nino, arn).map { hasPartialAuth =>
           auditData.set("partialAuth", hasPartialAuth)
           auditService.sendCheckCESAAuditEvent
           hasPartialAuth

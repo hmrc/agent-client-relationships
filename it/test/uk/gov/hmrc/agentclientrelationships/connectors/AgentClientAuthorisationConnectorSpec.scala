@@ -27,6 +27,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentclientrelationships.stubs.ACAStubs
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
@@ -61,30 +62,36 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
 
   "getPartialAuthExistsFor" should {
 
-    "return true when a record exists with status PartialAuth for client" in {
-      givenPartialAuthExistsFor(agentARN, nino)
+    "return true when a record exists with status PartialAuth for main agent type" in {
+      givenPartialAuthExistsFor(agentARN, nino, HMRCMTDIT)
       givenCleanMetricRegistry()
-      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN, "HMRC-MTD-IT"))
+      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN))
       result shouldBe true
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-GET")
+    }
+
+    "return true when a record exists with status PartialAuth for supporting agent type" in {
+      givenPartialAuthExistsFor(agentARN, nino, HMRCMTDITSUPP)
+      givenCleanMetricRegistry()
+      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN))
+      result shouldBe true
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-GET")
     }
 
     "return false when no record exists with PartialAuth for client" in {
       givenPartialAuthNotExistsFor(agentARN, nino)
       givenCleanMetricRegistry()
-      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN, "HMRC-MTD-IT"))
+      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN))
       result shouldBe false
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-GET")
     }
 
     "return false when there is a problem with the upstream service" in {
       givenAgentClientAuthorisationReturnsError(agentARN, nino, 503)
       givenCleanMetricRegistry()
-      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN, "HMRC-MTD-IT"))
+      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN))
       result shouldBe false
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-GET")
     }
-
   }
-
 }
