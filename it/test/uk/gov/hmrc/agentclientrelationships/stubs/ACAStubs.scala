@@ -20,6 +20,7 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 trait ACAStubs {
@@ -119,9 +120,9 @@ trait ACAStubs {
         )
     )
 
-  def givenAltItsaUpdate(nino: Nino, responseStatus: Int) =
+  def givenAltItsaUpdate(nino: Nino, service: String = HMRCMTDIT, responseStatus: Int) =
     stubFor(
-      put(urlEqualTo(s"/agent-client-authorisation/alt-itsa/update/${nino.value}"))
+      put(urlEqualTo(s"/agent-client-authorisation/alt-itsa/$service/update/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(responseStatus))
     )
 

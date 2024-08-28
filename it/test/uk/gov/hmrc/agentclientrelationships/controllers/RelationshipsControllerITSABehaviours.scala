@@ -70,7 +70,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, 200)
+        givenAltItsaUpdate(nino, responseStatus = 200)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest
@@ -86,7 +86,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenArnIsUnknownFor(arn)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, 200)
+        givenAltItsaUpdate(nino, responseStatus = 200)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest
@@ -131,7 +131,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "agentCode"               -> "bar",
             "nino"                    -> nino.value,
             "saAgentRef"              -> "foo",
-            "service"                 -> "mtd-it",
+            "service"                 -> "HMRC-MTD-IT",
             "clientId"                -> mtdItId.value,
             "clientIdType"            -> "mtditid",
             "CESARelationship"        -> "true",
@@ -168,7 +168,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenArnIsUnknownFor(arn)
         givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, 201)
+        givenAltItsaUpdate(nino, responseStatus = 201)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest
@@ -185,7 +185,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenArnIsUnknownFor(arn)
         givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, 200)
+        givenAltItsaUpdate(nino, responseStatus = 200)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest
@@ -257,7 +257,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "agentCode"               -> "bar",
             "nino"                    -> nino.value,
             "saAgentRef"              -> "foo",
-            "service"                 -> "mtd-it",
+            "service"                 -> "HMRC-MTD-IT",
             "clientId"                -> mtdItId.value,
             "clientIdType"            -> "mtditid",
             "CESARelationship"        -> "true",

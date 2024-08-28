@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -27,14 +26,16 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.util._
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import uk.gov.hmrc.agentclientrelationships.util._
 
 sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
@@ -99,7 +100,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
 
-  def checkForOldRelationshipAndCopy(arn: Arn, identifier: TaxIdentifier)(implicit
+  def checkForOldRelationshipAndCopy(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -113,9 +114,11 @@ class CheckAndCopyRelationshipsService @Inject() (
         returnValue(CopyRelationshipNotEnabled)
       }
 
-    identifier match {
+    enrolmentKey.oneTaxIdentifier() match {
       case mtdItId @ MtdItId(_) =>
-        ifEnabled(copyMtdItRelationshipFlag)(checkCesaForOldRelationshipAndCopyForMtdIt(arn, mtdItId))
+        ifEnabled(copyMtdItRelationshipFlag)(
+          checkCesaForOldRelationshipAndCopyOrPartialAuth(arn, mtdItId, enrolmentKey.service)
+        )
       case vrn @ Vrn(_) =>
         ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
 
@@ -123,7 +126,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     }
   }
 
-  private def checkCesaForOldRelationshipAndCopyForMtdIt(arn: Arn, mtdItId: MtdItId)(implicit
+  private def checkCesaAndCopy(arn: Arn, mtdItId: MtdItId, nino: Option[Nino])(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
@@ -131,9 +134,6 @@ class CheckAndCopyRelationshipsService @Inject() (
   ): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
-    auditData.set("service", "mtd-it")
-    auditData.set("clientId", mtdItId)
-    auditData.set("clientIdType", "mtditid")
 
     relationshipCopyRepository.findBy(arn, EnrolmentKey(Service.MtdIt, mtdItId)).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
@@ -141,7 +141,6 @@ class CheckAndCopyRelationshipsService @Inject() (
         Future successful AlreadyCopiedDidNotCheck
       case maybeRelationshipCopyRecord @ _ =>
         for {
-          nino <- ifConnector.getNinoFor(mtdItId)
           references <-
             nino.fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(lookupCesaForOldRelationship(arn, _))
           result <- if (references.nonEmpty)
@@ -172,17 +171,46 @@ class CheckAndCopyRelationshipsService @Inject() (
                           FoundAndFailedToCopy
                         }
                     else
-                      nino.fold[Future[CheckAndCopyResult]](Future(NotFound))(tryCreateRelationshipFromAltItsa(_))
+                      Future(NotFound)
         } yield result
     }
   }
 
-  private def tryCreateRelationshipFromAltItsa(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext) =
-    if (appConfig.altItsaEnabled)
+  private def checkCesaForOldRelationshipAndCopyOrPartialAuth(arn: Arn, mtdItId: MtdItId, service: String)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData
+  ): Future[CheckAndCopyResult] = {
+
+    auditData.set("service", s"$service")
+    auditData.set("clientId", mtdItId)
+    auditData.set("clientIdType", "mtditid")
+
+    for {
+      mNino <- ifConnector.getNinoFor(mtdItId)
+      cesaResult <- if (service == HMRCMTDIT) checkCesaAndCopy(arn, mtdItId, mNino)
+                    else Future(NotFound)
+      result <-
+        if (cesaResult == NotFound)
+          mNino.fold[Future[CheckAndCopyResult]](Future(NotFound))(nino =>
+            tryCreateRelationshipFromAltItsa(nino, service)
+          )
+        else toFuture(cesaResult)
+    } yield result
+  }
+
+  private def tryCreateRelationshipFromAltItsa(nino: Nino, service: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext,
+    auditData: AuditData
+  ) =
+    if (appConfig.altItsaEnabled) {
+      auditData.set("Journey", "PartialAuth")
       aca
-        .updateAltItsaFor(nino)
+        .updateAltItsaFor(nino, service)
         .map(created => if (created) AltItsaCreateRelationshipSuccess else AltItsaNotFoundOrFailed)
-    else toFuture(NotFound)
+    } else toFuture(NotFound)
 
   private def findOrCreateRelationshipCopyRecordAndCopy(
     references: Set[RelationshipReference],

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoException
+import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -29,7 +30,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 
-class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAppPerSuite {
+class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAppPerSuite with IntegrationPatience {
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()

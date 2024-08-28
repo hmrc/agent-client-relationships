@@ -140,7 +140,7 @@ class RelationshipsControllerWithoutMongoISpec
           "arn"                     -> arn.value,
           "nino"                    -> nino.value,
           "saAgentRef"              -> "foo",
-          "service"                 -> "mtd-it",
+          "service"                 -> "HMRC-MTD-IT",
           "clientId"                -> mtditid.value,
           "clientIdType"            -> "mtditid",
           "CESARelationship"        -> "true",

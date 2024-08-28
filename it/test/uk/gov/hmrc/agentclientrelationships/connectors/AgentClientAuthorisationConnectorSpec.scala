@@ -94,4 +94,15 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
       timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-GET")
     }
   }
+
+  "updateAltItsaFor" should {
+    "return true when response is 201" in {
+      givenAltItsaUpdate(nino, responseStatus = 201)
+      givenCleanMetricRegistry()
+      val result = await(acaConnector.updateAltItsaFor(nino, HMRCMTDIT))
+      result shouldBe true
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-updateAltItsaForHMRC-MTD-IT-PUT")
+
+    }
+  }
 }
