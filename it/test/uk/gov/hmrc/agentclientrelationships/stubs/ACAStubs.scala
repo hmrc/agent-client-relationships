@@ -25,11 +25,11 @@ import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 trait ACAStubs {
   me: WireMockSupport =>
 
-  def givenPartialAuthExistsFor(arn: Arn, nino: Nino) =
+  def givenPartialAuthExistsFor(arn: Arn, nino: Nino, service: String) =
     stubFor(
       get(
         urlEqualTo(
-          s"/agent-client-authorisation/agencies/${arn.value}/invitations/sent?status=PartialAuth&clientId=${nino.value}&service=HMRC-MTD-IT"
+          s"/agent-client-authorisation/agencies/${arn.value}/invitations/sent?status=PartialAuth&clientId=${nino.value}"
         )
       )
         .willReturn(
@@ -41,7 +41,7 @@ trait ACAStubs {
                          |            "href": "/agent-client-authorisation/agencies/${arn.value}/invitations/sent/AX6U1MAPY88GR"
                          |        },
                          |        "self": {
-                         |            "href": "/agent-client-authorisation/agencies/${arn.value}/invitations/sent?service=HMRC-MTD-IT&clientId=${nino.value}&status=PartialAuth"
+                         |            "href": "/agent-client-authorisation/agencies/${arn.value}/invitations/sent?clientId=${nino.value}&status=PartialAuth"
                          |        }
                          |    },
                          |    "_embedded": {
@@ -67,7 +67,7 @@ trait ACAStubs {
                          |                "expiryDate": "2021-05-19",
                          |                "lastUpdated": "2021-04-28T18:08:51.786+01:00",
                          |                "clientType": "personal",
-                         |                "service": "HMRC-MTD-IT",
+                         |                "service": "$service",
                          |                "suppliedClientId": "AB213308A",
                          |                "relationshipEndedBy": null,
                          |                "clientIdType": "MTDITID",
@@ -84,7 +84,7 @@ trait ACAStubs {
     stubFor(
       get(
         urlEqualTo(
-          s"/agent-client-authorisation/agencies/${arn.value}/invitations/sent?status=PartialAuth&clientId=${nino.value}&service=HMRC-MTD-IT"
+          s"/agent-client-authorisation/agencies/${arn.value}/invitations/sent?status=PartialAuth&clientId=${nino.value}"
         )
       )
         .willReturn(
@@ -96,7 +96,7 @@ trait ACAStubs {
                          |            "href": "/agent-client-authorisation/agencies/YARN8313176/invitations/sent/AX6U1MAPY88GR"
                          |        },
                          |        "self": {
-                         |            "href": "/agent-client-authorisation/agencies/YARN8313176/invitations/sent?service=HMRC-MTD-IT&clientId=AB213308A&status=PartialAuth"
+                         |            "href": "/agent-client-authorisation/agencies/YARN8313176/invitations/sent?clientId=AB213308A&status=PartialAuth"
                          |        }
                          |    },
                          |    "_embedded": {
@@ -110,7 +110,7 @@ trait ACAStubs {
     stubFor(
       get(
         urlEqualTo(
-          s"/agent-client-authorisation/agencies/${arn.value}/invitations/sent?status=PartialAuth&clientId=${nino.value}&service=HMRC-MTD-IT"
+          s"/agent-client-authorisation/agencies/${arn.value}/invitations/sent?status=PartialAuth&clientId=${nino.value}"
         )
       )
         .willReturn(

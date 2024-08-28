@@ -27,6 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -240,10 +241,39 @@ class RelationshipsControllerWithoutMongoISpec
       )
     }
 
-    "return 200 when relationship does not exist in CESA but there is a PartialAuth invitation" in {
+    "return 200 when relationship does not exist in CESA but there is a PartialAuth invitation for main agent type" in {
       getAgentRecordForClient(arn)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenPartialAuthExistsFor(arn, nino)
+      givenPartialAuthExistsFor(arn, nino, HMRCMTDIT)
+      givenAuditConnector()
+
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
+
+      val result = doAgentRequest(requestPath)
+      result.status shouldBe 200
+
+      await(repo.findBy(arn, enrolmentKey)) shouldBe None
+
+      verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
+
+      verifyAuditRequestSent(
+        1,
+        event = AgentClientRelationshipEvent.CheckCESA,
+        detail = Map(
+          "arn"              -> arn.value,
+          "nino"             -> nino.value,
+          "saAgentRef"       -> "",
+          "CESARelationship" -> "false",
+          "partialAuth"      -> "true"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
+    }
+
+    "return 200 when relationship does not exist in CESA but there is a PartialAuth invitation for supporting agent type" in {
+      getAgentRecordForClient(arn)
+      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenPartialAuthExistsFor(arn, nino, HMRCMTDITSUPP)
       givenAuditConnector()
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe None

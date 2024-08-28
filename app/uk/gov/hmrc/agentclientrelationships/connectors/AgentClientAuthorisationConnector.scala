@@ -25,6 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, SetRelationshipEndedPayload}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
@@ -43,7 +44,7 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
 
   private val acaBaseUrl: URL = new URL(appConfig.agentClientAuthorisationUrl)
 
-  def getPartialAuthExistsFor(clientId: TaxIdentifier, arn: Arn, service: String)(implicit
+  def getPartialAuthExistsFor(clientId: TaxIdentifier, arn: Arn)(implicit
     hc: HeaderCarrier
   ): Future[Boolean] = {
     val url: URL = new URL(
@@ -51,16 +52,21 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
       s"/agent-client-authorisation/agencies/${encodePathSegment(arn.value)}/invitations/sent"
     )
 
-    monitor(s"ConsumedAPI-ACA-getPartialAuthExistsFor-$service-GET") {
+    monitor(s"ConsumedAPI-ACA-getPartialAuthExistsFor-GET") {
       httpClient
         .GET[HttpResponse](
           url = url.toString,
-          queryParams = List("status" -> "PartialAuth", "clientId" -> clientId.value, "service" -> service)
+          queryParams = List("status" -> "PartialAuth", "clientId" -> clientId.value)
         )
         .map { response =>
           response.status match {
-            case Status.OK => !(response.json \ "_embedded" \ "invitations").as[JsArray].equals(JsArray.empty)
-            case _         => false
+            case Status.OK =>
+              ((response.json \ "_embedded" \ "invitations")
+                .as[JsArray]
+                .value
+                .map(x => (x \ "service").as[String])
+                .toList intersect List(HMRCMTDIT, HMRCMTDITSUPP)).nonEmpty
+            case _ => false
           }
         }
     }

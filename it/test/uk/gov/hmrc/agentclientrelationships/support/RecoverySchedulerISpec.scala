@@ -35,7 +35,6 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
 class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
