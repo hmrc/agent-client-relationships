@@ -126,8 +126,6 @@ class RelationshipsController @Inject() (
     auditData.set("arn", arn)
     maybeUserId.foreach(auditData.set("credId", _))
 
-    val taxIdentifier = enrolmentKey.oneTaxIdentifier()
-
     val result = for {
       _ <- agentUserService.getAgentAdminUserFor(arn)
       /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
@@ -143,9 +141,9 @@ class RelationshipsController @Inject() (
     result
       .recoverWith {
         case RelationshipNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, errorCode)
+          checkOldRelationship(arn, enrolmentKey, errorCode)
         case AdminNotFound(errorCode) =>
-          checkOldRelationship(arn, taxIdentifier, errorCode)
+          checkOldRelationship(arn, enrolmentKey, errorCode)
         case e @ RelationshipDeletePending() =>
           logger.warn("Denied access because relationship removal is pending.")
           Future.successful(Left(e.getMessage))
@@ -157,14 +155,14 @@ class RelationshipsController @Inject() (
       }
   }
 
-  private def checkOldRelationship(arn: Arn, taxIdentifier: TaxIdentifier, errorCode: String)(implicit
+  private def checkOldRelationship(arn: Arn, enrolmentKey: EnrolmentKey, errorCode: String)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData
   ): Future[Either[String, Boolean]] =
     checkOldAndCopyService
-      .checkForOldRelationshipAndCopy(arn, taxIdentifier)
+      .checkForOldRelationshipAndCopy(arn, enrolmentKey)
       .map {
         case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
           Left(errorCode)
@@ -175,6 +173,7 @@ class RelationshipsController @Inject() (
         case upS: UpstreamErrorResponse =>
           throw upS
         case NonFatal(ex) =>
+          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           logger.warn(
             s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
           )

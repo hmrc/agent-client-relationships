@@ -30,6 +30,9 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
   def givenDelegatedGroupIdsNotExistForMtdItId(mtdItId: MtdItId) =
     givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, mtdItId))
 
+  def givenDelegatedGroupIdsNotExistForMtdItIdSupp(mtdItId: MtdItId) =
+    givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdItSupp, mtdItId))
+
   def givenDelegatedGroupIdsExistForMtdItId(mtdItId: MtdItId, ids: String*) =
     givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.MtdIt, mtdItId), Set("bar", "foo") ++ ids.toSet)
 
@@ -44,6 +47,9 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
 
   def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", EnrolmentKey(Service.MtdIt, mtdItId), agentCode)
+
+  def givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) =
+    givenEnrolmentAllocationSucceeds("foo", "any", EnrolmentKey(Service.MtdItSupp, mtdItId), agentCode)
 
   def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) =
     givenEnrolmentAllocationSucceeds("foo", "any", EnrolmentKey(Service.Vat, vrn), agentCode)

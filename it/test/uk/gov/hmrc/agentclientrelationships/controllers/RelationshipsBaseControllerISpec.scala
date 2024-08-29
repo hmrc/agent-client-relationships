@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 import com.google.inject.AbstractModule
+import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -51,7 +52,8 @@ trait RelationshipsBaseControllerISpec
     with MockitoSugar
     with JsonMatchers
     with ACAStubs
-    with AUCDStubs {
+    with AUCDStubs
+    with IntegrationPatience {
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder
@@ -120,6 +122,7 @@ trait RelationshipsBaseControllerISpec
   val arn3 = Arn("AARN0000006")
   val mtdItId = MtdItId("ABCDEF123456789")
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
+  val mtdItSuppEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdItSupp, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
   val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)

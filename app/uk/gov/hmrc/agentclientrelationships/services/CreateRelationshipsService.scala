@@ -250,21 +250,23 @@ class CreateRelationshipsService @Inject() (
       .tryLock(arn, enrolmentKey) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
           case (true, true) =>
+            logger.warn(s"Relationship copy record found: ETMP and ES had failed status. Record dateTime: ${relationshipCopyRecord.dateTime}")
             for {
-              agentUser  <- retrieveAgentUser(arn)
+              agentUser <- retrieveAgentUser(arn)
               etmpStatus <- createEtmpRecord(arn, enrolmentKey)
               if etmpStatus == DbUpdateSucceeded
               esStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
             } yield esStatus
           case (false, true) =>
+            logger.warn(s"Relationship copy record found: ETMP had succeeded and ES had failed. Record dateTime: ${relationshipCopyRecord.dateTime}")
             for {
               agentUser <- retrieveAgentUser(arn)
-              esStatus  <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
+              esStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
             } yield esStatus
           case (true, false) =>
             logger.warn(
               s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
-                s"This should not happen because we always create the ETMP relationship first,"
+                s"This should not happen because we always create the ETMP relationship first. Record dateTime: ${relationshipCopyRecord.dateTime}"
             )
             createEtmpRecord(arn, enrolmentKey)
           case (false, false) =>

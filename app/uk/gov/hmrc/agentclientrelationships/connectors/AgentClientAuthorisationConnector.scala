@@ -72,14 +72,17 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
     }
   }
 
-  def updateAltItsaFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
+  def updateAltItsaFor(nino: Nino, service: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean] = {
 
     val url: URL = new URL(
       acaBaseUrl,
-      s"/agent-client-authorisation/alt-itsa/update/${encodePathSegment(nino.value)}"
+      s"/agent-client-authorisation/alt-itsa/$service/update/nino/${encodePathSegment(nino.value)}"
     )
 
-    monitor(s"ConsumedAPI-ACA-updateAltItsaFor-PUT") {
+    monitor(s"ConsumedAPI-ACA-updateAltItsaFor$service-PUT") {
       httpClient
         .PUTString[HttpResponse](url = url.toString, "")
         .map { response =>
