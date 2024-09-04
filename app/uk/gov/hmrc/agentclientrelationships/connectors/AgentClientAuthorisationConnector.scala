@@ -79,7 +79,7 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
 
     val url: URL = new URL(
       acaBaseUrl,
-      s"/agent-client-authorisation/alt-itsa/$service/update/nino/${encodePathSegment(nino.value)}"
+      s"/agent-client-authorisation/alt-itsa/$service/update/${encodePathSegment(nino.value)}"
     )
 
     monitor(s"ConsumedAPI-ACA-updateAltItsaFor$service-PUT") {
