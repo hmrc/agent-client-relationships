@@ -122,7 +122,7 @@ trait ACAStubs {
 
   def givenAltItsaUpdate(nino: Nino, service: String = HMRCMTDIT, responseStatus: Int) =
     stubFor(
-      put(urlEqualTo(s"/agent-client-authorisation/alt-itsa/$service/update/nino/${nino.value}"))
+      put(urlEqualTo(s"/agent-client-authorisation/alt-itsa/$service/update/${nino.value}"))
         .willReturn(aResponse().withStatus(responseStatus))
     )
 
