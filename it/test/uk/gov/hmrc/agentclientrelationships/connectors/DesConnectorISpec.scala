@@ -23,14 +23,13 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IFStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
 
 class DesConnectorISpec(implicit val ec: ExecutionContext)
     extends UnitSpec
@@ -47,7 +46,6 @@ class DesConnectorISpec(implicit val ec: ExecutionContext)
 
   val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
-  val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -66,10 +64,8 @@ class DesConnectorISpec(implicit val ec: ExecutionContext)
         "features.copy-relationship.mtd-it"                -> true,
         "features.copy-relationship.mtd-vat"               -> true,
         "features.recovery-enable"                         -> false,
-        "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
         "agent.cache.enabled"                              -> false,
-        "agent.trackPage.cache.size"                       -> 1,
         "agent.trackPage.cache.expires"                    -> "1 millis",
         "agent.trackPage.cache.enabled"                    -> false
       )
@@ -77,7 +73,7 @@ class DesConnectorISpec(implicit val ec: ExecutionContext)
   private implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val desConnector =
-    new DesConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
+    new DesConnector(httpClient, ec)(metrics, appConfig)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

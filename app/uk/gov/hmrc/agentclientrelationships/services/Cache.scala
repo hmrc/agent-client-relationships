@@ -17,12 +17,16 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
-import com.github.blemale.scaffeine.Scaffeine
+import play.api.libs.json.{Reads, Writes}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+
 import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Environment, Logging}
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
+import uk.gov.hmrc.mongo.cache.CacheIdType.SimpleCacheId
+import uk.gov.hmrc.mongo.cache.{DataKey, MongoCacheRepository}
+import uk.gov.hmrc.mongo.{CurrentTimestampSupport, MongoComponent}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,11 +36,10 @@ trait KenshooCacheMetrics extends Logging {
 
   val kenshooRegistry: MetricRegistry
 
-  def record[T](name: String): Unit = {
+  def record(name: String): Unit = {
     kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
     logger.debug(s"kenshoo-event::meter::$name::recorded")
   }
-
 }
 
 trait Cache[T] {
@@ -47,65 +50,83 @@ class DoNotCache[T] extends Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = body
 }
 
-class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit metrics: Metrics)
-    extends KenshooCacheMetrics
+@Singleton
+class CacheRepositoryFactory @Inject() (mongoComponent: MongoComponent, configuration: Configuration)(implicit
+  ec: ExecutionContext
+) {
+  def apply(collectionName: String, ttlConfigKey: String): MongoCacheRepository[String] =
+    new MongoCacheRepository[String](
+      mongoComponent = mongoComponent,
+      collectionName = collectionName,
+      ttl = configuration.get[FiniteDuration](ttlConfigKey),
+      timestampSupport = new CurrentTimestampSupport(),
+      cacheIdType = SimpleCacheId
+    )
+}
+
+class MongoCache[T] @Inject() (
+  cacheRepositoryFactory: CacheRepositoryFactory,
+  collectionName: String,
+  ttlConfigKey: String
+)(implicit
+  metrics: Metrics,
+  reads: Reads[T],
+  writes: Writes[T]
+) extends KenshooCacheMetrics
     with Cache[T] {
 
   val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  private val underlying: com.github.blemale.scaffeine.Cache[String, T] =
-    Scaffeine()
-      .recordStats()
-      .expireAfterWrite(FiniteDuration(expires.toMillis, MILLISECONDS))
-      .maximumSize(size)
-      .build[String, T]()
+  private lazy val cacheRepository: MongoCacheRepository[String] = cacheRepositoryFactory(collectionName, ttlConfigKey)
 
-  def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] =
-    underlying.getIfPresent(key) match {
-      case Some(v) =>
-        record("Count-" + name + "-from-cache")
-        Future.successful(v)
+  def apply(cacheId: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+    val dataKey: DataKey[T] = DataKey[T](cacheId)
+
+    cacheRepository.get(cacheId)(dataKey).flatMap {
+      case Some(cachedValue) =>
+        record(s"Count-$collectionName-from-cache")
+        Future.successful(cachedValue)
       case None =>
-        body.andThen { case Success(v) =>
-          logger.info(s"Missing $name cache hit, storing new value.")
-          record("Count-" + name + "-from-source")
-          underlying.put(key, v)
+        body.andThen { case Success(newValue) =>
+          logger.info(s"Missing $collectionName cache hit, storing new value.")
+          record(s"Count-$collectionName-from-source")
+          cacheRepository.put(cacheId)(dataKey, newValue).map(_ => newValue)
         }
     }
+  }
 }
 
 @Singleton
-class AgentCacheProvider @Inject() (val environment: Environment, configuration: Configuration)(implicit
-  metrics: Metrics
+class AgentCacheProvider @Inject() (configuration: Configuration, cacheRepositoryFactory: CacheRepositoryFactory)(
+  implicit metrics: Metrics
 ) {
 
-  private val cacheSize = configuration.underlying.getInt("agent.cache.size")
-  private val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))
-  private val cacheEnabled = configuration.underlying.getBoolean("agent.cache.enabled")
+  implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
+  implicit val readsOptionalUserDetails: Reads[Option[UserDetails]] = _.validateOpt[UserDetails]
 
-  private val agentTrackCacheSize = configuration.underlying.getInt("agent.trackPage.cache.size")
-  private val agentTrackCacheExpires =
-    Duration.create(configuration.underlying.getString("agent.trackPage.cache.expires"))
-  private val agentTrackCacheEnabled = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
+  private val cacheEnabled: Boolean = configuration.underlying.getBoolean("agent.cache.enabled")
+  private val agentTrackPageCacheEnabled: Boolean = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
+
+  private def createCache[T](enabled: Boolean, collectionName: String, ttlConfigKey: String)(implicit
+    reads: Reads[T],
+    writes: Writes[T]
+  ): Cache[T] =
+    if (enabled) new MongoCache[T](cacheRepositoryFactory, collectionName, ttlConfigKey)
+    else new DoNotCache[T]
 
   val esPrincipalGroupIdCache: Cache[String] =
-    if (cacheEnabled) new LocalCaffeineCache[String]("es-principalGroupId-cache", cacheSize, cacheExpires)
-    else new DoNotCache[String]
+    createCache[String](cacheEnabled, "es-principalGroupId-cache", "agent.cache.expires")
 
   val ugsFirstGroupAdminCache: Cache[Option[UserDetails]] =
-    if (cacheEnabled) new LocalCaffeineCache[Option[UserDetails]]("ugs-firstGroupAdmin-cache", cacheSize, cacheExpires)
-    else new DoNotCache[Option[UserDetails]]
+    createCache[Option[UserDetails]](cacheEnabled, "ugs-firstGroupAdmin-cache", "agent.cache.expires")
 
   val ugsGroupInfoCache: Cache[Option[GroupInfo]] =
-    if (cacheEnabled) new LocalCaffeineCache[Option[GroupInfo]]("ugs-groupInfo-cache", cacheSize, cacheExpires)
-    else new DoNotCache[Option[GroupInfo]]
+    createCache[Option[GroupInfo]](cacheEnabled, "ugs-groupInfo-cache", "agent.cache.expires")
 
   val agentTrackPageCache: Cache[Seq[InactiveRelationship]] =
-    if (agentTrackCacheEnabled)
-      new LocalCaffeineCache[Seq[InactiveRelationship]](
-        "agent-trackPage-cache",
-        agentTrackCacheSize,
-        agentTrackCacheExpires
-      )
-    else new DoNotCache[Seq[InactiveRelationship]]
+    createCache[Seq[InactiveRelationship]](
+      agentTrackPageCacheEnabled,
+      "agent-trackPage-cache",
+      "agent.trackPage.cache.expires"
+    )
 }

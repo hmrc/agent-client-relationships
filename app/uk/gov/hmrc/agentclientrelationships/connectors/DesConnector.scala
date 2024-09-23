@@ -25,7 +25,6 @@ import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -37,8 +36,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DesConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCacheProvider, val ec: ExecutionContext)(
-  implicit
+class DesConnector @Inject() (httpClient: HttpClient, val ec: ExecutionContext)(implicit
   val metrics: Metrics,
   val appConfig: AppConfig
 ) extends HttpAPIMonitor

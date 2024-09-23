@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HttpClient, RequestId, SessionId}
 
@@ -30,10 +29,9 @@ class DesConnectorSpec extends UnitSpec with MockitoSugar {
   val appConfig: AppConfig = mock[AppConfig]
   val httpClient: HttpClient = mock[HttpClient]
   val metrics: Metrics = mock[Metrics]
-  val agentCacheProvider: AgentCacheProvider = mock[AgentCacheProvider]
 
   val underTest =
-    new DesConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
+    new DesConnector(httpClient, ec)(metrics, appConfig)
 
   "desHeaders" should {
     "contain correct headers" when {

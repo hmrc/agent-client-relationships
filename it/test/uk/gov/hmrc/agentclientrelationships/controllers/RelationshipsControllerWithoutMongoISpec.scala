@@ -76,7 +76,6 @@ class RelationshipsControllerWithoutMongoISpec
         "auditing.consumer.baseUri.port"                        -> wireMockPort,
         "features.copy-relationship.mtd-vat"                    -> true,
         "features.recovery-enable"                              -> false,
-        "agent.cache.size"                                      -> 1,
         "agent.cache.expires"                                   -> "1 millis",
         "agent.cache.enabled"                                   -> true,
         "mongodb.uri"                                           -> mongoUri

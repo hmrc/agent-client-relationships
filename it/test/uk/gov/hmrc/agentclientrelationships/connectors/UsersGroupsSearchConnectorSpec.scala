@@ -30,7 +30,6 @@ import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class UsersGroupsSearchConnectorSpec(implicit ec: ExecutionContext)
     extends UnitSpec
@@ -60,10 +59,8 @@ class UsersGroupsSearchConnectorSpec(implicit ec: ExecutionContext)
         "features.copy-relationship.mtd-it"                -> true,
         "features.copy-relationship.mtd-vat"               -> true,
         "features.recovery-enable"                         -> false,
-        "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
         "agent.cache.enabled"                              -> true,
-        "agent.trackPage.cache.size"                       -> 1,
         "agent.trackPage.cache.expires"                    -> "1 millis",
         "agent.trackPage.cache.enabled"                    -> true
       )
