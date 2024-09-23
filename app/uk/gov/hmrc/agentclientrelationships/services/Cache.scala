@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,16 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
-import com.github.blemale.scaffeine.Scaffeine
+import play.api.libs.json.{Reads, Writes}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+
 import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Environment, Logging}
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
+import uk.gov.hmrc.mongo.cache.CacheIdType.SimpleCacheId
+import uk.gov.hmrc.mongo.cache.{DataKey, MongoCacheRepository}
+import uk.gov.hmrc.mongo.{CurrentTimestampSupport, MongoComponent}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,11 +36,10 @@ trait KenshooCacheMetrics extends Logging {
 
   val kenshooRegistry: MetricRegistry
 
-  def record[T](name: String): Unit = {
+  def record(name: String): Unit = {
     kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
     logger.debug(s"kenshoo-event::meter::$name::recorded")
   }
-
 }
 
 trait Cache[T] {
@@ -47,65 +50,124 @@ class DoNotCache[T] extends Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = body
 }
 
-class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit metrics: Metrics)
-    extends KenshooCacheMetrics
+class CacheRepository @Inject() (
+  mongoComponent: MongoComponent,
+  collectionName: String,
+  ttl: Duration
+)(implicit ec: ExecutionContext)
+    extends MongoCacheRepository(
+      mongoComponent = mongoComponent,
+      collectionName = collectionName,
+      ttl = ttl,
+      timestampSupport = new CurrentTimestampSupport(),
+      cacheIdType = SimpleCacheId
+    )
+
+@Singleton
+class EsPrincipalGroupIdCacheRepository @Inject() (
+  mongoComponent: MongoComponent,
+  configuration: Configuration
+)(implicit ec: ExecutionContext)
+    extends CacheRepository(
+      mongoComponent = mongoComponent,
+      collectionName = "es-principalGroupId-cache",
+      ttl = configuration.get[FiniteDuration]("agent.cache.expires")
+    )
+
+@Singleton
+class UgsFirstGroupAdminCacheRepository @Inject() (
+  mongoComponent: MongoComponent,
+  configuration: Configuration
+)(implicit ec: ExecutionContext)
+    extends CacheRepository(
+      mongoComponent = mongoComponent,
+      collectionName = "ugs-firstGroupAdmin-cache",
+      ttl = configuration.get[FiniteDuration]("agent.cache.expires")
+    )
+
+@Singleton
+class UgsGroupInfoCacheRepository @Inject() (mongoComponent: MongoComponent, configuration: Configuration)(implicit
+  ec: ExecutionContext
+) extends CacheRepository(
+      mongoComponent = mongoComponent,
+      collectionName = "ugs-groupInfo-cache",
+      ttl = configuration.get[FiniteDuration]("agent.cache.expires")
+    )
+
+@Singleton
+class AgentTrackPageCacheRepository @Inject() (
+  mongoComponent: MongoComponent,
+  configuration: Configuration
+)(implicit ec: ExecutionContext)
+    extends CacheRepository(
+      mongoComponent = mongoComponent,
+      collectionName = "agent-track-cache",
+      ttl = configuration.get[FiniteDuration]("agent.trackPage.cache.expires")
+    )
+
+class MongoCache[T] @Inject() (cacheRepository: CacheRepository, name: String)(implicit
+  metrics: Metrics,
+  reads: Reads[T],
+  writes: Writes[T]
+) extends KenshooCacheMetrics
     with Cache[T] {
 
   val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  private val underlying: com.github.blemale.scaffeine.Cache[String, T] =
-    Scaffeine()
-      .recordStats()
-      .expireAfterWrite(FiniteDuration(expires.toMillis, MILLISECONDS))
-      .maximumSize(size)
-      .build[String, T]()
+  def apply(cacheId: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+    val dataKey: DataKey[T] = DataKey[T](cacheId)
 
-  def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] =
-    underlying.getIfPresent(key) match {
-      case Some(v) =>
-        record("Count-" + name + "-from-cache")
-        Future.successful(v)
+    cacheRepository.get(cacheId)(dataKey).flatMap {
+      case Some(cachedValue) =>
+        record(s"Count-$name-from-cache")
+        Future.successful(cachedValue)
       case None =>
-        body.andThen { case Success(v) =>
+        body.andThen { case Success(newValue) =>
           logger.info(s"Missing $name cache hit, storing new value.")
-          record("Count-" + name + "-from-source")
-          underlying.put(key, v)
+          record(s"Count-$name-from-source")
+          cacheRepository.put(cacheId)(dataKey, newValue).map(_ => newValue)
         }
     }
+  }
 }
 
 @Singleton
-class AgentCacheProvider @Inject() (val environment: Environment, configuration: Configuration)(implicit
+class AgentCacheProvider @Inject() (
+  configuration: Configuration,
+  esPrincipalGroupIdCacheRepository: EsPrincipalGroupIdCacheRepository,
+  ugsFirstGroupAdminCacheRepository: UgsFirstGroupAdminCacheRepository,
+  ugsGroupInfoCacheRepository: UgsGroupInfoCacheRepository,
+  agentTrackPageCacheRepository: AgentTrackPageCacheRepository
+)(implicit
   metrics: Metrics
 ) {
 
-  private val cacheSize = configuration.underlying.getInt("agent.cache.size")
-  private val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))
-  private val cacheEnabled = configuration.underlying.getBoolean("agent.cache.enabled")
+  implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
+  implicit val readsOptionalUserDetails: Reads[Option[UserDetails]] = _.validateOpt[UserDetails]
 
-  private val agentTrackCacheSize = configuration.underlying.getInt("agent.trackPage.cache.size")
-  private val agentTrackCacheExpires =
-    Duration.create(configuration.underlying.getString("agent.trackPage.cache.expires"))
-  private val agentTrackCacheEnabled = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
+  private val cacheEnabled: Boolean = configuration.underlying.getBoolean("agent.cache.enabled")
+  private val agentTrackPageCacheEnabled: Boolean = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
+
+  private def createCache[T](enabled: Boolean, cacheRepository: CacheRepository, name: String)(implicit
+    reads: Reads[T],
+    writes: Writes[T]
+  ): Cache[T] =
+    if (enabled) new MongoCache[T](cacheRepository, name)
+    else new DoNotCache[T]
 
   val esPrincipalGroupIdCache: Cache[String] =
-    if (cacheEnabled) new LocalCaffeineCache[String]("es-principalGroupId-cache", cacheSize, cacheExpires)
-    else new DoNotCache[String]
+    createCache[String](cacheEnabled, esPrincipalGroupIdCacheRepository, "es-principalGroupId-cache")
 
   val ugsFirstGroupAdminCache: Cache[Option[UserDetails]] =
-    if (cacheEnabled) new LocalCaffeineCache[Option[UserDetails]]("ugs-firstGroupAdmin-cache", cacheSize, cacheExpires)
-    else new DoNotCache[Option[UserDetails]]
+    createCache[Option[UserDetails]](cacheEnabled, ugsFirstGroupAdminCacheRepository, "ugs-firstGroupAdmin-cache")
 
   val ugsGroupInfoCache: Cache[Option[GroupInfo]] =
-    if (cacheEnabled) new LocalCaffeineCache[Option[GroupInfo]]("ugs-groupInfo-cache", cacheSize, cacheExpires)
-    else new DoNotCache[Option[GroupInfo]]
+    createCache[Option[GroupInfo]](cacheEnabled, ugsGroupInfoCacheRepository, "ugs-groupInfo-cache")
 
   val agentTrackPageCache: Cache[Seq[InactiveRelationship]] =
-    if (agentTrackCacheEnabled)
-      new LocalCaffeineCache[Seq[InactiveRelationship]](
-        "agent-trackPage-cache",
-        agentTrackCacheSize,
-        agentTrackCacheExpires
-      )
-    else new DoNotCache[Seq[InactiveRelationship]]
+    createCache[Seq[InactiveRelationship]](
+      agentTrackPageCacheEnabled,
+      agentTrackPageCacheRepository,
+      "agent-trackPage-cache"
+    )
 }

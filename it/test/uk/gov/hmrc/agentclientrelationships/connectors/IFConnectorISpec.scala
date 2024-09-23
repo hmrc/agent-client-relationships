@@ -68,10 +68,8 @@ class IFConnectorISpec
         "features.copy-relationship.mtd-it"                    -> true,
         "features.copy-relationship.mtd-vat"                   -> true,
         "features.recovery-enable"                             -> false,
-        "agent.cache.size"                                     -> 1,
         "agent.cache.expires"                                  -> "1 millis",
         "agent.cache.enabled"                                  -> false,
-        "agent.trackPage.cache.size"                           -> 1,
         "agent.trackPage.cache.expires"                        -> "1 millis",
         "agent.trackPage.cache.enabled"                        -> false
       )

@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
 
 class DesConnectorISpec(implicit val ec: ExecutionContext)
     extends UnitSpec
@@ -66,10 +66,8 @@ class DesConnectorISpec(implicit val ec: ExecutionContext)
         "features.copy-relationship.mtd-it"                -> true,
         "features.copy-relationship.mtd-vat"               -> true,
         "features.recovery-enable"                         -> false,
-        "agent.cache.size"                                 -> 1,
         "agent.cache.expires"                              -> "1 millis",
         "agent.cache.enabled"                              -> false,
-        "agent.trackPage.cache.size"                       -> 1,
         "agent.trackPage.cache.expires"                    -> "1 millis",
         "agent.trackPage.cache.enabled"                    -> false
       )
