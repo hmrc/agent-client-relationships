@@ -7,6 +7,7 @@ ThisBuild / majorVersion := 1
 ThisBuild / scalaVersion := "2.13.12"
 
 lazy val root = (project in file("."))
+  .disablePlugins(JUnitXmlReportPlugin)
   .settings(
     name := appName,
     organization := "uk.gov.hmrc",
