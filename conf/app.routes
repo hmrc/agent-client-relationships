@@ -11,6 +11,8 @@ GET           /client/relationships/active                                   @uk
 GET           /client/relationships/inactive                                 @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsForClient
 GET           /client/relationships/service/:service                         @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
 
+POST          /client/:service/details                                       @uk.gov.hmrc.agentclientrelationships.controllers.ClientDetailsController.findClientDetails(service: String)
+
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
 
