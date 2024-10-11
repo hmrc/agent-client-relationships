@@ -16,8 +16,29 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
-sealed trait ClientDetailsFailureResponse
+import play.api.libs.json.Json
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-case object ClientDetailsNotFound extends ClientDetailsFailureResponse
-case object ClientDetailsDoNotMatch extends ClientDetailsFailureResponse
-case class ErrorRetrievingClientDetails(status: Int, message: String) extends ClientDetailsFailureResponse
+class ClientDetailsRequestSpec extends UnitSpec {
+
+  "ClientDetailsRequest" should {
+
+    "read from JSON" in {
+
+      val json = Json.obj(
+        "clientDetails" -> Json.arr(
+          Json.obj(
+            "key" -> "postcode",
+            "value" -> "AA1 1AA"
+          ),
+          Json.obj(
+            "key" -> "nino",
+            "value" -> "AA000001B"
+          )
+        )
+      )
+
+      json.as[ClientDetailsRequest] shouldBe ClientDetailsRequest(Map("postcode" -> "AA1 1AA", "nino" -> "AA000001B"))
+    }
+  }
+}

@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.A
 
 trait DataStreamStub extends Eventually {
 
-  private implicit val patience = PatienceConfig(scaled(Span(25, Seconds)), scaled(Span(500, Millis)))
+  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(25, Seconds)), scaled(Span(500, Millis)))
 
   def verifyAuditRequestSent(
     count: Int,

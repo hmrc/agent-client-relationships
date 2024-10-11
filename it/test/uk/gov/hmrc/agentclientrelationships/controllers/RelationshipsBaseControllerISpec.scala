@@ -81,6 +81,7 @@ trait RelationshipsBaseControllerISpec
         "microservice.services.users-groups-search.port"        -> wireMockPort,
         "microservice.services.des.port"                        -> wireMockPort,
         "microservice.services.if.port"                         -> wireMockPort,
+        "microservice.services.citizen-details.port"            -> wireMockPort,
         "microservice.services.auth.port"                       -> wireMockPort,
         "microservice.services.agent-mapping.port"              -> wireMockPort,
         "microservice.services.agent-client-authorisation.port" -> wireMockPort,
@@ -158,6 +159,9 @@ trait RelationshipsBaseControllerISpec
   }
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
+
+  protected def doAgentPostRequest(route: String, body: String) =
+    Http.post(s"http://localhost:$port$route", body, Seq("Content-Type" -> "application/json"))
 
   protected def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
 

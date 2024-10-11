@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.clientDetails
+package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 
-sealed trait ClientDetailsFailureResponse
+import play.api.libs.json.{JsPath, Reads}
 
-case object ClientDetailsNotFound extends ClientDetailsFailureResponse
-case object ClientDetailsDoNotMatch extends ClientDetailsFailureResponse
-case class ErrorRetrievingClientDetails(status: Int, message: String) extends ClientDetailsFailureResponse
+case class ItsaDesignatoryDetails(postCode: Option[String])
+
+object ItsaDesignatoryDetails {
+  implicit val reads: Reads[ItsaDesignatoryDetails] = for {
+    postCode <- (JsPath \ "address" \ "postcode").readNullable[String]
+  } yield ItsaDesignatoryDetails(postCode)
+}

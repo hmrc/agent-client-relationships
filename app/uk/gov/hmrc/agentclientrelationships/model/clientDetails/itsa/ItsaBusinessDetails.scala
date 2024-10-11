@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.clientDetails
+package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 
 import play.api.libs.json.{JsPath, Reads}
 
-case class ClientDetailsRequest(clientDetails: Map[String, String])
+case class ItsaBusinessDetails(name: String, postcode: Option[String], countryCode: String) {
+  def isOverseas: Boolean = !countryCode.toUpperCase.contains("GB")
+}
 
-object ClientDetailsRequest {
-  implicit val reads: Reads[ClientDetailsRequest] = {
-    for {
-      clientDetails <- (JsPath \ "clientDetails").read[Seq[Map[String, String]]]
-    } yield {
-      val convertToMap = clientDetails.map(item => (item("key"), item("value"))).toMap[String, String]
-      ClientDetailsRequest(convertToMap)
-    }
-  }
+object ItsaBusinessDetails {
+
+  implicit val reads: Reads[ItsaBusinessDetails] = for {
+    name        <- (JsPath \ "tradingName").read[String]
+    postcode    <- (JsPath \ "businessAddressDetails" \ "postalCode").readNullable[String]
+    countryCode <- (JsPath \ "businessAddressDetails" \ "countryCode").read[String]
+  } yield ItsaBusinessDetails(name, postcode, countryCode)
 }
