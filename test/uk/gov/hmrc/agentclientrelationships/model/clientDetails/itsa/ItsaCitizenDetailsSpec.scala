@@ -32,7 +32,7 @@ class ItsaCitizenDetailsSpec extends UnitSpec {
           "name" -> Json.obj(
             "current" -> Json.obj(
               "firstName" -> "Matthew",
-              "lastName" -> "Kovacic"
+              "lastName"  -> "Kovacic"
             )
           ),
           "dateOfBirth" -> "01012000"

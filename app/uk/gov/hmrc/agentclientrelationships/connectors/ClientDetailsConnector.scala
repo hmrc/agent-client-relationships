@@ -20,8 +20,10 @@ import play.api.Logging
 import play.api.http.Status.{NOT_FOUND, OK}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
@@ -30,6 +32,8 @@ import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, 
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -228,6 +232,74 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
             case status =>
               logger.warn(s"Unexpected error during 'getPptSubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPptSubscriptionDetails'"))
+          }
+        }
+    }
+  }
+
+  def getCbcSubscriptionDetails(
+    cbcId: String
+  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {
+    val conversationId = hc.sessionId.map(_.value.drop(8)).getOrElse(UUID.randomUUID().toString)
+    val request = DisplaySubscriptionForCBCRequest(
+      displaySubscriptionForCBCRequest = DisplaySubscriptionDetails(
+        requestCommon = RequestCommonForSubscription().copy(conversationID = Some(conversationId)),
+        requestDetail = ReadSubscriptionRequestDetail(IDType = "CBC", IDNumber = cbcId)
+      )
+    )
+
+    val httpHeaders = Seq(
+      HeaderNames.authorisation -> s"Bearer ${appConfig.eisAuthToken}",
+      "x-forwarded-host"        -> "mdtp",
+      "x-correlation-id"        -> UUID.randomUUID().toString,
+      "x-conversation-id"       -> conversationId,
+      "date"         -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
+      "content-type" -> "application/json",
+      "accept"       -> "application/json",
+      "Environment"  -> appConfig.eisEnvironment
+    )
+
+    monitor(s"ConsumedAPI-EIS-GetCbcSubscriptionDetails-POST") {
+      http
+        .POST[DisplaySubscriptionForCBCRequest, HttpResponse](
+          appConfig.eisBaseUrl + "/dac6/dct50d/v1",
+          request,
+          headers = httpHeaders
+        )
+        .map { response =>
+          response.status match {
+            case OK        => Right(response.json.as[SimpleCbcSubscription])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case status =>
+              logger.warn(s"Unexpected error during 'getCbcSubscriptionDetails', statusCode=$status")
+              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCbcSubscriptionDetails'"))
+          }
+        }
+    }
+  }
+
+  def getPillar2SubscriptionDetails(
+    plrId: String
+  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {
+
+    val url = new URL(s"${appConfig.ifPlatformBaseUrl}/pillar2/subscription/$plrId")
+
+    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+
+    monitor("ConsumedAPI-IF-GetPillar2SubscriptionDetails-GET") {
+      http
+        .GET(url, headers = desOrIFHeaders(appConfig.ifAPI2143Token, appConfig.ifEnvironment, isInternal))(
+          implicitly[HttpReads[HttpResponse]],
+          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.ifAPI2143Token}"))) else hc,
+          ec
+        )
+        .map { response =>
+          response.status match {
+            case OK        => Right(response.json.as[Pillar2Record])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case status =>
+              logger.warn(s"Unexpected error during 'getPillar2SubscriptionDetails', statusCode=$status")
+              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPillar2SubscriptionDetails'"))
           }
         }
     }

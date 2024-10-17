@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Insolvent
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.Email
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 class ClientDetailsResponseSpec extends UnitSpec {
@@ -28,23 +29,27 @@ class ClientDetailsResponseSpec extends UnitSpec {
 
       "optional fields are present" in {
 
-        val model = ClientDetailsResponse("Ilkay Gundo", Some(Insolvent), isOverseas = true)
+        val model =
+          ClientDetailsResponse("Ilkay Gundo", Some(Insolvent), isOverseas = true, Seq("test@email.com"), Some(Email))
 
         val expectedJson = Json.obj(
-          "name" -> "Ilkay Gundo",
-          "status" -> "Insolvent",
-          "isOverseas" -> true
+          "name"          -> "Ilkay Gundo",
+          "status"        -> "Insolvent",
+          "isOverseas"    -> true,
+          "knownFacts"    -> Json.arr("test@email.com"),
+          "knownFactType" -> "Email"
         )
 
         Json.toJson(model) shouldBe expectedJson
       }
 
       "optional fields are not present" in {
-        val model = ClientDetailsResponse("Ilkay Gundo", None, isOverseas = true)
+        val model = ClientDetailsResponse("Ilkay Gundo", None, isOverseas = true, Seq(), None)
 
         val expectedJson = Json.obj(
-          "name" -> "Ilkay Gundo",
-          "isOverseas" -> true
+          "name"       -> "Ilkay Gundo",
+          "isOverseas" -> true,
+          "knownFacts" -> Json.arr()
         )
 
         Json.toJson(model) shouldBe expectedJson

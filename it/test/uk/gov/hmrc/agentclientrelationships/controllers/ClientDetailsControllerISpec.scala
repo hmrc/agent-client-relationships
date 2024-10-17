@@ -41,22 +41,14 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
       givenAuditConnector()
       givenItsaBusinessDetailsExists("AA000001B")
 
-      val requestBody = """{"clientDetails":[{"key":"postcode","value":"AA1 1AA"},{"key":"nino","value":"AA000001B"}]}"""
-
-      val result = doAgentPostRequest("/agent-client-relationships/client/HMRC-MTD-IT/details", requestBody)
+      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
       result.status shouldBe 200
-      result.json shouldBe Json.obj("name" -> "Erling Haal", "isOverseas" -> false)
-    }
-
-    "return 400 status when there was a problem matching client details" in {
-      givenAuditConnector()
-      givenItsaBusinessDetailsExists("AA000001B")
-
-      val requestBody = """{"clientDetails":[{"key":"postcode","value":"BB2 2BB"},{"key":"nino","value":"AA000001B"}]}"""
-
-      val result = doAgentPostRequest("/agent-client-relationships/client/HMRC-MTD-IT/details", requestBody)
-      result.status shouldBe 400
-      result.body shouldBe empty
+      result.json shouldBe Json.obj(
+        "name"          -> "Erling Haal",
+        "isOverseas"    -> false,
+        "knownFacts"    -> Json.arr("AA1 1AA"),
+        "knownFactType" -> "PostalCode"
+      )
     }
 
     "return 404 status when client details were not found" in {
@@ -65,25 +57,18 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
       givenItsaCitizenDetailsError("AA000001B", NOT_FOUND)
       givenItsaDesignatoryDetailsError("AA000001B", NOT_FOUND)
 
-      val requestBody = """{"clientDetails":[{"key":"postcode","value":"AA1 1AA"},{"key":"nino","value":"AA000001B"}]}"""
-
-      val result = doAgentPostRequest("/agent-client-relationships/client/HMRC-MTD-IT/details", requestBody)
+      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
       result.status shouldBe 404
       result.body shouldBe empty
     }
 
-    "return an unexpected status and valid JSON passed down from the connector" in {
+    "return 500 status when there was an unexpected failure" in {
       givenAuditConnector()
       givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
 
-      val requestBody = """{"clientDetails":[{"key":"postcode","value":"AA1 1AA"},{"key":"nino","value":"AA000001B"}]}"""
-
-      val result = doAgentPostRequest("/agent-client-relationships/client/HMRC-MTD-IT/details", requestBody)
+      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
       result.status shouldBe 500
-      result.json shouldBe Json.obj(
-        "statusCode" -> 500,
-        "message" -> "Downstream call for service: HMRC-MTD-IT failed with status: 500 and error message: Unexpected error during 'getItsaBusinessDetails'"
-      )
+      result.body shouldBe empty
     }
   }
 }

@@ -32,16 +32,16 @@ class VatCustomerDetailsSpec extends UnitSpec {
           "approvedInformation" -> Json.obj(
             "customerDetails" -> Json.obj(
               "organisationName" -> "CFG",
-              "tradingName" -> "CFG Solutions",
+              "tradingName"      -> "CFG Solutions",
               "individual" -> Json.obj(
-                "title" -> "0001",
-                "firstName" -> "Ilkay",
+                "title"      -> "0001",
+                "firstName"  -> "Ilkay",
                 "middleName" -> "Silky",
-                "lastName" -> "Gundo"
+                "lastName"   -> "Gundo"
               ),
               "effectiveRegistrationDate" -> "2020-01-01",
-              "isInsolvent" -> false,
-              "overseasIndicator" -> true
+              "isInsolvent"               -> false,
+              "overseasIndicator"         -> true
             )
           )
         )
@@ -62,13 +62,20 @@ class VatCustomerDetailsSpec extends UnitSpec {
         val json = Json.obj(
           "approvedInformation" -> Json.obj(
             "customerDetails" -> Json.obj(
-              "isInsolvent" -> false,
+              "isInsolvent"       -> false,
               "overseasIndicator" -> false
             )
           )
         )
 
-        json.as[VatCustomerDetails] shouldBe VatCustomerDetails(None, None, None, None, isInsolvent = false, isOverseas = false)
+        json.as[VatCustomerDetails] shouldBe VatCustomerDetails(
+          None,
+          None,
+          None,
+          None,
+          isInsolvent = false,
+          isOverseas = false
+        )
       }
     }
   }

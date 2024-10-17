@@ -30,7 +30,12 @@ case class VatCustomerDetails(
   isOverseas: Boolean
 )
 
-case class VatIndividual(title: Option[String], firstName: Option[String], middleName: Option[String], lastName: Option[String]) {
+case class VatIndividual(
+  title: Option[String],
+  firstName: Option[String],
+  middleName: Option[String],
+  lastName: Option[String]
+) {
   def name: String =
     Seq(title, firstName, middleName, lastName).flatten.map(_.trim).filter(_.nonEmpty).mkString(" ")
 }
@@ -40,12 +45,12 @@ object VatCustomerDetails {
   val pathPrefix: JsPath = JsPath \ "approvedInformation" \ "customerDetails"
 
   implicit val reads: Reads[VatCustomerDetails] = for {
-    orgName <- (pathPrefix \ "organisationName").readNullable[String]
-    individual <- (pathPrefix \ "individual").readNullable[VatIndividual]
+    orgName     <- (pathPrefix \ "organisationName").readNullable[String]
+    individual  <- (pathPrefix \ "individual").readNullable[VatIndividual]
     tradingName <- (pathPrefix \ "tradingName").readNullable[String]
-    regDate <- (pathPrefix \ "effectiveRegistrationDate").readNullable[String].map(_.map(LocalDate.parse))
+    regDate     <- (pathPrefix \ "effectiveRegistrationDate").readNullable[String].map(_.map(LocalDate.parse))
     isInsolvent <- (pathPrefix \ "isInsolvent").read[Boolean]
-    isOverseas <- (pathPrefix \ "overseasIndicator").read[Boolean]
+    isOverseas  <- (pathPrefix \ "overseasIndicator").read[Boolean]
   } yield VatCustomerDetails(orgName, individual, tradingName, regDate, isInsolvent, isOverseas)
 }
 
@@ -70,9 +75,9 @@ object VatIndividual {
 
   implicit val reads: Reads[VatIndividual] = (
     (JsPath \ "title").readNullable[String].map(title => titles.get(title.getOrElse(""))) and
-    (JsPath \ "firstName").readNullable[String] and
-    (JsPath \ "middleName").readNullable[String] and
-    (JsPath \ "lastName").readNullable[String]
+      (JsPath \ "firstName").readNullable[String] and
+      (JsPath \ "middleName").readNullable[String] and
+      (JsPath \ "lastName").readNullable[String]
   )(VatIndividual.apply _)
 
 }

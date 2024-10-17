@@ -16,17 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
-import play.api.libs.json.{JsPath, Reads}
+import play.api.libs.json.{Format, Json}
 
-case class ClientDetailsRequest(clientDetails: Map[String, String])
+object KnownFactType extends Enumeration {
 
-object ClientDetailsRequest {
-  implicit val reads: Reads[ClientDetailsRequest] = {
-    for {
-      clientDetails <- (JsPath \ "clientDetails").read[Seq[Map[String, String]]]
-    } yield {
-      val convertToMap = clientDetails.map(item => (item("key"), item("value"))).toMap[String, String]
-      ClientDetailsRequest(convertToMap)
-    }
-  }
+  type KnownFactType = Value
+
+  val PostalCode: KnownFactType = Value("PostalCode")
+  val CountryCode: KnownFactType = Value("CountryCode")
+  val Email: KnownFactType = Value("Email")
+  val Date: KnownFactType = Value("Date")
+
+  implicit val format: Format[KnownFactType.Value] = Json.formatEnum(this)
+
 }

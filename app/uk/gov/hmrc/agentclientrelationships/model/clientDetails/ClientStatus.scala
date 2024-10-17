@@ -24,6 +24,7 @@ object ClientStatus extends Enumeration {
 
   val Insolvent: ClientStatus = Value("Insolvent")
   val Deregistered: ClientStatus = Value("Deregistered")
+  val Inactive: ClientStatus = Value("Inactive")
 
   implicit val format: Format[ClientStatus.Value] = Json.formatEnum(this)
 }

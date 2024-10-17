@@ -29,7 +29,7 @@ class ItsaBusinessDetailsSpec extends UnitSpec {
         val json = Json.obj(
           "tradingName" -> "John Rocks",
           "businessAddressDetails" -> Json.obj(
-            "postalCode" -> "AA1 1AA",
+            "postalCode"  -> "AA1 1AA",
             "countryCode" -> "GB"
           )
         )

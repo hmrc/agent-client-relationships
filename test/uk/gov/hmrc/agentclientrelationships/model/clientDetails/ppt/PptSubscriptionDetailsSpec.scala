@@ -36,7 +36,7 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
               "customerType" -> "Individual",
               "individualDetails" -> Json.obj(
                 "firstName" -> "Bernard",
-                "lastName" -> "Silver"
+                "lastName"  -> "Silver"
               )
             )
           ),

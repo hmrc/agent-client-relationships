@@ -64,6 +64,11 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val ifAPI1171Token = getConfigString("if.authorization-api1171-token")
   val ifAPI1712Token = getConfigString("if.authorization-api1712-token")
   val ifAPI1495Token = getConfigString("if.authorization-api1495-token")
+  val ifAPI2143Token = getConfigString("if.authorization-api2143-token")
+
+  val eisBaseUrl = servicesConfig.baseUrl("eis")
+  val eisEnvironment = getConfigString("eis.environment")
+  val eisAuthToken = getConfigString("eis.authorization-token")
 
   val agentMappingUrl = servicesConfig.baseUrl("agent-mapping")
 

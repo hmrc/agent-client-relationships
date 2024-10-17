@@ -20,12 +20,17 @@ import play.api.libs.json.{JsError, JsSuccess, Reads}
 
 import java.time.LocalDate
 
-case class PptSubscriptionDetails(customerName: String, dateOfApplication: LocalDate, deregistrationDate: Option[LocalDate])
+case class PptSubscriptionDetails(
+  customerName: String,
+  dateOfApplication: LocalDate,
+  deregistrationDate: Option[LocalDate]
+)
 
 object PptSubscriptionDetails {
   implicit val reads: Reads[PptSubscriptionDetails] = { json =>
     val dateOfApplication = (json \ "legalEntityDetails" \ "dateOfApplication").as[LocalDate]
-    val deregistrationDate = (json \ "changeOfCircumstanceDetails" \ "deregistrationDetails" \ "deregistrationDate").asOpt[LocalDate]
+    val deregistrationDate =
+      (json \ "changeOfCircumstanceDetails" \ "deregistrationDetails" \ "deregistrationDate").asOpt[LocalDate]
 
     (json \ "legalEntityDetails" \ "customerDetails" \ "customerType").as[String] match {
 
@@ -36,7 +41,8 @@ object PptSubscriptionDetails {
         JsSuccess(PptSubscriptionDetails(s"$firstName $lastName", dateOfApplication, deregistrationDate))
 
       case "Organisation" =>
-        val organisationName = (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
+        val organisationName =
+          (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
         JsSuccess(PptSubscriptionDetails(organisationName, dateOfApplication, deregistrationDate))
 
       case e => JsError(s"Unknown customerType $e")

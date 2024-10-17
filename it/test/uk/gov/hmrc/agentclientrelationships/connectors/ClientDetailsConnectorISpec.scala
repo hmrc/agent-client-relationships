@@ -22,8 +22,10 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.{VatCustomerDetails, VatIndividual}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsNotFound, ErrorRetrievingClientDetails}
@@ -36,7 +38,11 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class ClientDetailsConnectorISpec
-  extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with DataStreamStub with ClientDetailsStub {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with DataStreamStub
+    with ClientDetailsStub {
 
   override lazy val app: Application = appBuilder.build()
 
@@ -44,10 +50,11 @@ class ClientDetailsConnectorISpec
     new GuiceApplicationBuilder()
       .configure(
         "microservice.services.citizen-details.port" -> wireMockPort,
-        "microservice.services.if.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort
+        "microservice.services.if.port"              -> wireMockPort,
+        "microservice.services.eis.port"             -> wireMockPort,
+        "microservice.services.des.port"             -> wireMockPort,
+        "auditing.consumer.baseUri.host"             -> wireMockHost,
+        "auditing.consumer.baseUri.port"             -> wireMockPort
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -107,13 +114,17 @@ class ClientDetailsConnectorISpec
     "return business details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaBusinessDetailsExists("AA000001B")
-      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB"))
+      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
+      )
     }
 
     "return the first set of business details when receiving multiple" in {
       givenAuditConnector()
       givenMultipleItsaBusinessDetailsExists("AA000001B")
-      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB"))
+      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
+      )
     }
 
     "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
@@ -223,7 +234,9 @@ class ClientDetailsConnectorISpec
       givenAuditConnector()
       givenPptDetailsExist("XAPPT0004567890")
       await(connector.getPptSubscriptionDetails("XAPPT0004567890")) shouldBe
-        Right(PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), Some(LocalDate.parse("2030-01-01"))))
+        Right(
+          PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), Some(LocalDate.parse("2030-01-01")))
+        )
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
@@ -237,6 +250,61 @@ class ClientDetailsConnectorISpec
       givenPptDetailsError("XAPPT0004567890", INTERNAL_SERVER_ERROR)
       await(connector.getPptSubscriptionDetails("XAPPT0004567890")) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getPptSubscriptionDetails'"))
+    }
+  }
+
+  ".getCbcSubscriptionDetails" should {
+
+    "return CBC subscription details when receiving a 200 status" in {
+      givenAuditConnector()
+      givenCbcDetailsExist()
+      await(connector.getCbcSubscriptionDetails("XACBC1234567890")) shouldBe
+        Right(
+          SimpleCbcSubscription(
+            Some("CFG Solutions"),
+            Seq("Erling Haal", "Kevin De Burner"),
+            isGBUser = true,
+            Seq("test@email.com", "test2@email.com")
+          )
+        )
+    }
+
+    "return a ClientDetailsNotFound error when receiving a 404 status" in {
+      givenAuditConnector()
+      givenCbcDetailsError(NOT_FOUND)
+      await(connector.getCbcSubscriptionDetails("XACBC1234567890")) shouldBe Left(ClientDetailsNotFound)
+    }
+
+    "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
+      givenAuditConnector()
+      givenCbcDetailsError(INTERNAL_SERVER_ERROR)
+      await(connector.getCbcSubscriptionDetails("XACBC1234567890")) shouldBe
+        Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getCbcSubscriptionDetails'"))
+    }
+  }
+
+  ".getPillar2SubscriptionDetails" should {
+
+    "return Pillar2 record details when receiving a 200 status" in {
+      givenAuditConnector()
+      givenPillar2DetailsExist("XAPLR2222222222")
+      await(connector.getPillar2SubscriptionDetails("XAPLR2222222222")) shouldBe
+        Right(Pillar2Record("CFG Solutions", "2020-01-01", "GB", inactive = true))
+    }
+
+    "return a ClientDetailsNotFound error when receiving a 404 status" in {
+      givenAuditConnector()
+      givenPillar2DetailsError("XAPLR2222222222", NOT_FOUND)
+      await(connector.getPillar2SubscriptionDetails("XAPLR2222222222")) shouldBe Left(ClientDetailsNotFound)
+    }
+
+    "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
+      givenAuditConnector()
+      givenPillar2DetailsError("XAPLR2222222222", INTERNAL_SERVER_ERROR)
+      await(connector.getPillar2SubscriptionDetails("XAPLR2222222222")) shouldBe
+        Left(
+          ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getPillar2SubscriptionDetails'")
+        )
     }
   }
 }

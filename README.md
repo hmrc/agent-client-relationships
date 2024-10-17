@@ -80,6 +80,32 @@ The provided error code is to help diagnose potential issues in production and w
  | IR-SA           | ni           |
  | HMCE-VATDEC-ORG | vrn          |
 
+### Retrieve client details
+
+Returns a name, status, overseas flag, and known facts for a client.
+
+`GET /client/:service/details/:clientId`
+
+Successful response (status code 200):
+```
+{
+  "name": "Example name",
+  "status": "Insolvent",
+  "isOverseas": true,
+  "knownFacts": ["2020-01-01"],
+  "knownFactType": "Date"
+}
+```
+Where the fields "status", "knownFacts" and "knownFactType" are optional.
+
+"status" is an enum with possible values: `"Insolvent"`, `"Deregistered"`, `"Inactive"`
+
+"knownFactType" is an enum with possible values: `"Date"`, `"Email"`, `"PostalCode"`, `"CountryCode"`
+
+Error responses:
+- If the API call did not return the necessary client details, a status of 404 with no body is returned.
+- If there was an unexpected failure when calling the relevant API, a status of 500 with no body is returned.
+
 
 ## Running the tests
 

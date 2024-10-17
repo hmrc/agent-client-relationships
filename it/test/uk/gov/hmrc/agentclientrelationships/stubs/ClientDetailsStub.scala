@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, stubFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 
 trait ClientDetailsStub {
@@ -26,13 +26,12 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "address": {
-                 |    "postcode": "AA1 1AA"
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "address": {
+                         |    "postcode": "AA1 1AA"
+                         |  }
+                         |}
           """.stripMargin)
         )
     )
@@ -48,17 +47,16 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/citizen-details/nino/$nino"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "name": {
-                 |    "current": {
-                 |      "firstName": "Matthew",
-                 |      "lastName": "Kovacic"
-                 |    }
-                 |  },
-                 |  "dateOfBirth": "01012000"
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "name": {
+                         |    "current": {
+                         |      "firstName": "Matthew",
+                         |      "lastName": "Kovacic"
+                         |    }
+                         |  },
+                         |  "dateOfBirth": "01012000"
+                         |}
           """.stripMargin)
         )
     )
@@ -69,27 +67,25 @@ trait ClientDetailsStub {
         .willReturn(aResponse().withStatus(status))
     )
 
-
   def givenItsaBusinessDetailsExists(nino: String): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/$nino"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "taxPayerDisplayResponse": {
-                 |    "businessData": [
-                 |      {
-                 |        "tradingName": "Erling Haal",
-                 |        "businessAddressDetails": {
-                 |          "postalCode": "AA1 1AA",
-                 |          "countryCode": "GB"
-                 |        }
-                 |      }
-                 |    ]
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "taxPayerDisplayResponse": {
+                         |    "businessData": [
+                         |      {
+                         |        "tradingName": "Erling Haal",
+                         |        "businessAddressDetails": {
+                         |          "postalCode": "AA1 1AA",
+                         |          "countryCode": "GB"
+                         |        }
+                         |      }
+                         |    ]
+                         |  }
+                         |}
           """.stripMargin)
         )
     )
@@ -99,28 +95,27 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/registration/business-details/nino/$nino"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "taxPayerDisplayResponse": {
-                 |    "businessData": [
-                 |      {
-                 |        "tradingName": "Erling Haal",
-                 |        "businessAddressDetails": {
-                 |          "postalCode": "AA1 1AA",
-                 |          "countryCode": "GB"
-                 |        }
-                 |      },
-                 |      {
-                 |        "tradingName": "Bernard Silver",
-                 |        "businessAddressDetails": {
-                 |          "postalCode": "BB1 1BB",
-                 |          "countryCode": "PT"
-                 |        }
-                 |      }
-                 |    ]
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "taxPayerDisplayResponse": {
+                         |    "businessData": [
+                         |      {
+                         |        "tradingName": "Erling Haal",
+                         |        "businessAddressDetails": {
+                         |          "postalCode": "AA1 1AA",
+                         |          "countryCode": "GB"
+                         |        }
+                         |      },
+                         |      {
+                         |        "tradingName": "Bernard Silver",
+                         |        "businessAddressDetails": {
+                         |          "postalCode": "BB1 1BB",
+                         |          "countryCode": "PT"
+                         |        }
+                         |      }
+                         |    ]
+                         |  }
+                         |}
           """.stripMargin)
         )
     )
@@ -130,13 +125,12 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/registration/business-details/nino/$nino"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "taxPayerDisplayResponse": {
-                 |    "businessData": []
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "taxPayerDisplayResponse": {
+                         |    "businessData": []
+                         |  }
+                         |}
           """.stripMargin)
         )
     )
@@ -152,25 +146,24 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "approvedInformation": {
-                 |    "customerDetails": {
-                 |      "organisationName": "CFG",
-                 |      "tradingName": "CFG Solutions",
-                 |      "individual": {
-                 |        "title": "0001",
-                 |        "firstName": "Ilkay",
-                 |        "middleName": "Silky",
-                 |        "lastName": "Gundo"
-                 |      },
-                 |      "effectiveRegistrationDate": "2020-01-01",
-                 |      "isInsolvent": false,
-                 |      "overseasIndicator": true
-                 |    }
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "approvedInformation": {
+                         |    "customerDetails": {
+                         |      "organisationName": "CFG",
+                         |      "tradingName": "CFG Solutions",
+                         |      "individual": {
+                         |        "title": "0001",
+                         |        "firstName": "Ilkay",
+                         |        "middleName": "Silky",
+                         |        "lastName": "Gundo"
+                         |      },
+                         |      "effectiveRegistrationDate": "2020-01-01",
+                         |      "isInsolvent": false,
+                         |      "overseasIndicator": true
+                         |    }
+                         |  }
+                         |}
           """.stripMargin)
         )
     )
@@ -186,13 +179,12 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/trusts/agent-known-fact-check/$identifierType/$identifier"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "trustDetails": {
-                 |    "trustName": "The Safety Trust"
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "trustDetails": {
+                         |    "trustName": "The Safety Trust"
+                         |  }
+                         |}
             """.stripMargin)
         )
     )
@@ -208,16 +200,15 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "subscriptionDetails": {
-                 |    "typeOfPerson": "Trustee",
-                 |    "organisationName": "CFG Solutions",
-                 |    "postalCode": "AA1 1AA",
-                 |    "countryCode": "GB"
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "subscriptionDetails": {
+                         |    "typeOfPerson": "Trustee",
+                         |    "organisationName": "CFG Solutions",
+                         |    "postalCode": "AA1 1AA",
+                         |    "countryCode": "GB"
+                         |  }
+                         |}
             """.stripMargin)
         )
     )
@@ -233,24 +224,23 @@ trait ClientDetailsStub {
       get(urlEqualTo(s"/plastic-packaging-tax/subscriptions/PPT/$pptRef/display"))
         .willReturn(
           aResponse()
-            .withBody(
-              s"""
-                 |{
-                 |  "legalEntityDetails": {
-                 |    "dateOfApplication": "2020-01-01",
-                 |    "customerDetails": {
-                 |      "customerType": "Organisation",
-                 |      "organisationDetails": {
-                 |        "organisationName": "CFG Solutions"
-                 |      }
-                 |    }
-                 |  },
-                 |  "changeOfCircumstanceDetails": {
-                 |    "deregistrationDetails": {
-                 |      "deregistrationDate": "2030-01-01"
-                 |    }
-                 |  }
-                 |}
+            .withBody(s"""
+                         |{
+                         |  "legalEntityDetails": {
+                         |    "dateOfApplication": "2020-01-01",
+                         |    "customerDetails": {
+                         |      "customerType": "Organisation",
+                         |      "organisationDetails": {
+                         |        "organisationName": "CFG Solutions"
+                         |      }
+                         |    }
+                         |  },
+                         |  "changeOfCircumstanceDetails": {
+                         |    "deregistrationDetails": {
+                         |      "deregistrationDate": "2030-01-01"
+                         |    }
+                         |  }
+                         |}
             """.stripMargin)
         )
     )
@@ -258,6 +248,80 @@ trait ClientDetailsStub {
   def givenPptDetailsError(pptRef: String, status: Int): StubMapping =
     stubFor(
       get(urlEqualTo(s"/plastic-packaging-tax/subscriptions/PPT/$pptRef/display"))
+        .willReturn(aResponse().withStatus(status))
+    )
+
+  def givenCbcDetailsExist(): StubMapping =
+    stubFor(
+      post(urlEqualTo("/dac6/dct50d/v1"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""{
+                         |  "displaySubscriptionForCBCResponse": {
+                         |    "responseDetail": {
+                         |      "isGBUser": true,
+                         |      "tradingName": "CFG Solutions",
+                         |      "primaryContact": [
+                         |        {
+                         |          "email": "test@email.com",
+                         |          "individual": {
+                         |            "firstName": "Erling",
+                         |            "lastName": "Haal"
+                         |          },
+                         |          "organisation": {
+                         |            "organisationName": "CFG"
+                         |          }
+                         |        }
+                         |      ],
+                         |      "secondaryContact": [
+                         |        {
+                         |          "email": "test2@email.com",
+                         |          "individual": {
+                         |            "firstName": "Kevin",
+                         |            "lastName": "De Burner"
+                         |          },
+                         |          "organisation": {
+                         |            "organisationName": "CFG"
+                         |          }
+                         |        }
+                         |      ]
+                         |    }
+                         |  }
+                         |}
+            """.stripMargin)
+        )
+    )
+
+  def givenCbcDetailsError(status: Int): StubMapping =
+    stubFor(
+      post(urlEqualTo("/dac6/dct50d/v1"))
+        .willReturn(aResponse().withStatus(status))
+    )
+
+  def givenPillar2DetailsExist(plrId: String): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/pillar2/subscription/$plrId"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""{
+                         |  "upeDetails": {
+                         |    "organisationName": "CFG Solutions",
+                         |    "registrationDate": "2020-01-01"
+                         |  },
+                         |  "upeCorrespAddressDetails": {
+                         |    "countryCode": "GB"
+                         |  },
+                         |  "accountStatus": {
+                         |    "inactive": true
+                         |  }
+                         |}
+            """.stripMargin)
+        )
+    )
+
+  def givenPillar2DetailsError(plrId: String, status: Int): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/pillar2/subscription/$plrId"))
         .willReturn(aResponse().withStatus(status))
     )
 }

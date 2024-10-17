@@ -160,9 +160,6 @@ trait RelationshipsBaseControllerISpec
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
 
-  protected def doAgentPostRequest(route: String, body: String) =
-    Http.post(s"http://localhost:$port$route", body, Seq("Content-Type" -> "application/json"))
-
   protected def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
 
   protected def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
