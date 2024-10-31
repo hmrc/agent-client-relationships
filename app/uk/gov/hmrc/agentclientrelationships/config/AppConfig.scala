@@ -111,4 +111,5 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 
+  val invitationsTtl: Long = config.get[Long]("mongodb.invitations.expireAfterDays")
 }
