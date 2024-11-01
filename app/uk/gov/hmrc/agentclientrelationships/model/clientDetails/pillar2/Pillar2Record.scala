@@ -22,9 +22,9 @@ case class Pillar2Record(organisationName: String, registrationDate: String, cou
 
 object Pillar2Record {
   implicit val reads: Reads[Pillar2Record] = for {
-    orgName <- (JsPath \ "upeDetails" \ "organisationName").read[String]
-    regDate <- (JsPath \ "upeDetails" \ "registrationDate").read[String]
+    orgName     <- (JsPath \ "upeDetails" \ "organisationName").read[String]
+    regDate     <- (JsPath \ "upeDetails" \ "registrationDate").read[String]
     countryCode <- (JsPath \ "upeCorrespAddressDetails" \ "countryCode").read[String]
-    inactive <- (JsPath \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
+    inactive    <- (JsPath \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
   } yield Pillar2Record(orgName, regDate, countryCode, inactive)
 }

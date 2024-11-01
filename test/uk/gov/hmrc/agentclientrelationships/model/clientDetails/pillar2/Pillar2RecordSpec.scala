@@ -36,7 +36,7 @@ class Pillar2RecordSpec extends UnitSpec {
             "countryCode" -> "GB"
           ),
           "accountStatus" -> Json.obj(
-            "inactive" -> true,
+            "inactive" -> true
           )
         )
 

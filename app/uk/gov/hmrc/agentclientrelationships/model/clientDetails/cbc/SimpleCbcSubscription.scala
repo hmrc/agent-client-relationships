@@ -22,7 +22,12 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-case class SimpleCbcSubscription(tradingName: Option[String], otherNames: Seq[String], isGBUser: Boolean, emails: Seq[String]) {
+case class SimpleCbcSubscription(
+  tradingName: Option[String],
+  otherNames: Seq[String],
+  isGBUser: Boolean,
+  emails: Seq[String]
+) {
   def anyAvailableName: Option[String] = tradingName.orElse(otherNames.headOption)
 }
 
@@ -37,7 +42,7 @@ object SimpleCbcSubscription {
     val contacts = primaryContact ++ secondaryContact
 
     val otherNames: Seq[String] = contacts.collect {
-      case CbcContact(_, Some(ind: CbcIndividual), _) => ind.name
+      case CbcContact(_, Some(ind: CbcIndividual), _)   => ind.name
       case CbcContact(_, _, Some(org: CbcOrganisation)) => org.organisationName
     }
 
@@ -57,8 +62,10 @@ object DisplaySubscriptionForCBCRequest {
 
 //-----------------------------------------------------------------------------
 
-case class DisplaySubscriptionDetails(requestCommon: RequestCommonForSubscription,
-                                      requestDetail: ReadSubscriptionRequestDetail)
+case class DisplaySubscriptionDetails(
+  requestCommon: RequestCommonForSubscription,
+  requestDetail: ReadSubscriptionRequestDetail
+)
 
 object DisplaySubscriptionDetails {
   implicit val writes: Writes[DisplaySubscriptionDetails] = Json.writes[DisplaySubscriptionDetails]
@@ -66,11 +73,13 @@ object DisplaySubscriptionDetails {
 
 //-----------------------------------------------------------------------------
 
-case class RequestCommonForSubscription(regime: String,
-                                        receiptDate: String,
-                                        acknowledgementReference: String,
-                                        originatingSystem: String,
-                                        conversationID: Option[String])
+case class RequestCommonForSubscription(
+  regime: String,
+  receiptDate: String,
+  acknowledgementReference: String,
+  originatingSystem: String,
+  conversationID: Option[String]
+)
 
 object RequestCommonForSubscription {
   // Format: ISO 8601 YYYY-MM-DDTHH:mm:ssZ e.g. 2020-09-23T16:12:11Zs
