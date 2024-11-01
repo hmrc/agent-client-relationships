@@ -40,11 +40,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       collectionName = "invitations",
       domainFormat = Invitation.format,
       indexes = Seq(
+        IndexModel(Indexes.ascending("arn"), IndexOptions().name("arnIndex")),
+        IndexModel(Indexes.ascending("invitationId"), IndexOptions().name("invitationIdIndex").unique(true)),
         IndexModel(
           Indexes.ascending("created"),
-          IndexOptions()
-            .name("timeToLive")
-            .expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
+          IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
         )
       ),
       replaceIndexes = true

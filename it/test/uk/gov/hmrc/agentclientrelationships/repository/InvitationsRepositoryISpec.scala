@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Indexes
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -56,11 +57,28 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
 
   "InvitationsRepository" should {
 
-    "have a TTL of 30 days" in {
+    "have a TTL index of 30 days" in {
       val ttlIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("created")).get
 
       ttlIndex.getOptions.getName shouldBe "timeToLive"
       ttlIndex.getOptions.getExpireAfter(DAYS) shouldBe 30
+    }
+
+    "have a custom index for the arn field" in {
+      val arnIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("arn")).get
+
+      arnIndex.getKeys shouldBe Indexes.ascending("arn")
+      arnIndex.getOptions.getName shouldBe "arnIndex"
+      arnIndex.getOptions.isUnique shouldBe false
+    }
+
+    "have a custom index for the invitationId field" in {
+      val invitationIdIndex =
+        repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("invitationId")).get
+
+      invitationIdIndex.getKeys shouldBe Indexes.ascending("invitationId")
+      invitationIdIndex.getOptions.getName shouldBe "invitationIdIndex"
+      invitationIdIndex.getOptions.isUnique shouldBe true
     }
 
     "create a new invitation record" in {
