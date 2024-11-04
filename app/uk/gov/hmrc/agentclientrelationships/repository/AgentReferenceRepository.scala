@@ -20,7 +20,7 @@ import com.google.inject.ImplementedBy
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.addToSet
-import org.mongodb.scala.model.{IndexModel, IndexOptions}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions}
 import play.api.Logging
 import play.api.libs.json._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRecord.formats
@@ -44,11 +44,11 @@ object AgentReferenceRecord {
 
 @ImplementedBy(classOf[MongoAgentReferenceRepository])
 trait AgentReferenceRepository {
-  def create(agentReferenceRecord: AgentReferenceRecord): Future[Option[String]]
+  def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit]
   def findBy(uid: String): Future[Option[AgentReferenceRecord]]
   def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]]
   def updateAgentName(uid: String, newAgentName: String): Future[Unit]
-  def removeAgentReferencesForGiven(arn: Arn): Future[Int]
+  def delete(arn: Arn): Future[Unit]
 }
 
 @Singleton
@@ -67,11 +67,11 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
 
   override lazy val requiresTtlIndex: Boolean = false
 
-  override def create(agentReferenceRecord: AgentReferenceRecord): Future[Option[String]] =
+  override def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] =
     collection
       .insertOne(agentReferenceRecord)
-      .headOption()
-      .map(_.map(_.getInsertedId.asObjectId().getValue.toString))
+      .toFuture()
+      .map(_ => ())
 
   override def findBy(uid: String): Future[Option[AgentReferenceRecord]] =
     collection
@@ -85,14 +85,19 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
 
   override def updateAgentName(uid: String, newAgentName: String): Future[Unit] =
     collection
-      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName))
+      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName), UpdateOptions().upsert(false))
       .toFuture()
-      .map(uor => logger.info(s"Matched: ${uor.getMatchedCount}; Updated: ${uor.getModifiedCount}"))
+      .map { updateOneResult =>
+        if (updateOneResult.getMatchedCount == 1L && updateOneResult.getModifiedCount == 1L) ()
+        else throw new RuntimeException("could not update agent reference name, no matching uid found.")
+      }
 
-  override def removeAgentReferencesForGiven(arn: Arn): Future[Int] =
+  override def delete(arn: Arn): Future[Unit] =
     collection
       .deleteOne(equal("arn", arn.value))
       .toFuture()
-      .map(r => r.getDeletedCount.toInt)
-
+      .map { r =>
+        if (r.getDeletedCount == 1L) ()
+        else throw new RuntimeException("could not delete agent reference record, no matching ARN found.")
+      }
 }

@@ -33,26 +33,20 @@ class MongoAgentReferenceRepositoryISpec extends UnitSpec with DefaultPlayMongoR
 
     "create" should {
       "successfully create a record in the agentReferenceRepository" in {
-        await(repository.create(agentReferenceRecord("SCX39TGT", "LARN7404004"))).isDefined shouldBe true
-        await(repository.create(agentReferenceRecord("SCX39TGA", "EARN8077593"))).isDefined shouldBe true
-        await(repository.create(agentReferenceRecord("SCX39TGB", "VARN0590057"))).isDefined shouldBe true
+        await(repository.create(agentReferenceRecord("SCX39TGT", "LARN7404004"))) shouldBe ()
       }
 
       "throw an error if ARN is duplicated" in {
-        await(repository.create(agentReferenceRecord("SCX39TGT", "LARN7404004"))).isDefined shouldBe true
-        await(repository.create(agentReferenceRecord("SCX39TGA", "EARN8077593"))).isDefined shouldBe true
-        await(repository.create(agentReferenceRecord("SCX39TGB", "VARN0590057"))).isDefined shouldBe true
+        await(repository.collection.insertOne(agentReferenceRecord("SCX39TGT", "LARN7404004")).toFuture())
         an[MongoWriteException] shouldBe thrownBy {
-          await(repository.create(agentReferenceRecord("SCX39TGE", "VARN0590057")))
+          await(repository.create(agentReferenceRecord("SCX39TGE", "LARN7404004")))
         }
       }
 
       "throw an error if UID is duplicated" in {
-        await(repository.create(agentReferenceRecord("SCX39TGT", "LARN7404004"))).isDefined shouldBe true
-        await(repository.create(agentReferenceRecord("SCX39TGA", "EARN8077593"))).isDefined shouldBe true
-        await(repository.create(agentReferenceRecord("SCX39TGB", "VARN0590057"))).isDefined shouldBe true
+        await(repository.collection.insertOne(agentReferenceRecord("SCX39TGT", "LARN7404004")).toFuture())
         an[MongoWriteException] shouldBe thrownBy {
-          await(repository.create(agentReferenceRecord("SCX39TGB", "AARN5286261")))
+          await(repository.create(agentReferenceRecord("SCX39TGT", "LARN7404005")))
         }
       }
     }
@@ -81,6 +75,32 @@ class MongoAgentReferenceRepositoryISpec extends UnitSpec with DefaultPlayMongoR
         await(repository.findByArn(Arn("LARN7404004"))) shouldBe Some(
           agentReferenceRecord("SCX39TGT", "LARN7404004").copy(normalisedAgentNames = Seq("stan-lee", "chandler-bing"))
         )
+      }
+    }
+
+    "updateAgentName" should {
+      "successfully update agent name" in {
+        await(repository.collection.insertOne(agentReferenceRecord("SCX39TGT", "LARN7404004")).toFuture())
+        await(repository.updateAgentName("SCX39TGT", "New Name")) shouldBe ()
+      }
+
+      "fail to update agent name when no matching record found" in {
+        an[RuntimeException] shouldBe thrownBy {
+          await(repository.updateAgentName("SCX39TGT", "New Name"))
+        }
+      }
+    }
+
+    "delete" should {
+      "successfully delete" in {
+        await(repository.collection.insertOne(agentReferenceRecord("SCX39TGT", "LARN7404004")).toFuture())
+        await(repository.delete(Arn("LARN7404004"))) shouldBe ()
+      }
+
+      "fail to delete when no matching record found" in {
+        an[RuntimeException] shouldBe thrownBy {
+          await(repository.delete(Arn("LARN7404004")))
+        }
       }
     }
   }
