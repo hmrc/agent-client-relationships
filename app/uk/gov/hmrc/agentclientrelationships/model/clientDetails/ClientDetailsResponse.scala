@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.Kn
 case class ClientDetailsResponse(
   name: String,
   status: Option[ClientStatus],
-  isOverseas: Boolean,
+  isOverseas: Option[Boolean],
   knownFacts: Seq[String],
   knownFactType: Option[KnownFactType]
 )

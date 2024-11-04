@@ -26,8 +26,7 @@ case class VatCustomerDetails(
   individual: Option[VatIndividual],
   tradingName: Option[String],
   effectiveRegistrationDate: Option[LocalDate],
-  isInsolvent: Boolean,
-  isOverseas: Boolean
+  isInsolvent: Boolean
 )
 
 case class VatIndividual(
@@ -50,8 +49,7 @@ object VatCustomerDetails {
     tradingName <- (pathPrefix \ "tradingName").readNullable[String]
     regDate     <- (pathPrefix \ "effectiveRegistrationDate").readNullable[String].map(_.map(LocalDate.parse))
     isInsolvent <- (pathPrefix \ "isInsolvent").read[Boolean]
-    isOverseas  <- (pathPrefix \ "overseasIndicator").read[Boolean]
-  } yield VatCustomerDetails(orgName, individual, tradingName, regDate, isInsolvent, isOverseas)
+  } yield VatCustomerDetails(orgName, individual, tradingName, regDate, isInsolvent)
 }
 
 object VatIndividual {

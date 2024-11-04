@@ -203,10 +203,14 @@ trait ClientDetailsStub {
             .withBody(s"""
                          |{
                          |  "subscriptionDetails": {
-                         |    "typeOfPerson": "Trustee",
-                         |    "organisationName": "CFG Solutions",
-                         |    "postalCode": "AA1 1AA",
-                         |    "countryCode": "GB"
+                         |    "typeOfPersonDetails": {
+                         |      "typeOfPerson": "Trustee",
+                         |      "organisationName": "CFG Solutions"
+                         |    },
+                         |    "addressDetails": {
+                         |      "postalCode": "AA1 1AA",
+                         |      "countryCode": "GB"
+                         |    }
                          |  }
                          |}
             """.stripMargin)
@@ -304,15 +308,17 @@ trait ClientDetailsStub {
         .willReturn(
           aResponse()
             .withBody(s"""{
-                         |  "upeDetails": {
-                         |    "organisationName": "CFG Solutions",
-                         |    "registrationDate": "2020-01-01"
-                         |  },
-                         |  "upeCorrespAddressDetails": {
-                         |    "countryCode": "GB"
-                         |  },
-                         |  "accountStatus": {
-                         |    "inactive": true
+                         |  "success": {
+                         |    "upeDetails": {
+                         |      "organisationName": "CFG Solutions",
+                         |      "registrationDate": "2020-01-01"
+                         |    },
+                         |    "upeCorrespAddressDetails": {
+                         |      "countryCode": "GB"
+                         |    },
+                         |    "accountStatus": {
+                         |      "inactive": true
+                         |    }
                          |  }
                          |}
             """.stripMargin)

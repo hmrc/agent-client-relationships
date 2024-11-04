@@ -23,19 +23,19 @@ case class CgtSubscriptionDetails(name: String, postcode: Option[String], countr
 object CgtSubscriptionDetails {
 
   implicit val reads: Reads[CgtSubscriptionDetails] = { json =>
-    val typeOfPerson = (json \ "subscriptionDetails" \ "typeOfPerson").as[String]
-    val postcode = (json \ "subscriptionDetails" \ "postalCode").asOpt[String]
-    val countryCode = (json \ "subscriptionDetails" \ "countryCode").as[String]
+    val basePath = json \ "subscriptionDetails"
+    val typeOfPerson = (basePath \ "typeOfPersonDetails" \ "typeOfPerson").as[String]
+    val postcode = (basePath \ "addressDetails" \ "postalCode").asOpt[String]
+    val countryCode = (basePath \ "addressDetails" \ "countryCode").as[String]
 
     typeOfPerson match {
-
       case "Individual" =>
-        val firstName = (json \ "subscriptionDetails" \ "firstName").as[String]
-        val lastName = (json \ "subscriptionDetails" \ "lastName").as[String]
+        val firstName = (basePath \ "typeOfPersonDetails" \ "firstName").as[String]
+        val lastName = (basePath \ "typeOfPersonDetails" \ "lastName").as[String]
         JsSuccess(CgtSubscriptionDetails(firstName + " " + lastName, postcode, countryCode))
 
       case "Trustee" =>
-        val orgName = (json \ "subscriptionDetails" \ "organisationName").as[String]
+        val orgName = (basePath \ "typeOfPersonDetails" \ "organisationName").as[String]
         JsSuccess(CgtSubscriptionDetails(orgName, postcode, countryCode))
 
       case e => JsError(s"Unexpected typeOfPerson from DES for CGT: $e")
