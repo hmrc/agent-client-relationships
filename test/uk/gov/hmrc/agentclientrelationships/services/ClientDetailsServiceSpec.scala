@@ -56,7 +56,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             .thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", Some("AA1 1AA"), "GB"))))
 
           val resultModel =
-            ClientDetailsResponse("John Rocks", None, isOverseas = false, Seq("AA1 1AA"), Some(PostalCode))
+            ClientDetailsResponse("John Rocks", None, isOverseas = Some(false), Seq("AA1 1AA"), Some(PostalCode))
 
           await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
         }
@@ -83,7 +83,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
               .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA")))))
 
             val resultModel =
-              ClientDetailsResponse("John Rocks", None, isOverseas = false, Seq("AA1 1AA"), Some(PostalCode))
+              ClientDetailsResponse("John Rocks", None, isOverseas = None, Seq("AA1 1AA"), Some(PostalCode))
 
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
           }
@@ -139,8 +139,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
           Some(VatIndividual(Some("Mr"), Some("Ilkay"), Some("Silky"), Some("Gundo"))),
           Some("CFG Solutions"),
           Some(LocalDate.parse("2020-01-01")),
-          isInsolvent = true,
-          isOverseas = true
+          isInsolvent = true
         )
 
         "return a ClientDetailsResponse if expected data is returned" in {
@@ -148,7 +147,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             .thenReturn(Future.successful(Right(responseModel)))
 
           val resultModel =
-            ClientDetailsResponse("CFG Solutions", Some(Insolvent), isOverseas = true, Seq("2020-01-01"), Some(Date))
+            ClientDetailsResponse("CFG Solutions", Some(Insolvent), isOverseas = None, Seq("2020-01-01"), Some(Date))
 
           await(service.findClientDetails("HMRC-MTD-VAT", "123456789")) shouldBe Right(resultModel)
         }
@@ -191,7 +190,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getTrustName(eqTo[String]("1234567890"))(any[HeaderCarrier]))
             .thenReturn(Future.successful(Right("The Safety Trust")))
 
-          val resultModel = ClientDetailsResponse("The Safety Trust", None, isOverseas = false, Seq(), None)
+          val resultModel = ClientDetailsResponse("The Safety Trust", None, isOverseas = None, Seq(), None)
 
           await(service.findClientDetails("HMRC-TERS-ORG", "1234567890")) shouldBe Right(resultModel)
         }
@@ -221,23 +220,23 @@ class ClientDetailsServiceSpec extends UnitSpec {
             )
 
           val resultModel =
-            ClientDetailsResponse("John Rocks", None, isOverseas = false, Seq("2000-01-01"), Some(Date))
+            ClientDetailsResponse("John Rocks", None, isOverseas = None, Seq("2000-01-01"), Some(Date))
 
-          await(service.findClientDetails("IR-SA", "AA000001B")) shouldBe Right(resultModel)
+          await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Right(resultModel)
         }
 
         "return a ClientDetailsNotFound error if no date of birth was returned" in {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
             .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None))))
 
-          await(service.findClientDetails("IR-SA", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
+          await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
         }
 
         "return a ClientDetailsNotFound error if no name was returned" in {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
             .thenReturn(Future.successful(Right(ItsaCitizenDetails(None, None, Some(LocalDate.parse("2000-01-01"))))))
 
-          await(service.findClientDetails("IR-SA", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
+          await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
         }
       }
 
@@ -247,7 +246,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
             .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
 
-          await(service.findClientDetails("IR-SA", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
+          await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
         }
       }
     }
@@ -261,7 +260,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             .thenReturn(Future.successful(Right(CgtSubscriptionDetails("Erling Haal", Some("AA1 1AA"), "GB"))))
 
           val resultModel =
-            ClientDetailsResponse("Erling Haal", None, isOverseas = false, Seq("AA1 1AA"), Some(PostalCode))
+            ClientDetailsResponse("Erling Haal", None, isOverseas = Some(false), Seq("AA1 1AA"), Some(PostalCode))
 
           await(service.findClientDetails("HMRC-CGT-PD", "XACGTP123456789")) shouldBe Right(resultModel)
         }
@@ -271,7 +270,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             .thenReturn(Future.successful(Right(CgtSubscriptionDetails("Erling Haal", None, "NO"))))
 
           val resultModel =
-            ClientDetailsResponse("Erling Haal", None, isOverseas = true, Seq("NO"), Some(CountryCode))
+            ClientDetailsResponse("Erling Haal", None, isOverseas = Some(true), Seq("NO"), Some(CountryCode))
 
           await(service.findClientDetails("HMRC-CGT-PD", "XACGTP123456789")) shouldBe Right(resultModel)
         }
@@ -299,7 +298,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             )
 
           val resultModel =
-            ClientDetailsResponse("Erling Haal", None, isOverseas = false, Seq("2020-01-01"), Some(Date))
+            ClientDetailsResponse("Erling Haal", None, isOverseas = None, Seq("2020-01-01"), Some(Date))
 
           await(service.findClientDetails("HMRC-PPT-ORG", "XAPPT0004567890")) shouldBe Right(resultModel)
         }
@@ -319,7 +318,13 @@ class ClientDetailsServiceSpec extends UnitSpec {
             )
 
           val resultModel =
-            ClientDetailsResponse("Erling Haal", Some(Deregistered), isOverseas = false, Seq("2020-01-01"), Some(Date))
+            ClientDetailsResponse(
+              "Erling Haal",
+              Some(Deregistered),
+              isOverseas = None,
+              Seq("2020-01-01"),
+              Some(Date)
+            )
 
           await(service.findClientDetails("HMRC-PPT-ORG", "XAPPT0004567890")) shouldBe Right(resultModel)
         }
@@ -359,7 +364,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             ClientDetailsResponse(
               "CFG Solutions",
               None,
-              isOverseas = false,
+              isOverseas = Some(false),
               Seq("test@email.com", "test2@email.com"),
               Some(Email)
             )
@@ -409,7 +414,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             ClientDetailsResponse(
               "CFG Solutions",
               Some(Inactive),
-              isOverseas = false,
+              isOverseas = Some(false),
               Seq("2020-01-01"),
               Some(Date)
             )
@@ -425,7 +430,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             ClientDetailsResponse(
               "CFG Solutions",
               None,
-              isOverseas = true,
+              isOverseas = Some(true),
               Seq("2020-01-01"),
               Some(Date)
             )

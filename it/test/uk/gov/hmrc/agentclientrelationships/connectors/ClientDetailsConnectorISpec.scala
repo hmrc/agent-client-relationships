@@ -157,8 +157,7 @@ class ClientDetailsConnectorISpec
         Some(VatIndividual(Some("Mr"), Some("Ilkay"), Some("Silky"), Some("Gundo"))),
         Some("CFG Solutions"),
         Some(LocalDate.parse("2020-01-01")),
-        isInsolvent = false,
-        isOverseas = true
+        isInsolvent = false
       )
       await(connector.getVatCustomerInfo("123456789")) shouldBe Right(expectedModel)
     }

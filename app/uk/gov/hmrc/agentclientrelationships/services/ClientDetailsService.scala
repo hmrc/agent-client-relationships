@@ -47,7 +47,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
         getVatClientDetails(clientId)
       case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" =>
         getTrustClientDetails(clientId)
-      case "IR-SA" =>
+      case "PERSONAL-INCOME-RECORD" =>
         getIrvClientDetails(clientId)
       case "HMRC-CGT-PD" =>
         getCgtClientDetails(clientId)
@@ -65,7 +65,9 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
     clientDetailsConnector.getItsaBusinessDetails(nino).flatMap {
       case Right(details @ ItsaBusinessDetails(name, Some(postcode), _)) =>
         Future
-          .successful(Right(ClientDetailsResponse(name, None, details.isOverseas, Seq(postcode), Some(PostalCode))))
+          .successful(
+            Right(ClientDetailsResponse(name, None, Some(details.isOverseas), Seq(postcode), Some(PostalCode)))
+          )
       case Right(_) =>
         logger.warn("[getItsaClientDetails] - No postcode was returned by the API")
         Future.successful(Left(ClientDetailsNotFound))
@@ -75,7 +77,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
           optPostcode <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino)).map(_.postCode)
         } yield (optName, optPostcode)).subflatMap {
           case (Some(name), Some(postcode)) =>
-            Right(ClientDetailsResponse(name, None, isOverseas = false, Seq(postcode), Some(PostalCode)))
+            Right(ClientDetailsResponse(name, None, None, Seq(postcode), Some(PostalCode)))
           case _ =>
             Left(ClientDetailsNotFound)
         }.value
@@ -87,13 +89,13 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
     vrn: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getVatCustomerInfo(vrn).map {
-      case Right(VatCustomerDetails(None, None, None, _, _, _)) =>
+      case Right(VatCustomerDetails(None, None, None, _, _)) =>
         logger.warn("[getVatClientDetails] - No name was returned by the API")
         Left(ClientDetailsNotFound)
-      case Right(details @ VatCustomerDetails(_, _, _, Some(regDate), _, _)) =>
+      case Right(details @ VatCustomerDetails(_, _, _, Some(regDate), _)) =>
         val clientName = details.tradingName.getOrElse(details.organisationName.getOrElse(details.individual.get.name))
         val clientStatus = if (details.isInsolvent) Some(Insolvent) else None
-        Right(ClientDetailsResponse(clientName, clientStatus, details.isOverseas, Seq(regDate.toString), Some(Date)))
+        Right(ClientDetailsResponse(clientName, clientStatus, None, Seq(regDate.toString), Some(Date)))
       case Right(_) =>
         logger.warn("[getVatClientDetails] - No registration date was returned by the API")
         Left(ClientDetailsNotFound)
@@ -105,7 +107,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getTrustName(trustTaxIdentifier).map {
       case Right(name) =>
-        Right(ClientDetailsResponse(name, None, isOverseas = false, Seq(), None))
+        Right(ClientDetailsResponse(name, None, None, Seq(), None))
       case Left(err) => Left(err)
     }
 
@@ -116,7 +118,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
       case Right(details @ ItsaCitizenDetails(_, _, Some(dateOfBirth))) =>
         details.name match {
           case Some(name) =>
-            Right(ClientDetailsResponse(name, None, isOverseas = false, Seq(dateOfBirth.toString), Some(Date)))
+            Right(ClientDetailsResponse(name, None, None, Seq(dateOfBirth.toString), Some(Date)))
           case None =>
             logger.warn("[getIrvClientDetails] - No name was returned by the API")
             Left(ClientDetailsNotFound)
@@ -132,9 +134,9 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getCgtSubscriptionDetails(cgtRef).map {
       case Right(CgtSubscriptionDetails(name, Some(postcode), countryCode)) if countryCode.toUpperCase == "GB" =>
-        Right(ClientDetailsResponse(name, None, isOverseas = false, Seq(postcode), Some(PostalCode)))
+        Right(ClientDetailsResponse(name, None, Some(false), Seq(postcode), Some(PostalCode)))
       case Right(CgtSubscriptionDetails(name, _, countryCode)) =>
-        Right(ClientDetailsResponse(name, None, isOverseas = true, Seq(countryCode), Some(CountryCode)))
+        Right(ClientDetailsResponse(name, None, Some(true), Seq(countryCode), Some(CountryCode)))
       case Left(err) => Left(err)
     }
 
@@ -149,7 +151,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
           ClientDetailsResponse(
             details.customerName,
             status,
-            isOverseas = false,
+            None,
             Seq(details.dateOfApplication.toString),
             Some(Date)
           )
@@ -164,7 +166,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
       case Right(details) =>
         (details.anyAvailableName, details.emails.nonEmpty) match {
           case (Some(name), true) =>
-            Right(ClientDetailsResponse(name, None, !details.isGBUser, details.emails, Some(Email)))
+            Right(ClientDetailsResponse(name, None, Some(!details.isGBUser), details.emails, Some(Email)))
           case _ =>
             logger.warn("[getCbcClientDetails] - Necessary client name and/or email data was missing")
             Left(ClientDetailsNotFound)
@@ -180,7 +182,13 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
         val status = if (details.inactive) Some(Inactive) else None
         val isOverseas = details.countryCode.toUpperCase != "GB"
         Right(
-          ClientDetailsResponse(details.organisationName, status, isOverseas, Seq(details.registrationDate), Some(Date))
+          ClientDetailsResponse(
+            details.organisationName,
+            status,
+            Some(isOverseas),
+            Seq(details.registrationDate),
+            Some(Date)
+          )
         )
       case Left(err) => Left(err)
     }
