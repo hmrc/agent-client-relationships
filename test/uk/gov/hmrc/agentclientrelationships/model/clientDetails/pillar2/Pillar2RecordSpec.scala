@@ -28,15 +28,17 @@ class Pillar2RecordSpec extends UnitSpec {
       "all optional fields are present" in {
 
         val json = Json.obj(
-          "upeDetails" -> Json.obj(
-            "organisationName" -> "CFG Solutions",
-            "registrationDate" -> "2020-01-01"
-          ),
-          "upeCorrespAddressDetails" -> Json.obj(
-            "countryCode" -> "GB"
-          ),
-          "accountStatus" -> Json.obj(
-            "inactive" -> true
+          "success" -> Json.obj(
+            "upeDetails" -> Json.obj(
+              "organisationName" -> "CFG Solutions",
+              "registrationDate" -> "2020-01-01"
+            ),
+            "upeCorrespAddressDetails" -> Json.obj(
+              "countryCode" -> "GB"
+            ),
+            "accountStatus" -> Json.obj(
+              "inactive" -> true
+            )
           )
         )
 
@@ -47,12 +49,14 @@ class Pillar2RecordSpec extends UnitSpec {
     "all optional fields are missing" in {
 
       val json = Json.obj(
-        "upeDetails" -> Json.obj(
-          "organisationName" -> "CFG Solutions",
-          "registrationDate" -> "2020-01-01"
-        ),
-        "upeCorrespAddressDetails" -> Json.obj(
-          "countryCode" -> "GB"
+        "success" -> Json.obj(
+          "upeDetails" -> Json.obj(
+            "organisationName" -> "CFG Solutions",
+            "registrationDate" -> "2020-01-01"
+          ),
+          "upeCorrespAddressDetails" -> Json.obj(
+            "countryCode" -> "GB"
+          )
         )
       )
 

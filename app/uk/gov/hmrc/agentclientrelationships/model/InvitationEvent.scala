@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.clientDetails
+package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.ClientStatus
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.KnownFactType
+import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-case class ClientDetailsResponse(
-  name: String,
-  status: Option[ClientStatus],
-  isOverseas: Option[Boolean],
-  knownFacts: Seq[String],
-  knownFactType: Option[KnownFactType]
+import java.time.Instant
+
+case class InvitationEvent(
+  status: InvitationStatus,
+  created: Instant,
+  arn: String,
+  service: String,
+  clientId: String,
+  deauthorisedBy: Option[String]
 )
 
-object ClientDetailsResponse {
-  implicit val format: OFormat[ClientDetailsResponse] = Json.format[ClientDetailsResponse]
+object InvitationEvent {
+  implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
+  implicit val format: Format[InvitationEvent] = Json.format[InvitationEvent]
 }

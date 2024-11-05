@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2
 
-import play.api.libs.json.{JsPath, Reads}
+import play.api.libs.json.{Reads, __}
 
 case class Pillar2Record(organisationName: String, registrationDate: String, countryCode: String, inactive: Boolean)
 
 object Pillar2Record {
   implicit val reads: Reads[Pillar2Record] = for {
-    orgName     <- (JsPath \ "upeDetails" \ "organisationName").read[String]
-    regDate     <- (JsPath \ "upeDetails" \ "registrationDate").read[String]
-    countryCode <- (JsPath \ "upeCorrespAddressDetails" \ "countryCode").read[String]
-    inactive    <- (JsPath \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
+    orgName     <- (__ \ "success" \ "upeDetails" \ "organisationName").read[String]
+    regDate     <- (__ \ "success" \ "upeDetails" \ "registrationDate").read[String]
+    countryCode <- (__ \ "success" \ "upeCorrespAddressDetails" \ "countryCode").read[String]
+    inactive    <- (__ \ "success" \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
   } yield Pillar2Record(orgName, regDate, countryCode, inactive)
 }
