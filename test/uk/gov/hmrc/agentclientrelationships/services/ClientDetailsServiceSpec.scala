@@ -78,7 +78,9 @@ class ClientDetailsServiceSpec extends UnitSpec {
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
-              .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None))))
+              .thenReturn(
+                Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, Some("11223344"))))
+              )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA")))))
 
@@ -93,7 +95,9 @@ class ClientDetailsServiceSpec extends UnitSpec {
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
-              .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None))))
+              .thenReturn(
+                Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, Some("11223344"))))
+              )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(None))))
 
@@ -105,7 +109,19 @@ class ClientDetailsServiceSpec extends UnitSpec {
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
-              .thenReturn(Future.successful(Right(ItsaCitizenDetails(None, None, None))))
+              .thenReturn(Future.successful(Right(ItsaCitizenDetails(None, None, None, Some("11223344")))))
+            when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+              .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA")))))
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
+          }
+
+          "return a ClientDetailsNotFound error if no SA UTR was returned" in {
+            when(mockAppConfig.altItsaEnabled).thenReturn(true)
+            when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+              .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
+            when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+              .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, None))))
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA")))))
 
@@ -215,7 +231,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
             .thenReturn(
               Future.successful(
-                Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), Some(LocalDate.parse("2000-01-01"))))
+                Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), Some(LocalDate.parse("2000-01-01")), None))
               )
             )
 
@@ -227,14 +243,16 @@ class ClientDetailsServiceSpec extends UnitSpec {
 
         "return a ClientDetailsNotFound error if no date of birth was returned" in {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
-            .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None))))
+            .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, None))))
 
           await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
         }
 
         "return a ClientDetailsNotFound error if no name was returned" in {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
-            .thenReturn(Future.successful(Right(ItsaCitizenDetails(None, None, Some(LocalDate.parse("2000-01-01"))))))
+            .thenReturn(
+              Future.successful(Right(ItsaCitizenDetails(None, None, Some(LocalDate.parse("2000-01-01")), None)))
+            )
 
           await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
         }

@@ -55,7 +55,10 @@ trait ClientDetailsStub {
                          |      "lastName": "Kovacic"
                          |    }
                          |  },
-                         |  "dateOfBirth": "01012000"
+                         |  "dateOfBirth": "01012000",
+                         |  "ids": {
+                         |    "sautr": "11223344"
+                         |  }
                          |}
           """.stripMargin)
         )

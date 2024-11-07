@@ -73,10 +73,13 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
         Future.successful(Left(ClientDetailsNotFound))
       case Left(ClientDetailsNotFound) if appConfig.altItsaEnabled =>
         (for {
-          optName     <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino)).map(_.name)
-          optPostcode <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino)).map(_.postCode)
-        } yield (optName, optPostcode)).subflatMap {
-          case (Some(name), Some(postcode)) =>
+          citizenDetails     <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
+          designatoryDetails <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino))
+          optName = citizenDetails.name
+          optSaUtr = citizenDetails.saUtr
+          optPostcode = designatoryDetails.postCode
+        } yield (optName, optSaUtr, optPostcode)).subflatMap {
+          case (Some(name), Some(_), Some(postcode)) =>
             Right(ClientDetailsResponse(name, None, None, Seq(postcode), Some(PostalCode)))
           case _ =>
             Left(ClientDetailsNotFound)
@@ -115,7 +118,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
     nino: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getItsaCitizenDetails(nino).map {
-      case Right(details @ ItsaCitizenDetails(_, _, Some(dateOfBirth))) =>
+      case Right(details @ ItsaCitizenDetails(_, _, Some(dateOfBirth), _)) =>
         details.name match {
           case Some(name) =>
             Right(ClientDetailsResponse(name, None, None, Seq(dateOfBirth.toString), Some(Date)))

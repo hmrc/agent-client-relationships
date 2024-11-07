@@ -21,7 +21,12 @@ import play.api.libs.json.{JsPath, Reads}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-case class ItsaCitizenDetails(firstName: Option[String], lastName: Option[String], dateOfBirth: Option[LocalDate]) {
+case class ItsaCitizenDetails(
+  firstName: Option[String],
+  lastName: Option[String],
+  dateOfBirth: Option[LocalDate],
+  saUtr: Option[String]
+) {
   lazy val name: Option[String] = {
     val n = Seq(firstName, lastName).collect { case Some(x) => x }.mkString(" ")
     if (n.isEmpty) None else Some(n)
@@ -37,5 +42,6 @@ object ItsaCitizenDetails {
     lastName  <- (JsPath \ "name" \ "current" \ "lastName").readNullable[String]
     dateOfBirth <-
       (JsPath \ "dateOfBirth").readNullable[String].map(_.map(date => LocalDate.parse(date, citizenDateFormatter)))
-  } yield ItsaCitizenDetails(firstName, lastName, dateOfBirth)
+    saUtr <- (JsPath \ "ids" \ "sautr").readNullable[String]
+  } yield ItsaCitizenDetails(firstName, lastName, dateOfBirth, saUtr)
 }

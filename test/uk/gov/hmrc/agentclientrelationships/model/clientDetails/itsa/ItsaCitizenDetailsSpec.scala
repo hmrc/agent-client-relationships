@@ -35,11 +35,14 @@ class ItsaCitizenDetailsSpec extends UnitSpec {
               "lastName"  -> "Kovacic"
             )
           ),
-          "dateOfBirth" -> "01012000"
+          "dateOfBirth" -> "01012000",
+          "ids" -> Json.obj(
+            "sautr" -> "11223344"
+          )
         )
 
         json.as[ItsaCitizenDetails] shouldBe
-          ItsaCitizenDetails(Some("Matthew"), Some("Kovacic"), Some(LocalDate.parse("2000-01-01")))
+          ItsaCitizenDetails(Some("Matthew"), Some("Kovacic"), Some(LocalDate.parse("2000-01-01")), Some("11223344"))
       }
 
       "optional fields are not present" in {
@@ -49,7 +52,7 @@ class ItsaCitizenDetailsSpec extends UnitSpec {
           )
         )
 
-        json.as[ItsaCitizenDetails] shouldBe ItsaCitizenDetails(None, None, None)
+        json.as[ItsaCitizenDetails] shouldBe ItsaCitizenDetails(None, None, None, None)
       }
     }
   }
