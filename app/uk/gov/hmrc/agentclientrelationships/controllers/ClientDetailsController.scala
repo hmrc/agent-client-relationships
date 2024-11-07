@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
@@ -34,15 +35,20 @@ class ClientDetailsController @Inject() (
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit appConfig: AppConfig, ec: ExecutionContext)
-    extends BackendController(cc) {
+    extends BackendController(cc)
+    with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
   def findClientDetails(service: String, clientId: String): Action[AnyContent] = Action.async { implicit request =>
-    clientDetailsService.findClientDetails(service, clientId).map {
-      case Right(details)              => Ok(Json.toJson(details))
-      case Left(ClientDetailsNotFound) => NotFound
-      case Left(_)                     => InternalServerError
+    withAuthorisedAsAgent { arn =>
+      for {
+        clientDetailsResponse <- clientDetailsService.findClientDetails(service, clientId)
+      } yield clientDetailsResponse match {
+        case Right(details)              => Ok(Json.toJson(details))
+        case Left(ClientDetailsNotFound) => NotFound
+        case Left(_)                     => InternalServerError
+      }
     }
   }
 }

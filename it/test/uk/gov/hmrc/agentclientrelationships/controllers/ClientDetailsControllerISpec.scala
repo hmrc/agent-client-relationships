@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
+import play.api.test.FakeRequest
 import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
@@ -38,10 +39,12 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
   ".findClientDetails" should {
 
     "return 200 status and valid JSON when API calls are successful and relevant checks have passed" in {
+      val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      givenAuthorisedAsValidAgent(request, "XARN1234567")
       givenAuditConnector()
       givenItsaBusinessDetailsExists("AA000001B")
 
-      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      val result = doAgentGetRequest(request.uri)
       result.status shouldBe 200
       result.json shouldBe Json.obj(
         "name"          -> "Erling Haal",
@@ -52,23 +55,35 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
     }
 
     "return 404 status when client details were not found" in {
+      val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      givenAuthorisedAsValidAgent(request, "XARN1234567")
       givenAuditConnector()
       givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
       givenItsaCitizenDetailsError("AA000001B", NOT_FOUND)
       givenItsaDesignatoryDetailsError("AA000001B", NOT_FOUND)
 
-      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      val result = doAgentGetRequest(request.uri)
       result.status shouldBe 404
       result.body shouldBe empty
     }
 
     "return 500 status when there was an unexpected failure" in {
+      val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      givenAuthorisedAsValidAgent(request, "XARN1234567")
       givenAuditConnector()
       givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
 
-      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      val result = doAgentGetRequest(request.uri)
       result.status shouldBe 500
       result.body shouldBe empty
+    }
+
+    "return 401 if the user is not authorised" in {
+      val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      requestIsNotAuthenticated()
+
+      val result = doAgentGetRequest(request.uri)
+      result.status shouldBe 401
     }
   }
 }
