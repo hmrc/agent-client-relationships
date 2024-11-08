@@ -21,7 +21,7 @@ import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.addToSet
 import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions}
-import play.api.Logging
+import play.api.{Logger, Logging}
 import play.api.libs.json._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRecord.formats
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -65,6 +65,9 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
     with AgentReferenceRepository
     with Logging {
 
+  val localLogger: Logger = logger
+
+// to support static link for agents there is no TTL
   override lazy val requiresTtlIndex: Boolean = false
 
   override def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] =
@@ -85,10 +88,10 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
 
   override def updateAgentName(uid: String, newAgentName: String): Future[Unit] =
     collection
-      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName), UpdateOptions().upsert(false))
+      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName), UpdateOptions())
       .toFuture()
       .map { updateOneResult =>
-        if (updateOneResult.getMatchedCount == 1L && updateOneResult.getModifiedCount == 1L) ()
+        if (updateOneResult.getModifiedCount == 1L) ()
         else throw new RuntimeException("could not update agent reference name, no matching uid found.")
       }
 
@@ -97,7 +100,8 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
       .deleteOne(equal("arn", arn.value))
       .toFuture()
       .map { r =>
-        if (r.getDeletedCount == 1L) ()
-        else throw new RuntimeException("could not delete agent reference record, no matching ARN found.")
+        if (r.getDeletedCount == 0L)
+          localLogger.error("could not delete agent reference record, no matching ARN found.")
+        ()
       }
 }

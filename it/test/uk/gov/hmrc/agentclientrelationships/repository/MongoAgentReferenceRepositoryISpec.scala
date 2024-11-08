@@ -24,7 +24,10 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MongoAgentReferenceRepositoryISpec extends UnitSpec with DefaultPlayMongoRepositorySupport[AgentReferenceRecord] {
+class MongoAgentReferenceRepositoryISpec
+    extends UnitSpec
+    with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
+    with LogCapturing {
 
   val repository = new MongoAgentReferenceRepository(mongoComponent)
 
@@ -85,7 +88,7 @@ class MongoAgentReferenceRepositoryISpec extends UnitSpec with DefaultPlayMongoR
       }
 
       "fail to update agent name when no matching record found" in {
-        an[RuntimeException] shouldBe thrownBy {
+        a[RuntimeException] shouldBe thrownBy {
           await(repository.updateAgentName("SCX39TGT", "New Name"))
         }
       }
@@ -97,11 +100,37 @@ class MongoAgentReferenceRepositoryISpec extends UnitSpec with DefaultPlayMongoR
         await(repository.delete(Arn("LARN7404004"))) shouldBe ()
       }
 
-      "fail to delete when no matching record found" in {
-        an[RuntimeException] shouldBe thrownBy {
-          await(repository.delete(Arn("LARN7404004")))
+      "log error when no matching record found" in {
+        withCaptureOfErrorLogging(repository.localLogger) { logEvents =>
+          await(repository.delete(Arn("LARN7404004"))) shouldBe ()
+
+          logEvents.count(
+            _.getMessage.contains("could not delete agent reference record, no matching ARN found.")
+          ) shouldBe 1
         }
+
+        await(repository.delete(Arn("LARN7404004"))) shouldBe ()
       }
     }
+  }
+}
+
+trait LogCapturing {
+
+  import ch.qos.logback.classic.spi.ILoggingEvent
+  import ch.qos.logback.classic.{Level, Logger => LogbackLogger}
+  import ch.qos.logback.core.read.ListAppender
+  import play.api.LoggerLike
+  import scala.jdk.CollectionConverters.ListHasAsScala
+
+  def withCaptureOfErrorLogging(logger: LoggerLike)(body: (=> List[ILoggingEvent]) => Unit): Unit = {
+    val logbackLogger: LogbackLogger = logger.logger.asInstanceOf[LogbackLogger]
+    val appender = new ListAppender[ILoggingEvent]()
+    appender.setContext(logbackLogger.getLoggerContext)
+    appender.start()
+    logbackLogger.addAppender(appender)
+    logbackLogger.setLevel(Level.ERROR)
+    logbackLogger.setAdditive(true)
+    body(appender.list.asScala.toList)
   }
 }
