@@ -100,7 +100,7 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
       .deleteOne(equal("arn", arn.value))
       .toFuture()
       .map { r =>
-        if (r.getDeletedCount == 0L)
+        if (r.getDeletedCount == 0)
           localLogger.error("could not delete agent reference record, no matching ARN found.")
         ()
       }
