@@ -91,7 +91,7 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
       .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName), UpdateOptions())
       .toFuture()
       .map { updateOneResult =>
-        if (updateOneResult.getModifiedCount == 1L) ()
+        if (updateOneResult.getModifiedCount == 1) ()
         else throw new RuntimeException("could not update agent reference name, no matching uid found.")
       }
 
