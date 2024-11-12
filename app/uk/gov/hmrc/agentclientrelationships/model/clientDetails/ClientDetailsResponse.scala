@@ -25,7 +25,9 @@ case class ClientDetailsResponse(
   status: Option[ClientStatus],
   isOverseas: Option[Boolean],
   knownFacts: Seq[String],
-  knownFactType: Option[KnownFactType]
+  knownFactType: Option[KnownFactType],
+  hasPendingInvitation: Boolean = false,
+  hasExistingRelationshipFor: Option[String] = None
 )
 
 object ClientDetailsResponse {

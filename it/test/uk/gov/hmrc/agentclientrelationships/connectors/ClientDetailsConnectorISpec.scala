@@ -114,7 +114,7 @@ class ClientDetailsConnectorISpec
 
     "return business details when receiving a 200 status" in {
       givenAuditConnector()
-      givenItsaBusinessDetailsExists("AA000001B")
+      givenItsaBusinessDetailsExists("nino", "AA000001B")
       await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
         ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
       )

@@ -35,15 +35,19 @@ class ClientDetailsResponseSpec extends UnitSpec {
             Some(Insolvent),
             isOverseas = Some(true),
             Seq("test@email.com"),
-            Some(Email)
+            Some(Email),
+            hasPendingInvitation = true,
+            Some("HMRC-MTD-VAT")
           )
 
         val expectedJson = Json.obj(
-          "name"          -> "Ilkay Gundo",
-          "status"        -> "Insolvent",
-          "isOverseas"    -> true,
-          "knownFacts"    -> Json.arr("test@email.com"),
-          "knownFactType" -> "Email"
+          "name"                       -> "Ilkay Gundo",
+          "status"                     -> "Insolvent",
+          "isOverseas"                 -> true,
+          "knownFacts"                 -> Json.arr("test@email.com"),
+          "knownFactType"              -> "Email",
+          "hasPendingInvitation"       -> true,
+          "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
         )
 
         Json.toJson(model) shouldBe expectedJson
@@ -53,9 +57,10 @@ class ClientDetailsResponseSpec extends UnitSpec {
         val model = ClientDetailsResponse("Ilkay Gundo", None, isOverseas = Some(true), Seq(), None)
 
         val expectedJson = Json.obj(
-          "name"       -> "Ilkay Gundo",
-          "isOverseas" -> true,
-          "knownFacts" -> Json.arr()
+          "name"                 -> "Ilkay Gundo",
+          "isOverseas"           -> true,
+          "knownFacts"           -> Json.arr(),
+          "hasPendingInvitation" -> false
         )
 
         Json.toJson(model) shouldBe expectedJson

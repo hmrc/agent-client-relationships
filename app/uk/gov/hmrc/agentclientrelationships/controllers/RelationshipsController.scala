@@ -91,10 +91,8 @@ class RelationshipsController @Inject() (
         withIrSaSuspensionCheck(arn) {
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
-      case (Service.MtdIt.id, "ni" | "NI", _) if Nino.isValid(clientId) =>
-        useMtdIdInEnrolmentKey(Service.MtdIt.id)
-      case (Service.MtdItSupp.id, "ni" | "NI", _) if Nino.isValid(clientId) =>
-        useMtdIdInEnrolmentKey(Service.MtdItSupp.id)
+      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO", _) if Nino.isValid(clientId) =>
+        useMtdIdInEnrolmentKey(service)
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // "normal" cases
       case (svc, idType, id) =>
@@ -244,10 +242,8 @@ class RelationshipsController @Inject() (
       // "special" cases
       case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
-      case (Service.MtdIt.id, "ni" | "NI") if Nino.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey(Service.MtdIt.id, Nino(clientId))))
-      case (Service.MtdItSupp.id, "ni" | "NI") if Nino.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey(Service.MtdItSupp.id, Nino(clientId))))
+      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI") if Nino.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
       case (Service.Cbc.id, CbcIdType.enrolmentId) =>

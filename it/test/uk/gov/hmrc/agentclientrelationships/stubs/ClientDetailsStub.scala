@@ -70,9 +70,9 @@ trait ClientDetailsStub {
         .willReturn(aResponse().withStatus(status))
     )
 
-  def givenItsaBusinessDetailsExists(nino: String): StubMapping =
+  def givenItsaBusinessDetailsExists(idType: String, id: String): StubMapping =
     stubFor(
-      get(urlEqualTo(s"/registration/business-details/nino/$nino"))
+      get(urlEqualTo(s"/registration/business-details/$idType/$id"))
         .willReturn(
           aResponse()
             .withBody(s"""
@@ -86,7 +86,8 @@ trait ClientDetailsStub {
                          |          "countryCode": "GB"
                          |        }
                          |      }
-                         |    ]
+                         |    ],
+                         |    "mtdId": "XAIT0000111122"
                          |  }
                          |}
           """.stripMargin)
