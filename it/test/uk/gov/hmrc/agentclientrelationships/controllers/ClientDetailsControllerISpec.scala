@@ -18,12 +18,19 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
-import play.api.test.Helpers.stubControllerComponents
+import play.api.test.FakeRequest
+import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, EnrolmentKey, PartialAuth}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.domain.Nino
 
+import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
 class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with ClientDetailsStub {
@@ -32,43 +39,318 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+  val invitationsEventStoreRepo: InvitationsEventStoreRepository =
+    app.injector.instanceOf[InvitationsEventStoreRepository]
+  val relationshipsController: RelationshipsController = app.injector.instanceOf[RelationshipsController]
 
-  val controller = new ClientDetailsController(clientDetailsService, authConnector, stubControllerComponents())
+  val controller = new ClientDetailsController(
+    clientDetailsService,
+    relationshipsController,
+    invitationsRepo,
+    invitationsEventStoreRepo,
+    authConnector,
+    stubControllerComponents()
+  )
+
+  def setupCommonStubs(request: FakeRequest[?]): Unit = {
+    givenAuthorisedAsValidAgent(request, "XARN1234567")
+    givenAuditConnector()
+    givenAgentGroupExistsFor("foo")
+    givenAdminUser("foo", "bar")
+    givenPrincipalGroupIdExistsFor(agentEnrolmentKey(Arn("XARN1234567")), "foo")
+  }
 
   ".findClientDetails" should {
 
-    "return 200 status and valid JSON when API calls are successful and relevant checks have passed" in {
-      givenAuditConnector()
-      givenItsaBusinessDetailsExists("AA000001B")
+    "return 200 status and the expected JSON body" when {
 
-      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
-      result.status shouldBe 200
-      result.json shouldBe Json.obj(
-        "name"          -> "Erling Haal",
-        "isOverseas"    -> false,
-        "knownFacts"    -> Json.arr("AA1 1AA"),
-        "knownFactType" -> "PostalCode"
-      )
+      "the service supports multiple agents" when {
+
+        "there are no pending invitations or existing relationship" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                 -> "Erling Haal",
+            "isOverseas"           -> false,
+            "knownFacts"           -> Json.arr("AA1 1AA"),
+            "knownFactType"        -> "PostalCode",
+            "hasPendingInvitation" -> false
+          )
+        }
+
+        "there is a pending invitation" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          await(
+            invitationsRepo
+              .create("XARN1234567", MtdIt, Nino("AA000001B"), Nino("AA000001B"), "Erling Haal", LocalDate.now())
+          )
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                 -> "Erling Haal",
+            "isOverseas"           -> false,
+            "knownFacts"           -> Json.arr("AA1 1AA"),
+            "knownFactType"        -> "PostalCode",
+            "hasPendingInvitation" -> true
+          )
+        }
+
+        "there is an existing relationship in a main role" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "Erling Haal",
+            "isOverseas"                 -> false,
+            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFactType"              -> "PostalCode",
+            "hasPendingInvitation"       -> false,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
+          )
+        }
+
+        "there is an existing relationship in a supporting role" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "Erling Haal",
+            "isOverseas"                 -> false,
+            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFactType"              -> "PostalCode",
+            "hasPendingInvitation"       -> false,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
+          )
+        }
+
+        "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a main role" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          await(
+            invitationsEventStoreRepo
+              .create(
+                PartialAuth,
+                Instant.parse("2020-01-01T00:00:00.000Z"),
+                "XARN1234567",
+                MtdIt,
+                Nino("AA000001B"),
+                None
+              )
+          )
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "Erling Haal",
+            "isOverseas"                 -> false,
+            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFactType"              -> "PostalCode",
+            "hasPendingInvitation"       -> false,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
+          )
+        }
+
+        "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a supporting role" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          await(
+            invitationsEventStoreRepo
+              .create(PartialAuth, Instant.now(), "XARN1234567", MtdItSupp, Nino("AA000001B"), None)
+          )
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "Erling Haal",
+            "isOverseas"                 -> false,
+            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFactType"              -> "PostalCode",
+            "hasPendingInvitation"       -> false,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
+          )
+        }
+
+        "there is both a pending invitation and an existing relationship" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          await(
+            invitationsRepo
+              .create("XARN1234567", MtdIt, Nino("AA000001B"), Nino("AA000001B"), "Erling Haal", LocalDate.now())
+          )
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "Erling Haal",
+            "isOverseas"                 -> false,
+            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFactType"              -> "PostalCode",
+            "hasPendingInvitation"       -> true,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
+          )
+        }
+      }
+
+      "the service does not support multiple agents" when {
+
+        "there are no pending invitations or existing relationship" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+          setupCommonStubs(request)
+          givenVatCustomerInfoExists("101747641")
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                 -> "CFG Solutions",
+            "knownFacts"           -> Json.arr("2020-01-01"),
+            "knownFactType"        -> "Date",
+            "hasPendingInvitation" -> false
+          )
+        }
+
+        "there is a pending invitation" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+          setupCommonStubs(request)
+          givenVatCustomerInfoExists("101747641")
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
+          await(
+            invitationsRepo.create("XARN1234567", Vat, Vrn("101747641"), Vrn("101747641"), "My Name", LocalDate.now())
+          )
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                 -> "CFG Solutions",
+            "knownFacts"           -> Json.arr("2020-01-01"),
+            "knownFactType"        -> "Date",
+            "hasPendingInvitation" -> true
+          )
+        }
+
+        "there is an existing relationship" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+          setupCommonStubs(request)
+          givenVatCustomerInfoExists("101747641")
+          givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "CFG Solutions",
+            "knownFacts"                 -> Json.arr("2020-01-01"),
+            "knownFactType"              -> "Date",
+            "hasPendingInvitation"       -> false,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
+          )
+        }
+
+        "there is both a pending invitation and an existing relationship" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+          setupCommonStubs(request)
+          givenVatCustomerInfoExists("101747641")
+          givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
+          await(
+            invitationsRepo.create("XARN1234567", Vat, Vrn("101747641"), Vrn("101747641"), "My Name", LocalDate.now())
+          )
+
+          val result = doAgentGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "CFG Solutions",
+            "knownFacts"                 -> Json.arr("2020-01-01"),
+            "knownFactType"              -> "Date",
+            "hasPendingInvitation"       -> true,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
+          )
+        }
+      }
     }
 
     "return 404 status when client details were not found" in {
-      givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
-      givenItsaCitizenDetailsError("AA000001B", NOT_FOUND)
-      givenItsaDesignatoryDetailsError("AA000001B", NOT_FOUND)
+      val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+      setupCommonStubs(request)
+      givenVatCustomerInfoError("101747641", NOT_FOUND)
+      givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
 
-      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+      val result = doAgentGetRequest(request.uri)
       result.status shouldBe 404
       result.body shouldBe empty
     }
 
-    "return 500 status when there was an unexpected failure" in {
-      givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
+    "return 500 status" when {
 
-      val result = doAgentGetRequest("/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
-      result.status shouldBe 500
-      result.body shouldBe empty
+      "there was an unexpected failure retrieving client details" in {
+        val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+        setupCommonStubs(request)
+        givenVatCustomerInfoError("101747641", INTERNAL_SERVER_ERROR)
+        givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
+
+        val result = doAgentGetRequest(request.uri)
+        result.status shouldBe 500
+      }
+
+      "there was an unexpected failure retrieving the existing relationships" in {
+        val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+        givenAuthorisedAsValidAgent(request, "XARN1234567")
+        givenAuditConnector()
+        givenVatCustomerInfoExists("101747641")
+        givenAgentGroupExistsFor("foo")
+        givenAdminUser("foo", "bar")
+        givenPrincipalGroupIdRequestFailsWith(INTERNAL_SERVER_ERROR)
+        givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
+
+        val result = doAgentGetRequest(request.uri)
+        result.status shouldBe 500
+      }
+    }
+
+    "return 401 status if the user is not authorised" in {
+      val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
+      requestIsNotAuthenticated()
+
+      val result = doAgentGetRequest(request.uri)
+      result.status shouldBe 401
     }
   }
 }

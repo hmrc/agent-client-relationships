@@ -91,7 +91,8 @@ class ClientDetailsConnectorISpec
     "return citizen details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaCitizenDetailsExists("AA000001B")
-      val expectedModel = ItsaCitizenDetails(Some("Matthew"), Some("Kovacic"), Some(LocalDate.parse("2000-01-01")))
+      val expectedModel =
+        ItsaCitizenDetails(Some("Matthew"), Some("Kovacic"), Some(LocalDate.parse("2000-01-01")), Some("11223344"))
       await(connector.getItsaCitizenDetails("AA000001B")) shouldBe Right(expectedModel)
     }
 
@@ -113,7 +114,7 @@ class ClientDetailsConnectorISpec
 
     "return business details when receiving a 200 status" in {
       givenAuditConnector()
-      givenItsaBusinessDetailsExists("AA000001B")
+      givenItsaBusinessDetailsExists("nino", "AA000001B")
       await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
         ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
       )
