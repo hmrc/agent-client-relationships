@@ -28,7 +28,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class InvitationLinkController @Inject()(
+class InvitationLinkController @Inject() (
   agentReferenceService: AgentReferenceService,
   val authConnector: AuthConnector,
   cc: ControllerComponents
