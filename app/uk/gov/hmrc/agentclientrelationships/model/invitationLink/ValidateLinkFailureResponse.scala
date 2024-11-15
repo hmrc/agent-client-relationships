@@ -25,5 +25,5 @@ object ValidateLinkFailureResponse {
 
   case object AgentSuspended extends ValidateLinkFailureResponse
 
-  case object AgentNameMissing extends ValidateLinkFailureResponse
+  case class AgentDetailsJsonError(errorMessage: String) extends ValidateLinkFailureResponse
 }

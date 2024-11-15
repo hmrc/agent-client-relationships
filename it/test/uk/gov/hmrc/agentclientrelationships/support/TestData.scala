@@ -91,12 +91,12 @@ trait TestData {
   )
 
   val agentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
-    agencyDetails = Some(agentDetails),
+    agencyDetails = agentDetails,
     suspensionDetails = Some(suspensionDetails)
   )
 
   val suspendedAgentRecordOption: AgentDetailsDesResponse = AgentDetailsDesResponse(
-    agencyDetails = Some(agentDetails),
+    agencyDetails = agentDetails,
     suspensionDetails = Some(suspensionDetailsSuspended)
   )
 

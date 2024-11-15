@@ -20,24 +20,10 @@ import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
 
 case class AgentDetailsDesResponse(
-  agencyDetails: Option[AgencyDetails],
+  agencyDetails: AgencyDetails,
   suspensionDetails: Option[SuspensionDetails]
 )
 
 object AgentDetailsDesResponse {
-
-  // When AgencyDetails Json read fails with JsError than parse as None
-  private val reads: Reads[AgentDetailsDesResponse] = Reads { json =>
-    for {
-      agencyDetails <- (json \ "agencyDetails").validate[AgencyDetails].asOpt match {
-                         case Some(p) => JsSuccess(Some(p))
-                         case None    => JsSuccess(None)
-                       }
-      suspensionDetails <- (json \ "suspensionDetails").validateOpt[SuspensionDetails]
-    } yield AgentDetailsDesResponse(agencyDetails, suspensionDetails)
-  }
-
-  private val writes: Writes[AgentDetailsDesResponse] = Json.writes[AgentDetailsDesResponse]
-
-  implicit val agentDetailsDesResponseFormat: Format[AgentDetailsDesResponse] = Format(reads, writes)
+  implicit val format: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
 }

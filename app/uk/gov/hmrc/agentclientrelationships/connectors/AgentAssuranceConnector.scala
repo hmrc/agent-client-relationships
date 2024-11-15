@@ -17,9 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.http.Status.OK
-import play.api.libs.json.Json
+import play.api.libs.json.{JsError, JsSuccess, Json}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateLinkFailureResponse.AgentDetailsJsonError
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentDetailsDesResponse, ValidateLinkFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -40,13 +41,23 @@ class AgentAssuranceConnector @Inject() (httpV2: HttpClientV2)(implicit
 
   import uk.gov.hmrc.http.HttpReads.Implicits._
 
-  def getAgentRecordWithChecks(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AgentDetailsDesResponse] =
+  def getAgentRecordWithChecks(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[ValidateLinkFailureResponse, AgentDetailsDesResponse]] =
     httpV2
       .get(new URL(s"$baseUrl/agent-assurance/agent-record-with-checks"))
       .execute[HttpResponse]
       .map(response =>
         response.status match {
-          case OK    => Json.parse(response.body).as[AgentDetailsDesResponse]
+          case OK =>
+            Json.parse(response.body).validate[AgentDetailsDesResponse] match {
+              case JsSuccess(agentDetailsDesResponse, _) =>
+                Right(agentDetailsDesResponse)
+              case JsError(errors) =>
+                val errorDetails = JsError.toJson(errors).toString()
+                Left(AgentDetailsJsonError(errorDetails))
+            }
           case other => throw UpstreamErrorResponse(s"Agent record unavailable: des response code: $other", other)
         }
       )

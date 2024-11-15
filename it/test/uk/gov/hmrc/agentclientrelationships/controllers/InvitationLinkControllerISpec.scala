@@ -59,7 +59,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       result.status shouldBe 200
       result.json shouldBe Json.obj(
         "arn"  -> arn.value,
-        "name" -> agentRecord.agencyDetails.map(_.agencyName)
+        "name" -> agentRecord.agencyDetails.agencyName
       )
     }
 

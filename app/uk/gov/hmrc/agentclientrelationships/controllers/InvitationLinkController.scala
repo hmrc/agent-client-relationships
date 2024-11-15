@@ -46,9 +46,10 @@ class InvitationLinkController @Inject() (
           case ValidateLinkFailureResponse.AgentSuspended =>
             Logger(getClass).warn(s"Agent is suspended for: $uid")
             Forbidden
-          case ValidateLinkFailureResponse.AgentNameMissing =>
-            Logger(getClass).warn(s"Agent name is missing for: $uid")
+          case ValidateLinkFailureResponse.AgentDetailsJsonError(errorMessage) =>
+            Logger(getClass).warn(s"Agent details failed to parse JSON response: $errorMessage for: $uid")
             NotFound
+
         },
         validLinkResponse => Ok(Json.toJson(validLinkResponse))
       )

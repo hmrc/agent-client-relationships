@@ -52,7 +52,7 @@ class AgentAssuranceConnectorISpec
 
       givenAgentRecordFound(agentRecordResponse)
 
-      await(connector.getAgentRecordWithChecks) shouldBe agentRecord
+      await(connector.getAgentRecordWithChecks) shouldBe Right(agentRecord)
     }
 
     "throw exception when 502 response" in {

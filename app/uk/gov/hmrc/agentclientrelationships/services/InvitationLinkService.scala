@@ -43,7 +43,7 @@ class InvitationLinkService @Inject() (
       _ <- EitherT.fromEither[Future](
              validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
            )
-      agentDetailsResponse <- EitherT.right(getAgentDetails)
+      agentDetailsResponse <- EitherT(getAgentDetails)
       _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
       agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
     } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
@@ -64,7 +64,9 @@ class InvitationLinkService @Inject() (
     if (normalisedAgentNames.contains(normalizedAgentName)) Right(true)
     else Left(ValidateLinkFailureResponse.NormalizedAgentNameNotMatched)
 
-  private def getAgentDetails(implicit hc: HeaderCarrier): Future[AgentDetailsDesResponse] =
+  private def getAgentDetails(implicit
+    hc: HeaderCarrier
+  ): Future[Either[ValidateLinkFailureResponse, AgentDetailsDesResponse]] =
     agentAssuranceConnector.getAgentRecordWithChecks
 
   private def checkSuspensionDetails(
@@ -78,9 +80,7 @@ class InvitationLinkService @Inject() (
     agentDetailsDesResponse: AgentDetailsDesResponse
   ): Future[Either[ValidateLinkFailureResponse, String]] =
     Future.successful(
-      agentDetailsDesResponse.agencyDetails
-        .map(_.agencyName)
-        .toRight(ValidateLinkFailureResponse.AgentNameMissing)
+      Right(agentDetailsDesResponse.agencyDetails.agencyName)
     )
 
 }
