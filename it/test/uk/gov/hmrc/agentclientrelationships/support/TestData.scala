@@ -73,6 +73,12 @@ trait TestData {
     suspensionDetails = Some(suspensionDetails)
   )
 
+  val agentRecordResponseWithNoAgentName: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
+    uniqueTaxReference = Some(Utr("0123456789")),
+    agencyDetails = Some(agencyDetailsResponse.copy(agencyName = None)),
+    suspensionDetails = Some(suspensionDetails)
+  )
+
   val suspendedAgentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = Some(Utr("0123456789")),
     agencyDetails = Some(agencyDetailsResponse),

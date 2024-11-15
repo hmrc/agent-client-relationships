@@ -79,6 +79,14 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       result.status shouldBe 404
     }
 
+    "return 404 status when agent name is missing" in {
+      givenAuditConnector()
+      givenAgentRecordFound(agentRecordResponseWithNoAgentName)
+
+      val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
+      result.status shouldBe 404
+    }
+
     "return 502 status agent details are not found" in {
       givenAuditConnector()
       givenAgentDetailsErrorResponse(502)
