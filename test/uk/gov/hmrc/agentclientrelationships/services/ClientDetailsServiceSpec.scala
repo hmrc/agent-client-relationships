@@ -56,7 +56,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
             .thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", Some("AA1 1AA"), "GB"))))
 
           val resultModel =
-            ClientDetailsResponse("John Rocks", None, isOverseas = Some(false), Seq("AA1 1AA"), Some(PostalCode))
+            ClientDetailsResponse("John Rocks", None, isOverseas = Some(false), Seq("AA11AA"), Some(PostalCode))
 
           await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
         }
@@ -85,7 +85,7 @@ class ClientDetailsServiceSpec extends UnitSpec {
               .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA")))))
 
             val resultModel =
-              ClientDetailsResponse("John Rocks", None, isOverseas = None, Seq("AA1 1AA"), Some(PostalCode))
+              ClientDetailsResponse("John Rocks", None, isOverseas = None, Seq("AA11AA"), Some(PostalCode))
 
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
           }
@@ -275,10 +275,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
 
         "return a ClientDetailsResponse with postcode as the known fact if country code is GB" in {
           when(mockConnector.getCgtSubscriptionDetails(eqTo[String]("XACGTP123456789"))(any[HeaderCarrier]))
-            .thenReturn(Future.successful(Right(CgtSubscriptionDetails("Erling Haal", Some("AA1 1AA"), "GB"))))
+            .thenReturn(Future.successful(Right(CgtSubscriptionDetails("Erling Haal", Some("AA11AA"), "GB"))))
 
           val resultModel =
-            ClientDetailsResponse("Erling Haal", None, isOverseas = Some(false), Seq("AA1 1AA"), Some(PostalCode))
+            ClientDetailsResponse("Erling Haal", None, isOverseas = Some(false), Seq("AA11AA"), Some(PostalCode))
 
           await(service.findClientDetails("HMRC-CGT-PD", "XACGTP123456789")) shouldBe Right(resultModel)
         }
