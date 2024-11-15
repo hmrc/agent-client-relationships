@@ -13,6 +13,8 @@ GET           /client/relationships/service/:service                         @uk
 
 GET           /client/:service/details/:clientId                             @uk.gov.hmrc.agentclientrelationships.controllers.ClientDetailsController.findClientDetails(service: String, clientId: String)
 
+GET           /agent-reference/uid/:uid/:normalizedAgentName                 @uk.gov.hmrc.agentclientrelationships.controllers.ValidateLinkController.validateLink(uid: String, normalizedAgentName: String)
+
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
 

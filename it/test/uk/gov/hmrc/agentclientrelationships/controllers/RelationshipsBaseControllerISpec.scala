@@ -53,6 +53,7 @@ trait RelationshipsBaseControllerISpec
     with JsonMatchers
     with ACAStubs
     with AUCDStubs
+    with AgentAssuranceStubs
     with IntegrationPatience {
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
@@ -89,6 +90,7 @@ trait RelationshipsBaseControllerISpec
         "auditing.consumer.baseUri.host"                        -> wireMockHost,
         "auditing.consumer.baseUri.port"                        -> wireMockPort,
         "microservice.services.agent-user-client-details.port"  -> wireMockPort,
+        "microservice.services.agent-assurance.port"            -> wireMockPort,
         "features.copy-relationship.mtd-it"                     -> true,
         "features.copy-relationship.mtd-vat"                    -> true,
         "features.recovery-enable"                              -> false,

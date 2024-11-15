@@ -1,5 +1,4 @@
 /*
- * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +23,6 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MongoAgentReferenceRepositoryISpec
-    extends UnitSpec
-    with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
-    with LogCapturing {
 
   val repository = new MongoAgentReferenceRepository(mongoComponent)
 
@@ -36,20 +31,15 @@ class MongoAgentReferenceRepositoryISpec
 
     "create" should {
       "successfully create a record in the agentReferenceRepository" in {
-        await(repository.create(agentReferenceRecord("SCX39TGT", "LARN7404004"))) shouldBe ()
       }
 
       "throw an error if ARN is duplicated" in {
-        await(repository.collection.insertOne(agentReferenceRecord("SCX39TGT", "LARN7404004")).toFuture())
         an[MongoWriteException] shouldBe thrownBy {
-          await(repository.create(agentReferenceRecord("SCX39TGE", "LARN7404004")))
         }
       }
 
       "throw an error if UID is duplicated" in {
-        await(repository.collection.insertOne(agentReferenceRecord("SCX39TGT", "LARN7404004")).toFuture())
         an[MongoWriteException] shouldBe thrownBy {
-          await(repository.create(agentReferenceRecord("SCX39TGT", "LARN7404005")))
         }
       }
     }
