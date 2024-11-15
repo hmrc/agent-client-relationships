@@ -91,13 +91,11 @@ trait TestData {
   )
 
   val agentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
-    uniqueTaxReference = Some(Utr("0123456789")),
     agencyDetails = Some(agentDetails),
     suspensionDetails = Some(suspensionDetails)
   )
 
   val suspendedAgentRecordOption: AgentDetailsDesResponse = AgentDetailsDesResponse(
-    uniqueTaxReference = Some(Utr("0123456789")),
     agencyDetails = Some(agentDetails),
     suspensionDetails = Some(suspensionDetailsSuspended)
   )

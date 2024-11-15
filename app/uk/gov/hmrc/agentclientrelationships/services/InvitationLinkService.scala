@@ -27,7 +27,7 @@ import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentReferenceService @Inject() (
+class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
   agentAssuranceConnector: AgentAssuranceConnector
 )(implicit ec: ExecutionContext)

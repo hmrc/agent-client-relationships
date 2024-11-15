@@ -21,7 +21,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponen
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.repository.MongoAgentReferenceRepository
-import uk.gov.hmrc.agentclientrelationships.services.AgentReferenceService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.auth.core.AuthConnector
 
@@ -38,7 +38,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
     normalisedAgentNames = Seq(normalizedAgentName, "NormalisedAgentName2")
   )
 
-  val agentReferenceService: AgentReferenceService = app.injector.instanceOf[AgentReferenceService]
+  val agentReferenceService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -54,7 +54,8 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentRecordFound(agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
+      val result =
+        doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 200
       result.json shouldBe Json.obj(
         "arn"  -> arn.value,
@@ -66,7 +67,8 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAgentRecordFound(agentRecordResponse)
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
+      val result =
+        doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
     }
 
@@ -75,7 +77,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentRecordFound(agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord.copy(normalisedAgentNames = Seq("DummyNotMatching"))))
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
     }
 
@@ -83,7 +85,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAgentRecordFound(agentRecordResponseWithNoAgentName)
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
     }
 
@@ -92,7 +94,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentDetailsErrorResponse(502)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 502
     }
 
@@ -101,7 +103,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentRecordFound(suspendedAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 403
     }
   }
