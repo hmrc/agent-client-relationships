@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoWriteException
 import play.api.test.Helpers._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport

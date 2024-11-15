@@ -22,25 +22,13 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.addToSet
 import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions}
 import play.api.{Logger, Logging}
-import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRecord.formats
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import javax.inject._
-import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
-
-case class AgentReferenceRecord(
-  uid: String,
-  arn: Arn,
-  normalisedAgentNames: Seq[String]
-)
-
-object AgentReferenceRecord {
-  implicit val formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
-}
 
 @ImplementedBy(classOf[MongoAgentReferenceRepository])
 trait AgentReferenceRepository {
@@ -56,7 +44,7 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
     extends PlayMongoRepository[AgentReferenceRecord](
       mongoComponent = mongo,
       collectionName = "agent-reference",
-      domainFormat = formats,
+      domainFormat = AgentReferenceRecord.formats,
       indexes = List(
         IndexModel(ascending("uid"), IndexOptions().unique(true)),
         IndexModel(ascending("arn"), IndexOptions().unique(true))
