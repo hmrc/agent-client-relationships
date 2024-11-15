@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentclientrelationships.model.validateLink.{AgencyDetails, AgentDetailsDesResponse, BusinessAddress}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse, BusinessAddress}
 import uk.gov.hmrc.agentmtdidentifiers.model.{SuspensionDetails, Utr}
 
 trait TestData {

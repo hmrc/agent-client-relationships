@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.validateLink
+package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
 import play.api.libs.json.{Json, OFormat}
 

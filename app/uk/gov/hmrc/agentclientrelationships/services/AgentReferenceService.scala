@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
-import uk.gov.hmrc.agentclientrelationships.model.validateLink.{AgentDetailsDesResponse, AgentReferenceRecord, ValidateLinkFailureResponse, ValidateLinkResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentDetailsDesResponse, AgentReferenceRecord, ValidateLinkFailureResponse, ValidateLinkResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.http.HeaderCarrier
 

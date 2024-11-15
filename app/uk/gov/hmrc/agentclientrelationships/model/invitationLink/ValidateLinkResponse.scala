@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.validateLink
+package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentmtdidentifiers.model.{SuspensionDetails, Utr}
+import play.api.libs.json.{Format, JsResult, JsString, JsValue, Json, OFormat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-case class AgentDetailsDesResponse(
-  uniqueTaxReference: Option[Utr],
-  agencyDetails: Option[AgencyDetails],
-  suspensionDetails: Option[SuspensionDetails]
+case class ValidateLinkResponse(
+  arn: Arn,
+  name: String
 )
 
-object AgentDetailsDesResponse {
+object ValidateLinkResponse {
+  implicit val arnFormat: Format[Arn] = new Format[Arn] {
+    def writes(arn: Arn): JsValue = JsString(arn.value)
+    def reads(json: JsValue): JsResult[Arn] = json.validate[String].map(Arn.apply)
+  }
 
-  implicit val format: Format[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
+  implicit val format: OFormat[ValidateLinkResponse] = Json.format[ValidateLinkResponse]
 }

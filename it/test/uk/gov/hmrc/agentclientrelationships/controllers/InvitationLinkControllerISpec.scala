@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.validateLink.AgentReferenceRecord
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.repository.MongoAgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentReferenceService
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -28,7 +28,7 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 
-class ValidateLinkControllerISpec extends RelationshipsBaseControllerISpec with TestData {
+class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec with TestData {
 
   val uid = "TestUID"
   val normalizedAgentName = "TestNormalizedAgentName"
@@ -43,11 +43,11 @@ class ValidateLinkControllerISpec extends RelationshipsBaseControllerISpec with 
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val controller = new ValidateLinkController(agentReferenceService, authConnector, stubControllerComponents())
+  val controller = new InvitationLinkController(agentReferenceService, authConnector, stubControllerComponents())
 
   def agentReferenceRepo: MongoAgentReferenceRepository = new MongoAgentReferenceRepository(mongoComponent)
 
-  ".findClientDetails" should {
+  "validate invitation link" should {
 
     "return 200 status and valid JSON when agent reference and details are found and agent is not suspended " in {
       givenAuditConnector()

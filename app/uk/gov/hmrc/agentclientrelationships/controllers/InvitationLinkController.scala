@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.agentclientrelationships.model.validateLink.ValidateLinkFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateLinkFailureResponse
 import uk.gov.hmrc.agentclientrelationships.services.AgentReferenceService
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -28,7 +28,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class ValidateLinkController @Inject() (
+class InvitationLinkController @Inject()(
   agentReferenceService: AgentReferenceService,
   val authConnector: AuthConnector,
   cc: ControllerComponents

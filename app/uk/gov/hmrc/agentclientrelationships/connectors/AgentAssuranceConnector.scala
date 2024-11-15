@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.http.Status.OK
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.validateLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2

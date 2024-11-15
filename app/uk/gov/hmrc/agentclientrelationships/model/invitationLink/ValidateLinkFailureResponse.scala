@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.validateLink
+package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+sealed trait ValidateLinkFailureResponse
 
-import scala.collection.Seq
+object ValidateLinkFailureResponse {
+  case object AgentReferenceDataNotFound extends ValidateLinkFailureResponse
 
-case class AgentReferenceRecord(
-  uid: String,
-  arn: Arn,
-  normalisedAgentNames: Seq[String]
-)
+  case object NormalizedAgentNameNotMatched extends ValidateLinkFailureResponse
 
-object AgentReferenceRecord {
-  implicit val formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
+  case object AgentSuspended extends ValidateLinkFailureResponse
+
+  case object AgentNameMissing extends ValidateLinkFailureResponse
 }
