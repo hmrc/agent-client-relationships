@@ -50,7 +50,7 @@ class AgentAssuranceConnectorISpec
   "getAgentRecord" should {
     "return the agent record for a given agent" in {
 
-      givenAgentRecordFound(agentRecord)
+      givenAgentRecordFound(agentRecordResponse)
 
       await(connector.getAgentRecordWithChecks) shouldBe agentRecord
     }

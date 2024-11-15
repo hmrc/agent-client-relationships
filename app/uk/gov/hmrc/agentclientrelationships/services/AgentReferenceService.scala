@@ -79,7 +79,7 @@ class AgentReferenceService @Inject() (
   ): Future[Either[ValidateLinkFailureResponse, String]] =
     Future.successful(
       agentDetailsDesResponse.agencyDetails
-        .flatMap(_.agencyName)
+        .map(_.agencyName)
         .toRight(ValidateLinkFailureResponse.AgentNameMissing)
     )
 

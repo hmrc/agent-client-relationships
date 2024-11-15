@@ -19,11 +19,11 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.support.TestData
 
-trait AgentAssuranceStubs {
+trait AgentAssuranceStubs extends TestData {
 
-  def givenAgentRecordFound(agentRecord: AgentDetailsDesResponse): StubMapping =
+  def givenAgentRecordFound(agentRecord: TestAgentDetailsDesResponse): StubMapping =
     stubFor(
       get(urlEqualTo("/agent-assurance/agent-record-with-checks"))
         .willReturn(

@@ -16,23 +16,73 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse, BusinessAddress}
+import play.api.libs.json.{Format, Json, OFormat}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
 import uk.gov.hmrc.agentmtdidentifiers.model.{SuspensionDetails, Utr}
 
 trait TestData {
 
-  val emptyAgencyDetails: AgencyDetails = AgencyDetails(None, None, None, None)
-
-  val agentDetails: AgencyDetails = AgencyDetails(
-    Some("My Agency"),
-    Some("abc@abc.com"),
-    Some("07345678901"),
-    Some(BusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
+  case class TestBusinessAddress(
+    addressLine1: String,
+    addressLine2: Option[String],
+    addressLine3: Option[String] = None,
+    addressLine4: Option[String] = None,
+    postalCode: Option[String],
+    countryCode: String
   )
+
+  object TestBusinessAddress {
+    implicit val format: OFormat[TestBusinessAddress] = Json.format
+  }
+
+  case class TestAgencyDetails(
+    agencyName: Option[String],
+    agencyEmail: Option[String],
+    agencyTelephone: Option[String],
+    agencyAddress: Option[TestBusinessAddress]
+  )
+
+  object TestAgencyDetails {
+    implicit val format: OFormat[TestAgencyDetails] = Json.format
+  }
+
+  case class TestAgentDetailsDesResponse(
+    uniqueTaxReference: Option[Utr],
+    agencyDetails: Option[TestAgencyDetails],
+    suspensionDetails: Option[SuspensionDetails]
+  )
+
+  object TestAgentDetailsDesResponse {
+    implicit val format: Format[TestAgentDetailsDesResponse] = Json.format[TestAgentDetailsDesResponse]
+  }
 
   val suspensionDetails: SuspensionDetails = SuspensionDetails(suspensionStatus = false, None)
 
   val suspensionDetailsSuspended: SuspensionDetails = SuspensionDetails(suspensionStatus = true, None)
+
+  val agencyDetailsResponse: TestAgencyDetails = TestAgencyDetails(
+    Some("My Agency"),
+    Some("abc@abc.com"),
+    Some("07345678901"),
+    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
+  )
+
+  val agentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
+    uniqueTaxReference = Some(Utr("0123456789")),
+    agencyDetails = Some(agencyDetailsResponse),
+    suspensionDetails = Some(suspensionDetails)
+  )
+
+  val suspendedAgentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
+    uniqueTaxReference = Some(Utr("0123456789")),
+    agencyDetails = Some(agencyDetailsResponse),
+    suspensionDetails = Some(suspensionDetailsSuspended)
+  )
+
+  val agentDetails: AgencyDetails = AgencyDetails(
+    "My Agency",
+    "abc@abc.com"
+  )
 
   val agentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
     uniqueTaxReference = Some(Utr("0123456789")),

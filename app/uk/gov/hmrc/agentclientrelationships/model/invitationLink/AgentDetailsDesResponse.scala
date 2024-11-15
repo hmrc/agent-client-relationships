@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.{SuspensionDetails, Utr}
 
 case class AgentDetailsDesResponse(
@@ -27,5 +27,19 @@ case class AgentDetailsDesResponse(
 
 object AgentDetailsDesResponse {
 
-  implicit val format: Format[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
+  // When AgencyDetails Json read fails with JsError than parse as None
+  private val reads: Reads[AgentDetailsDesResponse] = Reads { json =>
+    for {
+      uniqueTaxReference <- (json \ "uniqueTaxReference").validateOpt[Utr]
+      agencyDetails <- (json \ "agencyDetails").validate[AgencyDetails].asOpt match {
+                         case Some(p) => JsSuccess(Some(p))
+                         case None    => JsSuccess(None)
+                       }
+      suspensionDetails <- (json \ "suspensionDetails").validateOpt[SuspensionDetails]
+    } yield AgentDetailsDesResponse(uniqueTaxReference, agencyDetails, suspensionDetails)
+  }
+
+  private val writes: Writes[AgentDetailsDesResponse] = Json.writes[AgentDetailsDesResponse]
+
+  implicit val agentDetailsDesResponseFormat: Format[AgentDetailsDesResponse] = Format(reads, writes)
 }

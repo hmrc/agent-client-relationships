@@ -51,20 +51,20 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 200 status and valid JSON when agent reference and details are found and agent is not suspended " in {
       givenAuditConnector()
-      givenAgentRecordFound(agentRecord)
+      givenAgentRecordFound(agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 200
       result.json shouldBe Json.obj(
         "arn"  -> arn.value,
-        "name" -> agentRecord.agencyDetails.flatMap(_.agencyName)
+        "name" -> agentRecord.agencyDetails.map(_.agencyName)
       )
     }
 
     "return 404 status when agent reference is not found" in {
       givenAuditConnector()
-      givenAgentRecordFound(agentRecord)
+      givenAgentRecordFound(agentRecordResponse)
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
@@ -72,7 +72,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 404 status when normalisedAgentNames is not on agent reference list" in {
       givenAuditConnector()
-      givenAgentRecordFound(agentRecord)
+      givenAgentRecordFound(agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord.copy(normalisedAgentNames = Seq("DummyNotMatching"))))
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
@@ -90,7 +90,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 403 status when agent is suspended" in {
       givenAuditConnector()
-      givenAgentRecordFound(suspendedAgentRecordOption)
+      givenAgentRecordFound(suspendedAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent-reference/uid/$uid/$normalizedAgentName")
