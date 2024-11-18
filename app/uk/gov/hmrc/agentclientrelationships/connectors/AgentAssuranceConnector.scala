@@ -22,6 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateLinkFailureResponse.AgentDetailsJsonError
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentDetailsDesResponse, ValidateLinkFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -41,12 +42,15 @@ class AgentAssuranceConnector @Inject() (httpV2: HttpClientV2)(implicit
 
   import uk.gov.hmrc.http.HttpReads.Implicits._
 
-  def getAgentRecordWithChecks(implicit
+  private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.agentAssuranceInternalAuthToken
+
+  def getAgentRecordWithChecks(arn: Arn)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[ValidateLinkFailureResponse, AgentDetailsDesResponse]] =
     httpV2
-      .get(new URL(s"$baseUrl/agent-assurance/agent-record-with-checks"))
+      .get(new URL(s"$baseUrl/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
+      .setHeader(aaHeaders)
       .execute[HttpResponse]
       .map(response =>
         response.status match {

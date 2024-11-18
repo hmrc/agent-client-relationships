@@ -51,7 +51,8 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 200 status and valid JSON when agent reference and details are found and agent is not suspended " in {
       givenAuditConnector()
-      givenAgentRecordFound(agentRecordResponse)
+
+      givenAgentRecordFound(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result =
@@ -65,7 +66,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 404 status when agent reference is not found" in {
       givenAuditConnector()
-      givenAgentRecordFound(agentRecordResponse)
+      givenAgentRecordFound(arn, agentRecordResponse)
 
       val result =
         doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -74,7 +75,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 404 status when normalisedAgentNames is not on agent reference list" in {
       givenAuditConnector()
-      givenAgentRecordFound(agentRecordResponse)
+      givenAgentRecordFound(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord.copy(normalisedAgentNames = Seq("DummyNotMatching"))))
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -83,7 +84,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 404 status when agent name is missing" in {
       givenAuditConnector()
-      givenAgentRecordFound(agentRecordResponseWithNoAgentName)
+      givenAgentRecordFound(arn, agentRecordResponseWithNoAgentName)
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
@@ -91,7 +92,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 502 status agent details are not found" in {
       givenAuditConnector()
-      givenAgentDetailsErrorResponse(502)
+      givenAgentDetailsErrorResponse(arn, 502)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -100,7 +101,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
     "return 403 status when agent is suspended" in {
       givenAuditConnector()
-      givenAgentRecordFound(suspendedAgentRecordResponse)
+      givenAgentRecordFound(arn, suspendedAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")

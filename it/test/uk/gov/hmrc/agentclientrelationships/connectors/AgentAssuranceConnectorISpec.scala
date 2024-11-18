@@ -22,6 +22,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.stubs.AgentAssuranceStubs
 import uk.gov.hmrc.agentclientrelationships.support.{TestData, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -40,7 +41,8 @@ class AgentAssuranceConnectorISpec
       .configure(
         "microservice.services.agent-assurance.port" -> wireMockPort,
         "auditing.consumer.baseUri.host"             -> wireMockHost,
-        "auditing.consumer.baseUri.port"             -> wireMockPort
+        "auditing.consumer.baseUri.port"             -> wireMockPort,
+        "agent-assurance-internal-auth.token"        -> "internalAuthToken"
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -49,16 +51,17 @@ class AgentAssuranceConnectorISpec
 
   "getAgentRecord" should {
     "return the agent record for a given agent" in {
+      val agentARN: Arn = Arn("ABCDE123456")
+      givenAgentRecordFound(agentARN, agentRecordResponse)
 
-      givenAgentRecordFound(agentRecordResponse)
-
-      await(connector.getAgentRecordWithChecks) shouldBe Right(agentRecord)
+      await(connector.getAgentRecordWithChecks(agentARN)) shouldBe Right(agentRecord)
     }
 
     "throw exception when 502 response" in {
-      givenAgentDetailsErrorResponse(502)
+      val agentARN: Arn = Arn("ABCDE123456")
+      givenAgentDetailsErrorResponse(agentARN, 502)
       intercept[UpstreamErrorResponse] {
-        await(connector.getAgentRecordWithChecks)
+        await(connector.getAgentRecordWithChecks(agentARN))
       }
     }
   }

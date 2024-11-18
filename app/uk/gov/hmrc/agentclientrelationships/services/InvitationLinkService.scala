@@ -20,6 +20,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentDetailsDesResponse, AgentReferenceRecord, ValidateLinkFailureResponse, ValidateLinkResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
@@ -43,7 +44,7 @@ class InvitationLinkService @Inject() (
       _ <- EitherT.fromEither[Future](
              validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
            )
-      agentDetailsResponse <- EitherT(getAgentDetails)
+      agentDetailsResponse <- EitherT(getAgentDetails(agentReferenceRecord.arn))
       _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
       agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
     } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
@@ -64,10 +65,10 @@ class InvitationLinkService @Inject() (
     if (normalisedAgentNames.contains(normalizedAgentName)) Right(true)
     else Left(ValidateLinkFailureResponse.NormalizedAgentNameNotMatched)
 
-  private def getAgentDetails(implicit
+  private def getAgentDetails(arn: Arn)(implicit
     hc: HeaderCarrier
   ): Future[Either[ValidateLinkFailureResponse, AgentDetailsDesResponse]] =
-    agentAssuranceConnector.getAgentRecordWithChecks
+    agentAssuranceConnector.getAgentRecordWithChecks(arn)
 
   private def checkSuspensionDetails(
     agentDetailsDesResponse: AgentDetailsDesResponse

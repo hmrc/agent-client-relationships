@@ -99,7 +99,8 @@ trait RelationshipsBaseControllerISpec
         "agent.trackPage.cache.expires"                         -> "1 millis",
         "agent.trackPage.cache.enabled"                         -> true,
         "alt-itsa.enabled"                                      -> true,
-        "mongodb.uri"                                           -> mongoUri
+        "mongodb.uri"                                           -> mongoUri,
+        "agent-assurance-internal-auth.token"                   -> "internalAuthToken"
       )
       .overrides(moduleWithOverrides)
       .configure(additionalConfig)
