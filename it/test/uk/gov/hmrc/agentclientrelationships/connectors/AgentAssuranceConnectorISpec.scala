@@ -54,7 +54,7 @@ class AgentAssuranceConnectorISpec
       val agentARN: Arn = Arn("ABCDE123456")
       givenAgentRecordFound(agentARN, agentRecordResponse)
 
-      await(connector.getAgentRecordWithChecks(agentARN)) shouldBe Right(agentRecord)
+      await(connector.getAgentRecordWithChecks(agentARN)) shouldBe agentRecord
     }
 
     "throw exception when 502 response" in {

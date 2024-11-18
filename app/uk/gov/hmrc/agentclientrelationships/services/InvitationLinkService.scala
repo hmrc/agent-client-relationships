@@ -44,7 +44,7 @@ class InvitationLinkService @Inject() (
       _ <- EitherT.fromEither[Future](
              validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
            )
-      agentDetailsResponse <- EitherT(getAgentDetails(agentReferenceRecord.arn))
+      agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
       _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
       agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
     } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
@@ -67,7 +67,7 @@ class InvitationLinkService @Inject() (
 
   private def getAgentDetails(arn: Arn)(implicit
     hc: HeaderCarrier
-  ): Future[Either[ValidateLinkFailureResponse, AgentDetailsDesResponse]] =
+  ): Future[AgentDetailsDesResponse] =
     agentAssuranceConnector.getAgentRecordWithChecks(arn)
 
   private def checkSuspensionDetails(

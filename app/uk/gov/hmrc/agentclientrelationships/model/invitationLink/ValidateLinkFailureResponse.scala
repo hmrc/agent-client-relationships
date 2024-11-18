@@ -24,6 +24,4 @@ object ValidateLinkFailureResponse {
   case object NormalizedAgentNameNotMatched extends ValidateLinkFailureResponse
 
   case object AgentSuspended extends ValidateLinkFailureResponse
-
-  case class AgentDetailsJsonError(errorMessage: String) extends ValidateLinkFailureResponse
 }
