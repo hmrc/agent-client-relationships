@@ -20,7 +20,7 @@ import com.google.inject.ImplementedBy
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.addToSet
-import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions}
+import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.{Logger, Logging}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -76,7 +76,7 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
 
   override def updateAgentName(uid: String, newAgentName: String): Future[Unit] =
     collection
-      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName), UpdateOptions())
+      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName))
       .toFuture()
       .map { updateOneResult =>
         if (updateOneResult.getModifiedCount == 1) ()
