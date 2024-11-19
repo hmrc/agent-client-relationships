@@ -66,7 +66,15 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
       case Right(details @ ItsaBusinessDetails(name, Some(postcode), _)) =>
         Future
           .successful(
-            Right(ClientDetailsResponse(name, None, Some(details.isOverseas), Seq(postcode), Some(PostalCode)))
+            Right(
+              ClientDetailsResponse(
+                name,
+                None,
+                Some(details.isOverseas),
+                Seq(postcode.replaceAll("\\s", "")),
+                Some(PostalCode)
+              )
+            )
           )
       case Right(_) =>
         logger.warn("[getItsaClientDetails] - No postcode was returned by the API")
@@ -80,7 +88,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
           optPostcode = designatoryDetails.postCode
         } yield (optName, optSaUtr, optPostcode)).subflatMap {
           case (Some(name), Some(_), Some(postcode)) =>
-            Right(ClientDetailsResponse(name, None, None, Seq(postcode), Some(PostalCode)))
+            Right(ClientDetailsResponse(name, None, None, Seq(postcode.replaceAll("\\s", "")), Some(PostalCode)))
           case _ =>
             Left(ClientDetailsNotFound)
         }.value
@@ -137,7 +145,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getCgtSubscriptionDetails(cgtRef).map {
       case Right(CgtSubscriptionDetails(name, Some(postcode), countryCode)) if countryCode.toUpperCase == "GB" =>
-        Right(ClientDetailsResponse(name, None, Some(false), Seq(postcode), Some(PostalCode)))
+        Right(ClientDetailsResponse(name, None, Some(false), Seq(postcode.replaceAll("\\s", "")), Some(PostalCode)))
       case Right(CgtSubscriptionDetails(name, _, countryCode)) =>
         Right(ClientDetailsResponse(name, None, Some(true), Seq(countryCode), Some(CountryCode)))
       case Left(err) => Left(err)

@@ -80,7 +80,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           result.json shouldBe Json.obj(
             "name"                 -> "Erling Haal",
             "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA1 1AA"),
+            "knownFacts"           -> Json.arr("AA11AA"),
             "knownFactType"        -> "PostalCode",
             "hasPendingInvitation" -> false
           )
@@ -103,7 +103,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           result.json shouldBe Json.obj(
             "name"                 -> "Erling Haal",
             "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA1 1AA"),
+            "knownFacts"           -> Json.arr("AA11AA"),
             "knownFactType"        -> "PostalCode",
             "hasPendingInvitation" -> true
           )
@@ -122,7 +122,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
             "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFacts"                 -> Json.arr("AA11AA"),
             "knownFactType"              -> "PostalCode",
             "hasPendingInvitation"       -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
@@ -142,7 +142,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
             "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFacts"                 -> Json.arr("AA11AA"),
             "knownFactType"              -> "PostalCode",
             "hasPendingInvitation"       -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
@@ -173,7 +173,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
             "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFacts"                 -> Json.arr("AA11AA"),
             "knownFactType"              -> "PostalCode",
             "hasPendingInvitation"       -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
@@ -197,7 +197,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
             "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFacts"                 -> Json.arr("AA11AA"),
             "knownFactType"              -> "PostalCode",
             "hasPendingInvitation"       -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
@@ -221,7 +221,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
             "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA1 1AA"),
+            "knownFacts"                 -> Json.arr("AA11AA"),
             "knownFactType"              -> "PostalCode",
             "hasPendingInvitation"       -> true,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
