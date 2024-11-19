@@ -20,6 +20,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentDetailsDesResponse, AgentReferenceRecord, ValidateLinkFailureResponse, ValidateLinkResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
@@ -27,7 +28,7 @@ import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentReferenceService @Inject() (
+class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
   agentAssuranceConnector: AgentAssuranceConnector
 )(implicit ec: ExecutionContext)
@@ -43,7 +44,7 @@ class AgentReferenceService @Inject() (
       _ <- EitherT.fromEither[Future](
              validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
            )
-      agentDetailsResponse <- EitherT.right(getAgentDetails)
+      agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
       _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
       agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
     } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
@@ -64,8 +65,10 @@ class AgentReferenceService @Inject() (
     if (normalisedAgentNames.contains(normalizedAgentName)) Right(true)
     else Left(ValidateLinkFailureResponse.NormalizedAgentNameNotMatched)
 
-  private def getAgentDetails(implicit hc: HeaderCarrier): Future[AgentDetailsDesResponse] =
-    agentAssuranceConnector.getAgentRecordWithChecks
+  private def getAgentDetails(arn: Arn)(implicit
+    hc: HeaderCarrier
+  ): Future[AgentDetailsDesResponse] =
+    agentAssuranceConnector.getAgentRecordWithChecks(arn)
 
   private def checkSuspensionDetails(
     agentDetailsDesResponse: AgentDetailsDesResponse
@@ -78,9 +81,7 @@ class AgentReferenceService @Inject() (
     agentDetailsDesResponse: AgentDetailsDesResponse
   ): Future[Either[ValidateLinkFailureResponse, String]] =
     Future.successful(
-      agentDetailsDesResponse.agencyDetails
-        .flatMap(_.agencyName)
-        .toRight(ValidateLinkFailureResponse.AgentNameMissing)
+      Right(agentDetailsDesResponse.agencyDetails.agencyName)
     )
 
 }

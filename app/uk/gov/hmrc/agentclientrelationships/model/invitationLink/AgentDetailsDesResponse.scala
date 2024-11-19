@@ -16,16 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentmtdidentifiers.model.{SuspensionDetails, Utr}
+import play.api.libs.json._
+import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
 
 case class AgentDetailsDesResponse(
-  uniqueTaxReference: Option[Utr],
-  agencyDetails: Option[AgencyDetails],
+  agencyDetails: AgencyDetails,
   suspensionDetails: Option[SuspensionDetails]
 )
 
 object AgentDetailsDesResponse {
-
-  implicit val format: Format[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
+  implicit val format: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
 }

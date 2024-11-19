@@ -19,13 +19,17 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import play.api.test.Helpers.{AUTHORIZATION, USER_AGENT}
+import uk.gov.hmrc.agentclientrelationships.support.TestData
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-trait AgentAssuranceStubs {
+trait AgentAssuranceStubs extends TestData {
 
-  def givenAgentRecordFound(agentRecord: AgentDetailsDesResponse): StubMapping =
+  def givenAgentRecordFound(arn: Arn, agentRecord: TestAgentDetailsDesResponse): StubMapping =
     stubFor(
-      get(urlEqualTo("/agent-assurance/agent-record-with-checks"))
+      get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
+        .withHeader(AUTHORIZATION, equalTo("internalAuthToken"))
+        .withHeader(USER_AGENT, equalTo("agent-client-relationships"))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -33,9 +37,11 @@ trait AgentAssuranceStubs {
         )
     )
 
-  def givenAgentDetailsErrorResponse(status: Int): StubMapping =
+  def givenAgentDetailsErrorResponse(arn: Arn, status: Int): StubMapping =
     stubFor(
-      get(urlEqualTo("/agent-assurance/agent-record-with-checks"))
+      get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
+        .withHeader(AUTHORIZATION, equalTo("internalAuthToken"))
+        .withHeader(USER_AGENT, equalTo("agent-client-relationships"))
         .willReturn(
           aResponse()
             .withStatus(status)

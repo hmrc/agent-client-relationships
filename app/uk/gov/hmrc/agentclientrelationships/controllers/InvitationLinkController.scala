@@ -20,7 +20,7 @@ import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateLinkFailureResponse
-import uk.gov.hmrc.agentclientrelationships.services.AgentReferenceService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -29,7 +29,7 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class InvitationLinkController @Inject() (
-  agentReferenceService: AgentReferenceService,
+  agentReferenceService: InvitationLinkService,
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
@@ -46,9 +46,6 @@ class InvitationLinkController @Inject() (
           case ValidateLinkFailureResponse.AgentSuspended =>
             Logger(getClass).warn(s"Agent is suspended for: $uid")
             Forbidden
-          case ValidateLinkFailureResponse.AgentNameMissing =>
-            Logger(getClass).warn(s"Agent name is missing for: $uid")
-            NotFound
         },
         validLinkResponse => Ok(Json.toJson(validLinkResponse))
       )

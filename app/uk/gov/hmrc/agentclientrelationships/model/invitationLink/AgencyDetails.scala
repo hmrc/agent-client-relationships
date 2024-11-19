@@ -16,28 +16,29 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Json, OFormat}
-
-case class BusinessAddress(
-  addressLine1: String,
-  addressLine2: Option[String],
-  addressLine3: Option[String] = None,
-  addressLine4: Option[String] = None,
-  postalCode: Option[String],
-  countryCode: String
-)
-
-object BusinessAddress {
-  implicit val format: OFormat[BusinessAddress] = Json.format
-}
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class AgencyDetails(
-  agencyName: Option[String],
-  agencyEmail: Option[String],
-  agencyTelephone: Option[String],
-  agencyAddress: Option[BusinessAddress]
+  agencyName: String,
+  agencyEmail: String
 )
 
 object AgencyDetails {
-  implicit val format: OFormat[AgencyDetails] = Json.format
+
+  private def optionalReads(fieldName: String): Reads[String] = Reads[String] {
+    case JsString(value) => JsSuccess(value)
+    case JsNull          => JsError(s"$fieldName must not be null")
+    case _               => JsError(s"Invalid $fieldName value")
+  }
+
+  private val reads: Reads[AgencyDetails] = (
+    (__ \ "agencyName").read(optionalReads("Agency name")).orElse(Reads.pure("")) and
+      (__ \ "agencyEmail").read(optionalReads("Agency email")).orElse(Reads.pure(""))
+  )(AgencyDetails.apply _)
+
+  private val writes: Writes[AgencyDetails] = Json.writes[AgencyDetails]
+
+  implicit val agencyDetailsFormat: Format[AgencyDetails] = Format(reads, writes)
+
 }
