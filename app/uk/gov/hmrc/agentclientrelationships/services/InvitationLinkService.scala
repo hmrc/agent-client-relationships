@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentDetailsDesResponse, AgentReferenceRecord, ValidateLinkFailureResponse, ValidateLinkResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
@@ -34,9 +35,11 @@ class InvitationLinkService @Inject() (
 )(implicit ec: ExecutionContext)
     extends Logging {
 
+  private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
+
   def validateLink(uid: String, normalizedAgentName: String)(implicit
     hc: HeaderCarrier
-  ): Future[Either[ValidateLinkFailureResponse, ValidateLinkResponse]] = {
+  ): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
     import cats.data.EitherT
     import cats.implicits._
     val agencyNameT = for {
@@ -53,17 +56,60 @@ class InvitationLinkService @Inject() (
 
   }
 
-  private def getAgentReferenceRecord(uid: String): Future[Either[ValidateLinkFailureResponse, AgentReferenceRecord]] =
+  def createLink(
+    arn: Arn
+  )(implicit hc: HeaderCarrier): Future[CreateLinkResponse] =
+    for {
+      agentDetailsResponse <- getAgentDetails(arn)
+      newNormaliseAgentName = normaliseAgentName(agentDetailsResponse.agencyDetails.agencyName)
+
+      agentReferenceRecord <- getAgentReferenceRecordByArn(arn).flatMap {
+                                case Some(value) => Future.successful(value)
+                                case None        => createAgentReferenceRecord(arn, newNormaliseAgentName)
+                              }
+
+      _ <- if (agentReferenceRecord.normalisedAgentNames.contains(newNormaliseAgentName)) Future.successful(())
+           else updateAgentReferenceRecord(agentReferenceRecord.uid, newNormaliseAgentName)
+
+    } yield CreateLinkResponse(agentReferenceRecord.uid, newNormaliseAgentName)
+
+  private def getAgentReferenceRecord(
+    uid: String
+  ): Future[Either[InvitationLinkFailureResponse, AgentReferenceRecord]] =
     agentReferenceRepository
       .findBy(uid)
-      .map(_.toRight(ValidateLinkFailureResponse.AgentReferenceDataNotFound))
+      .map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
+
+  private def getAgentReferenceRecordByArn(
+    arn: Arn
+  ): Future[Option[AgentReferenceRecord]] =
+    agentReferenceRepository
+      .findByArn(arn)
+
+  private def updateAgentReferenceRecord(uid: String, normalisedAgentNames: String): Future[Unit] =
+    agentReferenceRepository
+      .updateAgentName(uid, normalisedAgentNames)
+
+  private def createAgentReferenceRecord(arn: Arn, normalisedAgentNames: String): Future[AgentReferenceRecord] = {
+    val agentReferenceRecord = AgentReferenceRecord(
+      uid = RandomStringUtils.random(8, codetable),
+      arn = arn,
+      normalisedAgentNames = Seq(normalisedAgentNames)
+    )
+    agentReferenceRepository
+      .create(agentReferenceRecord)
+      .map(_ => agentReferenceRecord)
+  }
+
+  private def normaliseAgentName(agentName: String) =
+    agentName.toLowerCase().replaceAll("\\s+", "-").replaceAll("[^A-Za-z0-9-]", "")
 
   private def validateNormalizedAgentName(
     normalisedAgentNames: Seq[String],
     normalizedAgentName: String
-  ): Either[ValidateLinkFailureResponse, Boolean] =
+  ): Either[InvitationLinkFailureResponse, Boolean] =
     if (normalisedAgentNames.contains(normalizedAgentName)) Right(true)
-    else Left(ValidateLinkFailureResponse.NormalizedAgentNameNotMatched)
+    else Left(InvitationLinkFailureResponse.NormalizedAgentNameNotMatched)
 
   private def getAgentDetails(arn: Arn)(implicit
     hc: HeaderCarrier
@@ -72,14 +118,14 @@ class InvitationLinkService @Inject() (
 
   private def checkSuspensionDetails(
     agentDetailsDesResponse: AgentDetailsDesResponse
-  ): Either[ValidateLinkFailureResponse, Boolean] =
+  ): Either[InvitationLinkFailureResponse, Boolean] =
     if (agentDetailsDesResponse.suspensionDetails.exists(_.suspensionStatus))
-      Left(ValidateLinkFailureResponse.AgentSuspended)
+      Left(InvitationLinkFailureResponse.AgentSuspended)
     else Right(false)
 
   private def getAgencyName(
     agentDetailsDesResponse: AgentDetailsDesResponse
-  ): Future[Either[ValidateLinkFailureResponse, String]] =
+  ): Future[Either[InvitationLinkFailureResponse, String]] =
     Future.successful(
       Right(agentDetailsDesResponse.agencyDetails.agencyName)
     )

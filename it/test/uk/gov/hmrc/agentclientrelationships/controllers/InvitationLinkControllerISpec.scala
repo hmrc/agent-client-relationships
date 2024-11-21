@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
+import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
@@ -43,7 +44,8 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val controller = new InvitationLinkController(agentReferenceService, authConnector, stubControllerComponents())
+  val controller =
+    new InvitationLinkController(agentReferenceService, authConnector, appConfig, stubControllerComponents())
 
   def agentReferenceRepo: MongoAgentReferenceRepository = new MongoAgentReferenceRepository(mongoComponent)
 
@@ -106,6 +108,59 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
 
       val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 403
+    }
+  }
+
+  "create invitation link" should {
+
+    "return 200 status and valid JSON when agent reference and details are found" in {
+      val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/agent-link")
+      givenAuditConnector()
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+
+      val normalisedName = agentRecord.agencyDetails.agencyName
+        .toLowerCase()
+        .replaceAll("\\s+", "-")
+        .replaceAll("[^A-Za-z0-9-]", "")
+
+      givenAgentRecordFound(arn, agentRecordResponse)
+      await(agentReferenceRepo.create(agentReferenceRecord))
+
+      val result =
+        doAgentGetRequest(s"/agent-client-relationships/agent/agent-link")
+      result.status shouldBe 200
+      result.json shouldBe Json.obj(
+        "uid"                 -> agentReferenceRecord.uid,
+        "normalizedAgentName" -> normalisedName
+      )
+      agentReferenceRepo
+        .findBy(agentReferenceRecord.uid)
+        .futureValue
+        .get
+        .normalisedAgentNames should contain atLeastOneElementOf Seq(normalisedName)
+    }
+
+    "return 200 status and valid JSON when details are found and create new agent reference" in {
+      val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/agent/agent-link")
+      givenAuditConnector()
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+
+      val normalisedName = agentRecord.agencyDetails.agencyName
+        .toLowerCase()
+        .replaceAll("\\s+", "-")
+        .replaceAll("[^A-Za-z0-9-]", "")
+
+      givenAgentRecordFound(arn, agentRecordResponse)
+
+      val result =
+        doAgentGetRequest(s"/agent-client-relationships/agent/agent-link")
+      result.status shouldBe 200
+
+      agentReferenceRepo
+        .findByArn(arn)
+        .futureValue
+        .get
+        .normalisedAgentNames should contain atLeastOneElementOf Seq(normalisedName)
     }
   }
 }
