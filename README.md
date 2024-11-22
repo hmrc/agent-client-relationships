@@ -106,6 +106,32 @@ Error responses:
 - If the API call did not return the necessary client details, a status of 404 with no body is returned.
 - If there was an unexpected failure when calling the relevant API, a status of 500 with no body is returned.
 
+### Validate client invitation
+
+Validates that the expected client invitation exists, and returns details regarding the invitation and the associated agent. 
+
+`POST /client/validate-invitation`
+
+Example request body:
+```
+{
+  "uid":"1234567",
+  "serviceKeys":["HMRC-MTD-IT", "HMRC-NI", "HMRC-PT"]
+}
+```
+
+Example success response (status code 200):
+```
+{
+  "invitationId": "ABC123",
+  "serviceKey": "HMRC-MTD-IT",
+  "agentName": "ABC Accountants"
+}
+```
+
+Error responses:
+- If the associated agent is suspended, a status of 403 with no body is returned.
+- If the invitation or the relevant agent reference record could not be found, a status of 404 with no body is returned.
 
 ## Running the tests
 
@@ -114,7 +140,7 @@ Error responses:
 
 ## Running the app locally
 
-    sm2 --start AGENT_AUTHORISATION -r
+    sm2 --start AGENT_AUTHORISATION
     sm2 --stop AGENT_CLIENT_RELATIONSHIPS
     ./run.sh
 
