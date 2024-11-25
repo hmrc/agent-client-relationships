@@ -13,8 +13,9 @@ GET           /client/relationships/service/:service                         @uk
 
 GET           /client/:service/details/:clientId                             @uk.gov.hmrc.agentclientrelationships.controllers.ClientDetailsController.findClientDetails(service: String, clientId: String)
 
-GET           /agent/agent-reference/uid/:uid/:normalizedAgentName          @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateLink(uid: String, normalizedAgentName: String)
-GET           /agent/agent-link                                             @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.createLink
+GET           /agent/agent-reference/uid/:uid/:normalizedAgentName           @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateLink(uid: String, normalizedAgentName: String)
+GET           /agent/agent-link                                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.createLink
+POST          /client/validate-invitation                                    @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateInvitationForClient
 
 POST          /agent/:arn/authorization-request                             @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 

@@ -21,6 +21,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import play.utils.UriEncoding
@@ -162,6 +163,8 @@ trait RelationshipsBaseControllerISpec
   }
 
   protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
+
+  protected def doAgentPostRequest(route: String, json: JsValue) = new Resource(route, port).postAsJson(json.toString())
 
   protected def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
 
