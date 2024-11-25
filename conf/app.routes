@@ -24,6 +24,7 @@ GET           /agent/:arn/authorisation-request-info/:invitationId           @uk
 # TODO agree the response for and implement the GET all route
 # GET           /agent/:arn/authorisation-request-info                         @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.getAll
 
+POST          /agent/:arn/authorization-request                             @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)

@@ -23,8 +23,9 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationInputData, InvitationFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationInputData
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}

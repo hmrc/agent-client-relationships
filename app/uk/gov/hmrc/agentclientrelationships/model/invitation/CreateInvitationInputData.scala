@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.{Json, OFormat}
-import InvitationFailureResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationFailureResponse._
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}
 
