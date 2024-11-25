@@ -21,8 +21,8 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationInputData
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError, InvalidClientId, UnsupportedClientIdType, UnsupportedService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationInputData, CreateInvitationResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError, InvalidClientId, UnsupportedClientIdType, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -43,7 +43,6 @@ class InvitationController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
-  //TODO WG - no auth at the moment
   def createInvitation(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body
       .validate[CreateInvitationInputData]
@@ -60,15 +59,14 @@ class InvitationController @Inject() (
                   UnsupportedService.getResult(msg)
 
                 case InvalidClientId =>
-                  val msg = s"""Invalid clientId "${createInvitationInputData.inputSuppliedClientId}",
-                               | for service type "${createInvitationInputData.inputService}"""".stripMargin
+                  val msg =
+                    s"""Invalid clientId "${createInvitationInputData.inputSuppliedClientId}", for service type "${createInvitationInputData.inputService}""""
                   Logger(getClass).warn(msg)
                   InvalidClientId.getResult(msg)
 
                 case UnsupportedClientIdType =>
                   val msg =
-                    s"""Unsupported clientIdType "${createInvitationInputData.inputSuppliedClientIdType}",
-                       | for service type "${createInvitationInputData.inputService}"""".stripMargin
+                    s"""Unsupported clientIdType "${createInvitationInputData.inputSuppliedClientIdType}", for service type "${createInvitationInputData.inputService}"""".stripMargin
                   Logger(getClass).warn(msg)
                   UnsupportedClientIdType.getResult(msg)
 
@@ -89,7 +87,7 @@ class InvitationController @Inject() (
                   Logger(getClass).warn(msg)
                   DuplicateInvitationError.getResult(msg)
               },
-              invitation => Ok(Json.toJson(invitation.invitationId))
+              invitation => Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
             )
           }
         }

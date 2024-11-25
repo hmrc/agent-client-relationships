@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.invitationLink
+package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.libs.json.Json.toJson
+import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.Result
 import play.api.mvc.Results.{BadRequest, Forbidden, NotImplemented}
 
