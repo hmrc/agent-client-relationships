@@ -21,18 +21,22 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvitationRequest, ValidateInvitationResponse}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class InvitationLinkController @Inject() (
   agentReferenceService: InvitationLinkService,
+  invitationsRepository: InvitationsRepository,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -46,11 +50,10 @@ class InvitationLinkController @Inject() (
     agentReferenceService.validateLink(uid, normalizedAgentName).map { response =>
       response.fold(
         {
-          case InvitationLinkFailureResponse.AgentReferenceDataNotFound |
-              InvitationLinkFailureResponse.NormalizedAgentNameNotMatched =>
+          case AgentReferenceDataNotFound | NormalizedAgentNameNotMatched =>
             Logger(getClass).warn(s"Agent Reference Record not found for uid: $uid")
             NotFound
-          case InvitationLinkFailureResponse.AgentSuspended =>
+          case AgentSuspended =>
             Logger(getClass).warn(s"Agent is suspended for uid: $uid")
             Forbidden
         },
@@ -67,4 +70,39 @@ class InvitationLinkController @Inject() (
     }
   }
 
+  def validateInvitationForClient: Action[ValidateInvitationRequest] =
+    Action.async(parse.json[ValidateInvitationRequest]) { implicit request =>
+      withAuthorisedAsClient { enrolments =>
+        val targetServices = request.body.serviceKeys
+        val targetEnrolments = enrolments.view.filterKeys(key => targetServices.contains(key.enrolmentKey)).toMap
+        agentReferenceService.validateInvitationRequest(request.body.uid).flatMap {
+          case Right(validateLinkModel) =>
+            invitationsRepository.findAllForAgent(validateLinkModel.arn.value).map { invitations =>
+              val matchingInvitations = targetEnrolments.map { enrolment =>
+                invitations.find(inv =>
+                  inv.service == enrolment._1.enrolmentKey && inv.clientId == enrolment._2.value && inv.status == Pending
+                )
+              }
+              matchingInvitations match {
+                case Seq(Some(invitation)) =>
+                  val response =
+                    ValidateInvitationResponse(invitation.invitationId, invitation.service, validateLinkModel.name)
+                  Ok(Json.toJson(response))
+                case _ =>
+                  Logger(getClass).warn(
+                    s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
+                  )
+                  NotFound
+              }
+            }
+          case Left(AgentSuspended) =>
+            Logger(getClass).warn(s"Agent is suspended for UID: ${request.body.uid}")
+            Future(Forbidden)
+          case Left(_) =>
+            Logger(getClass).warn(s"Agent Reference Record not found for UID: ${request.body.uid}")
+            Future(NotFound)
+
+        }
+      }
+    }
 }

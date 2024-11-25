@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import cats.data.EitherT
+import cats.implicits._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
@@ -40,8 +42,7 @@ class InvitationLinkService @Inject() (
   def validateLink(uid: String, normalizedAgentName: String)(implicit
     hc: HeaderCarrier
   ): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
-    import cats.data.EitherT
-    import cats.implicits._
+
     val agencyNameT = for {
       agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
       _ <- EitherT.fromEither[Future](
@@ -72,6 +73,19 @@ class InvitationLinkService @Inject() (
            else updateAgentReferenceRecord(agentReferenceRecord.uid, newNormaliseAgentName)
 
     } yield CreateLinkResponse(agentReferenceRecord.uid, newNormaliseAgentName)
+
+  def validateInvitationRequest(
+    uid: String
+  )(implicit hc: HeaderCarrier): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
+    val responseT = for {
+      agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
+      agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
+      _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+      agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
+    } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
+
+    responseT.value
+  }
 
   private def getAgentReferenceRecord(
     uid: String
