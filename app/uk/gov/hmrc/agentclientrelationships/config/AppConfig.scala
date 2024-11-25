@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 
 case class ConfigNotFoundException(message: String) extends RuntimeException(message)
@@ -45,6 +46,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
     BasicAuthentication(username, password)
   }
+
+  private def baseUrl(key: String) = servicesConfig.baseUrl(key)
 
   val enrolmentStoreProxyUrl = servicesConfig.baseUrl("enrolment-store-proxy")
 
@@ -116,4 +119,15 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 
   val invitationsTtl: Long = config.get[Long]("mongodb.invitations.expireAfterDays")
+
+  val invitationExpiringDuration: Duration = servicesConfig.getDuration("invitation.expiryDuration")
+
+  val platformAnalyticsBaseUrl: String = baseUrl("platform-analytics")
+  val gaTrackingId: String = servicesConfig.getString("google-analytics.token")
+  val gaBatchSize: Int = servicesConfig.getInt("google-analytics.batchSize")
+  val gaClientTypeIndex: Int = servicesConfig.getInt("google-analytics.clientTypeIndex")
+  val gaInvitationIdIndex: Int = servicesConfig.getInt("google-analytics.invitationIdIndex")
+  val gaOriginIndex: Int = servicesConfig.getInt("google-analytics.originIndex")
+  val gaAltItsaIndex: Int = servicesConfig.getInt("google-analytics.altItsaIndex")
+
 }
