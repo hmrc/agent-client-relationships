@@ -170,6 +170,8 @@ trait RelationshipsBaseControllerISpec
 
   protected def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
+  protected def doAgentPostRequest(route: String, body: String) = new Resource(route, port).postAsJson(body)
+
   protected def verifyDeleteRecordHasStatuses(
     etmpStatus: Option[SyncStatus.Value],
     esStatus: Option[SyncStatus.Value]
