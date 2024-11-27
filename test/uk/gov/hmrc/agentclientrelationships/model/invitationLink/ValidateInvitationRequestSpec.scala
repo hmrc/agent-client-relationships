@@ -26,7 +26,7 @@ class ValidateInvitationRequestSpec extends UnitSpec {
     "read from JSON" in {
 
       val json = Json.obj(
-        "uid" -> "1234567",
+        "uid"         -> "1234567",
         "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-NI", "HMRC-PT")
       )
 

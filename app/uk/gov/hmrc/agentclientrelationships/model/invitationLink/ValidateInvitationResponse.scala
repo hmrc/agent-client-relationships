@@ -17,8 +17,17 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
 import play.api.libs.json.{Json, OWrites}
+import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 
-case class ValidateInvitationResponse(invitationId: String, serviceKey: String, agentName: String)
+import java.time.Instant
+
+case class ValidateInvitationResponse(
+  invitationId: String,
+  serviceKey: String,
+  agentName: String,
+  status: InvitationStatus,
+  lastModifiedDate: Instant
+)
 
 object ValidateInvitationResponse {
   implicit val writes: OWrites[ValidateInvitationResponse] = Json.writes[ValidateInvitationResponse]

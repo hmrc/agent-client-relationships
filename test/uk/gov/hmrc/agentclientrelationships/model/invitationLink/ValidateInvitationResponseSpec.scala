@@ -17,7 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
 import play.api.libs.json.Json
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+
+import java.time.Instant
 
 class ValidateInvitationResponseSpec extends UnitSpec {
 
@@ -25,12 +28,21 @@ class ValidateInvitationResponseSpec extends UnitSpec {
 
     "write to JSON" in {
 
-      val model = ValidateInvitationResponse("ABC123", "HMRC-MTD-IT", "ABC Accountants")
+      val model =
+        ValidateInvitationResponse(
+          "ABC123",
+          "HMRC-MTD-IT",
+          "ABC Accountants",
+          Pending,
+          Instant.parse("2020-01-01T00:00:00Z")
+        )
 
       val json = Json.obj(
-        "invitationId" -> "ABC123",
-        "serviceKey" -> "HMRC-MTD-IT",
-        "agentName" -> "ABC Accountants"
+        "invitationId"     -> "ABC123",
+        "serviceKey"       -> "HMRC-MTD-IT",
+        "agentName"        -> "ABC Accountants",
+        "status"           -> "Pending",
+        "lastModifiedDate" -> "2020-01-01T00:00:00Z"
       )
 
       Json.toJson(model) shouldBe json

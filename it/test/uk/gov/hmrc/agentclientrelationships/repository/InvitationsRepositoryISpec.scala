@@ -102,8 +102,36 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       await(repository.findAllForAgent("XARN1234567")) shouldBe listOfInvitations
     }
 
-    "fail to retrieve invitations when no invitations are found for a given ARN" in {
-      await(repository.findAllForAgent("XARN1234567")) shouldBe Seq()
+    "retrieve all existing invitations for a given ARN, filtered on the target services and clientIds" in {
+      val listOfInvitations = Seq(pendingInvitation, pendingInvitation, pendingInvitation)
+      await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+      await(repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("123456789"))) shouldBe listOfInvitations
+    }
+
+    "fail to retrieve invitations" when {
+
+      "no invitations are found for a given ARN" in {
+        await(repository.findAllForAgent("XARN1234567")) shouldBe Seq()
+      }
+
+      "no invitations are found for a given ARN, filtered on the target services and clientIds" in {
+        await(repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("123456789"))) shouldBe Seq()
+      }
+
+      "the filter for the service is not satisfied" in {
+        val listOfInvitations = Seq(pendingInvitation, pendingInvitation, pendingInvitation)
+        await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+        await(repository.findAllForAgent("XARN1234567", Seq("HMRC-XYZ"), Seq("123456789"))) shouldBe Seq()
+      }
+
+      "the filter for the clientId is not satisfied" in {
+        val listOfInvitations = Seq(pendingInvitation, pendingInvitation, pendingInvitation)
+        await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+        await(repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("1"))) shouldBe Seq()
+      }
     }
 
     "update the status of an invitation when a matching invitation is found" in {

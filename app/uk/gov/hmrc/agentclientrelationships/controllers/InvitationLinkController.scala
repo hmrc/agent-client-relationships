@@ -21,7 +21,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvitationRequest, ValidateInvitationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
@@ -77,23 +76,23 @@ class InvitationLinkController @Inject() (
         val targetEnrolments = enrolments.view.filterKeys(key => targetServices.contains(key.enrolmentKey)).toMap
         agentReferenceService.validateInvitationRequest(request.body.uid).flatMap {
           case Right(validateLinkModel) =>
-            invitationsRepository.findAllForAgent(validateLinkModel.arn.value).map { invitations =>
-              val matchingInvitations = targetEnrolments.map { enrolment =>
-                invitations.find(inv =>
-                  inv.service == enrolment._1.enrolmentKey && inv.clientId == enrolment._2.value && inv.status == Pending
+            val services = targetEnrolments.keys.map(_.id).toSeq
+            val clientIds = targetEnrolments.values.map(_.value).toSeq
+            invitationsRepository.findAllForAgent(validateLinkModel.arn.value, services, clientIds).map {
+              case Seq(invitation) =>
+                val response = ValidateInvitationResponse(
+                  invitation.invitationId,
+                  invitation.service,
+                  validateLinkModel.name,
+                  invitation.status,
+                  invitation.lastUpdated
                 )
-              }
-              matchingInvitations match {
-                case Seq(Some(invitation)) =>
-                  val response =
-                    ValidateInvitationResponse(invitation.invitationId, invitation.service, validateLinkModel.name)
-                  Ok(Json.toJson(response))
-                case _ =>
-                  Logger(getClass).warn(
-                    s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
-                  )
-                  NotFound
-              }
+                Ok(Json.toJson(response))
+              case _ =>
+                Logger(getClass).warn(
+                  s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
+                )
+                NotFound
             }
           case Left(AgentSuspended) =>
             Logger(getClass).warn(s"Agent is suspended for UID: ${request.body.uid}")
