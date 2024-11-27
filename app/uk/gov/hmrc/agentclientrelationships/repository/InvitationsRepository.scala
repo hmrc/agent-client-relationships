@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.{and, equal, in}
 import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import play.api.Logging
@@ -65,6 +65,17 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
 
   def findAllForAgent(arn: String): Future[Seq[Invitation]] =
     collection.find(equal("arn", arn)).toFuture()
+
+  def findAllForAgent(arn: String, services: Seq[String], clientIds: Seq[String]): Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(
+          equal("arn", arn),
+          in("service", services: _*),
+          in("clientId", clientIds: _*)
+        )
+      )
+      .toFuture()
 
   def updateStatus(invitationId: String, status: InvitationStatus): Future[Option[Invitation]] =
     collection

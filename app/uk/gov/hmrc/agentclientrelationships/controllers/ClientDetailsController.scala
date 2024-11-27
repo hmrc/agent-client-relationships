@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.{PartialAuth, Pending}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
@@ -60,7 +60,7 @@ class ClientDetailsController @Inject() (
       for {
         clientDetailsResponse <- clientDetailsService.findClientDetails(service, clientId)
         clientIdType = Service(service).supportedSuppliedClientIdType.enrolmentId
-        pendingRelResponse <- invitationsRepository.findAllForAgent(arn.value)
+        pendingRelResponse <- invitationsRepository.findAllForAgent(arn.value, Seq(service), Seq(clientId))
         existingRelResponseMain <-
           relationshipsController.checkForRelationship(arn, service, clientIdType, clientId, None)(request)
         existingRelResponseSupp <- if (multiAgentServices.contains(service))
@@ -78,7 +78,7 @@ class ClientDetailsController @Inject() (
           else Future(None)
       } yield clientDetailsResponse match {
         case Right(details) if expectedResults(Seq(existingRelResponseMain, existingRelResponseSupp)) =>
-          val pendingRelationship = pendingRelResponse.exists(inv => inv.service == service && inv.clientId == clientId)
+          val pendingRelationship = pendingRelResponse.exists(_.status == Pending)
           val existingRelationship =
             (existingRelResponseMain.header.status, existingRelResponseSupp.header.status) match {
               case (OK, _) => Some(service)

@@ -125,7 +125,9 @@ Example success response (status code 200):
 {
   "invitationId": "ABC123",
   "serviceKey": "HMRC-MTD-IT",
-  "agentName": "ABC Accountants"
+  "agentName": "ABC Accountants",
+  "status": "Pending",
+  "lastModifiedDate": "2020-01-01T00:00:00Z"
 }
 ```
 

@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext
 
 class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec with TestData {
@@ -190,7 +191,9 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       val expectedResponse = ValidateInvitationResponse(
         pendingInvitation.invitationId,
         pendingInvitation.service,
-        agentRecord.agencyDetails.agencyName
+        agentRecord.agencyDetails.agencyName,
+        pendingInvitation.status,
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS)
       )
 
       result.status shouldBe 200
