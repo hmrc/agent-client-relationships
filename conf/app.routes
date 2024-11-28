@@ -17,7 +17,13 @@ GET           /agent/agent-reference/uid/:uid/:normalizedAgentName           @uk
 GET           /agent/agent-link                                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.createLink
 POST          /client/validate-invitation                                    @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateInvitationForClient
 
-POST          /agent/:arn/authorization-request                             @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+
+POST          /agent/:arn/authorisation-request                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
+# TODO agree the response for and implement the GET all route
+# GET           /agent/:arn/authorisation-request-info                         @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.getAll
+
 
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)

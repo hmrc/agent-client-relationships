@@ -101,7 +101,7 @@ trait RelationshipsBaseControllerISpec
         "agent.trackPage.cache.enabled"                         -> true,
         "alt-itsa.enabled"                                      -> true,
         "mongodb.uri"                                           -> mongoUri,
-        "agent-assurance-internal-auth.token"                   -> "internalAuthToken"
+        "internal-auth.token"                                   -> "internalAuthToken"
       )
       .overrides(moduleWithOverrides)
       .configure(additionalConfig)

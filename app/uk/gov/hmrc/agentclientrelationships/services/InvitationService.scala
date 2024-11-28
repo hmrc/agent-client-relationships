@@ -63,6 +63,9 @@ class InvitationService @Inject() (
     invitationT.value
   }
 
+  def findInvitation(arn: String, invitationId: String): Future[Option[Invitation]] =
+    invitationsRepository.findOneById(arn, invitationId)
+
   private def makeInvitation(
     arn: Arn,
     suppliedClientId: ClientId,

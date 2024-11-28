@@ -31,7 +31,7 @@ case class ConfigNotFoundException(message: String) extends RuntimeException(mes
 @Singleton
 class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
 
-  val appName = "agent-client-relationships"
+  val appName = servicesConfig.getString("appName")
 
   private def getConfigString(key: String) =
     servicesConfig.getConfString(key, throw ConfigNotFoundException(s"Could not find config key: '$key'"))
@@ -77,7 +77,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val authUrl = servicesConfig.baseUrl("auth")
 
-  val agentAssuranceInternalAuthToken: String = servicesConfig.getString("agent-assurance-internal-auth.token")
+  val internalAuthBaseUrl: String = servicesConfig.baseUrl("internal-auth")
+  val internalAuthToken: String = servicesConfig.getString("internal-auth.token")
 
   val citizenDetailsBaseUrl: String = servicesConfig.baseUrl("citizen-details")
 
