@@ -41,7 +41,7 @@ class AgentAssuranceConnector @Inject() (httpV2: HttpClientV2)(implicit
 
   import uk.gov.hmrc.http.HttpReads.Implicits._
 
-  private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.agentAssuranceInternalAuthToken
+  private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
 
   def getAgentRecordWithChecks(arn: Arn)(implicit
     hc: HeaderCarrier,

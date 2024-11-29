@@ -42,7 +42,7 @@ class AgentAssuranceConnectorISpec
         "microservice.services.agent-assurance.port" -> wireMockPort,
         "auditing.consumer.baseUri.host"             -> wireMockHost,
         "auditing.consumer.baseUri.port"             -> wireMockPort,
-        "agent-assurance-internal-auth.token"        -> "internalAuthToken"
+        "internal-auth.token"                        -> "internalAuthToken"
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()

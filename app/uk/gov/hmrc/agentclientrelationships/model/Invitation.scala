@@ -40,9 +40,13 @@ case class Invitation(
 )
 
 object Invitation {
-  implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-  implicit val mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
   implicit val format: Format[Invitation] = Json.format[Invitation]
+
+  val mongoFormat: Format[Invitation] = {
+    implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
+    implicit val mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
+    Json.format[Invitation]
+  }
 
   def createNew(
     arn: String,

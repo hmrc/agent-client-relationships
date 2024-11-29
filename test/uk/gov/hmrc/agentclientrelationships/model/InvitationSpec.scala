@@ -66,22 +66,22 @@ class InvitationSpec extends UnitSpec {
     "read from JSON" when {
 
       "all optional fields are present" in {
-        fullJson.as[Invitation] shouldBe fullModel
+        fullJson.as[Invitation](Invitation.mongoFormat) shouldBe fullModel
       }
 
       "all optional fields are missing" in {
-        optionalJson.as[Invitation] shouldBe optionalModel
+        optionalJson.as[Invitation](Invitation.mongoFormat) shouldBe optionalModel
       }
     }
 
     "write to JSON" when {
 
       "all optional fields are present" in {
-        Json.toJson(fullModel) shouldBe fullJson
+        Json.toJson(fullModel)(Invitation.mongoFormat) shouldBe fullJson
       }
 
       "all optional fields are missing" in {
-        Json.toJson(optionalModel) shouldBe optionalJson
+        Json.toJson(optionalModel)(Invitation.mongoFormat) shouldBe optionalJson
       }
     }
   }

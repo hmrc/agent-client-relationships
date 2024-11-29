@@ -73,7 +73,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
 
       val result =
         doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorization-request",
+          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
           Json.toJson(createInvitationInputData).toString()
         )
       result.status shouldBe 201
@@ -123,7 +123,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
 
       val result =
         doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorization-request",
+          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
           Json.toJson(createInvitationInputData).toString()
         )
       result.status shouldBe 201
@@ -173,7 +173,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
 
       val result =
         doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorization-request",
+          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
           Json.toJson(createInvitationInputData).toString()
         )
       result.status shouldBe 403
@@ -211,7 +211,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
 
       val result =
         doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorization-request",
+          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
           Json.toJson(createInvitationInputData).toString()
         )
       result.status shouldBe 501
@@ -245,7 +245,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
 
       val result =
         doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorization-request",
+          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
           Json.toJson(createInvitationInputData).toString()
         )
       result.status shouldBe 400
@@ -277,7 +277,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
 
       val result =
         doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorization-request",
+          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
           Json.toJson(createInvitationInputData).toString()
         )
       result.status shouldBe 400

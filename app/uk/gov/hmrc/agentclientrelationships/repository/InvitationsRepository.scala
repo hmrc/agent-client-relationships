@@ -38,7 +38,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
 ) extends PlayMongoRepository[Invitation](
       mongoComponent = mongoComponent,
       collectionName = "invitations",
-      domainFormat = Invitation.format,
+      domainFormat = Invitation.mongoFormat,
       indexes = Seq(
         IndexModel(Indexes.ascending("arn"), IndexOptions().name("arnIndex")),
         IndexModel(Indexes.ascending("invitationId"), IndexOptions().name("invitationIdIndex").unique(true)),
@@ -62,6 +62,16 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     val invitation = Invitation.createNew(arn, service, clientId, suppliedClientId, clientName, expiryDate)
     collection.insertOne(invitation).toFuture().map(_ => invitation)
   }
+
+  def findOneById(arn: String, invitationId: String): Future[Option[Invitation]] =
+    collection
+      .find(
+        combine(
+          equal("arn", arn),
+          equal("invitationId", invitationId)
+        )
+      )
+      .headOption()
 
   def findAllForAgent(arn: String): Future[Seq[Invitation]] =
     collection.find(equal("arn", arn)).toFuture()

@@ -49,14 +49,6 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val controller = new InvitationLinkController(
-    agentReferenceService,
-    invitationsRepo,
-    authConnector,
-    appConfig,
-    stubControllerComponents()
-  )
-
   def agentReferenceRepo: MongoAgentReferenceRepository = new MongoAgentReferenceRepository(mongoComponent)
 
   "validate invitation link" should {
