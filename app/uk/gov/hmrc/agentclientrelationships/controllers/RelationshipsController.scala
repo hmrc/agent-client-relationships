@@ -51,12 +51,13 @@ class RelationshipsController @Inject() (
   des: DesConnector,
   ifConnector: IFConnector,
   ecp: Provider[ExecutionContext],
-  esConnector: EnrolmentStoreProxyConnector,
+  val esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
   auditService: AuditService,
   override val controllerComponents: ControllerComponents
 ) extends BackendController(controllerComponents)
-    with AuthActions {
+    with AuthActions
+    with RelationshipsCommon {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
@@ -233,79 +234,15 @@ class RelationshipsController @Inject() (
       }
   }
 
-  // noinspection ScalaStyle
-  private def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[String, EnrolmentKey]] =
-    (serviceKey, clientType) match {
-      // "special" cases
-      case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
-      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI") if Nino.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
-      case (Service.Cbc.id, CbcIdType.enrolmentId) =>
-        makeSanitisedCbcEnrolmentKey(CbcId(clientId))
-      // "normal" cases
-      case (serviceKey, _) =>
-        if (appConfig.supportedServices.exists(_.id == serviceKey)) {
-          validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
-        } else Future.successful(Left(s"Unknown service $serviceKey"))
-    }
-
-  /** This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be
-    * HMRC-CBC-NONUK-ORG (if the caller has no way of knowing). We check and correct the enrolment key as needed. Also,
-    * if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId) as required by specs. First,
-    * query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
-    */
-  private[controllers] def makeSanitisedCbcEnrolmentKey(
-    cbcId: CbcId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
-    // Try as HMRC-CBC-ORG (UK version)
-    esConnector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))).flatMap {
-      case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
-        logger.info(s"CbcId ${cbcId.value} not found as as HMRC-CBC-ORG. Trying as HMRC-CBC-NONUK-ORG.")
-        esConnector.queryKnownFacts(Service.CbcNonUk, Seq(Identifier("cbcId", cbcId.value))).map {
-          case Some(_) => Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
-          case None    => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
-        }
-      case Some(identifiers) =>
-        Future.successful(
-          Right(
-            EnrolmentKey(
-              Service.Cbc.id,
-              identifiers
-            )
-          )
-        )
-    }
-
-  private def validateSupportedServiceForEnrolmentKey(
-    serviceKey: String,
-    taxIdType: String,
-    clientId: String
-  ): Future[Either[String, EnrolmentKey]] = {
-    val service: Service = Service.forId(serviceKey)
-    val clientIdType: ClientIdType[TaxIdentifier] = service.supportedClientIdType
-    if (taxIdType == clientIdType.enrolmentId) {
-      if (clientIdType.isValid(clientId))
-        Future.successful(Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId))))
-      else
-        Future.successful(
-          Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
-        )
-    } else
-      Future.successful(Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey"))
-  }
-
   def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
+      // TODO WG Step1: get EnrolmentKey
       validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
+        // TODO WG Step2: get TaxIdentifier
         case Right(enrolmentKey) =>
           val taxIdentifier =
             enrolmentKey.oneTaxIdentifier()
+          // TODO WG Step3: get User to get affinityGroup
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
               maybeEk <- taxIdentifier match {
