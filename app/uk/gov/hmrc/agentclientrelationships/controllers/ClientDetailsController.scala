@@ -60,7 +60,8 @@ class ClientDetailsController @Inject() (
       for {
         clientDetailsResponse <- clientDetailsService.findClientDetails(service, clientId)
         clientIdType = Service(service).supportedSuppliedClientIdType.enrolmentId
-        pendingRelResponse <- invitationsRepository.findAllForAgent(arn.value, Seq(service), Seq(clientId))
+        pendingRelResponse <-
+          invitationsRepository.findAllForAgent(arn.value, Seq(service), Seq(clientId), isSuppliedClientId = true)
         existingRelResponseMain <-
           relationshipsController.checkForRelationship(arn, service, clientIdType, clientId, None)(request)
         existingRelResponseSupp <- if (multiAgentServices.contains(service))

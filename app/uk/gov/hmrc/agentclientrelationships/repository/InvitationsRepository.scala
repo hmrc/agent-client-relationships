@@ -76,13 +76,18 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   def findAllForAgent(arn: String): Future[Seq[Invitation]] =
     collection.find(equal("arn", arn)).toFuture()
 
-  def findAllForAgent(arn: String, services: Seq[String], clientIds: Seq[String]): Future[Seq[Invitation]] =
+  def findAllForAgent(
+    arn: String,
+    services: Seq[String],
+    clientIds: Seq[String],
+    isSuppliedClientId: Boolean = false
+  ): Future[Seq[Invitation]] =
     collection
       .find(
         and(
           equal("arn", arn),
           in("service", services: _*),
-          in("clientId", clientIds: _*)
+          in(if (isSuppliedClientId) "suppliedClientId" else "clientId", clientIds: _*)
         )
       )
       .toFuture()
