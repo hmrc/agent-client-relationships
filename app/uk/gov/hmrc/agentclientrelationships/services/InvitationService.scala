@@ -67,6 +67,9 @@ class InvitationService @Inject() (
     invitationT.value
   }
 
+  def findInvitation(arn: String, invitationId: String): Future[Option[Invitation]] =
+    invitationsRepository.findOneById(arn, invitationId)
+
   def validateRequest(serviceStr: String, clientIdStr: String): Either[InvitationFailureResponse, ValidRequest] = for {
     service <- Try(Service.forId(serviceStr))
                  .fold(_ => Left(UnsupportedService), Right(_))
