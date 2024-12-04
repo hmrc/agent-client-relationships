@@ -44,7 +44,7 @@ class RelationshipsController @Inject() (
   checkService: CheckRelationshipsService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,
-  deleteService: DeleteRelationshipsService,
+  deleteService: DeleteRelationshipsServiceWithAca,
   findService: FindRelationshipsService,
   agentUserService: AgentUserService,
   agentTerminationService: AgentTerminationService,
@@ -236,13 +236,10 @@ class RelationshipsController @Inject() (
 
   def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      // TODO WG Step1: get EnrolmentKey
       validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
-        // TODO WG Step2: get TaxIdentifier
         case Right(enrolmentKey) =>
           val taxIdentifier =
             enrolmentKey.oneTaxIdentifier()
-          // TODO WG Step3: get User to get affinityGroup
           authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
               maybeEk <- taxIdentifier match {

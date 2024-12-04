@@ -162,8 +162,8 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
                 PartialAuth,
                 Instant.parse("2020-01-01T00:00:00.000Z"),
                 "XARN1234567",
-                MtdIt,
-                Nino("AA000001B"),
+                MtdIt.id,
+                Nino("AA000001B").value,
                 None
               )
           )
@@ -189,7 +189,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
             invitationsEventStoreRepo
-              .create(PartialAuth, Instant.now(), "XARN1234567", MtdItSupp, Nino("AA000001B"), None)
+              .create(PartialAuth, Instant.now(), "XARN1234567", MtdItSupp.id, Nino("AA000001B").value, None)
           )
 
           val result = doAgentGetRequest(request.uri)

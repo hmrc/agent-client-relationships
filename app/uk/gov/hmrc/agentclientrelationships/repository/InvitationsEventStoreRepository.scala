@@ -48,11 +48,11 @@ class InvitationsEventStoreRepository @Inject() (mongoComponent: MongoComponent)
     status: InvitationStatus,
     created: Instant,
     arn: String,
-    service: Service,
-    clientId: ClientId,
+    service: String,
+    clientId: String,
     deauthorisedBy: Option[String]
   ): Future[InvitationEvent] = {
-    val invitationEvent = InvitationEvent(status, created, arn, service.id, clientId.value, deauthorisedBy)
+    val invitationEvent = InvitationEvent(status, created, arn, service, clientId, deauthorisedBy)
     collection.insertOne(invitationEvent).toFuture().map(_ => invitationEvent)
   }
 

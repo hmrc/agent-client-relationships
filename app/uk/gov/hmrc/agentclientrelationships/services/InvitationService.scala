@@ -22,10 +22,10 @@ import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationInputData, InvitationFailureResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError, InvalidClientId, InvitationNotFound, UnsupportedService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse, ValidRequest}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
@@ -34,12 +34,16 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
+import scala.annotation.unused
 import scala.concurrent.Future.successful
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
+import scala.util.control.NonFatal
 
 @Singleton
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
+  invitationsEventStoreRepository: InvitationsEventStoreRepository,
   analyticsService: PlatformAnalyticsService,
   ifConnector: IFConnector,
   appConfig: AppConfig
@@ -48,7 +52,7 @@ class InvitationService @Inject() (
 
   def createInvitation(
     arn: Arn,
-    createInvitationInputData: CreateInvitationInputData,
+    createInvitationInputData: CreateInvitationRequest,
     originHeader: Option[String]
   )(implicit hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Invitation]] = {
     val invitationT = for {
@@ -63,8 +67,51 @@ class InvitationService @Inject() (
     invitationT.value
   }
 
-  def findInvitation(arn: String, invitationId: String): Future[Option[Invitation]] =
-    invitationsRepository.findOneById(arn, invitationId)
+  def validateRequest(serviceStr: String, clientIdStr: String): Either[InvitationFailureResponse, ValidRequest] = for {
+    service <- Try(Service.forId(serviceStr))
+                 .fold(_ => Left(UnsupportedService), Right(_))
+    clientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id))
+                  .fold(_ => Left(InvalidClientId), Right(_))
+  } yield ValidRequest(clientId, service)
+
+  def findLatestActiveInvitations(
+    arn: Arn,
+    suppliedClientId: ClientId,
+    service: Service
+  ): Future[Either[InvitationFailureResponse, Invitation]] =
+    invitationsRepository
+      .findByArnClientIdService(arn, suppliedClientId, service)
+      .map(
+        _.filter(i => i.status == Accepted || i.status == PartialAuth)
+          .sortBy(_.created)
+          .headOption
+          .fold[Either[InvitationFailureResponse, Invitation]](Left(InvitationNotFound))(Right(_))
+      )
+
+  // Find Latest Invitation and check status is PartialAuth
+  def findLatestPartialAuthInvitationEvent(
+    arn: Arn,
+    clientId: ClientId,
+    service: Service
+  ): Future[Option[InvitationEvent]] =
+    invitationsEventStoreRepository
+      .findAllForClient(service, clientId)
+      .map(x =>
+        x.filter(_.arn == arn.value)
+          .sortBy(_.created)
+          .headOption
+          .filter(_.status == PartialAuth)
+      )
+
+  def deAuthPartialAuthEventStore(invitationEvent: InvitationEvent, endedBy: String): Future[InvitationEvent] =
+    invitationsEventStoreRepository.create(
+      status = DeAuthorised,
+      created = Instant.now(),
+      arn = invitationEvent.arn,
+      service = invitationEvent.service,
+      clientId = invitationEvent.clientId,
+      deauthorisedBy = Some(endedBy)
+    )
 
   private def makeInvitation(
     arn: Arn,
@@ -81,6 +128,18 @@ class InvitationService @Inject() (
     invitationT.value
   }
 
+  @unused
+  private def changeInvitationStatus(invitation: Invitation, status: InvitationStatus)(implicit
+    ec: ExecutionContext
+  ): Future[Either[InvitationFailureResponse, Invitation]] =
+    if (invitation.status == Pending || invitation.status == PartialAuth) {
+      (for {
+        updatedInvitation <-
+          EitherT
+            .fromOptionF(invitationsRepository.updateStatus(invitation.invitationId, status), InvitationNotFound)
+      } yield updatedInvitation).value
+    } else Future.successful(Left(InvitationNotFound))
+
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
     hc: HeaderCarrier
   ): Future[Either[InvitationFailureResponse, ClientId]] = (service, suppliedClientId.typeId) match {
@@ -91,6 +150,33 @@ class InvitationService @Inject() (
         .map(_.toRight(ClientRegistrationNotFound))
     case _ => Future successful Right(suppliedClientId)
   }
+
+  def replaceEnrolmentKeyForItsa(
+    suppliedClientId: ClientId,
+    suppliedEnrolmentKey: EnrolmentKey,
+    service: Service
+  )(implicit
+    hc: HeaderCarrier
+  ): Future[Either[InvitationFailureResponse, EnrolmentKey]] =
+    (service, suppliedClientId.typeId) match {
+      case (MtdIt | MtdItSupp, NinoType.id) =>
+        ifConnector
+          .getMtdIdFor(Nino(suppliedClientId.value))
+          .map(_.map(EnrolmentKey(Service.MtdIt, _)))
+          .map(_.toRight(ClientRegistrationNotFound))
+          .recover { case NonFatal(_) =>
+            Left[InvitationFailureResponse, EnrolmentKey](ClientRegistrationNotFound)
+          }
+      case _ => Future successful Right(suppliedEnrolmentKey)
+    }
+
+  def setRelationshipEnded(invitation: Invitation, endedBy: String)(implicit ec: ExecutionContext): Future[Invitation] =
+    for {
+      updatedInvitation <- invitationsRepository.setRelationshipEnded(invitation, endedBy)
+    } yield {
+      logger info s"""Invitation with id: "${invitation.invitationId}" has been flagged as isRelationshipEnded = true"""
+      updatedInvitation
+    }
 
   private def create(
     arn: Arn,
@@ -103,6 +189,7 @@ class InvitationService @Inject() (
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
       invitation <- invitationsRepository.create(arn.value, service, clientId, suppliedClientId, clientName, expiryDate)
+      // TODO WG - remove that code
       _ <- analyticsService.reportSingleEventAnalyticsRequest(invitation, originHeader).fallbackTo(successful(Done))
     } yield {
       logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
@@ -114,6 +201,8 @@ class InvitationService @Inject() (
   }
 
   private def currentTime() = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+  @unused
+  private def InstantUtc() = Instant.now().atZone(ZoneOffset.UTC)
 
   private val invitationExpiryDuration = appConfig.invitationExpiringDuration
 

@@ -28,7 +28,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository._
-import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsServiceWithAca
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.mongo.test.MongoSupport
@@ -73,7 +73,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
 
   private lazy val recoveryRepo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
-  private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
+  private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsServiceWithAca]
 
   override implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
