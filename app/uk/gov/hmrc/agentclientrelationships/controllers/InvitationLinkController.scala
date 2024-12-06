@@ -26,6 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvita
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -68,6 +69,8 @@ class InvitationLinkController @Inject() (
         .map(createLinkResponse => Ok(Json.toJson(createLinkResponse)))
     }
   }
+  // TODO: this is a duplicate of what's used in the ClientDetailsController - we really want centralised config
+  private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
     Action.async(parse.json[ValidateInvitationRequest]) { implicit request =>
@@ -76,10 +79,10 @@ class InvitationLinkController @Inject() (
         val targetEnrolments = enrolments.view.filterKeys(key => targetServices.contains(key.enrolmentKey)).toMap
         agentReferenceService.validateInvitationRequest(request.body.uid).flatMap {
           case Right(validateLinkModel) =>
-            val services = targetEnrolments.keys.map(_.id).toSeq
-            val servicesToSearch = if (services.contains("HMRC-MTD-IT")) {
-              services :+ "HMRC-MTD-IT-SUPP"
-            } else services
+            val mainServices = targetEnrolments.keys.map(_.id).toSeq
+            val suppServices =
+              mainServices.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
+            val servicesToSearch = mainServices ++ suppServices
             val clientIds = targetEnrolments.values.map(_.value).toSeq
             invitationsRepository.findAllForAgent(validateLinkModel.arn.value, servicesToSearch, clientIds).map {
               case Seq(invitation) =>
