@@ -23,7 +23,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{DeAuthorised, Invitation, InvitationStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
@@ -92,6 +92,13 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFuture()
 
+  def findByArnClientIdService(arn: Arn, suppliedClientId: ClientId, service: Service): Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(equal("arn", arn.value), equal("suppliedClientId", suppliedClientId.value), equal("service", service.id))
+      )
+      .toFuture()
+
   def updateStatus(invitationId: String, status: InvitationStatus): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
@@ -116,4 +123,40 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
       .toFutureOption()
+
+  // TODO WG - Confirm if that is still correct ?!? Should we update status to Deauth
+  def setRelationshipEnded(invitation: Invitation, endedBy: String): Future[Invitation] =
+    for {
+      invitationOpt <- collection.find(equal("invitationId", invitation.invitationId)).headOption()
+      modifiedOpt = invitationOpt.map { i =>
+                      i.copy(
+                        relationshipEndedBy = Some(endedBy)
+                      )
+                    }
+      updated <- modifiedOpt match {
+                   case Some(modified) =>
+                     collection
+                       .replaceOne(equal("invitationId", invitation.invitationId), modified)
+                       .toFuture()
+                       .flatMap { updateResult =>
+                         if (updateResult.getModifiedCount != 1L)
+                           Future.failed(
+                             new Exception(s"Invitation ${invitation.invitationId} de-authorisation failed")
+                           )
+                         else
+                           collection
+                             .find(equal("invitationId", invitation.invitationId))
+                             .headOption()
+                             .map(
+                               _.getOrElse(
+                                 throw new Exception(
+                                   s"Error de-authorising: invitation ${invitation.invitationId} not found"
+                                 )
+                               )
+                             )
+                       }
+                   case None => throw new Exception(s"Invitation ${invitation.invitationId} not found")
+                 }
+    } yield updated
+
 }

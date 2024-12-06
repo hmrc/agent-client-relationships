@@ -60,8 +60,8 @@ class InvitationsEventStoreRepositoryISpec extends AnyWordSpec with Matchers wit
           Accepted,
           Instant.parse("2020-01-01T00:00:00.000Z"),
           "XARN1234567",
-          Vat,
-          Vrn("123456789"),
+          Vat.id,
+          Vrn("123456789").value,
           None
         )
       )

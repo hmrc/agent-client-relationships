@@ -21,8 +21,8 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationInputData, CreateInvitationResponse}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError, InvalidClientId, UnsupportedClientIdType, UnsupportedService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -45,54 +45,55 @@ class InvitationController @Inject() (
 
   def createInvitation(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body
-      .validate[CreateInvitationInputData]
+      .validate[CreateInvitationRequest]
       .fold(
         errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-        createInvitationInputData => {
+        createInvitationRequest => {
           val originHeader: Option[String] = request.headers.get("Origin")
-          invitationService.createInvitation(arn, createInvitationInputData, originHeader).map { response =>
+          invitationService.createInvitation(arn, createInvitationRequest, originHeader).map { response =>
             response.fold(
               {
                 case UnsupportedService =>
-                  val msg = s"""Unsupported service "${createInvitationInputData.inputService}""""
+                  val msg = s"""Unsupported service "${createInvitationRequest.service}""""
                   Logger(getClass).warn(msg)
                   UnsupportedService.getResult(msg)
 
                 case InvalidClientId =>
                   val msg =
-                    s"""Invalid clientId "${createInvitationInputData.inputSuppliedClientId}", for service type "${createInvitationInputData.inputService}""""
+                    s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
                   Logger(getClass).warn(msg)
                   InvalidClientId.getResult(msg)
 
                 case UnsupportedClientIdType =>
                   val msg =
-                    s"""Unsupported clientIdType "${createInvitationInputData.inputSuppliedClientIdType}", for service type "${createInvitationInputData.inputService}"""".stripMargin
+                    s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}"""".stripMargin
                   Logger(getClass).warn(msg)
                   UnsupportedClientIdType.getResult(msg)
 
                 case ClientRegistrationNotFound =>
                   val msg = s"""The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found.
-                               | for clientId "${createInvitationInputData.inputSuppliedClientId}",
-                               | for clientIdType "${createInvitationInputData.inputSuppliedClientIdType}",
-                               | for service type "${createInvitationInputData.inputService}"""".stripMargin
+                               | for clientId "${createInvitationRequest.clientId}",
+                               | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
+                               | for service type "${createInvitationRequest.service}"""".stripMargin
                   Logger(getClass).warn(msg)
                   ClientRegistrationNotFound.getResult(msg)
 
                 case DuplicateInvitationError =>
                   val msg = s"""An authorisation request for this service has already been created
                                | and is awaiting the client’s response.
-                               | for clientId "${createInvitationInputData.inputSuppliedClientId}",
-                               | for clientIdType "${createInvitationInputData.inputSuppliedClientIdType}",
-                               | for service type "${createInvitationInputData.inputService}"""".stripMargin
+                               | for clientId "${createInvitationRequest.clientId}",
+                               | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
+                               | for service type "${createInvitationRequest.service}"""".stripMargin
                   Logger(getClass).warn(msg)
                   DuplicateInvitationError.getResult(msg)
+
+                case _ => BadRequest
               },
               invitation => Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
             )
           }
         }
       )
-
   }
 
 }
