@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReference
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, MongoAgentReferenceRepository}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.LocalDate
@@ -177,6 +177,28 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation =
         await(invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now()))
+
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+      val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+      val expectedResponse = ValidateInvitationResponse(
+        pendingInvitation.invitationId,
+        pendingInvitation.service,
+        agentRecord.agencyDetails.agencyName,
+        pendingInvitation.status,
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS)
+      )
+
+      result.status shouldBe 200
+      result.json shouldBe Json.toJson(expectedResponse)
+    }
+
+    "return 200 status and appropriate JSON body when a matching agent and invitation for ITSA supporting agent is found" in {
+      givenAuditConnector()
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAgentRecordFound(arn, agentRecordResponse)
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      val pendingInvitation =
+        await(invitationsRepo.create(arn.value, MtdItSupp, mtdItId, nino, "Erling Haal", LocalDate.now()))
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
