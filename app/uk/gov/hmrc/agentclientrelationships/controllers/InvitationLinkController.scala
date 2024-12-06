@@ -77,8 +77,11 @@ class InvitationLinkController @Inject() (
         agentReferenceService.validateInvitationRequest(request.body.uid).flatMap {
           case Right(validateLinkModel) =>
             val services = targetEnrolments.keys.map(_.id).toSeq
+            val servicesToSearch = if (services.contains("HMRC-MTD-IT")) {
+              services :+ "HMRC-MTD-IT-SUPP"
+            } else services
             val clientIds = targetEnrolments.values.map(_.value).toSeq
-            invitationsRepository.findAllForAgent(validateLinkModel.arn.value, services, clientIds).map {
+            invitationsRepository.findAllForAgent(validateLinkModel.arn.value, servicesToSearch, clientIds).map {
               case Seq(invitation) =>
                 val response = ValidateInvitationResponse(
                   invitation.invitationId,
