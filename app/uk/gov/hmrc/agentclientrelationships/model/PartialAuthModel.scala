@@ -17,20 +17,19 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 
-case class InvitationEvent(
-  status: InvitationStatus,
+case class PartialAuthModel(
   created: Instant,
   arn: String,
   service: String,
-  clientId: String,
-  deauthorisedBy: Option[String]
+  nino: String
 )
 
-object InvitationEvent {
+object PartialAuthModel {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-  implicit val format: Format[InvitationEvent] = Json.format[InvitationEvent]
+  implicit val format: Format[PartialAuthModel] = Json.format[PartialAuthModel]
 }

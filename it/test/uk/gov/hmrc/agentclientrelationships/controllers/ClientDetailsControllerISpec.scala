@@ -22,7 +22,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuth}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{PartialAuthRepository, InvitationsRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
@@ -40,8 +40,8 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
-  val invitationsEventStoreRepo: InvitationsEventStoreRepository =
-    app.injector.instanceOf[InvitationsEventStoreRepository]
+  val invitationsEventStoreRepo: PartialAuthRepository =
+    app.injector.instanceOf[PartialAuthRepository]
   val relationshipsController: RelationshipsController = app.injector.instanceOf[RelationshipsController]
 
   val controller = new ClientDetailsController(

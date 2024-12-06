@@ -30,10 +30,10 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import java.time.Instant
 import scala.concurrent.ExecutionContext
 
-class InvitationsEventStoreRepositoryISpec extends AnyWordSpec with Matchers with MongoApp with GuiceOneAppPerSuite {
+class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp with GuiceOneAppPerSuite {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  val repository: InvitationsEventStoreRepository = new InvitationsEventStoreRepository(mongoComponent)
+  val repository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
 
   val invitationEvent: InvitationEvent = InvitationEvent(
     Accepted,

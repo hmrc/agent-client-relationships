@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.model.{InvitationEvent, InvitationStatus}
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthModel
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.MongoComponent
@@ -30,11 +30,11 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class InvitationsEventStoreRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[InvitationEvent](
+class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[PartialAuthModel](
       mongoComponent = mongoComponent,
-      collectionName = "invitations-event-store",
-      domainFormat = InvitationEvent.format,
+      collectionName = "partial-auth",
+      domainFormat = PartialAuthModel.format,
       indexes = Seq(
         IndexModel(Indexes.ascending("service", "clientId"), IndexOptions().name("clientQueryIndex"))
       ),
@@ -45,23 +45,22 @@ class InvitationsEventStoreRepository @Inject() (mongoComponent: MongoComponent)
   override lazy val requiresTtlIndex: Boolean = false
 
   def create(
-    status: InvitationStatus,
     created: Instant,
     arn: String,
     service: Service,
-    clientId: ClientId,
-    deauthorisedBy: Option[String]
-  ): Future[InvitationEvent] = {
-    val invitationEvent = InvitationEvent(status, created, arn, service.id, clientId.value, deauthorisedBy)
-    collection.insertOne(invitationEvent).toFuture().map(_ => invitationEvent)
+    nino: String
+  ): Future[PartialAuthModel] = {
+    val partialAuth = PartialAuthModel(created, arn, service.id, nino)
+    collection.insertOne(partialAuth).toFuture().map(_ => partialAuth)
   }
 
-  def findAllForClient(service: Service, clientId: ClientId): Future[Seq[InvitationEvent]] =
+  def findAllForClient(service: Service, nino: String, arn: String): Future[Option[PartialAuthModel]] =
     collection
       .find(
         and(
           equal("service", service.id),
-          equal("clientId", clientId.value)
+          equal("nino", nino),
+          equal("arn", arn)
         )
       )
       .toFuture()

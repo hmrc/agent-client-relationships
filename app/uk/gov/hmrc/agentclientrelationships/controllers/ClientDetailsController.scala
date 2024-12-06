@@ -20,9 +20,9 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{PartialAuth, Pending}
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
@@ -38,7 +38,7 @@ class ClientDetailsController @Inject() (
   clientDetailsService: ClientDetailsService,
   relationshipsController: RelationshipsController,
   invitationsRepository: InvitationsRepository,
-  invitationsEventStoreRepository: InvitationsEventStoreRepository,
+  partialAuthRepository: PartialAuthRepository,
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit appConfig: AppConfig, ec: ExecutionContext)
@@ -75,7 +75,7 @@ class ClientDetailsController @Inject() (
                                    else Future(NotFound)
         additionalInvitations <-
           if (service == HMRCMTDIT && !existingRelationshipFound(Seq(existingRelResponseMain, existingRelResponseSupp)))
-            findAltItsaInvitations(clientId, arn)
+            findAltItsaInvitations(clientId, arn.value)
           else Future(None)
       } yield clientDetailsResponse match {
         case Right(details) if expectedResults(Seq(existingRelResponseMain, existingRelResponseSupp)) =>
@@ -97,12 +97,12 @@ class ClientDetailsController @Inject() (
     }
   }
 
-  private def findAltItsaInvitations(clientId: String, arn: Arn): Future[Option[String]] = for {
-    main <- invitationsEventStoreRepository.findAllForClient(Service.apply(HMRCMTDIT), Nino(clientId))
-    existingMain = main.filter(_.arn == arn.value).findLast(_.status == PartialAuth)
+  private def findAltItsaInvitations(nino: String, arn: String): Future[Option[String]] = for {
+    main <- partialAuthRepository.findAllForClient(Service.apply(HMRCMTDIT), nino)
+    existingMain = main.find(_.arn == arn)
     supp <- if (existingMain.isDefined) Future(Seq())
-            else invitationsEventStoreRepository.findAllForClient(Service.apply(HMRCMTDITSUPP), Nino(clientId))
-    existingSupp = supp.filter(_.arn == arn.value).findLast(_.status == PartialAuth)
+            else partialAuthRepository.findAllForClient(Service.apply(HMRCMTDITSUPP), nino)
+    existingSupp = supp.find(_.arn == arn)
   } yield (existingMain, existingSupp) match {
     case (Some(_), _) => Some(HMRCMTDIT)
     case (_, Some(_)) => Some(HMRCMTDITSUPP)
