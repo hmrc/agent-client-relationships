@@ -53,7 +53,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
     collection.insertOne(partialAuth).toFuture().map(_ => partialAuth)
   }
 
-  def findAllForClient(serviceId: String, nino: String, arn: String): Future[Seq[PartialAuthModel]] =
+  def find(serviceId: String, nino: String, arn: String): Future[Option[PartialAuthModel]] =
     collection
       .find(
         and(
@@ -62,5 +62,5 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
           equal("arn", arn)
         )
       )
-      .toFuture()
+      .headOption()
 }

@@ -63,34 +63,31 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }
 
-    "retrieve all existing partial auths for a matching service, nino and arn" in {
-      val relatedEvent = partialAuth.copy(created = Instant.parse("2024-01-01T00:00:00.000Z"))
-      val unrelatedEvent = partialAuth.copy(service = "HMRC-MTD-IT", nino = "XAIT0000111122")
-      val listOfPartialAuths = Seq(partialAuth, relatedEvent, unrelatedEvent)
+    "retrieve partial auth which matches service, nino and arn" in {
+      val nonMatchingEvent1 = partialAuth.copy(arn = "ARN1234567")
+      val nonMatchingEvent2 = partialAuth.copy(service = "HMRC-MTD-IT", nino = "XAIT0000111122")
+      val listOfPartialAuths = Seq(partialAuth, nonMatchingEvent1, nonMatchingEvent2)
       await(repository.collection.insertMany(listOfPartialAuths).toFuture())
 
-      await(repository.findAllForClient("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Seq(
-        partialAuth,
-        relatedEvent
-      )
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Some(partialAuth)
     }
 
     "fail to retrieve partial auths when no partial auths match the given service" in {
       val unrelatedEvent = partialAuth.copy(service = "HMRC-MTD-IT")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findAllForClient("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Seq()
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given nino" in {
       val unrelatedEvent = partialAuth.copy(nino = "234567890")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findAllForClient("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Seq()
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given arn" in {
       val unrelatedEvent = partialAuth.copy(arn = "XARN7654321")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findAllForClient("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Seq()
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
   }
 }
