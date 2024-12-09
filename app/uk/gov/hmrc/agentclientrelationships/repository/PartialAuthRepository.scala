@@ -20,7 +20,6 @@ import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthModel
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -54,7 +53,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
     collection.insertOne(partialAuth).toFuture().map(_ => partialAuth)
   }
 
-  def findAllForClient(service: Service, nino: String, arn: String): Future[Option[PartialAuthModel]] =
+  def findAllForClient(service: Service, nino: String, arn: String): Future[Seq[PartialAuthModel]] =
     collection
       .find(
         and(

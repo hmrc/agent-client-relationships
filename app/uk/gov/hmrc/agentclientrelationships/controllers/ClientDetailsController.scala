@@ -25,9 +25,8 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -98,10 +97,10 @@ class ClientDetailsController @Inject() (
   }
 
   private def findAltItsaInvitations(nino: String, arn: String): Future[Option[String]] = for {
-    main <- partialAuthRepository.findAllForClient(Service.apply(HMRCMTDIT), nino)
+    main <- partialAuthRepository.findAllForClient(Service.apply(HMRCMTDIT), nino, arn)
     existingMain = main.find(_.arn == arn)
     supp <- if (existingMain.isDefined) Future(Seq())
-            else partialAuthRepository.findAllForClient(Service.apply(HMRCMTDITSUPP), nino)
+            else partialAuthRepository.findAllForClient(Service.apply(HMRCMTDITSUPP), nino, arn)
     existingSupp = supp.find(_.arn == arn)
   } yield (existingMain, existingSupp) match {
     case (Some(_), _) => Some(HMRCMTDIT)

@@ -17,9 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
-
 import java.time.Instant
 
 case class PartialAuthModel(
