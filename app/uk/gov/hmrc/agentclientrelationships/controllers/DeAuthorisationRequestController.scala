@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConne
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, InvitationNotFound, RelationshipDeleteFailed, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{DeleteInvitationRequest, InvitationFailureResponse, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService, RelationshipsCommon}
+import uk.gov.hmrc.agentclientrelationships.services.{DeAuthorisationService, DeleteRelationshipsServiceWithAcr, RelationshipsCommon}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -38,7 +38,7 @@ import scala.util.control.NonFatal
 
 @Singleton
 class DeAuthorisationRequestController @Inject() (
-  invitationService: InvitationService,
+  deauthorisationService: DeAuthorisationService,
   pirRelationshipConnector: PirRelationshipConnector,
   deleteService: DeleteRelationshipsServiceWithAcr,
   val esConnector: EnrolmentStoreProxyConnector,
@@ -61,7 +61,7 @@ class DeAuthorisationRequestController @Inject() (
           val responseT = for {
 
             validRequest <-
-              EitherT.fromEither[Future](invitationService.validateRequest(delInvReq.service, delInvReq.clientId))
+              EitherT.fromEither[Future](deauthorisationService.validateRequest(delInvReq.service, delInvReq.clientId))
 
             result <- EitherT(deAuthInvitation(arn, validRequest))
           } yield result
@@ -96,12 +96,12 @@ class DeAuthorisationRequestController @Inject() (
           }
 
       case Service.MtdIt | Service.MtdItSupp =>
-        invitationService
+        deauthorisationService
           .findLatestPartialAuthInvitationEvent(arn, validRequest.suppliedClientId, validRequest.service)
           .flatMap {
             case Some(altItsaPartialAuthInvitation) =>
-              invitationService
-                .deAuthPartialAuthEventStore(altItsaPartialAuthInvitation, "Agent")
+              deauthorisationService
+                .deletePartialAuthFromEventStore(altItsaPartialAuthInvitation, "Agent")
                 .map(_ => Right[InvitationFailureResponse, Result](NoContent))
 
             case None => getEnrolmentAndDeleteRelationship(arn, validRequest)
@@ -152,7 +152,7 @@ class DeAuthorisationRequestController @Inject() (
 
       enrolmentKey <-
         EitherT(
-          invitationService
+          deauthorisationService
             .replaceEnrolmentKeyForItsa(validRequest.suppliedClientId, suppliedEnrolmentKey, validRequest.service)
         )
 

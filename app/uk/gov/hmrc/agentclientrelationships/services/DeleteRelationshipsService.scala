@@ -48,7 +48,7 @@ private[services] abstract class DeleteRelationshipsService(
   agentUserService: AgentUserService,
   val auditService: AuditService,
   val metrics: Metrics,
-  sharedInvitationService: SharedInvitationService
+  sharedInvitationService: SharedDeAuthorisationService
 )(implicit val appConfig: AppConfig, ec: ExecutionContext)
     extends Monitoring
     with Logging {
@@ -413,7 +413,7 @@ class DeleteRelationshipsServiceWithAca @Inject() (
   agentUserService: AgentUserService,
   override val auditService: AuditService,
   override val metrics: Metrics,
-  sharedInvitationService: AcaInvitationService
+  sharedInvitationService: AcaDeAuthorisationService
 )(implicit override val appConfig: AppConfig, ec: ExecutionContext)
     extends DeleteRelationshipsService(
       es,
@@ -439,7 +439,7 @@ class DeleteRelationshipsServiceWithAcr @Inject() (
   agentUserService: AgentUserService,
   override val auditService: AuditService,
   override val metrics: Metrics,
-  sharedInvitationService: AcrInvitationService
+  sharedInvitationService: AcrDeAuthorisationService
 )(implicit override val appConfig: AppConfig, ec: ExecutionContext)
     extends DeleteRelationshipsService(
       es,

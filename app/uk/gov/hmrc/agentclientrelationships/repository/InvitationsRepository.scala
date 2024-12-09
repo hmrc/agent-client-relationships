@@ -21,7 +21,7 @@ import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{DeAuthorised, Invitation, InvitationStatus}
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, Invitation, InvitationStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -111,10 +111,20 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFutureOption()
 
-  def deauthorise(invitationId: String, relationshipEndedBy: String): Future[Option[Invitation]] =
+  def deauthorise(
+    arn: String,
+    suppliedClientId: String,
+    service: String,
+    relationshipEndedBy: String
+  ): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
-        equal("invitationId", invitationId),
+        and(
+          equal("arn", arn),
+          equal("service", service),
+          equal("suppliedClientId", suppliedClientId),
+          equal("status", Codecs.toBson[InvitationStatus](Accepted))
+        ),
         combine(
           set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
           set("relationshipEndedBy", relationshipEndedBy),
@@ -123,40 +133,5 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
       .toFutureOption()
-
-  // TODO WG - Confirm if that is still correct ?!? Should we update status to Deauth
-  def setRelationshipEnded(invitation: Invitation, endedBy: String): Future[Invitation] =
-    for {
-      invitationOpt <- collection.find(equal("invitationId", invitation.invitationId)).headOption()
-      modifiedOpt = invitationOpt.map { i =>
-                      i.copy(
-                        relationshipEndedBy = Some(endedBy)
-                      )
-                    }
-      updated <- modifiedOpt match {
-                   case Some(modified) =>
-                     collection
-                       .replaceOne(equal("invitationId", invitation.invitationId), modified)
-                       .toFuture()
-                       .flatMap { updateResult =>
-                         if (updateResult.getModifiedCount != 1L)
-                           Future.failed(
-                             new Exception(s"Invitation ${invitation.invitationId} de-authorisation failed")
-                           )
-                         else
-                           collection
-                             .find(equal("invitationId", invitation.invitationId))
-                             .headOption()
-                             .map(
-                               _.getOrElse(
-                                 throw new Exception(
-                                   s"Error de-authorising: invitation ${invitation.invitationId} not found"
-                                 )
-                               )
-                             )
-                       }
-                   case None => throw new Exception(s"Invitation ${invitation.invitationId} not found")
-                 }
-    } yield updated
 
 }

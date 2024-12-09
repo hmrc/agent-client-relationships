@@ -522,7 +522,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
     val ifConnector: IFConnector = mock[IFConnector]
     val aca: AgentClientAuthorisationConnector = mock[AgentClientAuthorisationConnector]
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
-    val acaInvitationService: AcaInvitationService = new AcaInvitationService(aca)
+    val acaInvitationService: AcaDeAuthorisationService = new AcaDeAuthorisationService(aca)
 
     val repo = new FakeDeleteRecordRepository
     val lockService = new FakeLockService

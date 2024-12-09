@@ -19,11 +19,11 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.model.{InvitationEvent, InvitationStatus}
+import uk.gov.hmrc.agentclientrelationships.model.{InvitationEvent, InvitationStatus, PartialAuth}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -55,6 +55,19 @@ class InvitationsEventStoreRepository @Inject() (mongoComponent: MongoComponent)
     val invitationEvent = InvitationEvent(status, created, arn, service, clientId, deauthorisedBy)
     collection.insertOne(invitationEvent).toFuture().map(_ => invitationEvent)
   }
+
+  def deletePartialAuth(arn: String, service: String, clientId: String): Future[Boolean] =
+    collection
+      .deleteOne(
+        and(
+          equal("arn", arn),
+          equal("service", service),
+          equal("clientId", clientId),
+          equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
+        )
+      )
+      .toFuture()
+      .map(_.wasAcknowledged())
 
   def findAllForClient(service: Service, clientId: ClientId): Future[Seq[InvitationEvent]] =
     collection

@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.DeleteInvitationReq
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.{DeAuthorised, InvitationEvent, PartialAuth}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsEventStoreRepository, InvitationsRepository, SyncStatus}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
+import uk.gov.hmrc.agentclientrelationships.services.{DeAuthorisationService, DeleteRelationshipsServiceWithAcr}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
@@ -43,7 +43,7 @@ class DeAuthorisationRequestControllerISpec
     with AfiRelationshipStub
     with TestData {
 
-  val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
+  val deAuthorisationService: DeAuthorisationService = app.injector.instanceOf[DeAuthorisationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -55,7 +55,7 @@ class DeAuthorisationRequestControllerISpec
 
   val controller =
     new DeAuthorisationRequestController(
-      invitationService,
+      deAuthorisationService,
       pirRelationshipConnector,
       deleteRelationshipService,
       es,
@@ -268,9 +268,7 @@ class DeAuthorisationRequestControllerISpec
           .findAllForClient(MtdIt, ClientIdentifier(nino.value, MtdIt.supportedSuppliedClientIdType.id))
           .futureValue
 
-        invitations.size shouldBe 2
-        invitations.exists(_.status == PartialAuth) shouldBe true
-        invitations.exists(x => x.status == DeAuthorised && x.deauthorisedBy.contains("Agent")) shouldBe true
+        invitations.size shouldBe 0
       }
 
       "return Error and do not create DeAuthorised when PartialAuthdo not exists in InvitationEvent Repo" in new StubsForThisScenario {

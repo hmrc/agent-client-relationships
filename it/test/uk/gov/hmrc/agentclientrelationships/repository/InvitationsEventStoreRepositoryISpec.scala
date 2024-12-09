@@ -22,7 +22,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, InvitationEvent}
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, InvitationEvent, PartialAuth}
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
@@ -87,6 +87,35 @@ class InvitationsEventStoreRepositoryISpec extends AnyWordSpec with Matchers wit
       val unrelatedEvent = invitationEvent.copy(clientId = "234567890")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
       await(repository.findAllForClient(Vat, Vrn("123456789"))) shouldBe Seq()
+    }
+
+    "delete PartialAuth invitation success" in {
+      await(
+        repository.create(
+          PartialAuth,
+          Instant.parse("2020-01-01T00:00:00.000Z"),
+          "XARN1234567",
+          Vat.id,
+          Vrn("123456789").value,
+          None
+        )
+      )
+      await(repository.collection.countDocuments().toFuture()) shouldBe 1
+
+      await(repository.deletePartialAuth("XARN1234567", Vat.id, Vrn("123456789").value))
+
+      await(repository.collection.countDocuments().toFuture()) shouldBe 0
+
+    }
+
+    "delete PartialAuth invitation return success even when initation do not exists" in {
+
+      await(repository.collection.countDocuments().toFuture()) shouldBe 0
+
+      await(repository.deletePartialAuth("XARN1234567", Vat.id, Vrn("123456789").value))
+
+      await(repository.collection.countDocuments().toFuture()) shouldBe 0
+
     }
   }
 }

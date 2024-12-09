@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-abstract class SharedInvitationService {
+abstract class SharedDeAuthorisationService {
   def setRelationshipEndedShared(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -33,9 +33,8 @@ abstract class SharedInvitationService {
 }
 
 @Singleton
-class AcaInvitationService @Inject() (
-  aca: AgentClientAuthorisationConnector
-) extends SharedInvitationService {
+class AcaDeAuthorisationService @Inject() (aca: AgentClientAuthorisationConnector)
+    extends SharedDeAuthorisationService {
   override def setRelationshipEndedShared(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -44,28 +43,25 @@ class AcaInvitationService @Inject() (
 }
 
 @Singleton
-class AcrInvitationService @Inject() (
-  invitationService: InvitationService
-) extends SharedInvitationService {
+class AcrDeAuthorisationService @Inject() (deAuthorisationService: DeAuthorisationService)
+    extends SharedDeAuthorisationService {
   override def setRelationshipEndedShared(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[Boolean] = {
-    val resultT = for {
+  ): Future[Boolean] =
+    (for {
       validRequest <- EitherT.fromEither[Future](
-                        invitationService
+                        deAuthorisationService
                           .validateRequest(enrolmentKey.service, enrolmentKey.oneIdentifier().value)
                       )
-      invitation <-
-        EitherT(invitationService.findLatestActiveInvitations(arn, validRequest.suppliedClientId, validRequest.service))
 
-      updatedInvitation <- EitherT.liftF[Future, InvitationFailureResponse, Invitation](
-                             invitationService
-                               .setRelationshipEnded(invitation, endedBy)
-                           )
+      updatedInvitation <-
+        EitherT.liftF[Future, InvitationFailureResponse, Option[Invitation]](
+          deAuthorisationService
+            .setRelationshipEnded(arn.value, validRequest.suppliedClientId.value, validRequest.service.id, endedBy)
+        )
 
-    } yield updatedInvitation
-    resultT.value.map(_.fold(_ => false, _ => true))
+    } yield updatedInvitation).value
+      .map(_.fold(_ => false, _ => true))
 
-  }
 }
