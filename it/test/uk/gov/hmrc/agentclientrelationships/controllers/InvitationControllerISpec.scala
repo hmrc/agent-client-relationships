@@ -62,35 +62,35 @@ class InvitationControllerISpec
   def invitationEventsRepo: InvitationsEventStoreRepository = new InvitationsEventStoreRepository(mongoComponent)
 
   val clientName = "DummyClientName"
-  val baseInvitationInputData: CreateInvitationInputData =
-    CreateInvitationInputData(nino.value, NinoType.id, clientName, MtdIt.id)
+  val baseInvitationInputData: CreateInvitationRequest =
+    CreateInvitationRequest(nino.value, NinoType.id, clientName, MtdIt.id)
 
-  def allServices: Map[String, CreateInvitationInputData] = Map(
+  def allServices: Map[String, CreateInvitationRequest] = Map(
     HMRCMTDIT -> baseInvitationInputData,
-    HMRCPIR   -> baseInvitationInputData.copy(inputService = HMRCPIR),
+    HMRCPIR   -> baseInvitationInputData.copy(service = HMRCPIR),
     HMRCMTDVAT -> baseInvitationInputData
-      .copy(inputService = HMRCMTDVAT, inputSuppliedClientId = vrn.value, inputSuppliedClientIdType = VrnType.id),
+      .copy(service = HMRCMTDVAT, clientId = vrn.value, suppliedClientIdType = VrnType.id),
     HMRCTERSORG -> baseInvitationInputData
-      .copy(inputService = HMRCTERSORG, inputSuppliedClientId = utr.value, inputSuppliedClientIdType = UtrType.id),
+      .copy(service = HMRCTERSORG, clientId = utr.value, suppliedClientIdType = UtrType.id),
     HMRCTERSNTORG -> baseInvitationInputData
-      .copy(inputService = HMRCTERSNTORG, inputSuppliedClientId = urn.value, inputSuppliedClientIdType = UrnType.id),
+      .copy(service = HMRCTERSNTORG, clientId = urn.value, suppliedClientIdType = UrnType.id),
     HMRCCGTPD -> baseInvitationInputData
-      .copy(inputService = HMRCCGTPD, inputSuppliedClientId = cgtRef.value, inputSuppliedClientIdType = CgtRefType.id),
+      .copy(service = HMRCCGTPD, clientId = cgtRef.value, suppliedClientIdType = CgtRefType.id),
     HMRCPPTORG -> baseInvitationInputData
-      .copy(inputService = HMRCPPTORG, inputSuppliedClientId = pptRef.value, inputSuppliedClientIdType = PptRefType.id),
+      .copy(service = HMRCPPTORG, clientId = pptRef.value, suppliedClientIdType = PptRefType.id),
     HMRCCBCORG -> baseInvitationInputData
-      .copy(inputService = HMRCCBCORG, inputSuppliedClientId = cbcId.value, inputSuppliedClientIdType = CbcIdType.id),
+      .copy(service = HMRCCBCORG, clientId = cbcId.value, suppliedClientIdType = CbcIdType.id),
     HMRCCBCNONUKORG -> baseInvitationInputData.copy(
-      inputService = HMRCCBCNONUKORG,
-      inputSuppliedClientId = cbcId.value,
-      inputSuppliedClientIdType = CbcIdType.id
+      service = HMRCCBCNONUKORG,
+      clientId = cbcId.value,
+      suppliedClientIdType = CbcIdType.id
     ),
     HMRCPILLAR2ORG -> baseInvitationInputData.copy(
-      inputService = HMRCPILLAR2ORG,
-      inputSuppliedClientId = plrId.value,
-      inputSuppliedClientIdType = PlrIdType.id
+      service = HMRCPILLAR2ORG,
+      clientId = plrId.value,
+      suppliedClientIdType = PlrIdType.id
     ),
-    HMRCMTDITSUPP -> baseInvitationInputData.copy(inputService = HMRCMTDITSUPP)
+    HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
   )
 
   "create invitation link" should {
@@ -98,13 +98,13 @@ class InvitationControllerISpec
     // TODO WG - test expiry date of Invitation
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
-        val inputData: CreateInvitationInputData = allServices(taxService)
+        val inputData: CreateInvitationRequest = allServices(taxService)
 
         val clientId =
-          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.inputSuppliedClientId
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.clientId
         val clientIdType =
           if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) MtdItIdType.id
-          else inputData.inputSuppliedClientIdType
+          else inputData.suppliedClientIdType
 
         givenAuditConnector()
 
@@ -136,11 +136,11 @@ class InvitationControllerISpec
         )
 
         invitation.status shouldBe Pending
-        invitation.suppliedClientId shouldBe inputData.inputSuppliedClientId
-        invitation.suppliedClientIdType shouldBe inputData.inputSuppliedClientIdType
+        invitation.suppliedClientId shouldBe inputData.clientId
+        invitation.suppliedClientIdType shouldBe inputData.suppliedClientIdType
         invitation.clientId shouldBe clientId
         invitation.clientIdType shouldBe clientIdType
-        invitation.service shouldBe inputData.inputService
+        invitation.service shouldBe inputData.service
         invitation.clientName shouldBe clientName
 
       }
