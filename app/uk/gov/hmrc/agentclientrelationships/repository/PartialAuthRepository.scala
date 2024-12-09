@@ -35,7 +35,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       collectionName = "partial-auth",
       domainFormat = PartialAuthModel.format,
       indexes = Seq(
-        IndexModel(Indexes.ascending("service", "clientId"), IndexOptions().name("clientQueryIndex"))
+        IndexModel(Indexes.ascending("service", "nino", "arn"), IndexOptions().name("clientQueryIndex").unique(true))
       ),
       replaceIndexes = true
     )
