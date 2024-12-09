@@ -28,8 +28,8 @@ import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRep
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItIdType, NinoType, VrnType}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service._
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import scala.concurrent.ExecutionContext
@@ -61,111 +61,90 @@ class InvitationControllerISpec
   def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
   def invitationEventsRepo: InvitationsEventStoreRepository = new InvitationsEventStoreRepository(mongoComponent)
 
+  val clientName = "DummyClientName"
+  val baseInvitationInputData: CreateInvitationInputData =
+    CreateInvitationInputData(nino.value, NinoType.id, clientName, MtdIt.id)
+
+  def allServices: Map[String, CreateInvitationInputData] = Map(
+    HMRCMTDIT -> baseInvitationInputData,
+    HMRCPIR   -> baseInvitationInputData.copy(inputService = HMRCPIR),
+    HMRCMTDVAT -> baseInvitationInputData
+      .copy(inputService = HMRCMTDVAT, inputSuppliedClientId = vrn.value, inputSuppliedClientIdType = VrnType.id),
+    HMRCTERSORG -> baseInvitationInputData
+      .copy(inputService = HMRCTERSORG, inputSuppliedClientId = utr.value, inputSuppliedClientIdType = UtrType.id),
+    HMRCTERSNTORG -> baseInvitationInputData
+      .copy(inputService = HMRCTERSNTORG, inputSuppliedClientId = urn.value, inputSuppliedClientIdType = UrnType.id),
+    HMRCCGTPD -> baseInvitationInputData
+      .copy(inputService = HMRCCGTPD, inputSuppliedClientId = cgtRef.value, inputSuppliedClientIdType = CgtRefType.id),
+    HMRCPPTORG -> baseInvitationInputData
+      .copy(inputService = HMRCPPTORG, inputSuppliedClientId = pptRef.value, inputSuppliedClientIdType = PptRefType.id),
+    HMRCCBCORG -> baseInvitationInputData
+      .copy(inputService = HMRCCBCORG, inputSuppliedClientId = cbcId.value, inputSuppliedClientIdType = CbcIdType.id),
+    HMRCCBCNONUKORG -> baseInvitationInputData.copy(
+      inputService = HMRCCBCNONUKORG,
+      inputSuppliedClientId = cbcId.value,
+      inputSuppliedClientIdType = CbcIdType.id
+    ),
+    HMRCPILLAR2ORG -> baseInvitationInputData.copy(
+      inputService = HMRCPILLAR2ORG,
+      inputSuppliedClientId = plrId.value,
+      inputSuppliedClientIdType = PlrIdType.id
+    ),
+    HMRCMTDITSUPP -> baseInvitationInputData.copy(inputService = HMRCMTDITSUPP)
+  )
+
   "create invitation link" should {
 
-    // TODO WG - create test scenario for all Services
     // TODO WG - test expiry date of Invitation
-    "return 201 status and valid JSON when invitation is created for Itsa " in {
-      val suppliedClientId = nino.value
-      val suppliedClientIdType = NinoType.id
-      val clientId = mtdItId.value
-      val clientIdType = MtdItIdType.id
-      val service = MtdIt.id
-      val clientName = "DummyClientName"
+    allServices.keySet.foreach(taxService =>
+      s"return 201 status and valid JSON when invitation is created for $taxService" in {
+        val inputData: CreateInvitationInputData = allServices(taxService)
 
-      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
-        clientId = suppliedClientId,
-        suppliedClientIdType = suppliedClientIdType,
-        clientName = clientName,
-        service = service
-      )
+        val clientId =
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.inputSuppliedClientId
+        val clientIdType =
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) MtdItIdType.id
+          else inputData.inputSuppliedClientIdType
 
-      givenAuditConnector()
+        givenAuditConnector()
 
-      givenMtdItIdIsKnownFor(nino, mtdItId)
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+        }
 
-      invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue shouldBe empty
+        invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue shouldBe empty
 
-      val result =
-        doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-          Json.toJson(createInvitationInputData).toString()
+        val result =
+          doAgentPostRequest(
+            s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
+            Json.toJson(inputData).toString()
+          )
+        result.status shouldBe 201
+
+        val invitationSeq = invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
+
+        invitationSeq.size shouldBe 1
+
+        val invitation = invitationSeq.head
+
+        result.json shouldBe Json.obj(
+          "invitationId" -> invitation.invitationId
         )
-      result.status shouldBe 201
 
-      val invitationSeq = invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue
+        invitation.status shouldBe Pending
+        invitation.suppliedClientId shouldBe inputData.inputSuppliedClientId
+        invitation.suppliedClientIdType shouldBe inputData.inputSuppliedClientIdType
+        invitation.clientId shouldBe clientId
+        invitation.clientIdType shouldBe clientIdType
+        invitation.service shouldBe inputData.inputService
+        invitation.clientName shouldBe clientName
 
-      invitationSeq.size shouldBe 1
-
-      val invitation = invitationSeq.head
-
-      result.json shouldBe Json.obj(
-        "invitationId" -> invitation.invitationId
-      )
-
-      invitation.status shouldBe Pending
-      invitation.suppliedClientId shouldBe suppliedClientId
-      invitation.suppliedClientIdType shouldBe suppliedClientIdType
-      invitation.clientId shouldBe clientId
-      invitation.clientIdType shouldBe clientIdType
-      invitation.service shouldBe service
-      invitation.clientName shouldBe clientName
-
-    }
-
-    "return 201 status and valid JSON when invitation is created for VAT " in {
-      val suppliedClientId = vrn.value
-      val suppliedClientIdType = VrnType.id
-      val clientId = vrn.value
-      val clientIdType = VrnType.id
-      val service = Vat.id
-      val clientName = "DummyClientName"
-
-      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
-        clientId = suppliedClientId,
-        suppliedClientIdType = suppliedClientIdType,
-        clientName = clientName,
-        service = service
-      )
-
-      givenAuditConnector()
-
-      invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue shouldBe empty
-
-      val result =
-        doAgentPostRequest(
-          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-          Json.toJson(createInvitationInputData).toString()
-        )
-      result.status shouldBe 201
-
-      val invitationSeq = invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue
-
-      invitationSeq.size shouldBe 1
-
-      val invitation = invitationSeq.head
-
-      result.json shouldBe Json.obj(
-        "invitationId" -> invitation.invitationId
-      )
-
-      invitation.status shouldBe Pending
-      invitation.suppliedClientId shouldBe suppliedClientId
-      invitation.suppliedClientIdType shouldBe suppliedClientIdType
-      invitation.clientId shouldBe clientId
-      invitation.clientIdType shouldBe clientIdType
-      invitation.service shouldBe service
-      invitation.clientName shouldBe clientName
-
-    }
+      }
+    )
 
     "return Forbidden 403 status and JSON Error when client registration not found for ItSa" in {
       val suppliedClientId = nino.value
