@@ -79,7 +79,8 @@ class InvitationLinkController @Inject() (
   // TODO: this is a duplicate of what's used in the ClientDetailsController - we really want centralised config
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
-  private def reportExistingRelationship(service: String, arn: Arn, invitation: Invitation)(implicit hc: HeaderCarrier): Option[ExistingRelationship] = {
+  private def reportExistingRelationship(service: String, arn: Arn, invitation: Invitation)(
+    implicit hc: HeaderCarrier): Future[Option[ExistingRelationship]] = {
     if(service == invitation.service) for {
       agent <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
       isAltItsa <- findRelationshipsService.getPartialAuthExistsFor(service, invitation.suppliedClientId, arn.value)
@@ -87,7 +88,7 @@ class InvitationLinkController @Inject() (
       agencyName = agent.agencyDetails.agencyName,
       arn = arn.value,
       isAltItsa = isAltItsa
-  )) else None
+  )) else Future.successful(None)
   }
 
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
