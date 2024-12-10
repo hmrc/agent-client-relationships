@@ -24,8 +24,8 @@ import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, InvitationNotFound, RelationshipDeleteFailed, UnsupportedService}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{DeleteInvitationRequest, InvitationFailureResponse, ValidRequest}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, RelationshipDeleteFailed, RelationshipNotFound, UnsupportedService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
 import uk.gov.hmrc.agentclientrelationships.services.{DeAuthorisationService, DeleteRelationshipsServiceWithAcr, RelationshipsCommon}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -54,7 +54,7 @@ class DeAuthorisationRequestController @Inject() (
 
   def DeauthoriseRelationship(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body
-      .validate[DeleteInvitationRequest]
+      .validate[RemoveAuthorisationRequest]
       .fold(
         errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
         delInvReq => {
@@ -63,7 +63,7 @@ class DeAuthorisationRequestController @Inject() (
             validRequest <-
               EitherT.fromEither[Future](deauthorisationService.validateRequest(delInvReq.service, delInvReq.clientId))
 
-            result <- EitherT(deAuthInvitation(arn, validRequest))
+            result <- EitherT(deAuthRelationship(arn, validRequest))
           } yield result
 
           responseT.value
@@ -77,7 +77,7 @@ class DeAuthorisationRequestController @Inject() (
       )
   }
 
-  private def deAuthInvitation(
+  private def deAuthRelationship(
     arn: Arn,
     validRequest: ValidRequest
   )(implicit
@@ -91,7 +91,7 @@ class DeAuthorisationRequestController @Inject() (
           .deleteRelationship(arn, validRequest.service, validRequest.suppliedClientId.value)
           .map {
             case Some(true)  => Right(NoContent)
-            case Some(false) => Left(InvitationNotFound)
+            case Some(false) => Left(RelationshipNotFound)
             case None        => Left(RelationshipDeleteFailed("Remove PersonalIncomeRecord relationship failed"))
           }
 
@@ -204,8 +204,8 @@ class DeAuthorisationRequestController @Inject() (
         Logger(getClass).warn(s"Could not delete relationship: $msg")
         relationshipDeleteFailed.getResult("")
 
-      case InvitationNotFound =>
-        InvitationNotFound.getResult("")
+      case RelationshipNotFound =>
+        RelationshipNotFound.getResult("")
 
       case _ => BadRequest
     }

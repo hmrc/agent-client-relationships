@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}
 
 import scala.util.Try
 
-case class DeleteInvitationRequest(
+case class RemoveAuthorisationRequest(
   clientId: String,
   service: String
 ) {
@@ -44,7 +44,7 @@ case class DeleteInvitationRequest(
 
 }
 
-object DeleteInvitationRequest {
-  implicit val format: OFormat[DeleteInvitationRequest] = Json.format[DeleteInvitationRequest]
+object RemoveAuthorisationRequest {
+  implicit val format: OFormat[RemoveAuthorisationRequest] = Json.format[RemoveAuthorisationRequest]
 
 }

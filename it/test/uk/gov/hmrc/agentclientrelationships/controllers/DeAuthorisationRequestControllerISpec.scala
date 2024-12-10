@@ -23,7 +23,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.DeleteInvitationRequest
+import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.{DeAuthorised, InvitationEvent, PartialAuth}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsEventStoreRepository, InvitationsRepository, SyncStatus}
@@ -112,7 +112,7 @@ class DeAuthorisationRequestControllerISpec
       "return 204 and sent audit event" in new StubsForThisScenario {
         doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         ).status shouldBe 204
         verifyDeleteRecordNotExists
 
@@ -157,7 +157,7 @@ class DeAuthorisationRequestControllerISpec
         )
         doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         ).status shouldBe 204
         verifyDeleteRecordNotExists
 
@@ -185,7 +185,7 @@ class DeAuthorisationRequestControllerISpec
         )
         doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         ).status shouldBe 204
         verifyDeleteRecordNotExists
       }
@@ -202,7 +202,7 @@ class DeAuthorisationRequestControllerISpec
         )
         doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         ).status shouldBe 204
         verifyDeleteRecordNotExists
       }
@@ -221,7 +221,7 @@ class DeAuthorisationRequestControllerISpec
 
         doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, PersonalIncomeRecord.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
         ).status shouldBe 204
       }
 
@@ -230,7 +230,7 @@ class DeAuthorisationRequestControllerISpec
 
         val result = doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, PersonalIncomeRecord.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
         )
 
         result.status shouldBe 404
@@ -242,7 +242,7 @@ class DeAuthorisationRequestControllerISpec
 
         val result = doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, PersonalIncomeRecord.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
         )
         result.status shouldBe 500
       }
@@ -261,7 +261,7 @@ class DeAuthorisationRequestControllerISpec
 
         doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         ).status shouldBe 204
 
         val invitations: Seq[InvitationEvent] = invitationEventsRepo
@@ -274,7 +274,7 @@ class DeAuthorisationRequestControllerISpec
       "return Error and do not create DeAuthorised when PartialAuthdo not exists in InvitationEvent Repo" in new StubsForThisScenario {
         val result = doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         )
 
         result.status >= 400 && result.status < 600
@@ -292,7 +292,7 @@ class DeAuthorisationRequestControllerISpec
       "return BadRequest 400 status when clientId is not valid for service" in {
         val result = doAgentPostRequest(
           requestPath,
-          Json.toJson(DeleteInvitationRequest("IncorrectNino", MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest("IncorrectNino", MtdIt.id)).toString()
         )
         result.status shouldBe 400
         result.body shouldBe ""
@@ -303,7 +303,7 @@ class DeAuthorisationRequestControllerISpec
         val result =
           doAgentPostRequest(
             requestPath,
-            Json.toJson(DeleteInvitationRequest(nino.value, "IncorrectService")).toString()
+            Json.toJson(RemoveAuthorisationRequest(nino.value, "IncorrectService")).toString()
           )
         result.status shouldBe 501
 
@@ -318,7 +318,7 @@ class DeAuthorisationRequestControllerISpec
         val result =
           doAgentPostRequest(
             requestPath,
-            Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+            Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
           )
         result.status shouldBe 403
 
@@ -335,7 +335,7 @@ class DeAuthorisationRequestControllerISpec
         val result =
           doAgentPostRequest(
             requestPath,
-            Json.toJson(DeleteInvitationRequest(nino.value, MtdIt.id)).toString()
+            Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
           )
         result.status shouldBe 403
 
