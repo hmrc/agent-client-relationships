@@ -22,7 +22,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuth}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
@@ -40,15 +40,15 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
-  val invitationsEventStoreRepo: InvitationsEventStoreRepository =
-    app.injector.instanceOf[InvitationsEventStoreRepository]
+  val partialAuthRepo: PartialAuthRepository =
+    app.injector.instanceOf[PartialAuthRepository]
   val relationshipsController: RelationshipsController = app.injector.instanceOf[RelationshipsController]
 
   val controller = new ClientDetailsController(
     clientDetailsService,
     relationshipsController,
     invitationsRepo,
-    invitationsEventStoreRepo,
+    partialAuthRepo,
     authConnector,
     stubControllerComponents()
   )
@@ -157,14 +157,12 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            invitationsEventStoreRepo
+            partialAuthRepo
               .create(
-                PartialAuth,
                 Instant.parse("2020-01-01T00:00:00.000Z"),
                 "XARN1234567",
-                MtdIt.id,
-                Nino("AA000001B").value,
-                None
+                MtdIt,
+                "AA000001B"
               )
           )
 
@@ -188,8 +186,13 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            invitationsEventStoreRepo
-              .create(PartialAuth, Instant.now(), "XARN1234567", MtdItSupp.id, Nino("AA000001B").value, None)
+            partialAuthRepo
+              .create(
+                Instant.now(),
+                "XARN1234567",
+                MtdItSupp,
+                "AA000001B"
+              )
           )
 
           val result = doAgentGetRequest(request.uri)
