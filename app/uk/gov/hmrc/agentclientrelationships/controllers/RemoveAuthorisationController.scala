@@ -22,7 +22,7 @@ import play.api.libs.json.JsValue
 import play.api.mvc.{Action, ControllerComponents, Request, Result}
 import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, RelationshipDeleteFailed, RelationshipNotFound, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
@@ -39,7 +39,7 @@ import scala.util.control.NonFatal
 @Singleton
 class RemoveAuthorisationController @Inject() (
   deauthorisationService: RemoveAuthorisationService,
-  pirRelationshipConnector: PirRelationshipConnector,
+  agentFiRelationshipConnector: AgentFiRelationshipConnector,
   deleteService: DeleteRelationshipsServiceWithAcr,
   val esConnector: EnrolmentStoreProxyConnector,
   val authConnector: AuthConnector,
@@ -87,12 +87,14 @@ class RemoveAuthorisationController @Inject() (
     validRequest.service match {
 
       case Service.PersonalIncomeRecord =>
-        pirRelationshipConnector
+        agentFiRelationshipConnector
           .deleteRelationship(arn, validRequest.service, validRequest.suppliedClientId.value)
           .map {
-            case Some(true)  => Right(NoContent)
-            case Some(false) => Left(RelationshipNotFound)
-            case None        => Left(RelationshipDeleteFailed("Remove PersonalIncomeRecord relationship failed"))
+            case true  => Right(NoContent)
+            case false => Left(RelationshipNotFound)
+          }
+          .recover { case error: UpstreamErrorResponse =>
+            Left[InvitationFailureResponse, Result](RelationshipDeleteFailed(error.getMessage))
           }
 
       case Service.MtdIt | Service.MtdItSupp =>

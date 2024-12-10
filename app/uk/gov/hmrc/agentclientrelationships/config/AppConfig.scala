@@ -57,6 +57,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val agentPermissionsUrl = servicesConfig.baseUrl("agent-permissions")
 
+  val agentFiRelationshipBaseUrl: String = servicesConfig.baseUrl("agent-fi-relationship")
+
   val desUrl = servicesConfig.baseUrl("des")
   val desEnv = getConfigString("des.environment")
   val desToken = getConfigString("des.authorization-token")
@@ -87,8 +89,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val agentUserClientDetailsUrl = servicesConfig.baseUrl("agent-user-client-details")
 
   val agentAssuranceBaseUrl: String = servicesConfig.baseUrl("agent-assurance")
-
-  val afiBaseUrl: String = baseUrl("agent-fi-relationship")
 
   val inactiveRelationshipShowLastDays = servicesConfig.getInt("inactive-relationships.show-last-days")
 

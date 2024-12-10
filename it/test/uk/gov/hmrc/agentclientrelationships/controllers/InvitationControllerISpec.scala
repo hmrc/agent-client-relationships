@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
@@ -47,8 +47,8 @@ class InvitationControllerISpec
   val es: EnrolmentStoreProxyConnector = app.injector.instanceOf[EnrolmentStoreProxyConnector]
   val deleteRelationshipService: DeleteRelationshipsServiceWithAcr =
     app.injector.instanceOf[DeleteRelationshipsServiceWithAcr]
-  val pirRelationshipConnector: PirRelationshipConnector =
-    app.injector.instanceOf[PirRelationshipConnector]
+  val agentFiRelationshipConnector: AgentFiRelationshipConnector =
+    app.injector.instanceOf[AgentFiRelationshipConnector]
 
   val controller =
     new InvitationController(
