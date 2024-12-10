@@ -21,22 +21,29 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvitationRequest, ValidateInvitationResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ExistingRelationship, ValidateInvitationRequest, ValidateInvitationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.services.{FindRelationshipsService, InvitationLinkService, InvitationService}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, Service}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
 class InvitationLinkController @Inject() (
   agentReferenceService: InvitationLinkService,
-  invitationsRepository: InvitationsRepository,
+  invitationService: InvitationService,
+  findRelationshipsService: FindRelationshipsService,
+  agentAssuranceConnector: AgentAssuranceConnector,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -72,6 +79,17 @@ class InvitationLinkController @Inject() (
   // TODO: this is a duplicate of what's used in the ClientDetailsController - we really want centralised config
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
+  private def reportExistingRelationship(service: String, arn: Arn, invitation: Invitation)(implicit hc: HeaderCarrier): Option[ExistingRelationship] = {
+    if(service == invitation.service) for {
+      agent <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
+      isAltItsa <- findRelationshipsService.getPartialAuthExistsFor(service, invitation.suppliedClientId, arn.value)
+    } yield Some(ExistingRelationship(
+      agencyName = agent.agencyDetails.agencyName,
+      arn = arn.value,
+      isAltItsa = isAltItsa
+  )) else None
+  }
+
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
     Action.async(parse.json[ValidateInvitationRequest]) { implicit request =>
       withAuthorisedAsClient { enrolments =>
@@ -84,14 +102,22 @@ class InvitationLinkController @Inject() (
               mainServices.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
             val servicesToSearch = mainServices ++ suppServices
             val clientIds = targetEnrolments.values.map(_.value).toSeq
-            invitationsRepository.findAllForAgent(validateLinkModel.arn.value, servicesToSearch, clientIds).map {
+            invitationService.findAllForAgent(validateLinkModel.arn.value, servicesToSearch, clientIds).map {
               case Seq(invitation) =>
                 val response = ValidateInvitationResponse(
                   invitation.invitationId,
                   invitation.service,
                   validateLinkModel.name,
                   invitation.status,
-                  invitation.lastUpdated
+                  invitation.lastUpdated,
+                  existingRelationship = findRelationshipsService.getActiveRelationshipsForClient(targetEnrolments).map {
+                    case relationship: Map[Service, Seq[Arn]] =>
+                        relationship.map {
+                            case (service, arns) => reportExistingRelationship(service.id, arns.head, invitation)
+                            case _ => None
+                        }
+                    case _ => None
+                  }
                 )
                 Ok(Json.toJson(response))
               case _ =>

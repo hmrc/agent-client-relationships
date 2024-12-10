@@ -16,20 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Json, OWrites}
-import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
+import play.api.libs.json._
 
-import java.time.Instant
-
-case class ValidateInvitationResponse(
-  invitationId: String,
-  serviceKey: String,
-  agentName: String,
-  status: InvitationStatus,
-  lastModifiedDate: Instant,
-  existingRelationship: Option[ExistingRelationship]
+case class ExistingRelationship(
+  agencyName: String,
+  arn: String,
+  isAltItsa: Boolean
 )
 
-object ValidateInvitationResponse {
-  implicit val writes: OWrites[ValidateInvitationResponse] = Json.writes[ValidateInvitationResponse]
+object ExistingRelationship {
+  implicit val format: Format[ExistingRelationship] = Json.format[ExistingRelationship]
 }

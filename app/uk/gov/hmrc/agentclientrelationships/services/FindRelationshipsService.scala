@@ -23,6 +23,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -35,6 +36,7 @@ class FindRelationshipsService @Inject() (
   des: DesConnector,
   ifConnector: IFConnector,
   appConfig: AppConfig,
+  partialAuthRepository: PartialAuthRepository,
   val metrics: Metrics
 ) extends Monitoring
     with Logging {
@@ -47,6 +49,9 @@ class FindRelationshipsService @Inject() (
       relationships <-
         mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(ifConnector.getActiveClientRelationships(_))
     } yield relationships
+
+  def getPartialAuthExistsFor(service: String, nino: String, arn: String)(implicit ec: ExecutionContext): Future[Boolean] =
+    partialAuthRepository.find(service, nino, arn).map(_.isDefined)
 
   def getActiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier
