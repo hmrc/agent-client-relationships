@@ -21,9 +21,9 @@ import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{DeAuthorised, Invitation, InvitationStatus}
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, Invitation, InvitationStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
@@ -92,6 +92,13 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFuture()
 
+  def findByArnClientIdService(arn: Arn, suppliedClientId: ClientId, service: Service): Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(equal("arn", arn.value), equal("suppliedClientId", suppliedClientId.value), equal("service", service.id))
+      )
+      .toFuture()
+
   def updateStatus(invitationId: String, status: InvitationStatus): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
@@ -104,10 +111,20 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFutureOption()
 
-  def deauthorise(invitationId: String, relationshipEndedBy: String): Future[Option[Invitation]] =
+  def deauthorise(
+    arn: String,
+    suppliedClientId: String,
+    service: String,
+    relationshipEndedBy: String
+  ): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
-        equal("invitationId", invitationId),
+        and(
+          equal("arn", arn),
+          equal("service", service),
+          equal("suppliedClientId", suppliedClientId),
+          equal("status", Codecs.toBson[InvitationStatus](Accepted))
+        ),
         combine(
           set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
           set("relationshipEndedBy", relationshipEndedBy),
@@ -116,4 +133,5 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
       .toFutureOption()
+
 }

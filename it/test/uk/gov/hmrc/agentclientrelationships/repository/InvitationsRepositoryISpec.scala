@@ -146,17 +146,25 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       await(repository.updateStatus("ABC", Accepted)) shouldBe None
     }
 
-    "de-authorise an invitation when a matching invitation is found" in {
-      await(repository.collection.insertOne(pendingInvitation).toFuture())
+    "de-authorise Accepted invitation when a matching arn, service, suppliedClientId is found" in {
+      await(repository.collection.insertOne(pendingInvitation.copy(status = Accepted)).toFuture())
 
-      val updatedInvitation = await(repository.deauthorise(pendingInvitation.invitationId, "This guy")).get
+      val updatedInvitation = await(
+        repository
+          .deauthorise(pendingInvitation.arn, pendingInvitation.suppliedClientId, pendingInvitation.service, "This guy")
+      ).get
       updatedInvitation.status shouldBe DeAuthorised
       updatedInvitation.relationshipEndedBy shouldBe Some("This guy")
       updatedInvitation.lastUpdated.isAfter(pendingInvitation.lastUpdated)
     }
 
-    "fail to de-authorise an invitation when a matching invitation is not found" in {
-      await(repository.deauthorise("ABC", "This guy")) shouldBe None
+    "de-authorise DeAuthorised invitation when a matching arn, service, suppliedClientId is not found" in {
+      await(repository.collection.insertOne(pendingInvitation.copy(status = DeAuthorised)).toFuture())
+
+      await(
+        repository.deauthorise(pendingInvitation.arn, pendingInvitation.clientId, pendingInvitation.service, "This guy")
+      ) shouldBe None
     }
+
   }
 }

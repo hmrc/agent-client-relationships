@@ -21,7 +21,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord}
-import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsServiceWithAca
 
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.UUID
@@ -33,7 +33,7 @@ import scala.util.Random
 @Singleton
 class RecoveryScheduler @Inject() (
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
-  deleteRelationshipsService: DeleteRelationshipsService,
+  deleteRelationshipsService: DeleteRelationshipsServiceWithAca,
   actorSystem: ActorSystem
 )(implicit appConfig: AppConfig, ec: ExecutionContext)
     extends Logging {

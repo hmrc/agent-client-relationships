@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model.invitation
 import play.api.libs.json.Json.toJson
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, Forbidden, NotImplemented}
+import play.api.mvc.Results.{BadRequest, Forbidden, InternalServerError, NotFound, NotImplemented}
 
 sealed trait InvitationFailureResponse {
   def getResult(message: String): Result
@@ -34,7 +34,8 @@ object InvitationFailureResponse {
   }
 
   case object UnsupportedService extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotImplemented(toJson(ErrorBody("UNSUPPORTED_SERVICE", message)))
+    def getResult(message: String): Result =
+      NotImplemented(toJson(ErrorBody("UNSUPPORTED_SERVICE", message)))
   }
 
   case object InvalidClientId extends InvitationFailureResponse {
@@ -66,4 +67,19 @@ object InvitationFailureResponse {
       )
     )
   }
+
+  case object RelationshipNotFound extends InvitationFailureResponse {
+    def getResult(message: String): Result = NotFound(
+      toJson(ErrorBody("INVITATION_NOT_FOUND", "The specified invitation was not found."))
+    )
+  }
+
+  case object EnrolmentKeyNotFound extends InvitationFailureResponse {
+    def getResult(message: String): Result = BadRequest
+  }
+
+  case class RelationshipDeleteFailed(msg: String) extends InvitationFailureResponse {
+    def getResult(message: String): Result = InternalServerError(toJson(msg))
+  }
+
 }

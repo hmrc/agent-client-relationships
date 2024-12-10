@@ -17,40 +17,34 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.{Json, OFormat}
-import InvitationFailureResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}
 
 import scala.util.Try
 
-case class CreateInvitationInputData(
-  inputSuppliedClientId: String,
-  inputSuppliedClientIdType: String,
-  clientName: String,
-  inputService: String
+case class RemoveAuthorisationRequest(
+  clientId: String,
+  service: String
 ) {
-  def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(inputService))
+  def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(service))
     .fold(_ => Left(UnsupportedService), Right(_))
 
   def getSuppliedClientId: Either[InvitationFailureResponse, ClientId] = for {
     service <- getService
     _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.isValid(inputSuppliedClientId),
-           inputSuppliedClientId,
+           service.supportedSuppliedClientIdType.isValid(clientId),
+           clientId,
            InvalidClientId
          )
-    _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.id == inputSuppliedClientIdType,
-           inputSuppliedClientIdType,
-           UnsupportedClientIdType
-         )
     clientId <-
-      Try(ClientIdentifier(inputSuppliedClientId, inputSuppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
+      Try(ClientIdentifier(clientId, service.supportedSuppliedClientIdType.id))
+        .fold(_ => Left(InvalidClientId), Right(_))
   } yield clientId
 
 }
 
-object CreateInvitationInputData {
-  implicit val format: OFormat[CreateInvitationInputData] = Json.format[CreateInvitationInputData]
+object RemoveAuthorisationRequest {
+  implicit val format: OFormat[RemoveAuthorisationRequest] = Json.format[RemoveAuthorisationRequest]
 
 }

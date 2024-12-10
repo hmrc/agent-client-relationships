@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
@@ -32,24 +31,24 @@ import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, Rela
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-@Singleton
-class DeleteRelationshipsService @Inject() (
+private[services] abstract class DeleteRelationshipsService(
   es: EnrolmentStoreProxyConnector,
   ifConnector: IFConnector,
-  aca: AgentClientAuthorisationConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: RecoveryLockService,
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   val auditService: AuditService,
-  val metrics: Metrics
+  val metrics: Metrics,
+  sharedInvitationService: SharedDeAuthorisationService
 )(implicit val appConfig: AppConfig, ec: ExecutionContext)
     extends Monitoring
     with Logging {
@@ -392,8 +391,8 @@ class DeleteRelationshipsService @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Done] =
-    aca
-      .setRelationshipEnded(arn, enrolmentKey, endedBy)
+    sharedInvitationService
+      .setRelationshipEndedShared(arn, enrolmentKey, endedBy)
       .map(success =>
         if (success) Done
         else {
@@ -402,3 +401,55 @@ class DeleteRelationshipsService @Inject() (
         }
       )
 }
+
+@Singleton
+class DeleteRelationshipsServiceWithAca @Inject() (
+  es: EnrolmentStoreProxyConnector,
+  ifConnector: IFConnector,
+  deleteRecordRepository: DeleteRecordRepository,
+  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
+  lockService: RecoveryLockService,
+  checkService: CheckRelationshipsService,
+  agentUserService: AgentUserService,
+  override val auditService: AuditService,
+  override val metrics: Metrics,
+  sharedInvitationService: AcaDeAuthorisationService
+)(implicit override val appConfig: AppConfig, ec: ExecutionContext)
+    extends DeleteRelationshipsService(
+      es,
+      ifConnector,
+      deleteRecordRepository,
+      agentUserClientDetailsConnector,
+      lockService,
+      checkService,
+      agentUserService,
+      auditService,
+      metrics,
+      sharedInvitationService
+    )
+
+@Singleton
+class DeleteRelationshipsServiceWithAcr @Inject() (
+  es: EnrolmentStoreProxyConnector,
+  ifConnector: IFConnector,
+  deleteRecordRepository: DeleteRecordRepository,
+  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
+  lockService: RecoveryLockService,
+  checkService: CheckRelationshipsService,
+  agentUserService: AgentUserService,
+  override val auditService: AuditService,
+  override val metrics: Metrics,
+  sharedInvitationService: AcrDeAuthorisationService
+)(implicit override val appConfig: AppConfig, ec: ExecutionContext)
+    extends DeleteRelationshipsService(
+      es,
+      ifConnector,
+      deleteRecordRepository,
+      agentUserClientDetailsConnector,
+      lockService,
+      checkService,
+      agentUserService,
+      auditService,
+      metrics,
+      sharedInvitationService
+    )
