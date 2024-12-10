@@ -67,6 +67,17 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       )
       .headOption()
 
+  /* this will only find partially authorised ITSA main agents for a given nino string */
+  def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] =
+    collection
+      .find(
+        and(
+          equal("service", HMRCMTDIT),
+          equal("nino", nino)
+        )
+      )
+      .headOption()
+
   def deletePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] =
     collection
       .deleteOne(

@@ -19,30 +19,39 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReferenceRecord, ValidateInvitationResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, MongoAgentReferenceRepository}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReferenceRecord, ExistingMainAgent, ValidateInvitationResponse}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, MongoAgentReferenceRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.auth.core.AuthConnector
 
-import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
 class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec with TestData {
 
   val uid = "TestUID"
+  val existingAgentUid = "ExitingAgentUid"
   val normalizedAgentName = "TestNormalizedAgentName"
+  val normalizedExistingAgentName = "ExistingAgent"
   val agentReferenceRecord: AgentReferenceRecord = AgentReferenceRecord(
     uid = uid,
     arn = arn,
     normalisedAgentNames = Seq(normalizedAgentName, "NormalisedAgentName2")
   )
 
+  val existingAgentReferenceRecord: AgentReferenceRecord = AgentReferenceRecord(
+    uid = existingAgentUid,
+    arn = existingAgentArn,
+    normalisedAgentNames = Seq(normalizedExistingAgentName)
+  )
+
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+  val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   val agentReferenceService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -174,6 +183,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
       givenAgentRecordFound(arn, agentRecordResponse)
+      givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation =
         await(invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now()))
@@ -185,7 +195,117 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
         pendingInvitation.service,
         agentRecord.agencyDetails.agencyName,
         pendingInvitation.status,
-        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS)
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
+        existingMainAgent = None
+      )
+
+      result.status shouldBe 200
+      result.json shouldBe Json.toJson(expectedResponse)
+    }
+
+    "return 200 status and appropriate JSON body when a matching agent and invitation plus existing main agent is found" in {
+      givenAuditConnector()
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAgentRecordFound(arn, agentRecordResponse)
+      givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set(testExistingAgentGroup))
+      givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
+      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
+      val pendingInvitation =
+        await(invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now()))
+
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+      val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+      val expectedResponse = ValidateInvitationResponse(
+        pendingInvitation.invitationId,
+        pendingInvitation.service,
+        agentRecord.agencyDetails.agencyName,
+        pendingInvitation.status,
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
+        existingMainAgent = Some(expectedExistingMainAgent)
+      )
+
+      result.status shouldBe 200
+      result.json shouldBe Json.toJson(expectedResponse)
+    }
+
+    "return 200 status and appropriate JSON body when a matching agent and invitation plus existing same main agent is found" in {
+      givenAuditConnector()
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set(testExistingAgentGroup))
+      givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
+      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      await(agentReferenceRepo.create(existingAgentReferenceRecord))
+      val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = true)
+      val pendingInvitation =
+        await(
+          invitationsRepo.create(existingAgentArn.value, MtdItSupp, mtdItId, nino, "Erling Haal", LocalDate.now())
+        )
+
+      val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+      val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+      val expectedResponse = ValidateInvitationResponse(
+        pendingInvitation.invitationId,
+        pendingInvitation.service,
+        existingAgentRecord.agencyDetails.agencyName,
+        pendingInvitation.status,
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
+        existingMainAgent = Some(expectedExistingMainAgent)
+      )
+
+      result.status shouldBe 200
+      result.json shouldBe Json.toJson(expectedResponse)
+    }
+
+    "return 200 status and correct JSON when a matching agent, invitation and existing main agent with partial auth is found" in {
+      givenAuditConnector()
+      givenAuthorisedAsAltItsaClient(fakeRequest, nino)
+      await(partialAuthRepo.create(created = Instant.now(), existingAgentArn, "HMRC-MTD-IT", nino))
+      givenMtdItIdIsUnKnownFor(nino)
+      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
+      val pendingInvitation =
+        await(invitationsRepo.create(arn.value, MtdIt, nino, nino, "Erling Haal", LocalDate.now()))
+
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-PT"))
+      val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+      val expectedResponse = ValidateInvitationResponse(
+        pendingInvitation.invitationId,
+        pendingInvitation.service,
+        agentRecord.agencyDetails.agencyName,
+        pendingInvitation.status,
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
+        existingMainAgent = Some(expectedExistingMainAgent)
+      )
+
+      result.status shouldBe 200
+      result.json shouldBe Json.toJson(expectedResponse)
+    }
+
+    "return 200 status and correct JSON when a matching agent, invitation and existing same main agent with partial auth is found" in {
+      givenAuditConnector()
+      givenAuthorisedAsAltItsaClient(fakeRequest, nino)
+      await(partialAuthRepo.create(created = Instant.now(), existingAgentArn, "HMRC-MTD-IT", nino))
+      givenMtdItIdIsUnKnownFor(nino)
+      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      await(agentReferenceRepo.create(existingAgentReferenceRecord))
+      val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = true)
+      val pendingInvitation =
+        await(invitationsRepo.create(existingAgentArn.value, MtdItSupp, nino, nino, "Erling Haal", LocalDate.now()))
+
+      val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-PT"))
+      val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+      val expectedResponse = ValidateInvitationResponse(
+        pendingInvitation.invitationId,
+        pendingInvitation.service,
+        existingAgentRecord.agencyDetails.agencyName,
+        pendingInvitation.status,
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
+        existingMainAgent = Some(expectedExistingMainAgent)
       )
 
       result.status shouldBe 200
@@ -196,6 +316,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
       givenAgentRecordFound(arn, agentRecordResponse)
+      givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation =
         await(invitationsRepo.create(arn.value, MtdItSupp, mtdItId, nino, "Erling Haal", LocalDate.now()))
@@ -207,7 +328,8 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
         pendingInvitation.service,
         agentRecord.agencyDetails.agencyName,
         pendingInvitation.status,
-        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS)
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
+        existingMainAgent = None
       )
 
       result.status shouldBe 200
@@ -223,17 +345,34 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       result.status shouldBe 400
     }
 
-    "return 403 status when the agent is suspended" in {
-      givenAuditConnector()
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
-      givenAgentRecordFound(arn, suspendedAgentRecordResponse)
-      await(agentReferenceRepo.create(agentReferenceRecord))
-      await(invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now()))
+    "return 403 status" when {
 
-      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
-      val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+      "the agent is suspended" in {
+        givenAuditConnector()
+        givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+        givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+        givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
+        await(agentReferenceRepo.create(agentReferenceRecord))
+        await(invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now()))
 
-      result.status shouldBe 403
+        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+        val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+
+        result.status shouldBe 403
+      }
+
+      "the provided service key does not exist in the client's enrolments" in {
+        givenAuditConnector()
+        givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+        givenAgentRecordFound(arn, agentRecordResponse)
+        await(agentReferenceRepo.create(agentReferenceRecord))
+        await(invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now()))
+
+        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MADE-UP"))
+        val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+
+        result.status shouldBe 403
+      }
     }
 
     "return 404 status" when {
@@ -245,19 +384,6 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
         await(agentReferenceRepo.create(agentReferenceRecord))
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
-        val result = doAgentPostRequest(fakeRequest.uri, requestBody)
-
-        result.status shouldBe 404
-      }
-
-      "the provided service key does not exist in the client's enrolments" in {
-        givenAuditConnector()
-        givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
-        givenAgentRecordFound(arn, agentRecordResponse)
-        await(agentReferenceRepo.create(agentReferenceRecord))
-        await(invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now()))
-
-        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MADE-UP"))
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)
 
         result.status shouldBe 404

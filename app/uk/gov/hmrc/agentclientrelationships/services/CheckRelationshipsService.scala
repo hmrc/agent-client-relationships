@@ -16,14 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ExistingMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, UserId}
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
 import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey.enrolmentKey
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,7 +36,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class CheckRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ap: AgentPermissionsConnector,
+  agentAssuranceConnector: AgentAssuranceConnector,
+  ifConnector: IFConnector,
   groupSearch: UsersGroupsSearchConnector,
+  partialAuthRepository: PartialAuthRepository,
+  agentFiRelationshipConnector: AgentFiRelationshipConnector,
   val metrics: Metrics
 ) extends Monitoring
     with Logging {
@@ -92,4 +100,80 @@ class CheckRelationshipsService @Inject() (
   private def enrolmentKeys(enrolment: Enrolment): Seq[String] =
     enrolment.identifiers.map(identifier => enrolmentKey(enrolment.service, identifier.value))
 
+  private def getArnForDelegatedEnrolmentKey(
+    enrolKey: EnrolmentKey
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Arn]] =
+    for {
+      maybeGroupId <- es.getDelegatedGroupIdsFor(enrolKey)
+      maybeArn <- maybeGroupId.headOption match {
+                    case Some(groupId) => es.getAgentReferenceNumberFor(groupId)
+                    case None          => Future.successful(None)
+                  }
+    } yield maybeArn
+
+  private def findMainAgentForNino(
+    invitation: Invitation
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ExistingMainAgent]] =
+    partialAuthRepository.findMainAgent(invitation.clientId).flatMap {
+      case Some(p) =>
+        agentAssuranceConnector
+          .getAgentRecordWithChecks(Arn(p.arn))
+          .map(agent =>
+            Some(
+              ExistingMainAgent(
+                agencyName = agent.agencyDetails.agencyName,
+                sameAgent = p.arn == invitation.arn
+              )
+            )
+          )
+      case None =>
+        ifConnector.getMtdIdFor(Nino(invitation.clientId)).flatMap {
+          case Some(mtdItId) =>
+            getArnForDelegatedEnrolmentKey(EnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
+              case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+              case None    => Future.successful(None)
+            }
+          case _ => Future.successful(None)
+        }
+    }
+
+  private def returnExistingMainAgentFromArn(
+    arn: String,
+    sameAgent: Boolean
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Some[ExistingMainAgent]] =
+    agentAssuranceConnector
+      .getAgentRecordWithChecks(Arn(arn))
+      .map(agent =>
+        Some(
+          ExistingMainAgent(
+            agencyName = agent.agencyDetails.agencyName,
+            sameAgent = sameAgent
+          )
+        )
+      )
+
+  def findCurrentMainAgent(
+    invitation: Invitation
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ExistingMainAgent]] =
+    invitation.service match {
+      case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
+      case HMRCPIR =>
+        agentFiRelationshipConnector.findRelationshipForClient(invitation.clientId).flatMap {
+          case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
+          case None    => Future.successful(None)
+        }
+      // TODO: add support for CBC to include UTR
+      case _ =>
+        getArnForDelegatedEnrolmentKey(
+          EnrolmentKey(
+            enrolmentKey(
+              if (invitation.service == HMRCMTDITSUPP) HMRCMTDIT else invitation.service,
+              invitation.clientId
+            )
+          )
+        ).flatMap {
+          case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+          case None    => Future.successful(None)
+        }
+    }
 }

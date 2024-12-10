@@ -25,7 +25,7 @@ import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
-import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
+import uk.gov.hmrc.agentclientrelationships.repository.{PartialAuthRepository, SyncStatus => _}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Vrn}
 import uk.gov.hmrc.domain._
@@ -52,6 +52,10 @@ class CheckRelationshipServiceSpec
   val agentCode: AgentCode = AgentCode("ABC1234")
 
   val metrics = mock[Metrics]
+  private val mockPartialAuthRepo = mock[PartialAuthRepository]
+  private val mockAgentAssuranceConnector = mock[AgentAssuranceConnector]
+  private val mockIfConnector = mock[IFConnector]
+  private val mockAgentFiConnector = mock[AgentFiRelationshipConnector]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -74,7 +78,16 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(
+          es,
+          ap,
+          mockAgentAssuranceConnector,
+          mockIfConnector,
+          gs,
+          mockPartialAuthRepo,
+          mockAgentFiConnector,
+          metrics
+        )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
       "should return 404 if the client is in at least an access groups but the user has not been assigned the client" in {
@@ -94,7 +107,16 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(
+          es,
+          ap,
+          mockAgentAssuranceConnector,
+          mockIfConnector,
+          gs,
+          mockPartialAuthRepo,
+          mockAgentFiConnector,
+          metrics
+        )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
       "should return 200 if the client is in at least an access groups and the user has been assigned the client" in {
@@ -114,7 +136,16 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(
+          es,
+          ap,
+          mockAgentAssuranceConnector,
+          mockIfConnector,
+          gs,
+          mockPartialAuthRepo,
+          mockAgentFiConnector,
+          metrics
+        )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
     }
@@ -130,7 +161,16 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val relationshipsService = new CheckRelationshipsService(es, ap, gs, metrics)
+        val relationshipsService = new CheckRelationshipsService(
+          es,
+          ap,
+          mockAgentAssuranceConnector,
+          mockIfConnector,
+          gs,
+          mockPartialAuthRepo,
+          mockAgentFiConnector,
+          metrics
+        )
         relationshipsService.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
@@ -152,7 +192,16 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some("someOtherUserId")))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(
+          es,
+          ap,
+          mockAgentAssuranceConnector,
+          mockIfConnector,
+          gs,
+          mockPartialAuthRepo,
+          mockAgentFiConnector,
+          metrics
+        )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
@@ -171,7 +220,16 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(es, ap, gs, metrics)
+        val crs = new CheckRelationshipsService(
+          es,
+          ap,
+          mockAgentAssuranceConnector,
+          mockIfConnector,
+          gs,
+          mockPartialAuthRepo,
+          mockAgentFiConnector,
+          metrics
+        )
         crs.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe true
       }
     }
@@ -187,7 +245,16 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val relationshipsService = new CheckRelationshipsService(es, ap, gs, metrics)
+        val relationshipsService = new CheckRelationshipsService(
+          es,
+          ap,
+          mockAgentAssuranceConnector,
+          mockIfConnector,
+          gs,
+          mockPartialAuthRepo,
+          mockAgentFiConnector,
+          metrics
+        )
         relationshipsService.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe false
       }
     }

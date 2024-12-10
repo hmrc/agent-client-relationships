@@ -23,8 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvitationRequest, ValidateInvitationResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
+import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsService, InvitationLinkService, InvitationService}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -36,7 +35,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class InvitationLinkController @Inject() (
   agentReferenceService: InvitationLinkService,
-  invitationsRepository: InvitationsRepository,
+  invitationService: InvitationService,
+  checkRelationshipsService: CheckRelationshipsService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -74,31 +74,34 @@ class InvitationLinkController @Inject() (
 
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
     Action.async(parse.json[ValidateInvitationRequest]) { implicit request =>
-      withAuthorisedAsClient { enrolments =>
-        val targetServices = request.body.serviceKeys
-        val targetEnrolments = enrolments.view.filterKeys(key => targetServices.contains(key.enrolmentKey)).toMap
+      withAuthorisedClientForServiceKeys(request.body.serviceKeys) { enrolments =>
         agentReferenceService.validateInvitationRequest(request.body.uid).flatMap {
-          case Right(validateLinkModel) =>
-            val mainServices = targetEnrolments.keys.map(_.id).toSeq
+          case Right(validateLinkResponse) =>
             val suppServices =
-              mainServices.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
-            val servicesToSearch = mainServices ++ suppServices
-            val clientIds = targetEnrolments.values.map(_.value).toSeq
-            invitationsRepository.findAllForAgent(validateLinkModel.arn.value, servicesToSearch, clientIds).map {
+              enrolments.keySet.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
+            val servicesToSearch = enrolments.keys.toSeq ++ suppServices
+            val clientIds = enrolments.values.toSeq
+            invitationService.findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIds).flatMap {
               case Seq(invitation) =>
-                val response = ValidateInvitationResponse(
-                  invitation.invitationId,
-                  invitation.service,
-                  validateLinkModel.name,
-                  invitation.status,
-                  invitation.lastUpdated
+                for {
+                  existingRelationship <- checkRelationshipsService.findCurrentMainAgent(invitation)
+                } yield Ok(
+                  Json.toJson(
+                    ValidateInvitationResponse(
+                      invitation.invitationId,
+                      invitation.service,
+                      validateLinkResponse.name,
+                      invitation.status,
+                      invitation.lastUpdated,
+                      existingMainAgent = existingRelationship
+                    )
+                  )
                 )
-                Ok(Json.toJson(response))
               case _ =>
                 Logger(getClass).warn(
                   s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
                 )
-                NotFound
+                Future.successful(NotFound)
             }
           case Left(AgentSuspended) =>
             Logger(getClass).warn(s"Agent is suspended for UID: ${request.body.uid}")

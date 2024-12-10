@@ -124,6 +124,7 @@ trait RelationshipsBaseControllerISpec
   val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
   val arn2 = Arn("AARN0000004")
   val arn3 = Arn("AARN0000006")
+  val existingAgentArn = Arn("AARN0000007")
   val mtdItId = MtdItId("ABCDEF123456789")
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
   val mtdItSuppEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdItSupp, mtdItId)
@@ -137,6 +138,7 @@ trait RelationshipsBaseControllerISpec
   val oldAgentCode = "oldAgentCode"
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
+  val testExistingAgentGroup = "testExistingAgentGroup"
   val STRIDE_ROLE = "maintain agent relationships"
   val NEW_STRIDE_ROLE = "maintain_agent_relationships"
   val TERMINATION_STRIDE_ROLE = "caat"

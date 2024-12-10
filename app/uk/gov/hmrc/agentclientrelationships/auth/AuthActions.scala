@@ -19,11 +19,11 @@ package uk.gov.hmrc.agentclientrelationships.auth
 import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey, _}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment => _, _}
 import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
-import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.{AffinityGroup, AuthConnector, AuthProviders, AuthorisedFunctions, Enrolment, EnrolmentIdentifier, Enrolments, InsufficientEnrolments}
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -139,21 +139,50 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         }
       }
 
-  // BTA & PTA Call
+  // Authorisation request response is a special case where we need to check for multiple services
+  def withAuthorisedClientForServiceKeys[A, T](serviceKeys: Seq[String])(
+    body: Map[String, String] => Future[Result]
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
+      .retrieve(allEnrolments) { enrolments =>
+        def normalizeServiceKey(serviceKey: String, isItsa: Boolean): String = serviceKey match {
+          case "HMRC-NI" | "HMRC-PT" if isItsa => Service.MtdIt.id
+          case "HMRC-NI" | "HMRC-PT"           => Service.PersonalIncomeRecord.id
+          case _                               => serviceKey
+        }
+
+        val requiredEnrolments = for {
+          serviceKey <- serviceKeys
+          enrolment  <- enrolments.getEnrolment(serviceKey)
+          clientId = LocalEnrolmentKey(
+                       service = serviceKey,
+                       identifiers = enrolment.identifiers.map(i => Identifier(i.key, i.value))
+                     ).oneTaxIdentifier().value
+        } yield (
+          normalizeServiceKey(serviceKey, serviceKeys.contains(Service.MtdIt.id)),
+          clientId
+        )
+
+        requiredEnrolments match {
+          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
+          case _              => body(requiredEnrolments.toMap)
+        }
+      }
+
   def withAuthorisedAsClient[A, T](
     body: Map[Service, TaxIdentifier] => Future[Result]
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
-        val identifiers: Map[Service, TaxIdentifier] = (for {
+        val identifiers = for {
           supportedService <- supportedServices
           enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
           clientId         <- enrolment.identifiers.headOption
-        } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))).toMap
+        } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
         identifiers match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _              => body(identifiers)
+          case _              => body(identifiers.toMap)
         }
       }
 

@@ -18,9 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.SessionKeys
 
@@ -431,6 +432,27 @@ trait AuthStub {
         .mkString(", ")}
          |]}
           """.stripMargin
+    )
+
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
+  }
+
+  def givenAuthorisedAsAltItsaClient[A](
+    request: FakeRequest[A],
+    nino: Nino
+  ): FakeRequest[A] = {
+    givenAuthorisedFor(
+      Json.obj("retrieve" -> Json.arr("allEnrolments")).toString,
+      Json
+        .obj(
+          "allEnrolments" -> Json.arr(
+            Json.obj(
+              "key"         -> "HMRC-PT",
+              "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino.value))
+            )
+          )
+        )
+        .toString
     )
 
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
