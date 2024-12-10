@@ -22,71 +22,72 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, InvitationEvent}
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthModel
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
 
-class InvitationsEventStoreRepositoryISpec extends AnyWordSpec with Matchers with MongoApp with GuiceOneAppPerSuite {
+class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp with GuiceOneAppPerSuite {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  val repository: InvitationsEventStoreRepository = new InvitationsEventStoreRepository(mongoComponent)
+  val repository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
 
-  val invitationEvent: InvitationEvent = InvitationEvent(
-    Accepted,
+  val partialAuth: PartialAuthModel = PartialAuthModel(
     Instant.parse("2020-02-02T00:00:00.000Z"),
     "XARN1234567",
     "HMRC-MTD-VAT",
-    "123456789",
-    None
+    "123456789"
   )
 
-  "InvitationsEventStoreRepository" should {
+  "partialAuthRepository" should {
 
     "have a custom compound index for the service and clientId fields" in {
       val customIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("service")).get
 
-      customIndex.getKeys shouldBe Indexes.ascending("service", "clientId")
+      customIndex.getKeys shouldBe Indexes.ascending("service", "nino", "arn")
       customIndex.getOptions.getName shouldBe "clientQueryIndex"
-      customIndex.getOptions.isUnique shouldBe false
+      customIndex.getOptions.isUnique shouldBe true
     }
 
-    "create a new invitation event record" in {
+    "create a new partial auth record" in {
       await(
         repository.create(
-          Accepted,
           Instant.parse("2020-01-01T00:00:00.000Z"),
           "XARN1234567",
           Vat,
-          Vrn("123456789"),
-          None
+          "123456789"
         )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }
 
-    "retrieve all existing invitation events for a matching service and client ID" in {
-      val relatedEvent = invitationEvent.copy(status = DeAuthorised, deauthorisedBy = Some("Me"))
-      val unrelatedEvent = invitationEvent.copy(service = "HMRC-MTD-IT", clientId = "XAIT0000111122")
-      val listOfInvitationEvents = Seq(invitationEvent, relatedEvent, unrelatedEvent)
-      await(repository.collection.insertMany(listOfInvitationEvents).toFuture())
+    "retrieve partial auth which matches service, nino and arn" in {
+      val nonMatchingEvent1 = partialAuth.copy(arn = "ARN1234567")
+      val nonMatchingEvent2 = partialAuth.copy(service = "HMRC-MTD-IT", nino = "XAIT0000111122")
+      val listOfPartialAuths = Seq(partialAuth, nonMatchingEvent1, nonMatchingEvent2)
+      await(repository.collection.insertMany(listOfPartialAuths).toFuture())
 
-      await(repository.findAllForClient(Vat, Vrn("123456789"))) shouldBe Seq(invitationEvent, relatedEvent)
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Some(partialAuth)
     }
 
-    "fail to retrieve invitations when no invitations match the given service" in {
-      val unrelatedEvent = invitationEvent.copy(service = "HMRC-MTD-IT")
+    "fail to retrieve partial auths when no partial auths match the given service" in {
+      val unrelatedEvent = partialAuth.copy(service = "HMRC-MTD-IT")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findAllForClient(Vat, Vrn("123456789"))) shouldBe Seq()
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
 
-    "fail to retrieve invitations when no invitations match the given clientId" in {
-      val unrelatedEvent = invitationEvent.copy(clientId = "234567890")
+    "fail to retrieve partial auths when no partial auths match the given nino" in {
+      val unrelatedEvent = partialAuth.copy(nino = "234567890")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findAllForClient(Vat, Vrn("123456789"))) shouldBe Seq()
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
+    }
+
+    "fail to retrieve partial auths when no partial auths match the given arn" in {
+      val unrelatedEvent = partialAuth.copy(arn = "XARN7654321")
+      await(repository.collection.insertOne(unrelatedEvent).toFuture())
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
   }
 }
