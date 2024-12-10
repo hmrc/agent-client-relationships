@@ -19,8 +19,10 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthModel
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -30,10 +32,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[PartialAuthModel](
+    extends PlayMongoRepository[PartialAuthRelationship](
       mongoComponent = mongoComponent,
       collectionName = "partial-auth",
-      domainFormat = PartialAuthModel.format,
+      domainFormat = PartialAuthRelationship.format,
       indexes = Seq(
         IndexModel(Indexes.ascending("service", "nino", "arn"), IndexOptions().name("clientQueryIndex").unique(true))
       ),
@@ -45,21 +47,22 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
 
   def create(
     created: Instant,
-    arn: String,
-    service: Service,
-    nino: String
-  ): Future[PartialAuthModel] = {
-    val partialAuth = PartialAuthModel(created, arn, service.id, nino)
-    collection.insertOne(partialAuth).toFuture().map(_ => partialAuth)
+    arn: Arn,
+    service: String,
+    nino: Nino
+  ): Future[Unit] = {
+    require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
+    val partialAuth = PartialAuthRelationship(created, arn.value, service, nino.value)
+    collection.insertOne(partialAuth).toFuture().map(_ => ())
   }
 
-  def find(serviceId: String, nino: String, arn: String): Future[Option[PartialAuthModel]] =
+  def find(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
     collection
       .find(
         and(
           equal("service", serviceId),
-          equal("nino", nino),
-          equal("arn", arn)
+          equal("nino", nino.value),
+          equal("arn", arn.value)
         )
       )
       .headOption()

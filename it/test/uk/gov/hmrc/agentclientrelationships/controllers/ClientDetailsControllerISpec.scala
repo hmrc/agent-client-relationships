@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuth}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
@@ -160,9 +160,9 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
             partialAuthRepo
               .create(
                 Instant.parse("2020-01-01T00:00:00.000Z"),
-                "XARN1234567",
-                MtdIt,
-                "AA000001B"
+                Arn("XARN1234567"),
+                MtdIt.toString(),
+                Nino("AA000001B")
               )
           )
 
@@ -189,9 +189,9 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
             partialAuthRepo
               .create(
                 Instant.now(),
-                "XARN1234567",
-                MtdItSupp,
-                "AA000001B"
+                Arn("XARN1234567"),
+                MtdItSupp.toString(),
+                Nino("AA000001B")
               )
           )
 
