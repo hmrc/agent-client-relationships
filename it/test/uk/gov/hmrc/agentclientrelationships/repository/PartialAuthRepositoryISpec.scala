@@ -22,10 +22,9 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthInvitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant
@@ -35,16 +34,12 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
-  val nino = Nino("AB123456C")
-  val notMatchingNino = Nino("AB654321C")
-  val arn: Arn = Arn("ABCDE123456")
-  val notMatchingArn: Arn = Arn("ABCDE654321")
 
-  val partialAuth: PartialAuthInvitation = PartialAuthInvitation(
+  val partialAuth: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),
-    arn.value,
-    Vat.id,
-    nino.value
+    "XARN1234567",
+    "HMRC-MTD-IT",
+    "SX579189D"
   )
 
   "partialAuthRepository" should {
@@ -61,39 +56,53 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       await(
         repository.create(
           Instant.parse("2020-01-01T00:00:00.000Z"),
-          arn,
+          "XARN1234567",
           Vat,
-          nino
+          "123456789"
         )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }
 
+    "throw an exception if invalid service passed in" in {
+      an[IllegalArgumentException] shouldBe thrownBy(
+        repository.create(
+          Instant.parse("2020-01-01T00:00:00.000Z"),
+          Arn("XARN1234567"),
+          "HMRC-MTD-VAT",
+          Nino("SX579189D")
+        )
+      )
+    }
+  }
+
+  "partialAuthRepository.find" should {
+
     "retrieve partial auth which matches service, nino and arn" in {
-      val nonMatchingEvent1 = partialAuth.copy(arn = notMatchingArn.value)
-      val nonMatchingEvent2 = partialAuth.copy(service = MtdIt.id, nino = notMatchingNino.value)
+      val nonMatchingEvent1 = partialAuth.copy(arn = "ARN1234567")
+      val nonMatchingEvent2 = partialAuth.copy(service = "HMRC-MTD-IT", nino = "XAIT0000111122")
       val listOfPartialAuths = Seq(partialAuth, nonMatchingEvent1, nonMatchingEvent2)
       await(repository.collection.insertMany(listOfPartialAuths).toFuture())
 
-      await(repository.find(Vat, nino, arn)) shouldBe Some(partialAuth)
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Some(partialAuth)
     }
 
     "fail to retrieve partial auths when no partial auths match the given service" in {
-      val unrelatedEvent = partialAuth.copy(service = MtdIt.id)
+      val unrelatedEvent = partialAuth.copy(service = "HMRC-MTD-IT")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find(Vat, nino, arn)) shouldBe None
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given nino" in {
-      val unrelatedEvent = partialAuth.copy(nino = notMatchingNino.value)
+      val unrelatedEvent = partialAuth.copy(nino = "234567890")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find(Vat, nino, arn)) shouldBe None
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given arn" in {
-      val unrelatedEvent = partialAuth.copy(arn = notMatchingArn.value)
+      val unrelatedEvent = partialAuth.copy(arn = "XARN7654321")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find(MtdIt, nino, arn)) shouldBe None
+      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
     }
   }
 

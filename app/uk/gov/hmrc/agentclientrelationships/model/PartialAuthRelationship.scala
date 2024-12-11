@@ -20,14 +20,14 @@ import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import java.time.Instant
 
-case class PartialAuthInvitation(
+case class PartialAuthRelationship(
   created: Instant,
   arn: String,
   service: String,
   nino: String
 )
 
-object PartialAuthInvitation {
+object PartialAuthRelationship {
   implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-  implicit val format: Format[PartialAuthInvitation] = Json.format[PartialAuthInvitation]
+  implicit val format: Format[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
 }

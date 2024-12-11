@@ -19,8 +19,9 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthInvitation
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -31,10 +32,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[PartialAuthInvitation](
+    extends PlayMongoRepository[PartialAuthRelationship](
       mongoComponent = mongoComponent,
       collectionName = "partial-auth",
-      domainFormat = PartialAuthInvitation.format,
+      domainFormat = PartialAuthRelationship.format,
       indexes = Seq(
         IndexModel(Indexes.ascending("service", "nino", "arn"), IndexOptions().name("clientQueryIndex").unique(true))
       ),
@@ -47,19 +48,20 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
   def create(
     created: Instant,
     arn: Arn,
-    service: Service,
+    service: String,
     nino: Nino
-  ): Future[PartialAuthInvitation] = {
-    val partialAuth = PartialAuthInvitation(created, arn.value, service.id, nino.value)
-    collection.insertOne(partialAuth).toFuture().map(_ => partialAuth)
+  ): Future[Unit] = {
+    require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
+    val partialAuth = PartialAuthRelationship(created, arn.value, service, nino.value)
+    collection.insertOne(partialAuth).toFuture().map(_ => ())
   }
 
-  def find(service: Service, nino: Nino, arn: Arn): Future[Option[PartialAuthInvitation]] =
+  def find(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
     collection
       .find(
         and(
-          equal("service", service.id),
-          equal("nino", nino),
+          equal("service", serviceId),
+          equal("nino", nino.value),
           equal("arn", arn.value)
         )
       )

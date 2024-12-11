@@ -161,7 +161,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
               .create(
                 Instant.parse("2020-01-01T00:00:00.000Z"),
                 Arn("XARN1234567"),
-                MtdIt,
+                MtdIt.toString(),
                 Nino("AA000001B")
               )
           )
@@ -190,7 +190,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
               .create(
                 Instant.now(),
                 Arn("XARN1234567"),
-                MtdItSupp,
+                MtdItSupp.toString(),
                 Nino("AA000001B")
               )
           )

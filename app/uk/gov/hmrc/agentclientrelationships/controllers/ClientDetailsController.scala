@@ -98,11 +98,9 @@ class ClientDetailsController @Inject() (
   }
 
   private def findAltItsaInvitations(nino: Nino, arn: Arn): Future[Option[String]] = for {
-    main <- partialAuthRepository.find(Service.apply(HMRCMTDIT), nino, arn)
-    existingMain = main.find(_.arn == arn.value)
-    supp <- if (existingMain.isDefined) Future(None)
-            else partialAuthRepository.find(Service.apply(HMRCMTDITSUPP), nino, arn)
-    existingSupp = supp.find(_.arn == arn.value)
+    existingMain <- partialAuthRepository.find(HMRCMTDIT, nino, arn)
+    existingSupp <- if (existingMain.isDefined) Future(None)
+                    else partialAuthRepository.find(HMRCMTDITSUPP, nino, arn)
   } yield (existingMain, existingSupp) match {
     case (Some(_), _) => Some(HMRCMTDIT)
     case (_, Some(_)) => Some(HMRCMTDITSUPP)
