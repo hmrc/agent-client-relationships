@@ -23,27 +23,26 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthInvitation
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.{DeAuthorised, InvitationEvent, PartialAuth}
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsEventStoreRepository, InvitationsRepository, SyncStatus}
-import uk.gov.hmrc.agentclientrelationships.services.{DeAuthorisationService, DeleteRelationshipsServiceWithAcr}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
+import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsRepository, PartialAuthRepository, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, PersonalIncomeRecord}
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.ExecutionContext
 
-class DeAuthorisationRequestControllerISpec
+class RemoveAuthorisationControllerISpec
     extends RelationshipsBaseControllerISpec
     with ClientDetailsStub
     with AfiRelationshipStub
     with TestData {
 
-  val deAuthorisationService: DeAuthorisationService = app.injector.instanceOf[DeAuthorisationService]
+  val deAuthorisationService: RemoveAuthorisationService = app.injector.instanceOf[RemoveAuthorisationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -54,7 +53,7 @@ class DeAuthorisationRequestControllerISpec
     app.injector.instanceOf[PirRelationshipConnector]
 
   val controller =
-    new DeAuthorisationRequestController(
+    new RemoveAuthorisationController(
       deAuthorisationService,
       pirRelationshipConnector,
       deleteRelationshipService,
@@ -65,7 +64,7 @@ class DeAuthorisationRequestControllerISpec
     )
 
   def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
-  def invitationEventsRepo: InvitationsEventStoreRepository = new InvitationsEventStoreRepository(mongoComponent)
+  def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
 
   "/agent/:arn/remove-authorisation" should {
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/remove-authorisation"
@@ -256,22 +255,22 @@ class DeAuthorisationRequestControllerISpec
         givenMtdItIdIsKnownFor(nino, mtdItId)
       }
 
-      "return 204 when PartialAuth exists in InvitationEvent Repo" in new StubsForThisScenario {
-        await(invitationEventsRepo.create(PartialAuth, Instant.now(), arn.value, MtdIt.id, nino.value, None))
+      "return 204 when PartialAuth exists in PartialAuth Repo" in new StubsForThisScenario {
+        await(partialAuthRepository.create(Instant.now(), arn, MtdIt, nino))
 
         doAgentPostRequest(
           requestPath,
           Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         ).status shouldBe 204
 
-        val invitations: Seq[InvitationEvent] = invitationEventsRepo
-          .findAllForClient(MtdIt, ClientIdentifier(nino.value, MtdIt.supportedSuppliedClientIdType.id))
+        val partialAuthInvitations: Option[PartialAuthInvitation] = partialAuthRepository
+          .find(MtdIt, nino, arn)
           .futureValue
 
-        invitations.size shouldBe 0
+        partialAuthInvitations.isDefined shouldBe true
       }
 
-      "return Error and do not create DeAuthorised when PartialAuthdo not exists in InvitationEvent Repo" in new StubsForThisScenario {
+      "return None when PartialAuth do not exists in PartialAuth Repo" in new StubsForThisScenario {
         val result = doAgentPostRequest(
           requestPath,
           Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
@@ -279,11 +278,11 @@ class DeAuthorisationRequestControllerISpec
 
         result.status >= 400 && result.status < 600
 
-        val invitations: Seq[InvitationEvent] = invitationEventsRepo
-          .findAllForClient(MtdIt, ClientIdentifier(nino.value, MtdIt.supportedSuppliedClientIdType.id))
+        val partialAuthInvitations: Option[PartialAuthInvitation] = partialAuthRepository
+          .find(MtdIt, nino, arn)
           .futureValue
 
-        invitations.size shouldBe 0
+        partialAuthInvitations.isDefined shouldBe false
       }
 
     }

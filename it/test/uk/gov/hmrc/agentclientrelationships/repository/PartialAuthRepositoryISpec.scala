@@ -22,9 +22,11 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthModel
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthInvitation
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext
@@ -33,12 +35,16 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
+  val nino = Nino("AB123456C")
+  val notMatchingNino = Nino("AB654321C")
+  val arn: Arn = Arn("ABCDE123456")
+  val notMatchingArn: Arn = Arn("ABCDE654321")
 
-  val partialAuth: PartialAuthModel = PartialAuthModel(
+  val partialAuth: PartialAuthInvitation = PartialAuthInvitation(
     Instant.parse("2020-02-02T00:00:00.000Z"),
-    "XARN1234567",
-    "HMRC-MTD-VAT",
-    "123456789"
+    arn.value,
+    Vat.id,
+    nino.value
   )
 
   "partialAuthRepository" should {
@@ -55,39 +61,60 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       await(
         repository.create(
           Instant.parse("2020-01-01T00:00:00.000Z"),
-          "XARN1234567",
+          arn,
           Vat,
-          "123456789"
+          nino
         )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }
 
     "retrieve partial auth which matches service, nino and arn" in {
-      val nonMatchingEvent1 = partialAuth.copy(arn = "ARN1234567")
-      val nonMatchingEvent2 = partialAuth.copy(service = "HMRC-MTD-IT", nino = "XAIT0000111122")
+      val nonMatchingEvent1 = partialAuth.copy(arn = notMatchingArn.value)
+      val nonMatchingEvent2 = partialAuth.copy(service = MtdIt.id, nino = notMatchingNino.value)
       val listOfPartialAuths = Seq(partialAuth, nonMatchingEvent1, nonMatchingEvent2)
       await(repository.collection.insertMany(listOfPartialAuths).toFuture())
 
-      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe Some(partialAuth)
+      await(repository.find(Vat, nino, arn)) shouldBe Some(partialAuth)
     }
 
     "fail to retrieve partial auths when no partial auths match the given service" in {
-      val unrelatedEvent = partialAuth.copy(service = "HMRC-MTD-IT")
+      val unrelatedEvent = partialAuth.copy(service = MtdIt.id)
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
+      await(repository.find(Vat, nino, arn)) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given nino" in {
-      val unrelatedEvent = partialAuth.copy(nino = "234567890")
+      val unrelatedEvent = partialAuth.copy(nino = notMatchingNino.value)
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
+      await(repository.find(Vat, nino, arn)) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given arn" in {
-      val unrelatedEvent = partialAuth.copy(arn = "XARN7654321")
+      val unrelatedEvent = partialAuth.copy(arn = notMatchingArn.value)
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find("HMRC-MTD-VAT", "123456789", "XARN1234567")) shouldBe None
+      await(repository.find(MtdIt, nino, arn)) shouldBe None
     }
   }
+
+  "delete PartialAuth invitation success" in {
+    await(
+      repository.create(
+        Instant.parse("2020-01-01T00:00:00.000Z"),
+        arn,
+        Vat,
+        nino
+      )
+    )
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
+    await(repository.deletePartialAuth(Vat, nino, arn))
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
+  }
+
+  "delete PartialAuth invitation return success even when initation do not exists" in {
+    await(repository.collection.countDocuments().toFuture()) shouldBe 0
+    await(repository.deletePartialAuth(Vat, nino, arn))
+    await(repository.collection.countDocuments().toFuture()) shouldBe 0
+  }
+
 }

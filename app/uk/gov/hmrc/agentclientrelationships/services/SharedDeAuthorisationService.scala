@@ -43,7 +43,7 @@ class AcaDeAuthorisationService @Inject() (aca: AgentClientAuthorisationConnecto
 }
 
 @Singleton
-class AcrDeAuthorisationService @Inject() (deAuthorisationService: DeAuthorisationService)
+class AcrDeAuthorisationService @Inject() (deAuthorisationService: RemoveAuthorisationService)
     extends SharedDeAuthorisationService {
   override def setRelationshipEndedShared(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     hc: HeaderCarrier,

@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, InvalidClientId, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
@@ -34,9 +34,9 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 @Singleton
-class DeAuthorisationService @Inject() (
+class RemoveAuthorisationService @Inject() (
   invitationsRepository: InvitationsRepository,
-  invitationsEventStoreRepository: InvitationsEventStoreRepository,
+  partialAuthRepository: PartialAuthRepository,
   ifConnector: IFConnector
 )(implicit ec: ExecutionContext)
     extends Logging {
@@ -48,28 +48,25 @@ class DeAuthorisationService @Inject() (
                   .fold(_ => Left(InvalidClientId), Right(_))
   } yield ValidRequest(clientId, service)
 
-  def findLatestPartialAuthInvitationEvent(
+  def findPartialAuthInvitation(
     arn: Arn,
     clientId: ClientId,
     service: Service
-  ): Future[Option[InvitationEvent]] =
-    invitationsEventStoreRepository
-      .findAllForClient(service, clientId)
-      .map(x =>
-        x.filter(_.arn == arn.value)
-          .sortBy(_.created)
-          .headOption
-          .filter(_.status == PartialAuth)
-      )
+  ): Future[Option[PartialAuthInvitation]] =
+    clientId.typeId match {
+      case NinoType.id =>
+        partialAuthRepository
+          .find(service, Nino(clientId.value), arn)
+      case _ => Future.successful(None)
+    }
 
-  def deletePartialAuthFromEventStore(invitationEvent: InvitationEvent, endedBy: String): Future[Unit] =
-    invitationsEventStoreRepository
-      .deletePartialAuth(
-        arn = invitationEvent.arn,
-        service = invitationEvent.service,
-        clientId = invitationEvent.clientId
-      )
-      .map(_ => ())
+  def deletePartialAuthInvitation(arn: Arn, clientId: ClientId, service: Service): Future[Boolean] =
+    clientId.typeId match {
+      case NinoType.id =>
+        partialAuthRepository
+          .deletePartialAuth(service, Nino(clientId.value), arn)
+      case _ => Future.successful(false)
+    }
 
   def replaceEnrolmentKeyForItsa(
     suppliedClientId: ClientId,

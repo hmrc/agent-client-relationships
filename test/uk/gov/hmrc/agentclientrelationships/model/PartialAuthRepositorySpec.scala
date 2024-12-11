@@ -23,7 +23,7 @@ import java.time.Instant
 
 class PartialAuthRepositorySpec extends UnitSpec {
 
-  val testModel: PartialAuthModel = PartialAuthModel(
+  val testModel: PartialAuthInvitation = PartialAuthInvitation(
     Instant.parse("2020-02-02T00:00:00.000Z"),
     "XARN1234567",
     "HMRC-MTD-VAT",
@@ -42,7 +42,7 @@ class PartialAuthRepositorySpec extends UnitSpec {
     "read from JSON" when {
 
       "all fields are present" in {
-        testJsonResponse.as[PartialAuthModel] shouldBe testModel
+        testJsonResponse.as[PartialAuthInvitation] shouldBe testModel
       }
     }
 

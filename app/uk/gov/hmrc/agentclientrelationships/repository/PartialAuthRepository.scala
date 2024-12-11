@@ -19,9 +19,9 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.model.Filters.{and, equal}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.model.{InvitationEvent, InvitationStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthInvitation
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -31,10 +31,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[PartialAuthModel](
+    extends PlayMongoRepository[PartialAuthInvitation](
       mongoComponent = mongoComponent,
       collectionName = "partial-auth",
-      domainFormat = PartialAuthModel.format,
+      domainFormat = PartialAuthInvitation.format,
       indexes = Seq(
         IndexModel(Indexes.ascending("service", "nino", "arn"), IndexOptions().name("clientQueryIndex").unique(true))
       ),
@@ -46,22 +46,34 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
 
   def create(
     created: Instant,
-    arn: String,
+    arn: Arn,
     service: Service,
-    nino: String
-  ): Future[PartialAuthModel] = {
-    val partialAuth = PartialAuthModel(created, arn, service.id, nino)
+    nino: Nino
+  ): Future[PartialAuthInvitation] = {
+    val partialAuth = PartialAuthInvitation(created, arn.value, service.id, nino.value)
     collection.insertOne(partialAuth).toFuture().map(_ => partialAuth)
   }
 
-  def find(serviceId: String, nino: String, arn: String): Future[Option[PartialAuthModel]] =
+  def find(service: Service, nino: Nino, arn: Arn): Future[Option[PartialAuthInvitation]] =
     collection
       .find(
         and(
-          equal("service", serviceId),
+          equal("service", service.id),
           equal("nino", nino),
-          equal("arn", arn)
+          equal("arn", arn.value)
         )
       )
       .headOption()
+
+  def deletePartialAuth(service: Service, nino: Nino, arn: Arn): Future[Boolean] =
+    collection
+      .deleteOne(
+        and(
+          equal("arn", arn.value),
+          equal("service", service.id),
+          equal("clientId", nino.value)
+        )
+      )
+      .toFuture()
+      .map(_.wasAcknowledged())
 }

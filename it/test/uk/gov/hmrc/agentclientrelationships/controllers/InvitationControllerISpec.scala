@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConne
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsEventStoreRepository, InvitationsRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -59,7 +59,7 @@ class InvitationControllerISpec
     )
 
   def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
-  def invitationEventsRepo: InvitationsEventStoreRepository = new InvitationsEventStoreRepository(mongoComponent)
+  def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
 
   val clientName = "DummyClientName"
   val baseInvitationInputData: CreateInvitationRequest =
