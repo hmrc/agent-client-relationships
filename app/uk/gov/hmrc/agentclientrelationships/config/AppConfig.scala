@@ -88,6 +88,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val agentAssuranceBaseUrl: String = servicesConfig.baseUrl("agent-assurance")
 
+  val emailBaseUrl: String = servicesConfig.baseUrl("email")
+
   val inactiveRelationshipShowLastDays = servicesConfig.getInt("inactive-relationships.show-last-days")
 
   val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "utf-8")
@@ -111,8 +113,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val altItsaEnabled =
     servicesConfig.getBoolean("alt-itsa.enabled")
-
-  val emailBaseUrl: String = baseUrl("email")
 
   // Note: Personal Income Record is not handled through agent-client-relationships
   val supportedServices: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)

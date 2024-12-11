@@ -18,15 +18,29 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalToJson, post, stubFor, urlEqualTo}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.test.Helpers.await
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import play.api.test.Helpers._
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport {
+
+  override lazy val app: Application = appBuilder.build()
+
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .configure(
+        "microservice.services.agent-assurance.port" -> wireMockPort,
+        "auditing.consumer.baseUri.host"             -> wireMockHost,
+        "auditing.consumer.baseUri.port"             -> wireMockPort,
+        "internal-auth.token"                        -> "internalAuthToken"
+      )
 
   val connector = app.injector.instanceOf[EmailConnector]
 
@@ -53,23 +67,25 @@ class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with Wire
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
 
+  implicit val hc: HeaderCarrier = HeaderCarrier()
+
   "sendEmail" should {
     val emailInfo = EmailInformation(Seq("abc@xyz.com"), "template-id", Map("param1" -> "foo", "param2" -> "bar"))
 
     "return Unit when the email service responds" in {
+
       givenEmailSent(emailInfo)
 
       val result = await(connector.sendEmail(emailInfo))
 
-      result shouldBe (())
+      result shouldBe ()
     }
     "not throw an Exception when the email service throws an Exception" in {
       givenEmailReturns500
 
       val result = await(connector.sendEmail(emailInfo))
 
-      result shouldBe (())
+      result shouldBe ()
     }
   }
-
 }
