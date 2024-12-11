@@ -18,13 +18,15 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
-import play.api.test.Helpers.stubControllerComponents
+import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationInputData
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -32,48 +34,63 @@ import uk.gov.hmrc.auth.core.AuthConnector
 
 import scala.concurrent.ExecutionContext
 
-class InvitationControllerISpec extends RelationshipsBaseControllerISpec with TestData {
+class InvitationControllerISpec
+    extends RelationshipsBaseControllerISpec
+    with ClientDetailsStub
+    with AfiRelationshipStub
+    with TestData {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  val es: EnrolmentStoreProxyConnector = app.injector.instanceOf[EnrolmentStoreProxyConnector]
+  val deleteRelationshipService: DeleteRelationshipsServiceWithAcr =
+    app.injector.instanceOf[DeleteRelationshipsServiceWithAcr]
+  val pirRelationshipConnector: PirRelationshipConnector =
+    app.injector.instanceOf[PirRelationshipConnector]
 
   val controller =
-    new InvitationController(invitationService, authConnector, appConfig, stubControllerComponents())
+    new InvitationController(
+      invitationService,
+      authConnector,
+      appConfig,
+      stubControllerComponents()
+    )
 
   def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
+  def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
 
   val clientName = "DummyClientName"
-  val baseInvitationInputData: CreateInvitationInputData =
-    CreateInvitationInputData(nino.value, NinoType.id, clientName, MtdIt.id)
+  val baseInvitationInputData: CreateInvitationRequest =
+    CreateInvitationRequest(nino.value, NinoType.id, clientName, MtdIt.id)
 
-  def allServices: Map[String, CreateInvitationInputData] = Map(
+  def allServices: Map[String, CreateInvitationRequest] = Map(
     HMRCMTDIT -> baseInvitationInputData,
-    HMRCPIR   -> baseInvitationInputData.copy(inputService = HMRCPIR),
+    HMRCPIR   -> baseInvitationInputData.copy(service = HMRCPIR),
     HMRCMTDVAT -> baseInvitationInputData
-      .copy(inputService = HMRCMTDVAT, inputSuppliedClientId = vrn.value, inputSuppliedClientIdType = VrnType.id),
+      .copy(service = HMRCMTDVAT, clientId = vrn.value, suppliedClientIdType = VrnType.id),
     HMRCTERSORG -> baseInvitationInputData
-      .copy(inputService = HMRCTERSORG, inputSuppliedClientId = utr.value, inputSuppliedClientIdType = UtrType.id),
+      .copy(service = HMRCTERSORG, clientId = utr.value, suppliedClientIdType = UtrType.id),
     HMRCTERSNTORG -> baseInvitationInputData
-      .copy(inputService = HMRCTERSNTORG, inputSuppliedClientId = urn.value, inputSuppliedClientIdType = UrnType.id),
+      .copy(service = HMRCTERSNTORG, clientId = urn.value, suppliedClientIdType = UrnType.id),
     HMRCCGTPD -> baseInvitationInputData
-      .copy(inputService = HMRCCGTPD, inputSuppliedClientId = cgtRef.value, inputSuppliedClientIdType = CgtRefType.id),
+      .copy(service = HMRCCGTPD, clientId = cgtRef.value, suppliedClientIdType = CgtRefType.id),
     HMRCPPTORG -> baseInvitationInputData
-      .copy(inputService = HMRCPPTORG, inputSuppliedClientId = pptRef.value, inputSuppliedClientIdType = PptRefType.id),
+      .copy(service = HMRCPPTORG, clientId = pptRef.value, suppliedClientIdType = PptRefType.id),
     HMRCCBCORG -> baseInvitationInputData
-      .copy(inputService = HMRCCBCORG, inputSuppliedClientId = cbcId.value, inputSuppliedClientIdType = CbcIdType.id),
+      .copy(service = HMRCCBCORG, clientId = cbcId.value, suppliedClientIdType = CbcIdType.id),
     HMRCCBCNONUKORG -> baseInvitationInputData.copy(
-      inputService = HMRCCBCNONUKORG,
-      inputSuppliedClientId = cbcId.value,
-      inputSuppliedClientIdType = CbcIdType.id
+      service = HMRCCBCNONUKORG,
+      clientId = cbcId.value,
+      suppliedClientIdType = CbcIdType.id
     ),
     HMRCPILLAR2ORG -> baseInvitationInputData.copy(
-      inputService = HMRCPILLAR2ORG,
-      inputSuppliedClientId = plrId.value,
-      inputSuppliedClientIdType = PlrIdType.id
+      service = HMRCPILLAR2ORG,
+      clientId = plrId.value,
+      suppliedClientIdType = PlrIdType.id
     ),
-    HMRCMTDITSUPP -> baseInvitationInputData.copy(inputService = HMRCMTDITSUPP)
+    HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
   )
 
   "create invitation link" should {
@@ -81,13 +98,13 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
     // TODO WG - test expiry date of Invitation
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
-        val inputData: CreateInvitationInputData = allServices(taxService)
+        val inputData: CreateInvitationRequest = allServices(taxService)
 
         val clientId =
-          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.inputSuppliedClientId
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.clientId
         val clientIdType =
           if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) MtdItIdType.id
-          else inputData.inputSuppliedClientIdType
+          else inputData.suppliedClientIdType
 
         givenAuditConnector()
 
@@ -119,11 +136,11 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
         )
 
         invitation.status shouldBe Pending
-        invitation.suppliedClientId shouldBe inputData.inputSuppliedClientId
-        invitation.suppliedClientIdType shouldBe inputData.inputSuppliedClientIdType
+        invitation.suppliedClientId shouldBe inputData.clientId
+        invitation.suppliedClientIdType shouldBe inputData.suppliedClientIdType
         invitation.clientId shouldBe clientId
         invitation.clientIdType shouldBe clientIdType
-        invitation.service shouldBe inputData.inputService
+        invitation.service shouldBe inputData.service
         invitation.clientName shouldBe clientName
 
       }
@@ -135,11 +152,11 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
       val service = MtdIt.id
       val clientName = "DummyClientName"
 
-      val createInvitationInputData: CreateInvitationInputData = CreateInvitationInputData(
-        inputSuppliedClientId = suppliedClientId,
-        inputSuppliedClientIdType = suppliedClientIdType,
+      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
+        clientId = suppliedClientId,
+        suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        inputService = service
+        service = service
       )
 
       givenAuditConnector()
@@ -175,11 +192,11 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
       val service = "HMRC-NOT-SUPPORTED"
       val clientName = "DummyClientName"
 
-      val createInvitationInputData: CreateInvitationInputData = CreateInvitationInputData(
-        inputSuppliedClientId = suppliedClientId,
-        inputSuppliedClientIdType = suppliedClientIdType,
+      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
+        clientId = suppliedClientId,
+        suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        inputService = service
+        service = service
       )
 
       givenAuditConnector()
@@ -199,7 +216,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
         .findAllForAgent(arn.value)
         .futureValue shouldBe empty
 
-      val message = s"""Unsupported service "${createInvitationInputData.inputService}""""
+      val message = s"""Unsupported service "${createInvitationInputData.service}""""
       result.json shouldBe toJson(ErrorBody("UNSUPPORTED_SERVICE", message))
     }
 
@@ -209,11 +226,11 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
       val service = MtdIt.id
       val clientName = "DummyClientName"
 
-      val createInvitationInputData: CreateInvitationInputData = CreateInvitationInputData(
-        inputSuppliedClientId = suppliedClientId,
-        inputSuppliedClientIdType = suppliedClientIdType,
+      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
+        clientId = suppliedClientId,
+        suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        inputService = service
+        service = service
       )
 
       givenAuditConnector()
@@ -241,11 +258,11 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
       val service = MtdIt.id
       val clientName = "DummyClientName"
 
-      val createInvitationInputData: CreateInvitationInputData = CreateInvitationInputData(
-        inputSuppliedClientId = suppliedClientId,
-        inputSuppliedClientIdType = suppliedClientIdType,
+      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
+        clientId = suppliedClientId,
+        suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        inputService = service
+        service = service
       )
 
       givenAuditConnector()
@@ -262,7 +279,7 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
       result.status shouldBe 400
 
       val message =
-        s"""Unsupported clientIdType "${createInvitationInputData.inputSuppliedClientIdType}", for service type "${createInvitationInputData.inputService}"""".stripMargin
+        s"""Unsupported clientIdType "${createInvitationInputData.suppliedClientIdType}", for service type "${createInvitationInputData.service}"""".stripMargin
       result.json shouldBe toJson(ErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message))
 
       invitationRepo
@@ -272,4 +289,5 @@ class InvitationControllerISpec extends RelationshipsBaseControllerISpec with Te
     }
 
   }
+
 }

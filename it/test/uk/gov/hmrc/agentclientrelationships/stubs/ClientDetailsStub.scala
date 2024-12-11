@@ -70,7 +70,7 @@ trait ClientDetailsStub {
         .willReturn(aResponse().withStatus(status))
     )
 
-  def givenItsaBusinessDetailsExists(idType: String, id: String): StubMapping =
+  def givenItsaBusinessDetailsExists(idType: String, id: String, mtdId: String = "XAIT0000111122"): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/$idType/$id"))
         .willReturn(
@@ -87,7 +87,7 @@ trait ClientDetailsStub {
                          |        }
                          |      }
                          |    ],
-                         |    "mtdId": "XAIT0000111122"
+                         |    "mtdId": "$mtdId"
                          |  }
                          |}
           """.stripMargin)
