@@ -24,66 +24,9 @@ import java.time.LocalDateTime
 
 trait AfiRelationshipStub {
 
-  def givenAfiRelationshipIsActiveForAgent(arn: Arn, clientId: Nino) =
-    stubFor(
-      get(
-        urlEqualTo(
-          s"/agent-fi-relationship/relationships/PERSONAL-INCOME-RECORD/agent/${arn.value}/client/${clientId.value}"
-        )
-      )
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |[{
-                         |   "arn":"${arn.value}",
-                         |   "endDate":"2017-12-08T15:21:51.040",
-                         |   "clientId":"${clientId.value}"
-                         |},
-                         |{  "arn":"${arn.value}",
-                         |   "endDate":"2017-12-08T15:21:51.040",
-                         |   "clientId":"${clientId.value}"
-                         |}]""".stripMargin)
-        )
-    )
-
-  def givenAfiRelationshipIsActiveForAgentNoEndDate(arn: Arn, clientId: Nino) =
-    stubFor(
-      get(
-        urlEqualTo(
-          s"/agent-fi-relationship/relationships/PERSONAL-INCOME-RECORD/agent/${arn.value}/client/${clientId.value}"
-        )
-      )
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |[{
-                         |   "arn":"${arn.value}",
-                         |   "clientId":"${clientId.value}"
-                         |},
-                         |{  "arn":"${arn.value}",
-                         |   "clientId":"${clientId.value}"
-                         |}]""".stripMargin)
-        )
-    )
-
-  def givenAfiRelationshipNotFoundForAgent(arn: Arn, clientId: Nino) =
-    stubFor(
-      get(
-        urlEqualTo(
-          s"/agent-fi-relationship/relationships/PERSONAL-INCOME-RECORD/agent/${arn.value}/client/${clientId.value}"
-        )
-      )
-        .willReturn(
-          aResponse()
-            .withStatus(404)
-        )
-    )
-
   def givenAfiRelationshipIsActive(arn: Arn, service: String, clientId: String, fromCesa: Boolean) =
     stubFor(
-      get(urlEqualTo(s"/agent-fi-relationship/relationships/service/$service/clientId/$clientId"))
+      get(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -99,9 +42,9 @@ trait AfiRelationshipStub {
         )
     )
 
-  def givenAfiRelationshipNotFound(service: String, clientId: String) =
+  def givenAfiRelationshipNotFound(arn: Arn, service: String, clientId: String) =
     stubFor(
-      get(urlEqualTo(s"/agent-fi-relationship/relationships/service/$service/clientId/$clientId"))
+      get(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
         .willReturn(
           aResponse()
             .withStatus(404)
@@ -141,19 +84,6 @@ trait AfiRelationshipStub {
         )
     )
 
-  def givenTestOnlyTerminateAfiRelationshipSucceeds(arn: Arn, service: String, clientId: String) =
-    stubFor(
-      delete(
-        urlEqualTo(
-          s"/agent-fi-relationship/test-only/relationships/agent/${arn.value}/service/$service/client/$clientId"
-        )
-      )
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-        )
-    )
-
   def givenTerminateAfiRelationshipFails(arn: Arn, service: String, clientId: String, status: Int = 500) =
     stubFor(
       delete(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
@@ -166,19 +96,6 @@ trait AfiRelationshipStub {
   def givenCreateAfiRelationshipSucceeds(arn: Arn, service: String, clientId: String) =
     stubFor(
       put(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
-        .willReturn(
-          aResponse()
-            .withStatus(201)
-        )
-    )
-
-  def givenTestOnlyCreateAfiRelationshipSucceeds(arn: Arn, service: String, clientId: String) =
-    stubFor(
-      put(
-        urlEqualTo(
-          s"/agent-fi-relationship/test-only/relationships/agent/${arn.value}/service/$service/client/$clientId"
-        )
-      )
         .willReturn(
           aResponse()
             .withStatus(201)

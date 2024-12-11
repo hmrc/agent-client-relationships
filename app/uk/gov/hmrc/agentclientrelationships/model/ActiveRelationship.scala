@@ -20,7 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 
 case class ActiveRelationship(arn: Arn, dateTo: Option[LocalDate], dateFrom: Option[LocalDate])
 
@@ -31,6 +31,12 @@ object ActiveRelationship {
   implicit val reads: Reads[ActiveRelationship] = ((JsPath \ "agentReferenceNumber").read[Arn] and
     (JsPath \ "dateTo").readNullable[LocalDate] and
     (JsPath \ "dateFrom").readNullable[LocalDate])(ActiveRelationship.apply _)
+
+  val irvReads: Reads[ActiveRelationship] = (
+    (__ \ "arn").read[Arn] and
+      (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+      (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate))
+  )(ActiveRelationship.apply _)
 }
 
 case class ActiveRelationshipResponse(relationship: Seq[ActiveRelationship])
