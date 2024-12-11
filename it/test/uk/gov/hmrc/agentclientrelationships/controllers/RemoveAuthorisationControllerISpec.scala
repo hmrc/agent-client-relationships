@@ -23,7 +23,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthInvitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsRepository, PartialAuthRepository, SyncStatus}
@@ -256,18 +256,18 @@ class RemoveAuthorisationControllerISpec
       }
 
       "return 204 when PartialAuth exists in PartialAuth Repo" in new StubsForThisScenario {
-        await(partialAuthRepository.create(Instant.now(), arn, MtdIt, nino))
+        await(partialAuthRepository.create(Instant.now(), arn, MtdIt.id, nino))
 
         doAgentPostRequest(
           requestPath,
           Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         ).status shouldBe 204
 
-        val partialAuthInvitations: Option[PartialAuthInvitation] = partialAuthRepository
-          .find(MtdIt, nino, arn)
+        val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
+          .find(MtdIt.id, nino, arn)
           .futureValue
 
-        partialAuthInvitations.isDefined shouldBe true
+        partialAuthInvitations.isDefined shouldBe false
       }
 
       "return None when PartialAuth do not exists in PartialAuth Repo" in new StubsForThisScenario {
@@ -278,8 +278,8 @@ class RemoveAuthorisationControllerISpec
 
         result.status >= 400 && result.status < 600
 
-        val partialAuthInvitations: Option[PartialAuthInvitation] = partialAuthRepository
-          .find(MtdIt, nino, arn)
+        val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
+          .find(MtdIt.id, nino, arn)
           .futureValue
 
         partialAuthInvitations.isDefined shouldBe false

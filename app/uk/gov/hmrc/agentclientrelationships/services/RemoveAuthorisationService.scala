@@ -52,11 +52,11 @@ class RemoveAuthorisationService @Inject() (
     arn: Arn,
     clientId: ClientId,
     service: Service
-  ): Future[Option[PartialAuthInvitation]] =
+  ): Future[Option[PartialAuthRelationship]] =
     clientId.typeId match {
       case NinoType.id =>
         partialAuthRepository
-          .find(service, Nino(clientId.value), arn)
+          .find(service.id, Nino(clientId.value), arn)
       case _ => Future.successful(None)
     }
 
@@ -64,7 +64,7 @@ class RemoveAuthorisationService @Inject() (
     clientId.typeId match {
       case NinoType.id =>
         partialAuthRepository
-          .deletePartialAuth(service, Nino(clientId.value), arn)
+          .deletePartialAuth(service.id, Nino(clientId.value), arn)
       case _ => Future.successful(false)
     }
 
