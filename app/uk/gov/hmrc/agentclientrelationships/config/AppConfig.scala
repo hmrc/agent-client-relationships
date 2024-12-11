@@ -112,6 +112,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val altItsaEnabled =
     servicesConfig.getBoolean("alt-itsa.enabled")
 
+  val emailBaseUrl: String = baseUrl("email")
+
   // Note: Personal Income Record is not handled through agent-client-relationships
   val supportedServices: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
   // TODO: Keeping this list in appConfig to enable reading it from config in future if necessary
