@@ -23,6 +23,7 @@ import play.api.mvc.{Action, ControllerComponents, Request, Result}
 import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.PirRelationshipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, RelationshipDeleteFailed, RelationshipNotFound, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
@@ -39,8 +40,9 @@ import scala.util.control.NonFatal
 @Singleton
 class RemoveAuthorisationController @Inject() (
   deauthorisationService: RemoveAuthorisationService,
-  pirRelationshipConnector: PirRelationshipConnector,
+  agentFiRelationshipConnector: AgentFiRelationshipConnector,
   deleteService: DeleteRelationshipsServiceWithAcr,
+  val esConnector: EnrolmentStoreProxyConnector,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   validationService: ValidationService,
@@ -86,12 +88,14 @@ class RemoveAuthorisationController @Inject() (
     validRequest.service match {
 
       case Service.PersonalIncomeRecord =>
-        pirRelationshipConnector
+        agentFiRelationshipConnector
           .deleteRelationship(arn, validRequest.service, validRequest.suppliedClientId.value)
           .map {
-            case Some(true)  => Right(NoContent)
-            case Some(false) => Left(RelationshipNotFound)
-            case None        => Left(RelationshipDeleteFailed("Remove PersonalIncomeRecord relationship failed"))
+            case true  => Right(NoContent)
+            case false => Left(RelationshipNotFound)
+          }
+          .recover { case error: UpstreamErrorResponse =>
+            Left[InvitationFailureResponse, Result](RelationshipDeleteFailed(error.getMessage))
           }
 
       case Service.MtdIt | Service.MtdItSupp =>
@@ -148,7 +152,7 @@ class RemoveAuthorisationController @Inject() (
   ): Future[Either[InvitationFailureResponse, EnrolmentKey]] = {
     val resultT = for {
       suppliedEnrolmentKey <- EitherT(
-                                validationService.validateForEnrolmentKey(
+                                validateForEnrolmentKey(
                                   validRequest.service.id,
                                   validRequest.suppliedClientId.typeId,
                                   validRequest.suppliedClientId.value
