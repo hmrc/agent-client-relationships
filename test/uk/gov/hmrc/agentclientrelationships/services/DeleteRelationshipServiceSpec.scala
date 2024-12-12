@@ -522,6 +522,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
     val ifConnector: IFConnector = mock[IFConnector]
     val aca: AgentClientAuthorisationConnector = mock[AgentClientAuthorisationConnector]
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
+    val acaInvitationService: AcaDeAuthorisationService = new AcaDeAuthorisationService(aca)
 
     val repo = new FakeDeleteRecordRepository
     val lockService = new FakeLockService
@@ -535,17 +536,17 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
       .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
     implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
-    val underTest = new DeleteRelationshipsService(
+    val underTest = new DeleteRelationshipsServiceWithAca(
       es,
       ifConnector,
-      aca,
       repo,
       aucdConnector,
       lockService,
       checkService,
       agentUserService,
       auditService,
-      metrics
+      metrics,
+      acaInvitationService
     )
 
     def givenAgentExists: OngoingStubbing[Future[Either[String, AgentUser]]] =

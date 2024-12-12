@@ -57,6 +57,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val agentPermissionsUrl = servicesConfig.baseUrl("agent-permissions")
 
+  val agentFiRelationshipBaseUrl: String = servicesConfig.baseUrl("agent-fi-relationship")
+
   val desUrl = servicesConfig.baseUrl("des")
   val desEnv = getConfigString("des.environment")
   val desToken = getConfigString("des.authorization-token")

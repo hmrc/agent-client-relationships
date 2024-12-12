@@ -66,4 +66,16 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
         )
       )
       .headOption()
+
+  def deletePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] =
+    collection
+      .deleteOne(
+        and(
+          equal("arn", arn.value),
+          equal("service", serviceId),
+          equal("nino", nino.value)
+        )
+      )
+      .toFuture()
+      .map(_.wasAcknowledged())
 }

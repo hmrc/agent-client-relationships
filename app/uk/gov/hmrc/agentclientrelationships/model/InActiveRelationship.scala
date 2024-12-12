@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 
 case class InactiveRelationship(
   arn: Arn,
@@ -56,6 +57,15 @@ object InactiveRelationship {
       JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
     }
   }
+
+  val irvReads: Reads[InactiveRelationship] = (
+    (__ \ "arn").read[Arn] and
+      (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+      (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+      (__ \ "clientId").read[String]
+  )((arn, validTo, validFrom, clientId) =>
+    InactiveRelationship(arn, validTo, validFrom, clientId, "personal", Service.PersonalIncomeRecord.id)
+  )
 
 }
 

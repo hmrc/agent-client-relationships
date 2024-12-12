@@ -104,4 +104,33 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       await(repository.find("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
     }
   }
+
+  "delete PartialAuth invitation success" in {
+    await(
+      repository.create(
+        Instant.parse("2020-01-01T00:00:00.000Z"),
+        Arn("XARN1234567"),
+        "HMRC-MTD-IT",
+        Nino("SX579189D")
+      )
+    )
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
+    await(repository.deletePartialAuth("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567")))
+    val result = await(
+      repository.find(
+        "HMRC-MTD-IT",
+        Nino("SX579189D"),
+        Arn("XARN1234567")
+      )
+    )
+    result.isEmpty shouldBe true
+    await(repository.collection.countDocuments().toFuture()) shouldBe 0
+  }
+
+  "delete PartialAuth invitation return success even when initation do not exists" in {
+    await(repository.collection.countDocuments().toFuture()) shouldBe 0
+    await(repository.deletePartialAuth("HMRC-MTD-VAT", Nino("SX579189D"), Arn("XARN1234567")))
+    await(repository.collection.countDocuments().toFuture()) shouldBe 0
+  }
+
 }

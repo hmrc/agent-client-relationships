@@ -23,7 +23,7 @@ POST          /agent/:arn/authorisation-request                              @uk
 GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
 # TODO agree the response for and implement the GET all route
 # GET           /agent/:arn/authorisation-request-info                         @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.getAll
-
+POST          /agent/:arn/remove-authorisation                              @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)

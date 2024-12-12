@@ -92,6 +92,7 @@ trait RelationshipsBaseControllerISpec
         "auditing.consumer.baseUri.port"                        -> wireMockPort,
         "microservice.services.agent-user-client-details.port"  -> wireMockPort,
         "microservice.services.agent-assurance.port"            -> wireMockPort,
+        "microservice.services.agent-fi-relationship.port"      -> wireMockPort,
         "features.copy-relationship.mtd-it"                     -> true,
         "features.copy-relationship.mtd-vat"                    -> true,
         "features.recovery-enable"                              -> false,
