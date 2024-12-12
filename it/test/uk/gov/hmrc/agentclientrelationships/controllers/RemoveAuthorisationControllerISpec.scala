@@ -22,7 +22,7 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
@@ -48,8 +48,6 @@ class RemoveAuthorisationControllerISpec
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val deleteRelationshipService: DeleteRelationshipsServiceWithAcr =
     app.injector.instanceOf[DeleteRelationshipsServiceWithAcr]
-  val pirRelationshipConnector: PirRelationshipConnector =
-    app.injector.instanceOf[PirRelationshipConnector]
   val validationService = app.injector.instanceOf[ValidationService]
   val agentFiRelationshipConnector: AgentFiRelationshipConnector =
     app.injector.instanceOf[AgentFiRelationshipConnector]

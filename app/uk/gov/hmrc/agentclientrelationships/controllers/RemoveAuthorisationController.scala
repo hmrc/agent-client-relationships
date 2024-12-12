@@ -22,8 +22,7 @@ import play.api.libs.json.JsValue
 import play.api.mvc.{Action, ControllerComponents, Request, Result}
 import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.PirRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, RelationshipDeleteFailed, RelationshipNotFound, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
@@ -42,7 +41,6 @@ class RemoveAuthorisationController @Inject() (
   deauthorisationService: RemoveAuthorisationService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   deleteService: DeleteRelationshipsServiceWithAcr,
-  val esConnector: EnrolmentStoreProxyConnector,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   validationService: ValidationService,
@@ -152,7 +150,7 @@ class RemoveAuthorisationController @Inject() (
   ): Future[Either[InvitationFailureResponse, EnrolmentKey]] = {
     val resultT = for {
       suppliedEnrolmentKey <- EitherT(
-                                validateForEnrolmentKey(
+                                validationService.validateForEnrolmentKey(
                                   validRequest.service.id,
                                   validRequest.suppliedClientId.typeId,
                                   validRequest.suppliedClientId.value
