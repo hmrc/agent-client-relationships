@@ -22,11 +22,11 @@ import play.api.libs.json.JsValue
 import play.api.mvc.{Action, ControllerComponents, Request, Result}
 import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, PirRelationshipConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.PirRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, RelationshipDeleteFailed, RelationshipNotFound, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RelationshipsCommon, RemoveAuthorisationService}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -41,14 +41,13 @@ class RemoveAuthorisationController @Inject() (
   deauthorisationService: RemoveAuthorisationService,
   pirRelationshipConnector: PirRelationshipConnector,
   deleteService: DeleteRelationshipsServiceWithAcr,
-  val esConnector: EnrolmentStoreProxyConnector,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
+  validationService: ValidationService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
-    with AuthActions
-    with RelationshipsCommon {
+    with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
@@ -149,7 +148,7 @@ class RemoveAuthorisationController @Inject() (
   ): Future[Either[InvitationFailureResponse, EnrolmentKey]] = {
     val resultT = for {
       suppliedEnrolmentKey <- EitherT(
-                                validateForEnrolmentKey(
+                                validationService.validateForEnrolmentKey(
                                   validRequest.service.id,
                                   validRequest.suppliedClientId.typeId,
                                   validRequest.suppliedClientId.value
