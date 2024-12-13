@@ -47,8 +47,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     BasicAuthentication(username, password)
   }
 
-  private def baseUrl(key: String) = servicesConfig.baseUrl(key)
-
   val enrolmentStoreProxyUrl = servicesConfig.baseUrl("enrolment-store-proxy")
 
   val taxEnrolmentsUrl = servicesConfig.baseUrl("tax-enrolments")
@@ -124,13 +122,4 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val invitationsTtl: Long = config.get[Long]("mongodb.invitations.expireAfterDays")
 
   val invitationExpiringDuration: Duration = servicesConfig.getDuration("invitation.expiryDuration")
-
-  val platformAnalyticsBaseUrl: String = baseUrl("platform-analytics")
-  val gaTrackingId: String = servicesConfig.getString("google-analytics.token")
-  val gaBatchSize: Int = servicesConfig.getInt("google-analytics.batchSize")
-  val gaClientTypeIndex: Int = servicesConfig.getInt("google-analytics.clientTypeIndex")
-  val gaInvitationIdIndex: Int = servicesConfig.getInt("google-analytics.invitationIdIndex")
-  val gaOriginIndex: Int = servicesConfig.getInt("google-analytics.originIndex")
-  val gaAltItsaIndex: Int = servicesConfig.getInt("google-analytics.altItsaIndex")
-
 }

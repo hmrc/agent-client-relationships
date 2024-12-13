@@ -87,14 +87,4 @@ class RemoveAuthorisationService @Inject() (
       case _ => Future successful Right(suppliedEnrolmentKey)
     }
 
-  def setRelationshipEnded(arn: String, suppliedClientId: String, service: String, endedBy: String)(implicit
-    ec: ExecutionContext
-  ): Future[Option[Invitation]] =
-    for {
-      updatedInvitation <- invitationsRepository.deauthorise(arn, suppliedClientId, service, endedBy)
-    } yield updatedInvitation.map { i =>
-      logger info s"""Invitation with id: "${i.invitationId}" status has been changed to Deauthorise"""
-      i
-    }
-
 }

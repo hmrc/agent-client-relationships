@@ -54,10 +54,10 @@ class RelationshipsController @Inject() (
   val esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
   auditService: AuditService,
+  validationService: ValidationService,
   override val controllerComponents: ControllerComponents
 ) extends BackendController(controllerComponents)
-    with AuthActions
-    with RelationshipsCommon {
+    with AuthActions {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
@@ -98,7 +98,7 @@ class RelationshipsController @Inject() (
       // "normal" cases
       case (svc, idType, id) =>
         // TODO, unnecessary ES20 call?
-        validateForEnrolmentKey(svc, idType, id).flatMap {
+        validationService.validateForEnrolmentKey(svc, idType, id).flatMap {
           case Right(enrolmentKey) => checkWithTaxIdentifier(arn, tUserId, enrolmentKey)
           case Left(validationError) =>
             logger.warn(s"Invalid parameters: $validationError")
@@ -201,7 +201,7 @@ class RelationshipsController @Inject() (
 
   def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
+      validationService.validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
@@ -236,7 +236,7 @@ class RelationshipsController @Inject() (
 
   def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
+      validationService.validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier =
             enrolmentKey.oneTaxIdentifier()
@@ -315,7 +315,7 @@ class RelationshipsController @Inject() (
 
   def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
+      validationService.validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>

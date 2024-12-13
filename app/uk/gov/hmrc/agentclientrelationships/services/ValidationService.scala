@@ -25,15 +25,14 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-trait RelationshipsCommon {
-  this: Logging =>
-
-  val esConnector: EnrolmentStoreProxyConnector
-  val appConfig: AppConfig
+class ValidationService @Inject() (
+  esConnector: EnrolmentStoreProxyConnector,
+  appConfig: AppConfig
+) extends Logging {
 
   // noinspection ScalaStyle
   def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(implicit

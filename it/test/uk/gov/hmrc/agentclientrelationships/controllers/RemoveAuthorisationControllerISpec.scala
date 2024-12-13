@@ -22,12 +22,12 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsRepository, PartialAuthRepository, SyncStatus}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, PersonalIncomeRecord}
@@ -46,9 +46,9 @@ class RemoveAuthorisationControllerISpec
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  val es: EnrolmentStoreProxyConnector = app.injector.instanceOf[EnrolmentStoreProxyConnector]
   val deleteRelationshipService: DeleteRelationshipsServiceWithAcr =
     app.injector.instanceOf[DeleteRelationshipsServiceWithAcr]
+  val validationService = app.injector.instanceOf[ValidationService]
   val agentFiRelationshipConnector: AgentFiRelationshipConnector =
     app.injector.instanceOf[AgentFiRelationshipConnector]
 
@@ -57,9 +57,9 @@ class RemoveAuthorisationControllerISpec
       deAuthorisationService,
       agentFiRelationshipConnector,
       deleteRelationshipService,
-      es,
       authConnector,
       appConfig,
+      validationService,
       stubControllerComponents()
     )
 

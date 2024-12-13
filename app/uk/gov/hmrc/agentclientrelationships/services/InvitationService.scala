@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
-import org.apache.pekko.Done
 import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -34,13 +33,11 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future.successful
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
-  analyticsService: PlatformAnalyticsService,
   ifConnector: IFConnector,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
@@ -48,15 +45,14 @@ class InvitationService @Inject() (
 
   def createInvitation(
     arn: Arn,
-    createInvitationInputData: CreateInvitationRequest,
-    originHeader: Option[String]
+    createInvitationInputData: CreateInvitationRequest
   )(implicit hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Invitation]] = {
     val invitationT = for {
 
       suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
       service          <- EitherT.fromEither[Future](createInvitationInputData.getService)
       invitation <- EitherT(
-                      makeInvitation(arn, suppliedClientId, service, createInvitationInputData.clientName, originHeader)
+                      makeInvitation(arn, suppliedClientId, service, createInvitationInputData.clientName)
                     )
     } yield invitation
 
@@ -70,12 +66,11 @@ class InvitationService @Inject() (
     arn: Arn,
     suppliedClientId: ClientId,
     service: Service,
-    clientName: String,
-    originHeader: Option[String]
+    clientName: String
   )(implicit hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Invitation]] = {
     val invitationT = for {
       clientId   <- EitherT(getClientId(suppliedClientId, service))
-      invitation <- EitherT(create(arn, service, clientId, suppliedClientId, clientName, originHeader))
+      invitation <- EitherT(create(arn, service, clientId, suppliedClientId, clientName))
     } yield invitation
 
     invitationT.value
@@ -97,14 +92,11 @@ class InvitationService @Inject() (
     service: Service,
     clientId: ClientId,
     suppliedClientId: ClientId,
-    clientName: String,
-    originHeader: Option[String]
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
+    clientName: String
+  )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
       invitation <- invitationsRepository.create(arn.value, service, clientId, suppliedClientId, clientName, expiryDate)
-      // TODO WG - remove that code
-      _ <- analyticsService.reportSingleEventAnalyticsRequest(invitation, originHeader).fallbackTo(successful(Done))
     } yield {
       logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
       Right(invitation)

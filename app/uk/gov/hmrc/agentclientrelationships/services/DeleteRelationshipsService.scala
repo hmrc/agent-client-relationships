@@ -48,7 +48,7 @@ private[services] abstract class DeleteRelationshipsService(
   agentUserService: AgentUserService,
   val auditService: AuditService,
   val metrics: Metrics,
-  sharedInvitationService: SharedDeAuthorisationService
+  deAuthoriseInvitationService: DeAuthoriseInvitationService
 )(implicit val appConfig: AppConfig, ec: ExecutionContext)
     extends Monitoring
     with Logging {
@@ -391,8 +391,8 @@ private[services] abstract class DeleteRelationshipsService(
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Done] =
-    sharedInvitationService
-      .setRelationshipEndedShared(arn, enrolmentKey, endedBy)
+    deAuthoriseInvitationService
+      .deAuthoriseInvitation(arn, enrolmentKey, endedBy)
       .map(success =>
         if (success) Done
         else {
@@ -413,7 +413,7 @@ class DeleteRelationshipsServiceWithAca @Inject() (
   agentUserService: AgentUserService,
   override val auditService: AuditService,
   override val metrics: Metrics,
-  sharedInvitationService: AcaDeAuthorisationService
+  acaDeAuthoriseInvitationService: AcaDeAuthoriseInvitationService
 )(implicit override val appConfig: AppConfig, ec: ExecutionContext)
     extends DeleteRelationshipsService(
       es,
@@ -425,7 +425,7 @@ class DeleteRelationshipsServiceWithAca @Inject() (
       agentUserService,
       auditService,
       metrics,
-      sharedInvitationService
+      acaDeAuthoriseInvitationService
     )
 
 @Singleton
@@ -439,7 +439,7 @@ class DeleteRelationshipsServiceWithAcr @Inject() (
   agentUserService: AgentUserService,
   override val auditService: AuditService,
   override val metrics: Metrics,
-  sharedInvitationService: AcrDeAuthorisationService
+  acrDeAuthoriseInvitationService: AcrDeAuthoriseInvitationService
 )(implicit override val appConfig: AppConfig, ec: ExecutionContext)
     extends DeleteRelationshipsService(
       es,
@@ -451,5 +451,5 @@ class DeleteRelationshipsServiceWithAcr @Inject() (
       agentUserService,
       auditService,
       metrics,
-      sharedInvitationService
+      acrDeAuthoriseInvitationService
     )
