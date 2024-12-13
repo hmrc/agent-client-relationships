@@ -48,9 +48,8 @@ class InvitationController @Inject() (
       .validate[CreateInvitationRequest]
       .fold(
         errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-        createInvitationRequest => {
-          val originHeader: Option[String] = request.headers.get("Origin")
-          invitationService.createInvitation(arn, createInvitationRequest, originHeader).map { response =>
+        createInvitationRequest =>
+          invitationService.createInvitation(arn, createInvitationRequest).map { response =>
             response.fold(
               {
                 case UnsupportedService =>
@@ -92,7 +91,6 @@ class InvitationController @Inject() (
               invitation => Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
             )
           }
-        }
       )
   }
 
