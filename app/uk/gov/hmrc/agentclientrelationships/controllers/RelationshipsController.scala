@@ -24,16 +24,16 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, IFConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, RelationshipDeletePending, RelationshipNotFound}
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Provider, Singleton}
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -41,27 +41,24 @@ import scala.util.control.NonFatal
 class RelationshipsController @Inject() (
   override val authConnector: AuthConnector,
   val appConfig: AppConfig,
-  checkService: CheckRelationshipsService,
+  checkOrchestratorService: CheckRelationshipsOrchestratorService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,
   deleteService: DeleteRelationshipsServiceWithAca,
   findService: FindRelationshipsService,
-  agentUserService: AgentUserService,
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
   ifConnector: IFConnector,
-  ecp: Provider[ExecutionContext],
   val esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
   auditService: AuditService,
   validationService: ValidationService,
   override val controllerComponents: ControllerComponents
-) extends BackendController(controllerComponents)
+)(implicit executionContext: ExecutionContext)
+    extends BackendController(controllerComponents)
     with AuthActions {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
-
-  implicit val ec: ExecutionContext = ecp.get
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
@@ -72,130 +69,12 @@ class RelationshipsController @Inject() (
     clientId: String,
     userId: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
-    val tUserId = userId.map(UserId)
-    def useMtdIdInEnrolmentKey(serviceId: String): Future[Result] =
-      ifConnector
-        .getMtdIdFor(Nino(clientId))
-        .flatMap(
-          _.fold(Future.successful(NotFound(toJson("RELATIONSHIP_NOT_FOUND"))))(mtdItId =>
-            checkWithTaxIdentifier(
-              arn,
-              tUserId,
-              EnrolmentKey(serviceId, mtdItId)
-            )
-          )
-        )
-
-    (service, clientIdType, clientId) match {
-      // "special" cases
-      case ("IR-SA", _, _) if Nino.isValid(clientId) =>
-        withIrSaSuspensionCheck(arn) {
-          checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
-        }
-      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO", _) if Nino.isValid(clientId) =>
-        useMtdIdInEnrolmentKey(service)
-      case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
-      // "normal" cases
-      case (svc, idType, id) =>
-        // TODO, unnecessary ES20 call?
-        validationService.validateForEnrolmentKey(svc, idType, id).flatMap {
-          case Right(enrolmentKey) => checkWithTaxIdentifier(arn, tUserId, enrolmentKey)
-          case Left(validationError) =>
-            logger.warn(s"Invalid parameters: $validationError")
-            Future.successful(BadRequest)
-        }
-    }
-  }
-
-  private def withIrSaSuspensionCheck(
-    agentId: Arn
-  )(proceed: => Future[Result])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
-    des.getAgentRecord(agentId).flatMap {
-      case None => Future.successful(BadRequest)
-      case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
-        logger.warn(s"agent with id : ${agentId.value} is suspended for regime ITSA")
-        Future.successful(BadRequest)
-      case _ => proceed
-    }
-
-  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
-    request: Request[_]
-  ) = {
-    implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
-    maybeUserId.foreach(auditData.set("credId", _))
-
-    val result = for {
-      _ <- agentUserService.getAgentAdminUserFor(arn)
-      /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
-         the relevant auditData fields are populated, which our tests expect.
-         TODO: Must refactor to remove these hidden side-effects and put them somewhere more explicit.
-         Statements populating audit data should be gathered together as much as possible, preferably at the controller level,
-         and not scattered throughout lots of methods in different classes. */
-      isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
-      res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
-             else Future.failed(RelationshipDeletePending())
-    } yield if (res) Right(true) else throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
-
-    result
-      .recoverWith {
-        case RelationshipNotFound(errorCode) =>
-          checkOldRelationship(arn, enrolmentKey, errorCode)
-        case AdminNotFound(errorCode) =>
-          checkOldRelationship(arn, enrolmentKey, errorCode)
-        case e @ RelationshipDeletePending() =>
-          logger.warn("Denied access because relationship removal is pending.")
-          Future.successful(Left(e.getMessage))
-      }
+    checkOrchestratorService
+      .checkForRelationship(arn, service, clientIdType, clientId, userId)
       .map {
-        case Left(errorCode) => NotFound(toJson(errorCode)) // no access (due to error)
-        case Right(false)    => NotFound(toJson("RELATIONSHIP_NOT_FOUND")) // do not grant access
-        case Right(true)     => Ok // grant access
-      }
-  }
-
-  private def checkOldRelationship(arn: Arn, enrolmentKey: EnrolmentKey, errorCode: String)(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData
-  ): Future[Either[String, Boolean]] =
-    checkOldAndCopyService
-      .checkForOldRelationshipAndCopy(arn, enrolmentKey)
-      .map {
-        case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
-          Left(errorCode)
-        case cesaResult =>
-          Right(cesaResult.grantAccess)
-      }
-      .recover {
-        case upS: UpstreamErrorResponse =>
-          throw upS
-        case NonFatal(ex) =>
-          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
-          logger.warn(
-            s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
-          )
-          Left(errorCode)
-      }
-
-  private def checkLegacyWithNinoOrPartialAuth(arn: Arn, nino: Nino)(implicit request: Request[_]) = {
-    implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
-
-    checkOldAndCopyService
-      .hasLegacyRelationshipInCesaOrHasPartialAuth(arn, nino)
-      .map {
-        case true  => Ok
-        case false => NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-      }
-      .recover {
-        case upS: UpstreamErrorResponse => throw upS
-        case NonFatal(ex) =>
-          logger.warn(
-            s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}"
-          )
-          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
+        case CheckRelationshipFound             => Ok
+        case CheckRelationshipNotFound(message) => NotFound(toJson(message))
+        case CheckRelationshipInvalidRequest    => BadRequest
       }
   }
 
@@ -265,26 +144,6 @@ class RelationshipsController @Inject() (
               }
           }
         case Left(error) => Future.successful(BadRequest(error))
-      }
-  }
-
-  private def checkWithVrn(arn: Arn, vrn: Vrn)(implicit request: Request[_]) = {
-    implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
-
-    checkOldAndCopyService
-      .lookupESForOldRelationship(arn, vrn)
-      .map {
-        case references if references.nonEmpty =>
-          Ok
-        case _ =>
-          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
-      }
-      .recover {
-        case upS: UpstreamErrorResponse => throw upS
-        case NonFatal(_) =>
-          logger.warn("checkWithVrn: lookupESForOldRelationship failed")
-          NotFound(toJson("RELATIONSHIP_NOT_FOUND"))
       }
   }
 

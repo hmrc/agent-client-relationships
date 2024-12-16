@@ -76,31 +76,31 @@ class AgentFiRelationshipConnectorISpec
     new AgentFiRelationshipConnector(appConfig, httpClient, metrics)(ec)
 
   val arn: Arn = Arn("ABCDE123456")
-  val service: Service = Service.PersonalIncomeRecord
+  val service: String = Service.PersonalIncomeRecord.id
   val clientId = "AA000001B"
 
   "deleteRelationship" should {
     "return a true if PersonalIncomeRecord has been deleted" in {
-      givenTerminateAfiRelationshipSucceeds(arn, service.id, clientId)
+      givenTerminateAfiRelationshipSucceeds(arn, service, clientId)
       await(agentFiRelationshipConnector.deleteRelationship(arn, service, clientId)) shouldBe true
     }
     "return a false if PersonalIncomeRecord has not been found" in {
-      givenTerminateAfiRelationshipFails(arn, service.id, clientId, NOT_FOUND)
+      givenTerminateAfiRelationshipFails(arn, service, clientId, NOT_FOUND)
       await(agentFiRelationshipConnector.deleteRelationship(arn, service, clientId)) shouldBe false
     }
     "throw an if PersonalIncomeRecord fails to delete" in {
-      givenTerminateAfiRelationshipFails(arn, service.id, clientId, INTERNAL_SERVER_ERROR)
+      givenTerminateAfiRelationshipFails(arn, service, clientId, INTERNAL_SERVER_ERROR)
       intercept[UpstreamErrorResponse](await(agentFiRelationshipConnector.deleteRelationship(arn, service, clientId)))
     }
   }
 
   "createRelationship" should {
     "return a true if PersonalIncomeRecord has been created" in {
-      givenCreateAfiRelationshipSucceeds(arn, service.id, clientId)
+      givenCreateAfiRelationshipSucceeds(arn, service, clientId)
       await(agentFiRelationshipConnector.createRelationship(arn, service, clientId, LocalDateTime.now())) shouldBe true
     }
     "throw an if PersonalIncomeRecord fails to create" in {
-      givenCreateAfiRelationshipFails(arn, service.id, clientId)
+      givenCreateAfiRelationshipFails(arn, service, clientId)
       intercept[UpstreamErrorResponse](
         await(agentFiRelationshipConnector.createRelationship(arn, service, clientId, LocalDateTime.now()))
       )
@@ -109,13 +109,13 @@ class AgentFiRelationshipConnectorISpec
 
   "getRelationship" should {
     "return an active relationship if active PersonalIncomeRecord exists" in {
-      givenAfiRelationshipIsActive(arn, service.id, clientId, fromCesa = false)
+      givenAfiRelationshipIsActive(arn, service, clientId, fromCesa = false)
       await(agentFiRelationshipConnector.getRelationship(arn, service, clientId)) shouldBe Some(
         ActiveRelationship(Arn("ABCDE123456"), None, Some(LocalDate.parse("2017-12-08")))
       )
     }
     "return None if active PersonalIncomeRecord does not exist" in {
-      givenAfiRelationshipNotFound(arn, service.id, clientId)
+      givenAfiRelationshipNotFound(arn, service, clientId)
       await(agentFiRelationshipConnector.getRelationship(arn, service, clientId)) shouldBe None
     }
   }

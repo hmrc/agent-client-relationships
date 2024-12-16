@@ -87,7 +87,7 @@ class RemoveAuthorisationController @Inject() (
 
       case Service.PersonalIncomeRecord =>
         agentFiRelationshipConnector
-          .deleteRelationship(arn, validRequest.service, validRequest.suppliedClientId.value)
+          .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
           .map {
             case true  => Right(NoContent)
             case false => Left(RelationshipNotFound)
