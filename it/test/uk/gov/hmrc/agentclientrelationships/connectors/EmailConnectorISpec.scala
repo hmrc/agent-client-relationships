@@ -36,10 +36,10 @@ class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with Wire
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "microservice.services.agent-assurance.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host"             -> wireMockHost,
-        "auditing.consumer.baseUri.port"             -> wireMockPort,
-        "internal-auth.token"                        -> "internalAuthToken"
+        "microservice.services.email.port" -> wireMockPort,
+        "auditing.consumer.baseUri.host"   -> wireMockHost,
+        "auditing.consumer.baseUri.port"   -> wireMockPort,
+        "internal-auth.token"              -> "internalAuthToken"
       )
 
   val connector = app.injector.instanceOf[EmailConnector]
