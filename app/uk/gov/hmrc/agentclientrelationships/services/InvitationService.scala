@@ -21,9 +21,9 @@ import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
-import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
@@ -61,6 +61,23 @@ class InvitationService @Inject() (
 
   def findInvitation(arn: String, invitationId: String): Future[Option[Invitation]] =
     invitationsRepository.findOneById(arn, invitationId)
+
+  def rejectInvitation(
+    invitationId: String
+  )(implicit ec: ExecutionContext /*, hc: HeaderCarrier*/ ): Future[Either[InvitationFailureResponse, Unit]] =
+    (for {
+      invitation <- EitherT(
+                      invitationsRepository
+                        .updateStatusFromTo(invitationId, Pending, Rejected)
+                        .map(_.fold[Either[InvitationFailureResponse, Invitation]](Left(NoPendingInvitation))(Right(_)))
+                    )
+      // TODO WG 1. emailService 2. Analitics etc
+//      _ = reportHistogramValue("Duration-Invitation-Rejected", durationOf(invitation))
+//      _ <- emailService.sendRejectedEmail(invitation).fallbackTo(successful(()))
+//      _ <- analyticsService.reportSingleEventAnalyticsRequest(invitation).fallbackTo(successful(Done))
+    } yield invitation)
+      .map(_ => ())
+      .value
 
   private def makeInvitation(
     arn: Arn,

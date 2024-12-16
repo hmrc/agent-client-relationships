@@ -111,6 +111,25 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFutureOption()
 
+  def updateStatusFromTo(
+    invitationId: String,
+    fromStatus: InvitationStatus,
+    toStatus: InvitationStatus
+  ): Future[Option[Invitation]] =
+    collection
+      .findOneAndUpdate(
+        and(
+          equal("invitationId", invitationId),
+          equal("status", Codecs.toBson[InvitationStatus](fromStatus))
+        ),
+        combine(
+          set("status", Codecs.toBson(toStatus)),
+          set("lastUpdated", Instant.now())
+        ),
+        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
+      )
+      .toFutureOption()
+
   def deauthorise(
     arn: String,
     suppliedClientId: String,

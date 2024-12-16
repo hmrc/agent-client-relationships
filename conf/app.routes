@@ -19,6 +19,8 @@ POST          /client/validate-invitation                                    @uk
 
 GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
+PUT           /client/authorisation-response/reject/:invitationId            @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.rejectInvitation(invitationId: String)
+
 POST          /agent/:arn/authorisation-request                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
 # TODO agree the response for and implement the GET all route

@@ -34,8 +34,7 @@ object InvitationFailureResponse {
   }
 
   case object UnsupportedService extends InvitationFailureResponse {
-    def getResult(message: String): Result =
-      NotImplemented(toJson(ErrorBody("UNSUPPORTED_SERVICE", message)))
+    def getResult(message: String): Result = NotImplemented(toJson(ErrorBody("UNSUPPORTED_SERVICE", message)))
   }
 
   case object InvalidClientId extends InvitationFailureResponse {
@@ -80,6 +79,10 @@ object InvitationFailureResponse {
 
   case class RelationshipDeleteFailed(msg: String) extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError(toJson(msg))
+  }
+
+  case object NoPendingInvitation extends InvitationFailureResponse {
+    def getResult(message: String): Result = NotFound(message)
   }
 
 }

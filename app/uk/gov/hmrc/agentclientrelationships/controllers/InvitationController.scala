@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
@@ -92,6 +92,23 @@ class InvitationController @Inject() (
             )
           }
       )
+  }
+
+  def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async {
+    invitationService.rejectInvitation(invitationId).map { response =>
+      response.fold(
+        {
+          case NoPendingInvitation =>
+            val msg = s"""Pending Invitation not found
+                         | for invitationId "$invitationId"""".stripMargin
+            Logger(getClass).warn(msg)
+            NoPendingInvitation.getResult(msg)
+
+          case _ => BadRequest
+        },
+        _ => NoContent
+      )
+    }
   }
 
 }
