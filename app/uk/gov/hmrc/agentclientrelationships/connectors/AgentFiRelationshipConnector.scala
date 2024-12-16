@@ -21,7 +21,7 @@ import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
@@ -40,13 +40,13 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, http: HttpCl
     s"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships" +
       s"/agent/$arn/service/$service/client/$clientId"
 
-  def getRelationship(arn: Arn, service: Service, clientId: String)(implicit
+  def getRelationship(arn: Arn, service: String, clientId: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[ActiveRelationship]] =
-    monitor(s"ConsumedAPI-AgentFiRelationship-${service.id}-GET") {
+    monitor(s"ConsumedAPI-AgentFiRelationship-$service-GET") {
       http
-        .get(url"${afiRelationshipUrl(arn.value, service.id, clientId)}")
+        .get(url"${afiRelationshipUrl(arn.value, service, clientId)}")
         .execute[HttpResponse]
         .map { response =>
           implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
@@ -84,13 +84,13 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, http: HttpCl
         }
     }
 
-  def createRelationship(arn: Arn, service: Service, clientId: String, acceptedDate: LocalDateTime)(implicit
+  def createRelationship(arn: Arn, service: String, clientId: String, acceptedDate: LocalDateTime)(implicit
     hc: HeaderCarrier
   ): Future[Boolean] = {
     val body = Json.obj("startDate" -> acceptedDate.toString)
-    monitor(s"ConsumedAPI-AgentFiRelationship-${service.id}-PUT") {
+    monitor(s"ConsumedAPI-AgentFiRelationship-$service-PUT") {
       http
-        .put(url"${afiRelationshipUrl(arn.value, service.id, clientId)}")
+        .put(url"${afiRelationshipUrl(arn.value, service, clientId)}")
         .withBody(body)
         .execute[HttpResponse]
         .map { response =>
@@ -103,13 +103,13 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, http: HttpCl
     }
   }
 
-  def deleteRelationship(arn: Arn, service: Service, clientId: String)(implicit
+  def deleteRelationship(arn: Arn, service: String, clientId: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Boolean] =
-    monitor(s"ConsumedAPI-AgentFiRelationship-${service.id}-DELETE") {
+    monitor(s"ConsumedAPI-AgentFiRelationship-$service-DELETE") {
       http
-        .delete(url"${afiRelationshipUrl(arn.value, service.id, clientId)}")
+        .delete(url"${afiRelationshipUrl(arn.value, service, clientId)}")
         .execute[HttpResponse]
         .map { response =>
           response.status match {
