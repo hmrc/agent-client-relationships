@@ -71,9 +71,18 @@ class InvitationService @Inject() (
                         .updateStatusFromTo(invitationId, Pending, Rejected)
                         .map(_.fold[Either[InvitationFailureResponse, Invitation]](Left(NoPendingInvitation))(Right(_)))
                     )
-      // TODO WG 1. emailService 2. Analitics etc
+      // TODO WG 1. emailService
+      //      _ <- emailService.sendRejectedEmail(invitation).fallbackTo(successful(()))
+      // TODO WG 2. auditEvent
+//      val auditData: AuditData = new AuditData()
+//      auditData.set("arn", arn)
+//        auditData.set("Journey", "hasLegacyMapping")
+//        auditData.set("service", "mtd-it")
+//        auditData.set("clientId", nino)
+//        auditData.set("clientIdType", "nino")
+////      _ <- auditService.sendRejectInvitationAuditEvent
+      //TODO WG - what are those histogram and analitics ??
 //      _ = reportHistogramValue("Duration-Invitation-Rejected", durationOf(invitation))
-//      _ <- emailService.sendRejectedEmail(invitation).fallbackTo(successful(()))
 //      _ <- analyticsService.reportSingleEventAnalyticsRequest(invitation).fallbackTo(successful(Done))
     } yield invitation)
       .map(_ => ())
