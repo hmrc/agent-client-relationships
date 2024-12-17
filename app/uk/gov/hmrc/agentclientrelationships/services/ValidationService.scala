@@ -41,9 +41,9 @@ class ValidationService @Inject() (
   ): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
-      case ("IR-SA", "ni" | "NI") if Nino.isValid(clientId) =>
+      case ("IR-SA", "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
-      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI") if Nino.isValid(clientId) =>
+      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
@@ -51,9 +51,10 @@ class ValidationService @Inject() (
         makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>
-        if (appConfig.supportedServices.exists(_.id == serviceKey)) {
+        if (appConfig.supportedServices.exists(_.id == serviceKey))
           validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
-        } else Future.successful(Left(s"Unknown service $serviceKey"))
+        else
+          Future.successful(Left(s"Unknown service $serviceKey"))
     }
 
   /** This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be

@@ -85,6 +85,7 @@ class RemoveAuthorisationController @Inject() (
   ): Future[Either[InvitationFailureResponse, Result]] =
     validRequest.service match {
 
+      // TODO WG - do audit for PersonalIncome
       case Service.PersonalIncomeRecord =>
         agentFiRelationshipConnector
           .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
@@ -111,7 +112,8 @@ class RemoveAuthorisationController @Inject() (
                     )
                 }
 
-            case None => getEnrolmentAndDeleteRelationship(arn, validRequest)
+            case None =>
+              getEnrolmentAndDeleteRelationship(arn, validRequest)
 
           }
 
@@ -152,7 +154,7 @@ class RemoveAuthorisationController @Inject() (
       suppliedEnrolmentKey <- EitherT(
                                 validationService.validateForEnrolmentKey(
                                   validRequest.service.id,
-                                  validRequest.suppliedClientId.typeId,
+                                  validRequest.suppliedClientId.enrolmentId,
                                   validRequest.suppliedClientId.value
                                 )
                               ).leftMap(_ => EnrolmentKeyNotFound)
@@ -162,7 +164,6 @@ class RemoveAuthorisationController @Inject() (
           deauthorisationService
             .replaceEnrolmentKeyForItsa(validRequest.suppliedClientId, suppliedEnrolmentKey, validRequest.service)
         )
-
     } yield enrolmentKey
     resultT.value
   }
