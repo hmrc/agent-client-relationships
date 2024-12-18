@@ -33,12 +33,14 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
+import scala.concurrent.Future.successful
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
   ifConnector: IFConnector,
+  emailService: EmailService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends Logging {
@@ -64,26 +66,16 @@ class InvitationService @Inject() (
 
   def rejectInvitation(
     invitationId: String
-  )(implicit ec: ExecutionContext /*, hc: HeaderCarrier*/ ): Future[Either[InvitationFailureResponse, Unit]] =
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Unit]] =
     (for {
       invitation <- EitherT(
                       invitationsRepository
                         .updateStatusFromTo(invitationId, Pending, Rejected)
                         .map(_.fold[Either[InvitationFailureResponse, Invitation]](Left(NoPendingInvitation))(Right(_)))
                     )
-      // TODO WG 1. emailService
-      //      _ <- emailService.sendRejectedEmail(invitation).fallbackTo(successful(()))
-      // TODO WG 2. auditEvent
-//      val auditData: AuditData = new AuditData()
-//      auditData.set("arn", arn)
-//        auditData.set("Journey", "hasLegacyMapping")
-//        auditData.set("service", "mtd-it")
-//        auditData.set("clientId", nino)
-//        auditData.set("clientIdType", "nino")
-////      _ <- auditService.sendRejectInvitationAuditEvent
-      //TODO WG - what are those histogram and analitics ??
-//      _ = reportHistogramValue("Duration-Invitation-Rejected", durationOf(invitation))
-//      _ <- analyticsService.reportSingleEventAnalyticsRequest(invitation).fallbackTo(successful(Done))
+      _ <-
+        EitherT.right[InvitationFailureResponse](emailService.sendRejectedEmail(invitation).fallbackTo(successful(())))
+      // TODO WG  auditEvent
     } yield invitation)
       .map(_ => ())
       .value

@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import org.scalatest.concurrent.Eventually.eventually
 import play.api.libs.json.Json
 import play.api.test.Helpers.{AUTHORIZATION, USER_AGENT}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -37,6 +38,14 @@ trait AgentAssuranceStubs extends TestData {
         )
     )
 
+  def verifyAgentRecordFoundSent(arn: Arn, count: Int = 1) =
+    eventually {
+      verify(
+        count,
+        getRequestedFor(urlPathEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
+      )
+    }
+
   def givenAgentDetailsErrorResponse(arn: Arn, status: Int): StubMapping =
     stubFor(
       get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
@@ -47,4 +56,6 @@ trait AgentAssuranceStubs extends TestData {
             .withStatus(status)
         )
     )
+
+  private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
 }

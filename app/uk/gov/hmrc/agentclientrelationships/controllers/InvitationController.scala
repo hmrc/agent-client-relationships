@@ -94,7 +94,7 @@ class InvitationController @Inject() (
       )
   }
 
-  def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async {
+  def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     invitationService.rejectInvitation(invitationId).map { response =>
       response.fold(
         {

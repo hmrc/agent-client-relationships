@@ -21,24 +21,28 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
-import uk.gov.hmrc.agentclientrelationships.model.{Pending, Rejected}
+import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, ClientDetailsStub, EmailStubs}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
     extends RelationshipsBaseControllerISpec
     with ClientDetailsStub
     with AfiRelationshipStub
+    with AgentAssuranceStubs
+    with EmailStubs
     with TestData {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
@@ -94,6 +98,8 @@ class InvitationControllerISpec
     HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
   )
 
+  val dateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
   "create invitation link" should {
 
     // TODO WG - test expiry date of Invitation
@@ -296,6 +302,16 @@ class InvitationControllerISpec
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
         val inputData: CreateInvitationRequest = allServices(taxService)
+        val emailInfo = EmailInformation(
+          to = Seq("abc@abc.com"),
+          templateId = "client_rejected_authorisation_request",
+          parameters = Map(
+            "agencyName" -> "My Agency",
+            "clientName" -> "Erling Haal",
+            "expiryDate" -> LocalDate.now().format(dateFormatter),
+            "service"    -> taxService
+          )
+        )
 
         val clientId =
           if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.clientId
@@ -304,6 +320,8 @@ class InvitationControllerISpec
           else inputData.suppliedClientIdType
 
         val clientIdentifier = ClientIdentifier(clientId, clientIdType)
+
+        givenAgentRecordFound(arn, agentRecordResponse)
 
         await(
           invitationRepo.create(
@@ -333,6 +351,9 @@ class InvitationControllerISpec
 
         invitationSeq.size shouldBe 1
         invitationSeq.head.status shouldBe Rejected
+
+        verifyAgentRecordFoundSent(arn)
+        verifyRejectInvitationSent(emailInfo)
       }
     )
 
