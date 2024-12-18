@@ -50,6 +50,7 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
     "Macrosoft",
     Pending,
     None,
+    Some("personal"),
     LocalDate.parse("2020-01-01"),
     Instant.now().truncatedTo(ChronoUnit.SECONDS),
     Instant.now().truncatedTo(ChronoUnit.SECONDS)
@@ -89,7 +90,8 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
           Vrn("123456789"),
           Vrn("234567890"),
           "Macrosoft",
-          LocalDate.parse("2020-01-01")
+          LocalDate.parse("2020-01-01"),
+          Some("personal")
         )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1

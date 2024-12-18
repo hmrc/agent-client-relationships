@@ -39,11 +39,15 @@ object InvitationFailureResponse {
   }
 
   case object InvalidClientId extends InvitationFailureResponse {
-    def getResult(message: String): Result = BadRequest
+    def getResult(message: String): Result = BadRequest(toJson(ErrorBody("INVALID_CLIENT_ID", message)))
   }
 
   case object UnsupportedClientIdType extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(toJson(ErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message)))
+  }
+
+  case object UnsupportedClientType extends InvitationFailureResponse {
+    def getResult(message: String): Result = BadRequest(toJson(ErrorBody("UNSUPPORTED_CLIENT_TYPE", message)))
   }
 
   case object ClientRegistrationNotFound extends InvitationFailureResponse {
