@@ -51,7 +51,7 @@ class AgentDetailsControllerISpec extends RelationshipsBaseControllerISpec with 
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result =
-        doAgentGetRequest(testUrl)
+        doGetRequest(testUrl)
       result.status shouldBe 200
       result.json shouldBe Json.obj(
         "agencyDetails" -> Json.obj(

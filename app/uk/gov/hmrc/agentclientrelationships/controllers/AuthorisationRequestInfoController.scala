@@ -21,9 +21,9 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
-import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfo
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{AuthorisationRequestInfo, AuthorisationRequestInfoForClient}
 import uk.gov.hmrc.agentclientrelationships.services.{InvitationLinkService, InvitationService}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -55,6 +55,32 @@ class AuthorisationRequestInfoController @Inject() (
         case _ =>
           Future.successful(NotFound)
       }
+    }
+  }
+
+  def getForClient(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+    invitationService.findInvitationForClient(invitationId).flatMap {
+      case Some(invitation) =>
+        authorisedUser(
+          arn = Some(Arn(invitation.arn)),
+          clientId = ClientIdentifier(invitation.clientId, invitation.clientIdType).underlying,
+          Seq.empty
+        ) { _ =>
+          val arn = Arn(invitation.arn)
+          for {
+            agentDetails <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
+          } yield Ok(
+            Json.toJson(
+              AuthorisationRequestInfoForClient(
+                agentName = agentDetails.agencyDetails.agencyName,
+                service = invitation.service,
+                status = invitation.status
+              )
+            )
+          )
+        }
+      case _ =>
+        Future.successful(NotFound)
     }
   }
 

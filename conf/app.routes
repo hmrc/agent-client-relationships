@@ -16,7 +16,7 @@ GET           /client/:service/details/:clientId                             @uk
 GET           /agent/agent-reference/uid/:uid/:normalizedAgentName           @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateLink(uid: String, normalizedAgentName: String)
 GET           /agent/agent-link                                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.createLink
 POST          /client/validate-invitation                                    @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateInvitationForClient
-
+GET           /client/authorisation-request-info/:invitationId               @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.getForClient(invitationId: String)
 GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 PUT           /client/authorisation-response/reject/:invitationId            @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.rejectInvitation(invitationId: String)
