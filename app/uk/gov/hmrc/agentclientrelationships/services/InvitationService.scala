@@ -83,6 +83,9 @@ class InvitationService @Inject() (
       .map(_ => ())
       .value
 
+  def findInvitationForClient(invitationId: String): Future[Option[Invitation]] =
+    invitationsRepository.findOneByIdForClient(invitationId)
+
   def findAllForAgent(
     arn: String,
     services: Set[String],
