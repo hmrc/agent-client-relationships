@@ -16,14 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ExistingMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey, Invitation, UserId}
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
 import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey.enrolmentKey
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCCBCORG, HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,12 +36,16 @@ import scala.concurrent.{ExecutionContext, Future}
 class CheckRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ap: AgentPermissionsConnector,
+  agentAssuranceConnector: AgentAssuranceConnector,
+  ifConnector: IFConnector,
   groupSearch: UsersGroupsSearchConnector,
+  partialAuthRepository: PartialAuthRepository,
+  agentFiRelationshipConnector: AgentFiRelationshipConnector,
   val metrics: Metrics
 ) extends Monitoring
     with Logging {
 
-  def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
+  def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: LocalEnrolmentKey)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Boolean] = userId match {
@@ -45,7 +53,7 @@ class CheckRelationshipsService @Inject() (
     case Some(userId) => checkForRelationshipUserLevel(arn, userId, enrolmentKey)
   }
 
-  def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+  def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: LocalEnrolmentKey)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[(Boolean, String)] =
@@ -55,7 +63,7 @@ class CheckRelationshipsService @Inject() (
       groupHasAssignedEnrolment = allocatedGroupIds.contains(groupId)
     } yield (groupHasAssignedEnrolment, groupId)
 
-  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, enrolmentKey: EnrolmentKey)(implicit
+  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, enrolmentKey: LocalEnrolmentKey)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Boolean] =
@@ -92,4 +100,85 @@ class CheckRelationshipsService @Inject() (
   private def enrolmentKeys(enrolment: Enrolment): Seq[String] =
     enrolment.identifiers.map(identifier => enrolmentKey(enrolment.service, identifier.value))
 
+  private def getArnForDelegatedEnrolmentKey(
+    enrolKey: LocalEnrolmentKey
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Arn]] =
+    for {
+      maybeGroupId <- es.getDelegatedGroupIdsFor(enrolKey)
+      maybeArn <- maybeGroupId.headOption match {
+                    case Some(groupId) => es.getAgentReferenceNumberFor(groupId)
+                    case None          => Future.successful(None)
+                  }
+    } yield maybeArn
+
+  private def findMainAgentForNino(
+    invitation: Invitation
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ExistingMainAgent]] =
+    partialAuthRepository.findMainAgent(invitation.clientId).flatMap {
+      case Some(p) =>
+        agentAssuranceConnector
+          .getAgentRecordWithChecks(Arn(p.arn))
+          .map(agent =>
+            Some(
+              ExistingMainAgent(
+                agencyName = agent.agencyDetails.agencyName,
+                sameAgent = p.arn == invitation.arn
+              )
+            )
+          )
+      case None =>
+        ifConnector.getMtdIdFor(Nino(invitation.clientId)).flatMap {
+          case Some(mtdItId) =>
+            getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
+              case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+              case None    => Future.successful(None)
+            }
+          case _ => Future.successful(None)
+        }
+    }
+
+  private def returnExistingMainAgentFromArn(
+    arn: String,
+    sameAgent: Boolean
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Some[ExistingMainAgent]] =
+    agentAssuranceConnector
+      .getAgentRecordWithChecks(Arn(arn))
+      .map(agent =>
+        Some(
+          ExistingMainAgent(
+            agencyName = agent.agencyDetails.agencyName,
+            sameAgent = sameAgent
+          )
+        )
+      )
+
+  def findCurrentMainAgent(
+    invitation: Invitation,
+    enrolment: Option[LocalEnrolmentKey]
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ExistingMainAgent]] =
+    invitation.service match {
+      case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
+      case HMRCPIR =>
+        agentFiRelationshipConnector.findRelationshipForClient(invitation.clientId).flatMap {
+          case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
+          case None    => Future.successful(None)
+        }
+      case HMRCCBCORG if enrolment.isDefined =>
+        getArnForDelegatedEnrolmentKey(enrolment.get).flatMap {
+          case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+          case None    => Future.successful(None)
+        }
+      case _ =>
+        getArnForDelegatedEnrolmentKey(
+          LocalEnrolmentKey(
+            enrolmentKey(
+              if (invitation.service == HMRCMTDITSUPP) HMRCMTDIT else invitation.service,
+              invitation.clientId
+            )
+          )
+        ).flatMap {
+          case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+          case None    => Future.successful(None)
+        }
+    }
 }

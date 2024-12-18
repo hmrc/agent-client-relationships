@@ -67,9 +67,22 @@ trait TestData {
     Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
   )
 
+  val existingAgencyDetailsResponse: TestAgencyDetails = TestAgencyDetails(
+    Some("ExistingAgent"),
+    Some("abc@example.com"),
+    Some("07345678901"),
+    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
+  )
+
   val agentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = Some(Utr("0123456789")),
     agencyDetails = Some(agencyDetailsResponse),
+    suspensionDetails = Some(suspensionDetails)
+  )
+
+  val existingAgentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
+    uniqueTaxReference = Some(Utr("0123456989")),
+    agencyDetails = Some(existingAgencyDetailsResponse),
     suspensionDetails = Some(suspensionDetails)
   )
 
@@ -90,8 +103,18 @@ trait TestData {
     "abc@abc.com"
   )
 
+  val existingAgentDetails: AgencyDetails = AgencyDetails(
+    "ExistingAgent",
+    "abc@abc.com"
+  )
+
   val agentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
     agencyDetails = agentDetails,
+    suspensionDetails = Some(suspensionDetails)
+  )
+
+  val existingAgentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
+    agencyDetails = existingAgentDetails,
     suspensionDetails = Some(suspensionDetails)
   )
 

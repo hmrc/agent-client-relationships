@@ -25,7 +25,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.MongoRecoveryLockService
 import uk.gov.hmrc.agentclientrelationships.stubs._
@@ -124,12 +124,24 @@ trait RelationshipsBaseControllerISpec
   val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
   val arn2 = Arn("AARN0000004")
   val arn3 = Arn("AARN0000006")
+  val existingAgentArn = Arn("AARN0000007")
   val mtdItId = MtdItId("ABCDEF123456789")
-  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
-  val mtdItSuppEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdItSupp, mtdItId)
+  val utr = Utr("3087612352")
+  val urn = Urn("XXTRUST12345678")
+  val utrUriEncoded: String = UriEncoding.encodePathSegment(utr.value, "UTF-8")
+  val saUtrType = "SAUTR"
+  val urnType = "URN"
+  val cgtRef = CgtRef("XMCGTP123456789")
+  val pptRef = PptRef("XAPPT0004567890")
+  val cbcId = CbcId("XACBC1234567890")
+  val plrId = PlrId("XAPLR2222222222")
+  val mtdItEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.MtdIt, mtdItId)
+  val cbcUkEnrolmentKey: LocalEnrolmentKey =
+    LocalEnrolmentKey(Service.Cbc.id, Seq(Identifier("UTR", utr.value), Identifier("cbcId", cbcId.value)))
+  val mtdItSuppEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.MtdItSupp, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
-  val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
+  val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
   val nino = Nino("AB123456C")
   val mtdItIdType = "MTDITID"
@@ -137,21 +149,11 @@ trait RelationshipsBaseControllerISpec
   val oldAgentCode = "oldAgentCode"
   val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
+  val testExistingAgentGroup = "testExistingAgentGroup"
   val STRIDE_ROLE = "maintain agent relationships"
   val NEW_STRIDE_ROLE = "maintain_agent_relationships"
   val TERMINATION_STRIDE_ROLE = "caat"
 
-  val utr = Utr("3087612352")
-  val urn = Urn("XXTRUST12345678")
-  val utrUriEncoded: String = UriEncoding.encodePathSegment(utr.value, "UTF-8")
-  val saUtrType = "SAUTR"
-  val urnType = "URN"
-
-  val cgtRef = CgtRef("XMCGTP123456789")
-
-  val pptRef = PptRef("XAPPT0004567890")
-  val cbcId = CbcId("XACBC1234567890")
-  val plrId = PlrId("XAPLR2222222222")
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
     case Vrn(_)     => Vrn("101747641")
@@ -179,7 +181,7 @@ trait RelationshipsBaseControllerISpec
   ) =
     await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
       case Some(DeleteRecord(arn.value, Some(ek), _, _, _, `etmpStatus`, `esStatus`, _, _, _, _))
-          if ek == EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789")) =>
+          if ek == LocalEnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789")) =>
     }
 
   protected def verifyDeleteRecordNotExists =

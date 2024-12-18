@@ -27,6 +27,8 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
+import java.net.URL
+
 trait EnrolmentStoreProxyStubs extends Eventually {
 
   private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
@@ -73,7 +75,11 @@ trait EnrolmentStoreProxyStubs extends Eventually {
 
   def givenDelegatedGroupIdsExistFor(enrolmentKey: EnrolmentKey, groupIds: Set[String]): StubMapping =
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"))
+      get(
+        urlEqualTo(
+          s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated"
+        )
+      )
         .willReturn(
           aResponse()
             .withBody(s"""
@@ -318,6 +324,40 @@ trait EnrolmentStoreProxyStubs extends Eventually {
     givenKnownFactsQuery(Service.CbcNonUk, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
   def givenCbcNonUkDoesNotExistInES(cbcId: CbcId): StubMapping =
     givenKnownFactsQuery(Service.CbcNonUk, cbcId, None)
+
+  def givenGetAgentReferenceNumberFor(groupId: String, arn: String): StubMapping =
+    stubFor(
+      get(
+        urlEqualTo(
+          s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"
+        )
+      )
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |    "startRecord": 1,
+                         |    "totalRecords": 1,
+                         |    "enrolments": [
+                         |        {
+                         |           "service": "HMRC-AS-AGENT",
+                         |           "friendlyName": "anyName",
+                         |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
+                         |           "failedActivationCount": 1,
+                         |           "activationDate": "2018-10-13T17:36:00.000Z",
+                         |           "identifiers": [
+                         |              {
+                         |                 "key": "AgentReferenceNumber",
+                         |                 "value": "$arn"
+                         |              }
+                         |           ]
+                         |        }
+                         |    ]
+                         |}
+             """.stripMargin)
+        )
+    )
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
 

@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-
-import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -27,7 +24,9 @@ import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton

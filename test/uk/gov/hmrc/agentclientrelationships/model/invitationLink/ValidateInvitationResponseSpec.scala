@@ -34,7 +34,8 @@ class ValidateInvitationResponseSpec extends UnitSpec {
           "HMRC-MTD-IT",
           "ABC Accountants",
           Pending,
-          Instant.parse("2020-01-01T00:00:00Z")
+          Instant.parse("2020-01-01T00:00:00Z"),
+          None
         )
 
       val json = Json.obj(

@@ -62,6 +62,14 @@ class InvitationService @Inject() (
   def findInvitation(arn: String, invitationId: String): Future[Option[Invitation]] =
     invitationsRepository.findOneById(arn, invitationId)
 
+  def findAllForAgent(
+    arn: String,
+    services: Set[String],
+    clientIds: Seq[String],
+    isSuppliedClientId: Boolean = false
+  ): Future[Seq[Invitation]] =
+    invitationsRepository.findAllForAgent(arn, services.toSeq, clientIds, isSuppliedClientId)
+
   private def makeInvitation(
     arn: Arn,
     suppliedClientId: ClientId,
