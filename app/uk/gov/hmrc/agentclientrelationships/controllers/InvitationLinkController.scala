@@ -78,8 +78,8 @@ class InvitationLinkController @Inject() (
       serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
     (enrolments.map(_.service) ++ suppServices).map {
       case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
-      case "HMRC-NI" | "HMRC-PT" => "PERSONAL-INCOME-RECORD"
-      case serviceKey => serviceKey
+      case "HMRC-NI" | "HMRC-PT"                                        => "PERSONAL-INCOME-RECORD"
+      case serviceKey                                                   => serviceKey
     }.toSet
   }
 
@@ -90,30 +90,32 @@ class InvitationLinkController @Inject() (
           case Right(validateLinkResponse) =>
             val servicesToSearch = servicesToSearchInvitationsFor(enrolments, request.body.serviceKeys)
             val clientIdsToSearch = enrolments.map(e => e.oneTaxIdentifier()).map(_.value)
-            invitationService.findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIdsToSearch).flatMap {
-              case Seq(invitation) =>
-                for {
-                  existingRelationship <-
-                    checkRelationshipsService
-                      .findCurrentMainAgent(invitation, enrolments.find(_.service == invitation.service))
-                } yield Ok(
-                  Json.toJson(
-                    ValidateInvitationResponse(
-                      invitation.invitationId,
-                      invitation.service,
-                      validateLinkResponse.name,
-                      invitation.status,
-                      invitation.lastUpdated,
-                      existingMainAgent = existingRelationship
+            invitationService
+              .findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIdsToSearch)
+              .flatMap {
+                case Seq(invitation) =>
+                  for {
+                    existingRelationship <-
+                      checkRelationshipsService
+                        .findCurrentMainAgent(invitation, enrolments.find(_.service == invitation.service))
+                  } yield Ok(
+                    Json.toJson(
+                      ValidateInvitationResponse(
+                        invitation.invitationId,
+                        invitation.service,
+                        validateLinkResponse.name,
+                        invitation.status,
+                        invitation.lastUpdated,
+                        existingMainAgent = existingRelationship
+                      )
                     )
                   )
-                )
-              case _ =>
-                Logger(getClass).warn(
-                  s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
-                )
-                Future.successful(NotFound)
-            }
+                case _ =>
+                  Logger(getClass).warn(
+                    s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
+                  )
+                  Future.successful(NotFound)
+              }
           case Left(AgentSuspended) =>
             Logger(getClass).warn(s"Agent is suspended for UID: ${request.body.uid}")
             Future(Forbidden)
