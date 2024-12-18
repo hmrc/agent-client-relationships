@@ -19,11 +19,11 @@ package uk.gov.hmrc.agentclientrelationships.services
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ExistingMainAgent
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey, Invitation, UserId}
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey.enrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCCBCORG, HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
@@ -45,7 +45,7 @@ class CheckRelationshipsService @Inject() (
 ) extends Monitoring
     with Logging {
 
-  def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
+  def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: LocalEnrolmentKey)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Boolean] = userId match {
@@ -53,7 +53,7 @@ class CheckRelationshipsService @Inject() (
     case Some(userId) => checkForRelationshipUserLevel(arn, userId, enrolmentKey)
   }
 
-  def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+  def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: LocalEnrolmentKey)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[(Boolean, String)] =
@@ -63,7 +63,7 @@ class CheckRelationshipsService @Inject() (
       groupHasAssignedEnrolment = allocatedGroupIds.contains(groupId)
     } yield (groupHasAssignedEnrolment, groupId)
 
-  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, enrolmentKey: EnrolmentKey)(implicit
+  def checkForRelationshipUserLevel(arn: Arn, userId: UserId, enrolmentKey: LocalEnrolmentKey)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Boolean] =
@@ -101,7 +101,7 @@ class CheckRelationshipsService @Inject() (
     enrolment.identifiers.map(identifier => enrolmentKey(enrolment.service, identifier.value))
 
   private def getArnForDelegatedEnrolmentKey(
-    enrolKey: EnrolmentKey
+    enrolKey: LocalEnrolmentKey
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Arn]] =
     for {
       maybeGroupId <- es.getDelegatedGroupIdsFor(enrolKey)
@@ -129,7 +129,7 @@ class CheckRelationshipsService @Inject() (
       case None =>
         ifConnector.getMtdIdFor(Nino(invitation.clientId)).flatMap {
           case Some(mtdItId) =>
-            getArnForDelegatedEnrolmentKey(EnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
+            getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
               case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
               case None    => Future.successful(None)
             }
@@ -153,7 +153,8 @@ class CheckRelationshipsService @Inject() (
       )
 
   def findCurrentMainAgent(
-    invitation: Invitation
+    invitation: Invitation,
+    enrolment: Option[LocalEnrolmentKey]
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ExistingMainAgent]] =
     invitation.service match {
       case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
@@ -162,10 +163,14 @@ class CheckRelationshipsService @Inject() (
           case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
           case None    => Future.successful(None)
         }
-      // TODO: add support for CBC to include UTR
+      case HMRCCBCORG if enrolment.isDefined =>
+        getArnForDelegatedEnrolmentKey(enrolment.get).flatMap {
+          case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+          case None    => Future.successful(None)
+        }
       case _ =>
         getArnForDelegatedEnrolmentKey(
-          EnrolmentKey(
+          LocalEnrolmentKey(
             enrolmentKey(
               if (invitation.service == HMRCMTDITSUPP) HMRCMTDIT else invitation.service,
               invitation.clientId

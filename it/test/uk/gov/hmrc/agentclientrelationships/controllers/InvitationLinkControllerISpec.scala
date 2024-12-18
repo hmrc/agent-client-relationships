@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReference
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, MongoAgentReferenceRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, MtdIt, MtdItSupp}
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.temporal.ChronoUnit
@@ -271,7 +271,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       val pendingInvitation =
         await(invitationsRepo.create(arn.value, MtdIt, nino, nino, "Erling Haal", LocalDate.now()))
 
-      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-PT"))
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-NI", "HMRC-PT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
       val expectedResponse = ValidateInvitationResponse(
         pendingInvitation.invitationId,
@@ -330,6 +330,33 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = None
+      )
+
+      result.status shouldBe 200
+      result.json shouldBe Json.toJson(expectedResponse)
+    }
+
+    "return 200 status and appropriate JSON body when a matching agent, invitation and existing agent for CBC UK is found" in {
+      givenAuditConnector()
+      givenAuthorisedAsCbcUkClient(fakeRequest, utr, cbcId)
+      givenAgentRecordFound(arn, agentRecordResponse)
+      givenDelegatedGroupIdsExistFor(cbcUkEnrolmentKey, Set(testExistingAgentGroup))
+      givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
+      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      val pendingInvitation =
+        await(invitationsRepo.create(arn.value, Cbc, cbcId, cbcId, "Erling Haal", LocalDate.now()))
+
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-CBC-ORG"))
+      val result = doAgentPostRequest(fakeRequest.uri, requestBody)
+      val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
+      val expectedResponse = ValidateInvitationResponse(
+        pendingInvitation.invitationId,
+        pendingInvitation.service,
+        agentRecord.agencyDetails.agencyName,
+        pendingInvitation.status,
+        pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
+        existingMainAgent = Some(expectedExistingMainAgent)
       )
 
       result.status shouldBe 200

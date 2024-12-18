@@ -78,13 +78,21 @@ class InvitationLinkController @Inject() (
         agentReferenceService.validateInvitationRequest(request.body.uid).flatMap {
           case Right(validateLinkResponse) =>
             val suppServices =
-              enrolments.keySet.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
-            val servicesToSearch = enrolments.keys.toSeq ++ suppServices
-            val clientIds = enrolments.values.toSeq
+              request.body.serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
+            val servicesToSearch = (enrolments.map(_.service) ++ suppServices).map { serviceKey =>
+              serviceKey match {
+                case "HMRC-NI" | "HMRC-PT" if request.body.serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
+                case "HMRC-NI" | "HMRC-PT" => "PERSONAL-INCOME-RECORD"
+                case _                     => serviceKey
+              }
+            }.toSet
+            val clientIds = enrolments.map(e => e.oneTaxIdentifier()).map(_.value)
             invitationService.findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIds).flatMap {
               case Seq(invitation) =>
                 for {
-                  existingRelationship <- checkRelationshipsService.findCurrentMainAgent(invitation)
+                  existingRelationship <-
+                    checkRelationshipsService
+                      .findCurrentMainAgent(invitation, enrolments.find(_.service == invitation.service))
                 } yield Ok(
                   Json.toJson(
                     ValidateInvitationResponse(

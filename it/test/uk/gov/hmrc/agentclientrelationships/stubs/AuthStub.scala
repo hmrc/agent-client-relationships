@@ -458,6 +458,29 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
+  def givenAuthorisedAsCbcUkClient[A](
+    request: FakeRequest[A],
+    utr: Utr,
+    cbcId: CbcId
+  ): FakeRequest[A] = {
+    givenAuthorisedFor(
+      Json.obj("retrieve" -> Json.arr("allEnrolments")).toString,
+      Json
+        .obj(
+          "allEnrolments" -> Json.arr(
+            Json.obj(
+              "key" -> "HMRC-CBC-ORG",
+              "identifiers" -> Json
+                .arr(Json.obj("key" -> "UTR", "value" -> utr.value), Json.obj("key" -> "cbcId", "value" -> cbcId.value))
+            )
+          )
+        )
+        .toString
+    )
+
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
+  }
+
   def givenAuthorisedAsValidAgent[A](request: FakeRequest[A], arn: String) =
     authenticatedAgent(request, Enrolment("HMRC-AS-AGENT", "AgentReferenceNumber", arn))
 
