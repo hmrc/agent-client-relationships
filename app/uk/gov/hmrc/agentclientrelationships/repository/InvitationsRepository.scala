@@ -97,6 +97,13 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFuture()
 
+  def findOneByIdForClient(invitationId: String): Future[Option[Invitation]] =
+    collection
+      .find(
+        equal("invitationId", invitationId)
+      )
+      .headOption()
+
   def findAllForAgent(arn: String): Future[Seq[Invitation]] =
     collection.find(equal("arn", arn)).toFuture()
 
