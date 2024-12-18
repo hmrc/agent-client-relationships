@@ -79,7 +79,7 @@ class RemoveAuthorisationService @Inject() (
       case (MtdIt | MtdItSupp, NinoType.id) =>
         ifConnector
           .getMtdIdFor(Nino(suppliedClientId.value))
-          .map(_.map(EnrolmentKey(Service.MtdIt, _)))
+          .map(_.map(EnrolmentKey(service, _)))
           .map(_.toRight(ClientRegistrationNotFound))
           .recover { case NonFatal(_) =>
             Left[InvitationFailureResponse, EnrolmentKey](ClientRegistrationNotFound)
