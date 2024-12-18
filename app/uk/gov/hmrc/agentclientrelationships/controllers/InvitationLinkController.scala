@@ -21,6 +21,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvitationRequest, ValidateInvitationResponse}
 import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsService, InvitationLinkService, InvitationService}
@@ -72,22 +73,24 @@ class InvitationLinkController @Inject() (
   // TODO: this is a duplicate of what's used in the ClientDetailsController - we really want centralised config
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
+  private def servicesToSearchInvitationsFor(enrolments: Seq[EnrolmentKey], serviceKeys: Seq[String]): Set[String] = {
+    val suppServices =
+      serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
+    (enrolments.map(_.service) ++ suppServices).map {
+      case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
+      case "HMRC-NI" | "HMRC-PT" => "PERSONAL-INCOME-RECORD"
+      case serviceKey => serviceKey
+    }.toSet
+  }
+
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
     Action.async(parse.json[ValidateInvitationRequest]) { implicit request =>
       withAuthorisedClientForServiceKeys(request.body.serviceKeys) { enrolments =>
         agentReferenceService.validateInvitationRequest(request.body.uid).flatMap {
           case Right(validateLinkResponse) =>
-            val suppServices =
-              request.body.serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
-            val servicesToSearch = (enrolments.map(_.service) ++ suppServices).map { serviceKey =>
-              serviceKey match {
-                case "HMRC-NI" | "HMRC-PT" if request.body.serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
-                case "HMRC-NI" | "HMRC-PT" => "PERSONAL-INCOME-RECORD"
-                case _                     => serviceKey
-              }
-            }.toSet
-            val clientIds = enrolments.map(e => e.oneTaxIdentifier()).map(_.value)
-            invitationService.findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIds).flatMap {
+            val servicesToSearch = servicesToSearchInvitationsFor(enrolments, request.body.serviceKeys)
+            val clientIdsToSearch = enrolments.map(e => e.oneTaxIdentifier()).map(_.value)
+            invitationService.findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIdsToSearch).flatMap {
               case Seq(invitation) =>
                 for {
                   existingRelationship <-
