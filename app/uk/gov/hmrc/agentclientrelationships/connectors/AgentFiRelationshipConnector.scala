@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.http.Status.{CREATED, NOT_FOUND, OK}
 import play.api.libs.json.{Json, Reads}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship, IrvRelationship}
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -117,6 +117,26 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, http: HttpCl
             case NOT_FOUND => false
             case status =>
               throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
+          }
+        }
+    }
+
+  def findRelationshipForClient(clientId: String)(implicit hc: HeaderCarrier): Future[Option[IrvRelationship]] =
+    monitor(s"ConsumedAPI-AgentFiRelationship-GET") {
+      http
+        .get(
+          url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/service/PERSONAL-INCOME-RECORD/clientId/$clientId"
+        )
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case OK        => response.json.as[List[IrvRelationship]].headOption
+            case NOT_FOUND => None
+            case status =>
+              throw UpstreamErrorResponse(
+                s"Unexpected status $status received from AFI get active relationship for client",
+                status
+              )
           }
         }
     }

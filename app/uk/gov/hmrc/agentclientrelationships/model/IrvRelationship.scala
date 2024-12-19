@@ -14,22 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.invitationLink
+package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Json, OWrites}
-import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
+import play.api.libs.json.{Json, OFormat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-import java.time.Instant
+case class IrvRelationship(arn: Arn)
 
-case class ValidateInvitationResponse(
-  invitationId: String,
-  serviceKey: String,
-  agentName: String,
-  status: InvitationStatus,
-  lastModifiedDate: Instant,
-  existingMainAgent: Option[ExistingMainAgent]
-)
-
-object ValidateInvitationResponse {
-  implicit val writes: OWrites[ValidateInvitationResponse] = Json.writes[ValidateInvitationResponse]
+object IrvRelationship {
+  implicit val format: OFormat[IrvRelationship] = Json.format[IrvRelationship]
 }
