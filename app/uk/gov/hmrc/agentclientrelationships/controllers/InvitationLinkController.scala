@@ -45,7 +45,7 @@ class InvitationLinkController @Inject() (
     extends BackendController(cc)
     with AuthActions {
 
-  val supportedServices: Seq[Service] = appConfig.supportedServices
+  val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def validateLink(uid: String, normalizedAgentName: String): Action[AnyContent] = Action.async { implicit request =>
     agentReferenceService.validateLink(uid, normalizedAgentName).map { response =>

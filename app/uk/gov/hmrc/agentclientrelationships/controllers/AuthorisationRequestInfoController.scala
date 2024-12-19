@@ -42,7 +42,7 @@ class AuthorisationRequestInfoController @Inject() (
     extends BackendController(cc)
     with AuthActions {
 
-  val supportedServices: Seq[Service] = appConfig.supportedServices
+  val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def get(arn: Arn, invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { _ =>

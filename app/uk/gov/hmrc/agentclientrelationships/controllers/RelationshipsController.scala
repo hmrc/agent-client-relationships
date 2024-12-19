@@ -60,7 +60,7 @@ class RelationshipsController @Inject() (
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
-  val supportedServices: Seq[Service] = appConfig.supportedServices
+  val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def checkForRelationship(
     arn: Arn,

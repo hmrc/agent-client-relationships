@@ -39,7 +39,7 @@ class AgentDetailsController @Inject() (
     extends BackendController(cc)
     with AuthActions {
 
-  val supportedServices: Seq[Service] = appConfig.supportedServices
+  val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def getAgentDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { _ =>
