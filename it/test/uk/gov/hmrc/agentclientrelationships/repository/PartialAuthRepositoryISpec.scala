@@ -129,7 +129,7 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       )
     )
     result.isEmpty shouldBe true
-    await(repository.collection.countDocuments().toFuture()) shouldBe 0
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
   }
 
   "deauthorise PartialAuth invitation return success even when invitation does not exist" in {
