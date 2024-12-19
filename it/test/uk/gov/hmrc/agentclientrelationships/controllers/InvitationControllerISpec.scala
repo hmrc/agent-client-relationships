@@ -146,7 +146,7 @@ class InvitationControllerISpec
       }
     )
 
-    "return Forbidden 403 status and JSON Error when client registration not found for ItSa" in {
+    "return 201 status and valid JSON when invitation is created for altItSa" in {
       val suppliedClientId = nino.value
       val suppliedClientIdType = NinoType.id
       val service = MtdIt.id
@@ -159,8 +159,9 @@ class InvitationControllerISpec
         service = service
       )
 
-      givenAuditConnector()
+      val inputData: CreateInvitationRequest = baseInvitationInputData
 
+      givenAuditConnector()
       givenMtdItIdIsUnKnownFor(nino)
 
       invitationRepo
@@ -172,18 +173,27 @@ class InvitationControllerISpec
           s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
           Json.toJson(createInvitationInputData).toString()
         )
-      result.status shouldBe 403
+      result.status shouldBe 201
 
-      invitationRepo
+      val invitationSeq = invitationRepo
         .findAllForAgent(arn.value)
-        .futureValue shouldBe empty
+        .futureValue
 
-      result.json shouldBe toJson(
-        ErrorBody(
-          "CLIENT_REGISTRATION_NOT_FOUND",
-          "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
-        )
+      invitationSeq.size shouldBe 1
+
+      val invitation = invitationSeq.head
+
+      result.json shouldBe Json.obj(
+        "invitationId" -> invitation.invitationId
       )
+
+      invitation.status shouldBe Pending
+      invitation.suppliedClientId shouldBe inputData.clientId
+      invitation.suppliedClientIdType shouldBe inputData.suppliedClientIdType
+      invitation.clientId shouldBe suppliedClientId
+      invitation.clientIdType shouldBe suppliedClientIdType
+      invitation.service shouldBe inputData.service
+      invitation.clientName shouldBe clientName
     }
 
     "return NotImplemented 501 status and JSON Error If service is not supported" in {

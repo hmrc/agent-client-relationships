@@ -90,8 +90,12 @@ class InvitationService @Inject() (
     case (MtdIt | MtdItSupp, NinoType.id) =>
       ifConnector
         .getMtdIdFor(Nino(suppliedClientId.value))
-        .map(_.map(ClientIdentifier(_)))
-        .map(_.toRight(ClientRegistrationNotFound))
+        .map(
+          _.fold[Either[InvitationFailureResponse, ClientId]](
+            if (appConfig.altItsaEnabled) Right(suppliedClientId)
+            else Left(ClientRegistrationNotFound)
+          )(mdtId => Right(ClientIdentifier(mdtId)))
+        )
     case _ => Future successful Right(suppliedClientId)
   }
 
