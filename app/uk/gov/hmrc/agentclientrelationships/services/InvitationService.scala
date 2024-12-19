@@ -22,7 +22,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateInvitationError
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
@@ -91,10 +91,9 @@ class InvitationService @Inject() (
       ifConnector
         .getMtdIdFor(Nino(suppliedClientId.value))
         .map(
-          _.fold[Either[InvitationFailureResponse, ClientId]](
-            if (appConfig.altItsaEnabled) Right(suppliedClientId)
-            else Left(ClientRegistrationNotFound)
-          )(mdtId => Right(ClientIdentifier(mdtId)))
+          _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>
+            Right(ClientIdentifier(mdtId))
+          )
         )
     case _ => Future successful Right(suppliedClientId)
   }
