@@ -23,7 +23,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, Invitation, Pending}
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, Invitation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
@@ -144,6 +144,19 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
 
     "fail to update the status of an invitation when a matching invitation is not found" in {
       await(repository.updateStatus("ABC", Accepted)) shouldBe None
+    }
+
+    "update the status from Pending to Rejected of an invitation when a matching invitation is found" in {
+      await(repository.collection.insertOne(pendingInvitation).toFuture())
+
+      val updatedInvitation =
+        await(repository.updateStatusFromTo(pendingInvitation.invitationId, Pending, Rejected)).get
+      updatedInvitation.status shouldBe Rejected
+      updatedInvitation.lastUpdated.isAfter(pendingInvitation.lastUpdated)
+    }
+
+    "fail to update fromTo the status of an invitation when a matching invitation is not found" in {
+      await(repository.updateStatusFromTo("ABC", Pending, Rejected)) shouldBe None
     }
 
     "de-authorise Accepted invitation when a matching arn, service, suppliedClientId is found" in {

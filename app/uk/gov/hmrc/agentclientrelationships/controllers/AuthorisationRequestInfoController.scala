@@ -46,7 +46,7 @@ class AuthorisationRequestInfoController @Inject() (
 
   def get(arn: Arn, invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { _ =>
-      invitationService.findInvitation(arn.value, invitationId).flatMap {
+      invitationService.findInvitationForAgent(arn.value, invitationId).flatMap {
         case Some(invitation) =>
           for {
             agentLink    <- invitationLinkService.createLink(arn)

@@ -130,7 +130,7 @@ class RemoveAuthorisationController @Inject() (
       result <- EitherT.right[InvitationFailureResponse] {
 
                   authorisedUser(
-                    arn = arn,
+                    arn = Some(arn),
                     clientId = enrolmentKey.oneTaxIdentifier(),
                     strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
                   ) { implicit currentUser =>

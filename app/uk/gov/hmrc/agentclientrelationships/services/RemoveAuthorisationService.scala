@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, InvalidClientId, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
@@ -35,7 +35,6 @@ import scala.util.control.NonFatal
 
 @Singleton
 class RemoveAuthorisationService @Inject() (
-  invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   ifConnector: IFConnector
 )(implicit ec: ExecutionContext)

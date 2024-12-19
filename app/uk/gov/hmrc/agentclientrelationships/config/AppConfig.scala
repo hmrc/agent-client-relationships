@@ -115,7 +115,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     servicesConfig.getBoolean("alt-itsa.enabled")
 
   // Note: Personal Income Record is not handled through agent-client-relationships
-  val supportedServices: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
+  val supportedServices: Seq[Service] = Service.supportedServices
   // TODO: Keeping this list in appConfig to enable reading it from config in future if necessary
   // If this is not needed, could be moved somewhere else where constants are kept
 

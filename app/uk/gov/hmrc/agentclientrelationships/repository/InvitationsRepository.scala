@@ -63,7 +63,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection.insertOne(invitation).toFuture().map(_ => invitation)
   }
 
-  def findOneById(arn: String, invitationId: String): Future[Option[Invitation]] =
+  def findOneByIdForAgent(arn: String, invitationId: String): Future[Option[Invitation]] =
     collection
       .find(
         combine(
@@ -72,6 +72,29 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         )
       )
       .headOption()
+
+  def findOneById(invitationId: String): Future[Option[Invitation]] =
+    collection
+      .find(equal("invitationId", invitationId))
+      .headOption()
+
+  def findAllBy(
+    arn: Option[String] = None,
+    services: Seq[String] = Seq.empty,
+    clientId: Option[String] = None,
+    status: Option[InvitationStatus] = None
+  ): Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(
+          (Seq(
+            arn.map(equal("arn", _)),
+            clientId.map(equal("clientId", _)),
+            status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
+          ).flatten :+ in("service", services: _*)): _*
+        )
+      )
+      .toFuture()
 
   def findAllForAgent(arn: String): Future[Seq[Invitation]] =
     collection.find(equal("arn", arn)).toFuture()
@@ -99,12 +122,52 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFuture()
 
-  def updateStatus(invitationId: String, status: InvitationStatus): Future[Option[Invitation]] =
+  def updateStatus(
+    invitationId: String,
+    status: InvitationStatus,
+    timestamp: Option[Instant] = None
+  ): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
         equal("invitationId", invitationId),
         combine(
           set("status", Codecs.toBson(status)),
+          set("lastUpdated", timestamp.getOrElse(Instant.now()))
+        ),
+        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
+      )
+      .toFutureOption()
+
+  def deauthInvitation(
+    invitationId: String,
+    relationshipEndedBy: String,
+    timestamp: Option[Instant] = None
+  ): Future[Option[Invitation]] =
+    collection
+      .findOneAndUpdate(
+        equal("invitationId", invitationId),
+        combine(
+          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
+          set("lastUpdated", timestamp.getOrElse(Instant.now())),
+          set("relationshipEndedBy", relationshipEndedBy)
+        ),
+        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
+      )
+      .toFutureOption()
+
+  def updateStatusFromTo(
+    invitationId: String,
+    fromStatus: InvitationStatus,
+    toStatus: InvitationStatus
+  ): Future[Option[Invitation]] =
+    collection
+      .findOneAndUpdate(
+        and(
+          equal("invitationId", invitationId),
+          equal("status", Codecs.toBson[InvitationStatus](fromStatus))
+        ),
+        combine(
+          set("status", Codecs.toBson(toStatus)),
           set("lastUpdated", Instant.now())
         ),
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
@@ -123,7 +186,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           equal("arn", arn),
           equal("service", service),
           equal("suppliedClientId", suppliedClientId),
-          equal("status", Codecs.toBson[InvitationStatus](Accepted))
+          equal("status", Codecs.toBson[InvitationStatus](Accepted)) // TODO This will not work for partial auth
         ),
         combine(
           set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
@@ -134,4 +197,10 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFutureOption()
 
+}
+
+object InvitationsRepository {
+  val endedByClient = "Client"
+  val endedByHMRC = "HMRC"
+  val endedByAgent = "Agent"
 }

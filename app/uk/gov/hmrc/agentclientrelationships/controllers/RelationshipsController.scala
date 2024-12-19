@@ -119,7 +119,7 @@ class RelationshipsController @Inject() (
         case Right(enrolmentKey) =>
           val taxIdentifier =
             enrolmentKey.oneTaxIdentifier()
-          authorisedUser(arn, taxIdentifier, strideRoles) { implicit currentUser =>
+          authorisedUser(Some(arn), taxIdentifier, strideRoles) { implicit currentUser =>
             (for {
               maybeEk <- taxIdentifier match {
                            // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary

@@ -21,23 +21,28 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
-import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, ClientDetailsStub, EmailStubs}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
     extends RelationshipsBaseControllerISpec
     with ClientDetailsStub
     with AfiRelationshipStub
+    with AgentAssuranceStubs
+    with EmailStubs
     with TestData {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
@@ -93,6 +98,8 @@ class InvitationControllerISpec
     HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
   )
 
+  val dateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
   "create invitation link" should {
 
     // TODO WG - test expiry date of Invitation
@@ -295,6 +302,84 @@ class InvitationControllerISpec
       invitationRepo
         .findAllForAgent(arn.value)
         .futureValue shouldBe empty
+
+    }
+
+  }
+
+  "reject invitation" should {
+
+    allServices.keySet.foreach(taxService =>
+      s"return 201 status and valid JSON when invitation is created for $taxService" in {
+        val inputData: CreateInvitationRequest = allServices(taxService)
+        val emailInfo = EmailInformation(
+          to = Seq("abc@abc.com"),
+          templateId = "client_rejected_authorisation_request",
+          parameters = Map(
+            "agencyName" -> "My Agency",
+            "clientName" -> "Erling Haal",
+            "expiryDate" -> LocalDate.now().format(dateFormatter),
+            "service"    -> taxService
+          )
+        )
+
+        val clientId =
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.clientId
+        val clientIdType =
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) MtdItIdType.id
+          else inputData.suppliedClientIdType
+
+        val clientIdentifier = ClientIdentifier(clientId, clientIdType)
+
+        givenAgentRecordFound(arn, agentRecordResponse)
+
+        await(
+          invitationRepo.create(
+            arn.value,
+            Service.forId(taxService),
+            clientIdentifier,
+            clientIdentifier,
+            "Erling Haal",
+            LocalDate.now()
+          )
+        )
+
+        val pendingInvitation = invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
+          .head
+
+        val result =
+          doAgentPutRequest(
+            s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
+          )
+        result.status shouldBe 204
+
+        val invitationSeq = invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
+
+        invitationSeq.size shouldBe 1
+        invitationSeq.head.status shouldBe Rejected
+
+        verifyAgentRecordFoundSent(arn)
+        verifyRejectInvitationSent(emailInfo)
+      }
+    )
+
+    s"return NoFound status when no Pending Invitation " in {
+
+      val result =
+        doAgentPutRequest(
+          s"/agent-client-relationships/client/authorisation-response/reject/123456"
+        )
+      result.status shouldBe 404
+
+      val invitationSeq = invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue
+
+      invitationSeq.size shouldBe 0
 
     }
 
