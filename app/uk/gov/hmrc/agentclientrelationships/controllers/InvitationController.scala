@@ -69,6 +69,11 @@ class InvitationController @Inject() (
                   Logger(getClass).warn(msg)
                   UnsupportedClientIdType.getResult(msg)
 
+                case UnsupportedClientType =>
+                  val msg = s"""Unsupported clientType "${createInvitationRequest.clientType}""""
+                  Logger(getClass).warn(msg)
+                  UnsupportedClientType.getResult(msg)
+
                 case ClientRegistrationNotFound =>
                   val msg = s"""The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found.
                                | for clientId "${createInvitationRequest.clientId}",

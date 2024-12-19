@@ -27,7 +27,8 @@ case class CreateInvitationRequest(
   clientId: String,
   suppliedClientIdType: String,
   clientName: String,
-  service: String
+  service: String,
+  clientType: Option[String]
 ) {
   def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(service))
     .fold(_ => Left(UnsupportedService), Right(_))
@@ -48,6 +49,13 @@ case class CreateInvitationRequest(
       Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
   } yield clientId
 
+  private val validClientTypes = Seq("personal", "business", "trust")
+
+  def getClientType: Either[InvitationFailureResponse, Option[String]] = clientType match {
+    case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
+    case Some(_)                                             => Left(UnsupportedClientType)
+    case None                                                => Right(None)
+  }
 }
 
 object CreateInvitationRequest {

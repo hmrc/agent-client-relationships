@@ -95,7 +95,15 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
             invitationsRepo
-              .create("XARN1234567", MtdIt, Nino("AA000001B"), Nino("AA000001B"), "Erling Haal", LocalDate.now())
+              .create(
+                "XARN1234567",
+                MtdIt,
+                Nino("AA000001B"),
+                Nino("AA000001B"),
+                "Erling Haal",
+                LocalDate.now(),
+                Some("personal")
+              )
           )
 
           val result = doAgentGetRequest(request.uri)
@@ -216,7 +224,15 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
             invitationsRepo
-              .create("XARN1234567", MtdIt, Nino("AA000001B"), Nino("AA000001B"), "Erling Haal", LocalDate.now())
+              .create(
+                "XARN1234567",
+                MtdIt,
+                Nino("AA000001B"),
+                Nino("AA000001B"),
+                "Erling Haal",
+                LocalDate.now(),
+                Some("personal")
+              )
           )
 
           val result = doAgentGetRequest(request.uri)
@@ -258,7 +274,15 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
           await(
-            invitationsRepo.create("XARN1234567", Vat, Vrn("101747641"), Vrn("101747641"), "My Name", LocalDate.now())
+            invitationsRepo.create(
+              "XARN1234567",
+              Vat,
+              Vrn("101747641"),
+              Vrn("101747641"),
+              "My Name",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doAgentGetRequest(request.uri)
@@ -294,7 +318,15 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenVatCustomerInfoExists("101747641")
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
           await(
-            invitationsRepo.create("XARN1234567", Vat, Vrn("101747641"), Vrn("101747641"), "My Name", LocalDate.now())
+            invitationsRepo.create(
+              "XARN1234567",
+              Vat,
+              Vrn("101747641"),
+              Vrn("101747641"),
+              "My Name",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doAgentGetRequest(request.uri)

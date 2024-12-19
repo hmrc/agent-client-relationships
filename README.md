@@ -106,6 +106,41 @@ Error responses:
 - If the API call did not return the necessary client details, a status of 404 with no body is returned.
 - If there was an unexpected failure when calling the relevant API, a status of 500 with no body is returned.
 
+### Create authorisation request
+
+Creates a new authorisation request, also known as an invitation, and returns the invitation ID.
+
+`POST /agent/:arn/authorisation-request`
+
+Example request body:
+```
+{
+  "clientId": "123456789",
+  "suppliedClientIdType": "vrn",
+  "clientName": "Client Namerson",
+  "service": "HMRC-MTD-VAT",
+  "clientType": "personal"
+}
+```
+
+Example success response (status code 201)
+```
+{
+  "invitationId": "ABC123"
+}
+```
+
+Error responses:
+- Status 400:
+  - Invalid client ID (body includes `"code": "INVALID_CLIENT_ID"`)
+  - Client ID type is not supported (body includes `"code": "UNSUPPORTED_CLIENT_ID_TYPE"`)
+  - Service key is not supported (body includes `"code": "UNSUPPORTED_SERVICE"`)
+  - Client type is not supported (body includes `"code": "UNSUPPORTED_CLIENT_TYPE"`)
+  - Invalid JSON (no body)
+- Status 403:
+  - Client registration could not be found (body includes `"code": "CLIENT_REGISTRATION_NOT_FOUND"`)
+  - An invitation has already been created for these details (body includes `"code": "DUPLICATE_AUTHORISATION_REQUEST"`)
+
 ### Validate client invitation
 
 Validates that the expected client invitation exists, and returns details regarding the invitation and the associated agent. 
@@ -127,7 +162,12 @@ Example success response (status code 200):
   "serviceKey": "HMRC-MTD-IT",
   "agentName": "ABC Accountants",
   "status": "Pending",
-  "lastModifiedDate": "2020-01-01T00:00:00Z"
+  "lastModifiedDate": "2020-01-01T00:00:00Z",
+  "existingMainAgent": {
+    "agencyName": "XYZ Accountants",
+    "sameAgent": true
+  },
+  "clientType": "personal"
 }
 ```
 

@@ -106,7 +106,8 @@ class InvitationLinkController @Inject() (
                         validateLinkResponse.name,
                         invitation.status,
                         invitation.lastUpdated,
-                        existingMainAgent = existingRelationship
+                        existingMainAgent = existingRelationship,
+                        invitation.clientType
                       )
                     )
                   )
