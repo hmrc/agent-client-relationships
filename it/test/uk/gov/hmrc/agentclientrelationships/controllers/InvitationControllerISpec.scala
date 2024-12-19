@@ -387,7 +387,7 @@ class InvitationControllerISpec
             clientIdentifier,
             "Erling Haal",
             LocalDate.now(),
-            None
+            Some("personal")
           )
         )
 
