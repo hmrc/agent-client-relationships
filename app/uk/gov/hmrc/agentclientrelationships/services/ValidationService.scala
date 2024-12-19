@@ -51,7 +51,7 @@ class ValidationService @Inject() (
         makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>
-        if (appConfig.supportedServices.exists(_.id == serviceKey))
+        if (appConfig.supportedServicesWithoutPir.exists(_.id == serviceKey))
           validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
         else
           Future.successful(Left(s"Unknown service $serviceKey"))

@@ -52,7 +52,7 @@ class FindRelationshipsService @Inject() (
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     // If the tax id type is among one of the supported ones...
     if (
-      appConfig.supportedServices
+      appConfig.supportedServicesWithoutPir
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     )
@@ -71,7 +71,7 @@ class FindRelationshipsService @Inject() (
     identifiers: Map[Service, TaxIdentifier]
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Map[Service, Seq[Arn]]] =
     Future
-      .traverse(appConfig.supportedServices) { service =>
+      .traverse(appConfig.supportedServicesWithoutPir) { service =>
         identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
           case Some(taxId) =>
             getActiveRelationshipsForClient(taxId).map(_.map(r => (service, r.arn)))
@@ -84,7 +84,7 @@ class FindRelationshipsService @Inject() (
     identifiers: Map[Service, TaxIdentifier]
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     Future
-      .traverse(appConfig.supportedServices) { service =>
+      .traverse(appConfig.supportedServicesWithoutPir) { service =>
         identifiers.get(service) match {
           case Some(taxId) => getInactiveRelationshipsForClient(taxId)
           case None        => Future.successful(Seq.empty)
@@ -97,7 +97,7 @@ class FindRelationshipsService @Inject() (
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     // if it is one of the tax ids that we support...
     if (
-      appConfig.supportedServices.exists(
+      appConfig.supportedServicesWithoutPir.exists(
         _.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId
       )
     ) {
