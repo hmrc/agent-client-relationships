@@ -39,7 +39,9 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
     Instant.parse("2020-02-02T00:00:00.000Z"),
     "XARN1234567",
     "HMRC-MTD-IT",
-    "SX579189D"
+    "SX579189D",
+    active = true,
+    Instant.parse("2020-02-02T00:00:00.000Z")
   )
 
   "partialAuthRepository.create" should {
@@ -48,7 +50,7 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       val customIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("service")).get
 
       customIndex.getKeys shouldBe Indexes.ascending("service", "nino", "arn")
-      customIndex.getOptions.getName shouldBe "clientQueryIndex"
+      customIndex.getOptions.getName shouldBe "activeRelationshipsIndex"
       customIndex.getOptions.isUnique shouldBe true
     }
 
@@ -83,29 +85,29 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       val nonMatchingEvent2 = partialAuth.copy(service = "HMRC-MTD-IT-SUPP", nino = "AB539803A")
       val listOfPartialAuths = Seq(partialAuth, nonMatchingEvent1, nonMatchingEvent2)
       await(repository.collection.insertMany(listOfPartialAuths).toFuture())
-      await(repository.find("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe Some(partialAuth)
+      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe Some(partialAuth)
     }
 
     "fail to retrieve partial auths when no partial auths match the given service" in {
       val unrelatedEvent = partialAuth.copy(service = "HMRC-MTD-IT-SUPP")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
+      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given nino" in {
       val unrelatedEvent = partialAuth.copy(nino = "AB539803A")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
+      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given arn" in {
       val unrelatedEvent = partialAuth.copy(arn = "XARN7654321")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.find("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
+      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
     }
   }
 
-  "delete PartialAuth invitation success" in {
+  "deauthorise PartialAuth invitation success" in {
     await(
       repository.create(
         Instant.parse("2020-01-01T00:00:00.000Z"),
@@ -115,9 +117,12 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       )
     )
     await(repository.collection.countDocuments().toFuture()) shouldBe 1
-    await(repository.deletePartialAuth("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567")))
+    await(
+      repository
+        .deauthorise("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z"))
+    )
     val result = await(
-      repository.find(
+      repository.findActive(
         "HMRC-MTD-IT",
         Nino("SX579189D"),
         Arn("XARN1234567")
@@ -127,9 +132,12 @@ class PartialAuthRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
     await(repository.collection.countDocuments().toFuture()) shouldBe 0
   }
 
-  "delete PartialAuth invitation return success even when initation do not exists" in {
+  "deauthorise PartialAuth invitation return success even when invitation does not exist" in {
     await(repository.collection.countDocuments().toFuture()) shouldBe 0
-    await(repository.deletePartialAuth("HMRC-MTD-VAT", Nino("SX579189D"), Arn("XARN1234567")))
+    await(
+      repository
+        .deauthorise("HMRC-MTD-VAT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z"))
+    )
     await(repository.collection.countDocuments().toFuture()) shouldBe 0
   }
 

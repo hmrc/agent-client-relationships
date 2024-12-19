@@ -23,18 +23,22 @@ import java.time.Instant
 
 class PartialAuthRepositorySpec extends UnitSpec {
 
-  val testModel: PartialAuthRelationship = PartialAuthRelationship(
+  val activeTestModel: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),
     "XARN1234567",
     "HMRC-MTD-VAT",
-    "123456789"
+    "123456789",
+    active = true,
+    Instant.parse("2020-02-02T00:00:00.000Z")
   )
 
   val testJsonResponse: JsObject = Json.obj(
-    "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-    "arn"     -> "XARN1234567",
-    "service" -> "HMRC-MTD-VAT",
-    "nino"    -> "123456789"
+    "created"     -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
+    "arn"         -> "XARN1234567",
+    "service"     -> "HMRC-MTD-VAT",
+    "nino"        -> "123456789",
+    "active"      -> true,
+    "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000"))
   )
 
   "PartialAuthModel" should {
@@ -42,14 +46,14 @@ class PartialAuthRepositorySpec extends UnitSpec {
     "read from JSON" when {
 
       "all fields are present" in {
-        testJsonResponse.as[PartialAuthRelationship] shouldBe testModel
+        testJsonResponse.as[PartialAuthRelationship] shouldBe activeTestModel
       }
     }
 
     "write to JSON" when {
 
       "all fields are present" in {
-        Json.toJson(testModel) shouldBe testJsonResponse
+        Json.toJson(activeTestModel) shouldBe testJsonResponse
       }
     }
   }

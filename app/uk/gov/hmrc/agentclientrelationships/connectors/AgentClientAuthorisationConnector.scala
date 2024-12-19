@@ -16,19 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.JsArray
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, SetRelationshipEndedPayload}
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -44,9 +43,9 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
 
   private val acaBaseUrl: URL = new URL(appConfig.agentClientAuthorisationUrl)
 
-  def getPartialAuthExistsFor(clientId: TaxIdentifier, arn: Arn)(implicit
+  def getPartialAuth(clientId: TaxIdentifier, arn: Arn)(implicit
     hc: HeaderCarrier
-  ): Future[Boolean] = {
+  ): Future[List[String]] = {
     val url: URL = new URL(
       acaBaseUrl,
       s"/agent-client-authorisation/agencies/${encodePathSegment(arn.value)}/invitations/sent"
@@ -65,8 +64,8 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
                 .as[JsArray]
                 .value
                 .map(x => (x \ "service").as[String])
-                .toList intersect List(HMRCMTDIT, HMRCMTDITSUPP)).nonEmpty
-            case _ => false
+                .toList)
+            case _ => List.empty
           }
         }
     }
@@ -114,6 +113,27 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
     monitor(s"ConsumedAPI-ACA-setRelationshipEnded-PUT") {
       httpClient
         .PUT[SetRelationshipEndedPayload, HttpResponse](url = url.toString, payload)
+        .map { response =>
+          response.status match {
+            case Status.NO_CONTENT => true
+            case _                 => false
+          }
+        }
+    }
+
+  }
+
+  def updateStatusToAccepted(nino: Nino, service: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean] = {
+    val url: URL = new URL(
+      acaBaseUrl,
+      s"/agent-client-authorisation/agent/alt-itsa/$service/update-status/accepted/${nino.value}"
+    )
+    monitor(s"ConsumedAPI-ACA-updateStatusToAccepted-PUT") {
+      httpClient
+        .PUT[String, HttpResponse](url = url.toString, "")
         .map { response =>
           response.status match {
             case Status.NO_CONTENT => true

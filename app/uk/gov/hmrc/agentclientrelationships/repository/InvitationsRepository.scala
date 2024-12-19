@@ -21,9 +21,10 @@ import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, Invitation, InvitationStatus}
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
@@ -174,6 +175,25 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
       .toFutureOption()
+
+  def updatePartialAuthToAcceptedStatus(arn: Arn, service: String, nino: Nino, mtdItId: MtdItId): Future[Boolean] =
+    collection
+      .updateOne(
+        and(
+          equal("arn", arn.value),
+          equal("clientId", nino.value),
+          equal("service", service),
+          equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
+        ),
+        combine(
+          set("status", Codecs.toBson[InvitationStatus](Accepted)),
+          set("lastUpdated", Instant.now),
+          set("clientId", mtdItId.value),
+          set("clientIdType", "MTDITID")
+        )
+      )
+      .toFuture()
+      .map(_.getModifiedCount == 1L)
 
   def deauthorise(
     arn: String,

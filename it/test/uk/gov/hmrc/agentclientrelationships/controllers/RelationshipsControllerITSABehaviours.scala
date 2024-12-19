@@ -19,13 +19,16 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, PartialAuth, PartialAuthRelationship}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository._
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, MtdItId}
 import uk.gov.hmrc.domain.SaAgentReference
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDate, LocalDateTime}
+import scala.concurrent.ExecutionContext
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
@@ -43,6 +46,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       syncToETMPStatus = Some(SyncStatus.Success),
       syncToESStatus = Some(SyncStatus.Success)
     )
+
+    implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+    implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+
+    def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
+    def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
 
     def doRequest = doAgentGetRequest(requestPath)
 
@@ -70,7 +79,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, responseStatus = 200)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest
@@ -86,7 +94,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenArnIsUnknownFor(arn)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, responseStatus = 200)
+
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest
@@ -160,19 +168,100 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       // HAPPY PATH FOR ALTERNATIVE-ITSA
 
-      "return 200 when no relationship in CESA but there is an alt-itsa invitation for client" in {
+      "return 200 when no relationship in CESA but there is an alt-itsa MAIN invitation for client" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
-        givenArnIsUnknownFor(arn)
-        givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, responseStatus = 201)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenAgentCanBeAllocatedInIF(mtdItId, arn)
+        givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+
+        val now = Instant.now()
+
+        await(
+          invitationRepo.collection
+            .insertOne(
+              Invitation(
+                "abc1",
+                arn.value,
+                service = HMRCMTDIT,
+                nino.value,
+                "ni",
+                suppliedClientId = nino.value,
+                suppliedClientIdType = "ni",
+                "clientname",
+                status = PartialAuth,
+                None,
+                LocalDate.now().plusDays(21),
+                created = now,
+                lastUpdated = now
+              )
+            )
+            .toFuture()
+        )
+
+        await(
+          partialAuthRepository.collection
+            .insertOne(PartialAuthRelationship(now, arn.value, HMRCMTDIT, nino.value, active = true, now))
+            .toFuture()
+        )
+
+        await(partialAuthRepository.findActive(HMRCMTDIT, nino, arn)).isDefined shouldBe true
 
         val result = doRequest
         result.status shouldBe 200
+        await(partialAuthRepository.findActive(HMRCMTDIT, nino, arn)).isEmpty shouldBe true
+      }
+
+      "return 200 when no relationship in CESA but there is an alt-itsa SUPP invitation for client" in {
+        givenPrincipalAgentUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenDelegatedGroupIdsNotExistForMtdItIdSupp(mtdItId)
+        givenNinoIsKnownFor(mtdItId, nino)
+        givenAdminUser("foo", "any")
+        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenAgentCanBeAllocatedInIF(mtdItId, arn)
+        givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId, "bar")
+
+        val now = Instant.now()
+
+        await(
+          invitationRepo.collection
+            .insertOne(
+              Invitation(
+                "abc1",
+                arn.value,
+                service = HMRCMTDITSUPP,
+                nino.value,
+                "ni",
+                suppliedClientId = nino.value,
+                suppliedClientIdType = "ni",
+                "clientname",
+                status = PartialAuth,
+                None,
+                LocalDate.now().plusDays(21),
+                created = now,
+                lastUpdated = now
+              )
+            )
+            .toFuture()
+        )
+
+        await(
+          partialAuthRepository.collection
+            .insertOne(PartialAuthRelationship(now, arn.value, HMRCMTDITSUPP, nino.value, active = true, now))
+            .toFuture()
+        )
+
+        await(partialAuthRepository.findActive(HMRCMTDITSUPP, nino, arn)).isDefined shouldBe true
+
+        val result = doAgentGetRequest(
+          s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT-SUPP/client/MTDITID/${mtdItId.value}"
+        )
+        result.status shouldBe 200
+        await(partialAuthRepository.findActive(HMRCMTDITSUPP, nino, arn)).isEmpty shouldBe true
       }
 
       // UNHAPPY PATH FOR ALTERNATIVE-ITSA
