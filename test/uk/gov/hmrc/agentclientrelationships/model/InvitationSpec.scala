@@ -37,6 +37,7 @@ class InvitationSpec extends UnitSpec {
     "Macrosoft",
     Pending,
     Some("Me"),
+    Some("personal"),
     LocalDate.parse("2020-01-01"),
     Instant.parse("2020-02-02T00:00:00.000Z"),
     Instant.parse("2020-03-03T00:00:00.000Z")
@@ -53,13 +54,14 @@ class InvitationSpec extends UnitSpec {
     "clientName"           -> "Macrosoft",
     "status"               -> "Pending",
     "relationshipEndedBy"  -> "Me",
+    "clientType"           -> "personal",
     "expiryDate"           -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
     "created"              -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
     "lastUpdated"          -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
   )
 
-  val optionalJson: JsObject = fullJson.-("relationshipEndedBy")
-  val optionalModel: Invitation = fullModel.copy(relationshipEndedBy = None)
+  val optionalJson: JsObject = fullJson.-("relationshipEndedBy").-("clientType")
+  val optionalModel: Invitation = fullModel.copy(relationshipEndedBy = None, clientType = None)
 
   "Invitation" should {
 
@@ -95,7 +97,8 @@ class InvitationSpec extends UnitSpec {
         Vrn("123456789"),
         Vrn("234567890"),
         "Macrosoft",
-        LocalDate.parse("2020-01-01")
+        LocalDate.parse("2020-01-01"),
+        None
       )
 
       val expectedModel = optionalModel.copy(

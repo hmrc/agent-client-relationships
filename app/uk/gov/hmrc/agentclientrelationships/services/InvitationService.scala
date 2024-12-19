@@ -53,8 +53,15 @@ class InvitationService @Inject() (
 
       suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
       service          <- EitherT.fromEither[Future](createInvitationInputData.getService)
+      clientType       <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
       invitation <- EitherT(
-                      makeInvitation(arn, suppliedClientId, service, createInvitationInputData.clientName)
+                      makeInvitation(
+                        arn,
+                        suppliedClientId,
+                        service,
+                        createInvitationInputData.clientName,
+                        clientType
+                      )
                     )
     } yield invitation
 
@@ -95,11 +102,12 @@ class InvitationService @Inject() (
     arn: Arn,
     suppliedClientId: ClientId,
     service: Service,
-    clientName: String
+    clientName: String,
+    clientType: Option[String]
   )(implicit hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Invitation]] = {
     val invitationT = for {
       clientId   <- EitherT(getClientId(suppliedClientId, service))
-      invitation <- EitherT(create(arn, service, clientId, suppliedClientId, clientName))
+      invitation <- EitherT(create(arn, service, clientId, suppliedClientId, clientName, clientType))
     } yield invitation
 
     invitationT.value
@@ -121,11 +129,13 @@ class InvitationService @Inject() (
     service: Service,
     clientId: ClientId,
     suppliedClientId: ClientId,
-    clientName: String
+    clientName: String,
+    clientType: Option[String]
   )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
-      invitation <- invitationsRepository.create(arn.value, service, clientId, suppliedClientId, clientName, expiryDate)
+      invitation <-
+        invitationsRepository.create(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, clientType)
     } yield {
       logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
       Right(invitation)

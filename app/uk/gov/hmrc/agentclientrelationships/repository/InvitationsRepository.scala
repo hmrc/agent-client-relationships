@@ -57,9 +57,10 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
-    expiryDate: LocalDate
+    expiryDate: LocalDate,
+    clientType: Option[String]
   ): Future[Invitation] = {
-    val invitation = Invitation.createNew(arn, service, clientId, suppliedClientId, clientName, expiryDate)
+    val invitation = Invitation.createNew(arn, service, clientId, suppliedClientId, clientName, expiryDate, clientType)
     collection.insertOne(invitation).toFuture().map(_ => invitation)
   }
 

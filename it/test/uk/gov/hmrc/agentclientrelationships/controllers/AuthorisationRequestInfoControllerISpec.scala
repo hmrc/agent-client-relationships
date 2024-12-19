@@ -45,7 +45,8 @@ class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControlle
     "vrn",
     "testName",
     Pending,
-    None,
+    Some("Me"),
+    Some("personal"),
     testDate,
     testTime,
     testTime
@@ -93,6 +94,8 @@ class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControlle
           "suppliedClientIdType" -> "vrn",
           "clientName"           -> "testName",
           "status"               -> "Pending",
+          "relationshipEndedBy"  -> "Me",
+          "clientType"           -> "personal",
           "expiryDate"           -> testDate,
           "created"              -> testTime,
           "lastUpdated"          -> testTime

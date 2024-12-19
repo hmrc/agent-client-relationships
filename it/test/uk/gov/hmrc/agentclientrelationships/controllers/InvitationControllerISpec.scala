@@ -68,7 +68,7 @@ class InvitationControllerISpec
 
   val clientName = "DummyClientName"
   val baseInvitationInputData: CreateInvitationRequest =
-    CreateInvitationRequest(nino.value, NinoType.id, clientName, MtdIt.id)
+    CreateInvitationRequest(nino.value, NinoType.id, clientName, MtdIt.id, Some("personal"))
 
   def allServices: Map[String, CreateInvitationRequest] = Map(
     HMRCMTDIT -> baseInvitationInputData,
@@ -158,12 +158,14 @@ class InvitationControllerISpec
       val suppliedClientIdType = NinoType.id
       val service = MtdIt.id
       val clientName = "DummyClientName"
+      val clientType = Some("personal")
 
       val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
         clientId = suppliedClientId,
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        service = service
+        service = service,
+        clientType = clientType
       )
 
       givenAuditConnector()
@@ -198,12 +200,14 @@ class InvitationControllerISpec
       val suppliedClientIdType = NinoType.id
       val service = "HMRC-NOT-SUPPORTED"
       val clientName = "DummyClientName"
+      val clientType = Some("personal")
 
       val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
         clientId = suppliedClientId,
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        service = service
+        service = service,
+        clientType = clientType
       )
 
       givenAuditConnector()
@@ -232,12 +236,14 @@ class InvitationControllerISpec
       val suppliedClientIdType = NinoType.id
       val service = MtdIt.id
       val clientName = "DummyClientName"
+      val clientType = Some("personal")
 
       val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
         clientId = suppliedClientId,
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        service = service
+        service = service,
+        clientType = clientType
       )
 
       givenAuditConnector()
@@ -264,12 +270,14 @@ class InvitationControllerISpec
       val suppliedClientIdType = "NotValidClientIdType"
       val service = MtdIt.id
       val clientName = "DummyClientName"
+      val clientType = Some("personal")
 
       val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
         clientId = suppliedClientId,
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
-        service = service
+        service = service,
+        clientType = clientType
       )
 
       givenAuditConnector()
@@ -288,6 +296,44 @@ class InvitationControllerISpec
       val message =
         s"""Unsupported clientIdType "${createInvitationInputData.suppliedClientIdType}", for service type "${createInvitationInputData.service}"""".stripMargin
       result.json shouldBe toJson(ErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message))
+
+      invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue shouldBe empty
+
+    }
+
+    "return BadRequest 400 status and and JSON Error when clientType is not valid for service" in {
+      val suppliedClientId = nino.value
+      val suppliedClientIdType = NinoType.id
+      val service = MtdIt.id
+      val clientName = "DummyClientName"
+      val clientType = Some("invalid")
+
+      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
+        clientId = suppliedClientId,
+        suppliedClientIdType = suppliedClientIdType,
+        clientName = clientName,
+        service = service,
+        clientType = clientType
+      )
+
+      givenAuditConnector()
+
+      invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue shouldBe empty
+
+      val result =
+        doAgentPostRequest(
+          s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
+          Json.toJson(createInvitationInputData).toString()
+        )
+      result.status shouldBe 400
+
+      val message =
+        s"""Unsupported clientType "${createInvitationInputData.clientType}"""".stripMargin
+      result.json shouldBe toJson(ErrorBody("UNSUPPORTED_CLIENT_TYPE", message))
 
       invitationRepo
         .findAllForAgent(arn.value)

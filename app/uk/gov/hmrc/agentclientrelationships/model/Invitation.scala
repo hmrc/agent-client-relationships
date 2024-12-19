@@ -34,6 +34,7 @@ case class Invitation(
   clientName: String,
   status: InvitationStatus,
   relationshipEndedBy: Option[String] = None,
+  clientType: Option[String],
   expiryDate: LocalDate,
   created: Instant,
   lastUpdated: Instant
@@ -54,7 +55,8 @@ object Invitation {
     clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
-    expiryDate: LocalDate
+    expiryDate: LocalDate,
+    clientType: Option[String]
   ): Invitation =
     Invitation(
       InvitationId.create(arn, clientId.value, service.id)(service.invitationIdPrefix).value,
@@ -67,6 +69,7 @@ object Invitation {
       clientName,
       Pending,
       None,
+      clientType,
       expiryDate,
       Instant.now(),
       Instant.now()

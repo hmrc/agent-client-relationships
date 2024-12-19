@@ -329,7 +329,7 @@ class RemoveAuthorisationControllerISpec
     }
   }
 
-  "handle errors f" should {
+  "handle errors" should {
     "when request data are incorrect" should {
       "return BadRequest 400 status when clientId is not valid for service" in {
         val result = doAgentPostRequest(
@@ -337,8 +337,12 @@ class RemoveAuthorisationControllerISpec
           Json.toJson(RemoveAuthorisationRequest("IncorrectNino", MtdIt.id)).toString()
         )
         result.status shouldBe 400
-        result.body shouldBe ""
-
+        result.json shouldBe toJson(
+          ErrorBody(
+            "INVALID_CLIENT_ID",
+            "Invalid clientId \"IncorrectNino\", for service type \"HMRC-MTD-IT\""
+          )
+        )
       }
 
       "return NotImplemented 501 status and JSON Error If service is not supported" in {
