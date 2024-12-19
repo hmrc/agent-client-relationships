@@ -194,7 +194,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 "clientname",
                 status = PartialAuth,
                 None,
-                None,
                 LocalDate.now().plusDays(21),
                 created = now,
                 lastUpdated = now
@@ -241,7 +240,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
                 suppliedClientIdType = "ni",
                 "clientname",
                 status = PartialAuth,
-                None,
                 None,
                 LocalDate.now().plusDays(21),
                 created = now,

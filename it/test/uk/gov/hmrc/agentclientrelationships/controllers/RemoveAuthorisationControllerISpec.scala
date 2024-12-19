@@ -266,9 +266,9 @@ class RemoveAuthorisationControllerISpec
         Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
       ).status shouldBe 204
 
-      val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
-        .findActive(MtdIt.id, nino, arn)
-        .futureValue
+        val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
+          .findActive(MtdIt.id, nino, arn)
+          .futureValue
 
       partialAuthInvitations.isDefined shouldBe false
     }
@@ -281,9 +281,9 @@ class RemoveAuthorisationControllerISpec
 
       result.status >= 400 && result.status < 600
 
-      val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
-        .findActive(MtdIt.id, nino, arn)
-        .futureValue
+        val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
+          .findActive(MtdIt.id, nino, arn)
+          .futureValue
 
       partialAuthInvitations.isDefined shouldBe false
     }
