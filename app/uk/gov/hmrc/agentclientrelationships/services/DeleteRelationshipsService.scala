@@ -369,7 +369,7 @@ private[services] abstract class DeleteRelationshipsService(
     (for {
       clientIdTypeStr <- deleteRecord.clientIdentifierType
       clientIdStr     <- deleteRecord.clientIdentifier
-      service         <- appConfig.supportedServices.find(_.supportedClientIdType.enrolmentId == clientIdTypeStr)
+      service <- appConfig.supportedServicesWithoutPir.find(_.supportedClientIdType.enrolmentId == clientIdTypeStr)
     } yield EnrolmentKey(
       service.id,
       Seq(Identifier(clientIdTypeStr, clientIdStr))

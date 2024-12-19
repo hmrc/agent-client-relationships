@@ -45,7 +45,7 @@ class ClientDetailsController @Inject() (
     extends BackendController(cc)
     with AuthActions {
 
-  val supportedServices: Seq[Service] = appConfig.supportedServices
+  val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   private def expectedResults(results: Seq[Result]): Boolean =
     results.forall(result => result.header.status == 200 | result.header.status == 404)

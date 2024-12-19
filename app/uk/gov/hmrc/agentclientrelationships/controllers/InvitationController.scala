@@ -41,7 +41,7 @@ class InvitationController @Inject() (
     extends BackendController(cc)
     with AuthActions {
 
-  val supportedServices: Seq[Service] = appConfig.supportedServices
+  val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def createInvitation(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body
