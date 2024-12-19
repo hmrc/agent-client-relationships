@@ -107,16 +107,12 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
         and(
           equal("service", serviceId),
           equal("nino", nino.value),
-          equal("arn", arn.value),
-          equal("active", true)
+          equal("arn", arn.value)
         ),
         combine(set("active", false), set("lastUpdated", updated))
       )
       .toFuture()
-      .map { updateOneResult =>
-        val updateSuccess = updateOneResult.getModifiedCount == 1L
-        if (!updateSuccess) logger.error(s"deauthorising partialAuth failed $updateOneResult"); updateSuccess
-      }
+      .map(_.wasAcknowledged())
 
   // for example when a partialAuth becomes a MTD relationship we want to delete the partialAuth
   def deleteActivePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] =
