@@ -61,6 +61,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
     (service, clientIdType, clientId) match {
       // Used by BTA to handle non MTD ITSA users
       case ("IR-SA", _, _) if Nino.isValid(clientId) =>
+        // TODO make sure this checks partial auth on ACR instead of ACA
         withIrSaSuspensionCheck(arn) {
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }

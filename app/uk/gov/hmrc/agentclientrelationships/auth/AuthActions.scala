@@ -43,14 +43,14 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   val supportedServices: Seq[Service]
 
-  def authorisedUser(arn: Arn, clientId: TaxIdentifier, strideRoles: Seq[String])(
+  def authorisedUser(arn: Option[Arn], clientId: TaxIdentifier, strideRoles: Seq[String])(
     body: CurrentUser => Future[Result]
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
       optCreds
         .collect {
           case creds @ Credentials(_, "GovernmentGateway")
-              if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, Some(arn), clientId) =>
+              if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, arn, clientId) =>
             creds
           case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
             creds
@@ -104,7 +104,9 @@ trait AuthActions extends AuthorisedFunctions with Logging {
             enrolments.enrolments
               .flatMap(_.identifiers)
               .filter(_.key == requiredTaxIdType)
-              .exists(_.value == requiredIdentifier.value)
+              .exists(
+                _.value.replace(" ", "") == requiredIdentifier.value.replace(" ", "")
+              ) // In case NINO comes back without spaces
         }
       }
 
