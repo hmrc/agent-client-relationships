@@ -19,12 +19,9 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, MongoAgentReferenceRepository}
-import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
+import uk.gov.hmrc.agentclientrelationships.repository.MongoAgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.auth.core.AuthConnector
 
 import scala.concurrent.ExecutionContext
 
