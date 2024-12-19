@@ -21,7 +21,7 @@ import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, DuplicateInvitationError, NoPendingInvitation}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
@@ -119,8 +119,11 @@ class InvitationService @Inject() (
     case (MtdIt | MtdItSupp, NinoType.id) =>
       ifConnector
         .getMtdIdFor(Nino(suppliedClientId.value))
-        .map(_.map(ClientIdentifier(_)))
-        .map(_.toRight(ClientRegistrationNotFound))
+        .map(
+          _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>
+            Right(ClientIdentifier(mdtId))
+          )
+        )
     case _ => Future successful Right(suppliedClientId)
   }
 
