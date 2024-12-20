@@ -424,13 +424,50 @@ trait AuthStub {
            """.stripMargin,
       s"""
          |{
-         |"allEnrolments": [
-         |  ${enrolments
+         |  "allEnrolments": [
+         |    ${enrolments
         .map(enrolment =>
           s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
         )
         .mkString(", ")}
-         |]}
+         |  ]
+         |}
+          """.stripMargin
+    )
+
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
+  }
+
+  def givenAuthorisedAsVatClient[A](
+    request: FakeRequest[A],
+    vrn: Vrn
+  ): FakeRequest[A] = {
+    val enrolments =
+      Seq(
+        Enrolment("HMRC-MTD-VAT", "VRN", vrn.value)
+      )
+
+    givenAuthorisedFor(
+      s"""
+         |{
+         |  "retrieve":["allEnrolments", "affinityGroup", "optionalCredentials"]
+         |}
+           """.stripMargin,
+      s"""
+         |{
+         |  "affinityGroup": "Individual",
+         |  "optionalCredentials":{
+         |    "providerId": "anyId",
+         |    "providerType": "GovernmentGateway"
+         |  },
+         |  "allEnrolments": [
+         |    ${enrolments
+        .map(enrolment =>
+          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+        )
+        .mkString(", ")}
+         |  ]
+         |}
           """.stripMargin
     )
 

@@ -75,7 +75,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                 -> "Erling Haal",
@@ -106,7 +106,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
               )
           )
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                 -> "Erling Haal",
@@ -125,7 +125,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
@@ -145,7 +145,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
@@ -174,7 +174,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
               )
           )
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
@@ -203,7 +203,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
               )
           )
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
@@ -235,7 +235,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
               )
           )
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                       -> "Erling Haal",
@@ -257,7 +257,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                 -> "CFG Solutions",
@@ -285,7 +285,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
             )
           )
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                 -> "CFG Solutions",
@@ -301,7 +301,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
           givenVatCustomerInfoExists("101747641")
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                       -> "CFG Solutions",
@@ -329,7 +329,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
             )
           )
 
-          val result = doAgentGetRequest(request.uri)
+          val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
             "name"                       -> "CFG Solutions",
@@ -348,7 +348,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
       givenVatCustomerInfoError("101747641", NOT_FOUND)
       givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
 
-      val result = doAgentGetRequest(request.uri)
+      val result = doGetRequest(request.uri)
       result.status shouldBe 404
       result.body shouldBe empty
     }
@@ -361,7 +361,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
         givenVatCustomerInfoError("101747641", INTERNAL_SERVER_ERROR)
         givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
 
-        val result = doAgentGetRequest(request.uri)
+        val result = doGetRequest(request.uri)
         result.status shouldBe 500
       }
 
@@ -375,7 +375,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
         givenPrincipalGroupIdRequestFailsWith(INTERNAL_SERVER_ERROR)
         givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")), Set("foo"))
 
-        val result = doAgentGetRequest(request.uri)
+        val result = doGetRequest(request.uri)
         result.status shouldBe 500
       }
     }
@@ -384,7 +384,7 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
       val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
       requestIsNotAuthenticated()
 
-      val result = doAgentGetRequest(request.uri)
+      val result = doGetRequest(request.uri)
       result.status shouldBe 401
     }
   }

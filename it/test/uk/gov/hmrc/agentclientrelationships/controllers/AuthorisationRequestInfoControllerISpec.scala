@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending}
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
@@ -39,9 +39,9 @@ class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControlle
     testInvitationId,
     arn.value,
     "HMRC-MTD-VAT",
-    "123456789",
+    vrn.value,
     "vrn",
-    "234567890",
+    vrn.value,
     "vrn",
     "testName",
     Pending,
@@ -55,6 +55,7 @@ class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControlle
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
   val testUrl = s"/agent-client-relationships/agent/${arn.value}/authorisation-request-info/$testInvitationId"
+  val testClientUrl = s"/agent-client-relationships/client/authorisation-request-info/$testInvitationId"
 
   s"GET $testUrl" should {
     "return 200 status and valid JSON when invitation exists and there is an agent record" in {
@@ -66,7 +67,7 @@ class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControlle
 
       await(invitationRepo.collection.insertOne(testInvitation).toFuture())
 
-      val result = doAgentGetRequest(testUrl)
+      val result = doGetRequest(testUrl)
       result.status shouldBe 200
 
       val uid = await(agentReferenceRepo.findByArn(arn)).get.uid
@@ -88,9 +89,9 @@ class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControlle
           "invitationId"         -> "testInvitationId",
           "arn"                  -> "AARN0000002",
           "service"              -> "HMRC-MTD-VAT",
-          "clientId"             -> "123456789",
+          "clientId"             -> vrn.value,
           "clientIdType"         -> "vrn",
-          "suppliedClientId"     -> "234567890",
+          "suppliedClientId"     -> vrn.value,
           "suppliedClientIdType" -> "vrn",
           "clientName"           -> "testName",
           "status"               -> "Pending",
@@ -107,7 +108,32 @@ class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControlle
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      val result = doAgentGetRequest(testUrl)
+      val result = doGetRequest(testUrl)
+      result.status shouldBe 404
+    }
+  }
+
+  s"GET $testClientUrl" should {
+    "return 200 status and valid JSON when invitation exists and the client has authorisation with enrolment" in {
+      val fakeRequest = FakeRequest("GET", testClientUrl)
+      givenAuditConnector()
+      givenAuthorisedAsVatClient(fakeRequest, vrn)
+      givenAgentRecordFound(arn, agentRecordResponse)
+      await(invitationRepo.collection.insertOne(testInvitation.copy(status = Accepted)).toFuture())
+      val result = doGetRequest(testClientUrl)
+      result.status shouldBe 200
+
+      result.json shouldBe Json.obj(
+        "agentName" -> "My Agency",
+        "service"   -> "HMRC-MTD-VAT",
+        "status"    -> "Accepted"
+      )
+    }
+    "return 404 status when invitation doesnt exist" in {
+      val fakeRequest = FakeRequest("GET", testClientUrl)
+      givenAuditConnector()
+      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      val result = doGetRequest(testClientUrl)
       result.status shouldBe 404
     }
   }

@@ -25,7 +25,7 @@ trait RelationshipsControllerITSASUPP {
     val requestPath: String =
       s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT-SUPP/client/MTDITID/${mtdItId.value}"
 
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest = doGetRequest(requestPath)
 
     "GET /agent/:arn/service/HMRC-MTD-IT-SUPP/client/MTDITID/:mtdItId" should {
 

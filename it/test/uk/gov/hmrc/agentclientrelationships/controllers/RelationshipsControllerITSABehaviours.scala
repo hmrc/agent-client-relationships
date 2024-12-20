@@ -44,7 +44,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       syncToESStatus = Some(SyncStatus.Success)
     )
 
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest = doGetRequest(requestPath)
 
     "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
       // CESA CHECK UNHAPPY PATHS
@@ -339,7 +339,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       val requestPath: String =
         s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
 
       // HAPPY PATH :-)
 
@@ -374,7 +374,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/IR-SA/client/ni/${nino.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
 
       // CESA CHECK UNHAPPY PATHS
 
@@ -980,7 +980,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
     "GET /agent/:arn/client/:nino/legacy-mapped-relationship" should {
       val requestPath: String = s"/agent-client-relationships/agent/$arn/client/$nino/legacy-mapped-relationship"
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
       val req = FakeRequest()
 
       "find legacy mapped relationship" in {

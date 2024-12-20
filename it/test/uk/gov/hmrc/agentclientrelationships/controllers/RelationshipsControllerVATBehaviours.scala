@@ -42,7 +42,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       val requestPath: String =
         s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
 
       // HAPPY PATHS WHEN CHECKING HMRC-VATDEC-ORG
 
@@ -327,7 +327,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       val requestPath =
         s"/agent-client-relationships/agent/${arn.value}/service/HMCE-VATDEC-ORG/client/vrn/${vrn.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
 
       "return 404 when agent not allocated to client in es" in {
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)

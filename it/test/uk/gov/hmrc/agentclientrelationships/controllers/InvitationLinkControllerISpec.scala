@@ -69,7 +69,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result =
-        doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+        doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 200
       result.json shouldBe Json.obj(
         "arn"  -> arn.value,
@@ -82,7 +82,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentRecordFound(arn, agentRecordResponse)
 
       val result =
-        doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+        doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
     }
 
@@ -91,7 +91,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentRecordFound(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord.copy(normalisedAgentNames = Seq("DummyNotMatching"))))
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
     }
 
@@ -99,7 +99,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponseWithNoAgentName)
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
     }
 
@@ -108,7 +108,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentDetailsErrorResponse(arn, 502)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 502
     }
 
@@ -117,7 +117,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentRecordFound(arn, suspendedAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result = doAgentGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 403
     }
   }
@@ -138,7 +138,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result =
-        doAgentGetRequest(s"/agent-client-relationships/agent/agent-link")
+        doGetRequest(s"/agent-client-relationships/agent/agent-link")
       result.status shouldBe 200
       result.json shouldBe Json.obj(
         "uid"                 -> agentReferenceRecord.uid,
@@ -164,7 +164,7 @@ class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAgentRecordFound(arn, agentRecordResponse)
 
       val result =
-        doAgentGetRequest(s"/agent-client-relationships/agent/agent-link")
+        doGetRequest(s"/agent-client-relationships/agent/agent-link")
       result.status shouldBe 200
 
       agentReferenceRepo
