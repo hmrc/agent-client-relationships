@@ -33,7 +33,7 @@ import uk.gov.hmrc.agentclientrelationships.support._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.{AuthConnector, PlayAuthConnector}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.{CurrentTimestampSupport, MongoComponent}
@@ -165,7 +165,7 @@ trait RelationshipsBaseControllerISpec
     case x          => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
-  protected def doAgentGetRequest(route: String) = new Resource(route, port).get()
+  protected def doGetRequest(route: String): HttpResponse = new Resource(route, port).get()
 
   protected def doAgentPostRequest(route: String, json: JsValue) = new Resource(route, port).postAsJson(json.toString())
 

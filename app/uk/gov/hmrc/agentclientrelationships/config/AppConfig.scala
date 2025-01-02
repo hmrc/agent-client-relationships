@@ -111,10 +111,9 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val inactiveRelationshipsClientRecordStartDate =
     servicesConfig.getString("inactive-relationships-client.record-start-date")
 
-  // Note: Personal Income Record is not handled through agent-client-relationships
+  // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
+  val supportedServicesWithoutPir: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
   val supportedServices: Seq[Service] = Service.supportedServices
-  // TODO: Keeping this list in appConfig to enable reading it from config in future if necessary
-  // If this is not needed, could be moved somewhere else where constants are kept
 
   val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 

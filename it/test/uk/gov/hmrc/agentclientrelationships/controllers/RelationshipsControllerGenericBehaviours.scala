@@ -72,7 +72,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       val requestPath: String =
         s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
 
       // HAPPY PATH :-)
 
@@ -705,7 +705,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       val requestPath: String =
         s"/agent-client-relationships/relationships/service/$serviceId/client/$clientIdType/${clientId.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
       val req = FakeRequest()
 
       val enrolmentKey = if (serviceId == Service.Cbc.id) {

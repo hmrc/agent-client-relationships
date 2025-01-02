@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvitationRequest, ValidateInvitationResponse}
 import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsService, InvitationLinkService, InvitationService}
@@ -30,6 +30,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -93,7 +94,17 @@ class InvitationLinkController @Inject() (
             invitationService
               .findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIdsToSearch)
               .flatMap {
-                case Seq(invitation) =>
+                case Nil =>
+                  Logger(getClass).warn(
+                    s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
+                  )
+                  Future.successful(NotFound)
+                case invitations: Seq[Invitation] =>
+                  val invitation = invitations
+                    .find(i => i.status.eq(Pending))
+                    .getOrElse(
+                      invitations.sorted(Ordering[Invitation](Ordering.by[Invitation, Instant](_.created).reverse)).head
+                    )
                   for {
                     existingRelationship <-
                       checkRelationshipsService
@@ -111,11 +122,6 @@ class InvitationLinkController @Inject() (
                       )
                     )
                   )
-                case _ =>
-                  Logger(getClass).warn(
-                    s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
-                  )
-                  Future.successful(NotFound)
               }
           case Left(AgentSuspended) =>
             Logger(getClass).warn(s"Agent is suspended for UID: ${request.body.uid}")
