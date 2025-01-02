@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, S
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -55,15 +56,15 @@ class RemoveAuthorisationService @Inject() (
     clientId.typeId match {
       case NinoType.id =>
         partialAuthRepository
-          .find(service.id, Nino(clientId.value), arn)
+          .findActive(service.id, Nino(clientId.value), arn)
       case _ => Future.successful(None)
     }
 
-  def deletePartialAuthInvitation(arn: Arn, clientId: ClientId, service: Service): Future[Boolean] =
+  def deauthPartialAuth(arn: Arn, clientId: ClientId, service: Service): Future[Boolean] =
     clientId.typeId match {
       case NinoType.id =>
         partialAuthRepository
-          .deletePartialAuth(service.id, Nino(clientId.value), arn)
+          .deauthorise(service.id, Nino(clientId.value), arn, Instant.now)
       case _ => Future.successful(false)
     }
 

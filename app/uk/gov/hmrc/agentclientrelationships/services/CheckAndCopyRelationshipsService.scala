@@ -26,7 +26,6 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
-import uk.gov.hmrc.agentclientrelationships.util._
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
@@ -69,7 +68,7 @@ case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object AltItsaCreateRelationshipSuccess extends CheckAndCopyResult {
+case class AltItsaCreateRelationshipSuccess(service: String) extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
@@ -91,6 +90,8 @@ class CheckAndCopyRelationshipsService @Inject() (
   aca: AgentClientAuthorisationConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
+  partialAuthRepo: PartialAuthRepository,
+  invitationsRepository: InvitationsRepository,
   val auditService: AuditService,
   val metrics: Metrics
 )(implicit val appConfig: AppConfig)
@@ -117,7 +118,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     enrolmentKey.oneTaxIdentifier() match {
       case mtdItId @ MtdItId(_) =>
         ifEnabled(copyMtdItRelationshipFlag)(
-          checkCesaForOldRelationshipAndCopyOrPartialAuth(arn, mtdItId, enrolmentKey.service)
+          tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, enrolmentKey.service)
         )
       case vrn @ Vrn(_) =>
         ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
@@ -134,6 +135,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   ): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
+    auditData.set("service", HMRCMTDIT)
 
     relationshipCopyRepository.findBy(arn, EnrolmentKey(Service.MtdIt, mtdItId)).flatMap {
       case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
@@ -176,41 +178,81 @@ class CheckAndCopyRelationshipsService @Inject() (
     }
   }
 
-  private def checkCesaForOldRelationshipAndCopyOrPartialAuth(arn: Arn, mtdItId: MtdItId, service: String)(implicit
+  private def endPartialAuth(arn: Arn, service: String, nino: Option[Nino], mtdItId: MtdItId)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean] =
+    nino.fold(Future.successful(false))(ni =>
+      partialAuthRepo
+        .deleteActivePartialAuth(service, ni, arn)
+        .flatMap {
+          case true => invitationsRepository.updatePartialAuthToAcceptedStatus(arn, service, ni, mtdItId)
+          case false =>
+            aca.updateStatusToAccepted(ni, service).map { acaResult =>
+              if (!acaResult) logger.error("error ending partialauth")
+              acaResult
+            }
+        }
+    )
+
+  private def findPartialAuth(arn: Arn, nino: Option[Nino])(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext,
+    auditData: AuditData
+  ): Future[Option[String]] =
+    nino.fold[Future[Option[String]]](Future.successful(None)) { ni =>
+      auditData.set("nino", ni)
+      partialAuthRepo.findActive(ni, arn).map(_.map(_.service)).flatMap {
+        case Some(svc) => Future.successful(Option(svc))
+        case None      => aca.getPartialAuth(ni, arn).map(_.headOption)
+      }
+    }
+
+  private def tryCreateRelationshipFromPartialAuth(
+    service: String,
+    mPartialAuth: Option[String],
+    arn: Arn,
+    mtdItId: MtdItId
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, auditData: AuditData): Future[Option[DbUpdateStatus]] =
+    if (mPartialAuth.contains(service)) {
+      auditData.set("service", s"$service")
+      auditData.set("Journey", "PartialAuth")
+      createRelationshipsService
+        .createRelationship(
+          arn,
+          EnrolmentKey(s"$service~MTDITID~${mtdItId.value}"),
+          Set.empty,
+          failIfCreateRecordFails = true,
+          failIfAllocateAgentInESFails = true
+        )
+    } else Future.successful(None)
+
+  private def tryCreateITSARelationshipFromPartialAuthOrCopyAcross(
+    arn: Arn,
+    mtdItId: MtdItId,
+    service: String
+  )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
 
-    auditData.set("service", s"$service")
     auditData.set("clientId", mtdItId)
     auditData.set("clientIdType", "mtditid")
 
     for {
-      mNino <- ifConnector.getNinoFor(mtdItId)
-      cesaResult <- if (service == HMRCMTDIT) checkCesaAndCopy(arn, mtdItId, mNino)
-                    else Future(NotFound)
-      result <-
-        if (cesaResult == NotFound)
-          mNino.fold[Future[CheckAndCopyResult]](Future(NotFound))(nino =>
-            tryCreateRelationshipFromAltItsa(nino, service)
-          )
-        else toFuture(cesaResult)
-    } yield result
+      mNino          <- ifConnector.getNinoFor(mtdItId)
+      mPartialAuth   <- findPartialAuth(arn, mNino)
+      partialAuthRes <- tryCreateRelationshipFromPartialAuth(service, mPartialAuth, arn, mtdItId)
+      createRelResult <- if (partialAuthRes.contains(DbUpdateSucceeded)) {
+                           auditService.sendCreateRelationshipAuditEvent
+                           endPartialAuth(arn, service, mNino, mtdItId)
+                             .map(_ => AltItsaCreateRelationshipSuccess(service))
+                         } else if (service == HMRCMTDIT) checkCesaAndCopy(arn, mtdItId, mNino)
+                         else Future.successful(AltItsaNotFoundOrFailed)
+    } yield createRelResult
   }
-
-  private def tryCreateRelationshipFromAltItsa(nino: Nino, service: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext,
-    auditData: AuditData
-  ) =
-    if (appConfig.altItsaEnabled) {
-      auditData.set("Journey", "PartialAuth")
-      aca
-        .updateAltItsaFor(nino, service)
-        .map(created => if (created) AltItsaCreateRelationshipSuccess else AltItsaNotFoundOrFailed)
-    } else toFuture(NotFound)
 
   private def findOrCreateRelationshipCopyRecordAndCopy(
     references: Set[RelationshipReference],
@@ -307,21 +349,21 @@ class CheckAndCopyRelationshipsService @Inject() (
       _ = auditData.set("saAgentRef", matching.mkString(","))
       _ = auditData.set("CESARelationship", matching.nonEmpty)
     } yield {
-      if (matching.nonEmpty) auditService.sendCheckCESAAuditEvent
+      if (matching.nonEmpty) auditService.sendCheckCESAAndPartialAuthAuditEvent
       matching
     }
   }
 
-  def hasLegacyRelationshipInCesaOrHasPartialAuth(
+  def hasPartialAuthOrLegacyRelationshipInCesa(
     arn: Arn,
     nino: Nino
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
-        aca.getPartialAuthExistsFor(nino, arn).map { hasPartialAuth =>
-          auditData.set("partialAuth", hasPartialAuth)
-          auditService.sendCheckCESAAuditEvent
-          hasPartialAuth
+        aca.getPartialAuth(nino, arn).map { hasPartialAuth =>
+          auditData.set("partialAuth", hasPartialAuth.nonEmpty)
+          auditService.sendCheckCESAAndPartialAuthAuditEvent
+          hasPartialAuth.nonEmpty
         }
       } else Future successful true
     )

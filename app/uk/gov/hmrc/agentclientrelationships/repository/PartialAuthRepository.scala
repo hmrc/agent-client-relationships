@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.model.Filters.{and, equal}
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters.{and, equal, in}
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
@@ -25,6 +26,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import org.mongodb.scala.model.Updates._
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -37,7 +39,14 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       collectionName = "partial-auth",
       domainFormat = PartialAuthRelationship.format,
       indexes = Seq(
-        IndexModel(Indexes.ascending("service", "nino", "arn"), IndexOptions().name("clientQueryIndex").unique(true))
+        IndexModel(
+          Indexes.ascending("service", "nino", "arn"),
+          IndexOptions()
+            .partialFilterExpression(BsonDocument("active" -> "true"))
+            .unique(true)
+            .name("activeRelationshipsIndex")
+        ),
+        IndexModel(Indexes.ascending("service", "nino", "arn", "active"))
       ),
       replaceIndexes = true
     )
@@ -52,17 +61,31 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
     nino: Nino
   ): Future[Unit] = {
     require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
-    val partialAuth = PartialAuthRelationship(created, arn.value, service, nino.value)
+    val partialAuth =
+      PartialAuthRelationship(created, arn.value, service, nino.value, active = true, lastUpdated = created)
     collection.insertOne(partialAuth).toFuture().map(_ => ())
   }
 
-  def find(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
+  def findActive(nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
+    collection
+      .find(
+        and(
+          in("service", HMRCMTDIT, HMRCMTDITSUPP),
+          equal("nino", nino.value),
+          equal("arn", arn.value),
+          equal("active", true)
+        )
+      )
+      .headOption()
+
+  def findActive(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
     collection
       .find(
         and(
           equal("service", serviceId),
           equal("nino", nino.value),
-          equal("arn", arn.value)
+          equal("arn", arn.value),
+          equal("active", true)
         )
       )
       .headOption()
@@ -78,15 +101,30 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       )
       .headOption()
 
-  def deletePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] =
+  def deauthorise(serviceId: String, nino: Nino, arn: Arn, updated: Instant): Future[Boolean] =
     collection
-      .deleteOne(
+      .updateOne(
         and(
-          equal("arn", arn.value),
           equal("service", serviceId),
-          equal("nino", nino.value)
-        )
+          equal("nino", nino.value),
+          equal("arn", arn.value)
+        ),
+        combine(set("active", false), set("lastUpdated", updated))
       )
       .toFuture()
       .map(_.wasAcknowledged())
+
+  // for example when a partialAuth becomes a MTD relationship we want to delete the partialAuth
+  def deleteActivePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] =
+    collection
+      .deleteOne(
+        and(
+          equal("service", serviceId),
+          equal("nino", nino.value),
+          equal("arn", arn.value),
+          equal("active", true)
+        )
+      )
+      .toFuture()
+      .map(_.getDeletedCount == 1L)
 }

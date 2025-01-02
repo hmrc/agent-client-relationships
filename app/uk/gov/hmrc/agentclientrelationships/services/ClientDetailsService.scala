@@ -79,7 +79,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
       case Right(_) =>
         logger.warn("[getItsaClientDetails] - No postcode was returned by the API")
         Future.successful(Left(ClientDetailsNotFound))
-      case Left(ClientDetailsNotFound) if appConfig.altItsaEnabled =>
+      case Left(ClientDetailsNotFound) =>
         (for {
           citizenDetails     <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
           designatoryDetails <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino))

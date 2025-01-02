@@ -103,7 +103,7 @@ class RemoveAuthorisationController @Inject() (
           .flatMap {
             case Some(_) =>
               deauthorisationService
-                .deletePartialAuthInvitation(arn, validRequest.suppliedClientId, validRequest.service)
+                .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
                 .map { result =>
                   if (result) Right[InvitationFailureResponse, Result](NoContent)
                   else

@@ -126,6 +126,12 @@ trait ACAStubs {
         .willReturn(aResponse().withStatus(responseStatus))
     )
 
+  def givenUpdateStatusToAccepted(nino: Nino, service: String = HMRCMTDIT, responseStatus: Int) =
+    stubFor(
+      put(urlEqualTo(s"/agent-client-authorisation/agent/alt-itsa/$service/update-status/accepted/${nino.value}"))
+        .willReturn(aResponse().withStatus(responseStatus))
+    )
+
   def givenSetRelationshipEnded(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
       put(urlEqualTo(s"/agent-client-authorisation/invitations/set-relationship-ended"))

@@ -74,7 +74,6 @@ class ClientDetailsServiceSpec extends UnitSpec {
         "the Citizen Details APIs (alt-ITSA) return successful responses" should {
 
           "return a ClientDetailsResponse if expected data is returned" in {
-            when(mockAppConfig.altItsaEnabled).thenReturn(true)
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
@@ -91,7 +90,6 @@ class ClientDetailsServiceSpec extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no postcode was returned" in {
-            when(mockAppConfig.altItsaEnabled).thenReturn(true)
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
@@ -105,7 +103,6 @@ class ClientDetailsServiceSpec extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no name was returned" in {
-            when(mockAppConfig.altItsaEnabled).thenReturn(true)
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
@@ -117,7 +114,6 @@ class ClientDetailsServiceSpec extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no SA UTR was returned" in {
-            when(mockAppConfig.altItsaEnabled).thenReturn(true)
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
@@ -132,7 +128,6 @@ class ClientDetailsServiceSpec extends UnitSpec {
         "the Citizen Details APIs (alt-ITSA) return 404 responses" should {
 
           "return a ClientDetailsNotFound error" in {
-            when(mockAppConfig.altItsaEnabled).thenReturn(true)
             when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))

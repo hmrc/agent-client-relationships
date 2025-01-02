@@ -119,7 +119,14 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("nino", Nino("KS969148D").value)
       auditData.set("CESARelationship", true)
 
-      await(service.sendCheckCESAAuditEvent(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext]))
+      await(
+        service.sendCheckCESAAndPartialAuthAuditEvent(
+          hc,
+          FakeRequest("GET", "/path"),
+          auditData,
+          implicitly[ExecutionContext]
+        )
+      )
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

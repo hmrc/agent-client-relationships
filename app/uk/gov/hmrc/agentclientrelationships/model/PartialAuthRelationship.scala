@@ -24,7 +24,9 @@ case class PartialAuthRelationship(
   created: Instant,
   arn: String,
   service: String,
-  nino: String
+  nino: String,
+  active: Boolean,
+  lastUpdated: Instant
 )
 
 object PartialAuthRelationship {

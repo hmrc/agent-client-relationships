@@ -65,7 +65,7 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
     "return true when a record exists with status PartialAuth for client" in {
       givenPartialAuthExistsFor(agentARN, nino, HMRCMTDIT)
       givenCleanMetricRegistry()
-      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN))
+      val result = await(acaConnector.getPartialAuth(nino, agentARN))
       result shouldBe true
       timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
     }
@@ -73,7 +73,7 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
     "return false when no record exists with PartialAuth for client" in {
       givenPartialAuthNotExistsFor(agentARN, nino)
       givenCleanMetricRegistry()
-      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN))
+      val result = await(acaConnector.getPartialAuth(nino, agentARN))
       result shouldBe false
       timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
     }
@@ -81,7 +81,7 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
     "return false when there is a problem with the upstream service" in {
       givenAgentClientAuthorisationReturnsError(agentARN, nino, 503)
       givenCleanMetricRegistry()
-      val result = await(acaConnector.getPartialAuthExistsFor(nino, agentARN))
+      val result = await(acaConnector.getPartialAuth(nino, agentARN))
       result shouldBe false
       timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
     }
@@ -96,6 +96,16 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
       result shouldBe true
       timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-updateAltItsaForHMRC-MTD-IT-PUT")
 
+    }
+  }
+
+  "updateStatusToAccepted" should {
+    "return true" in {
+      givenUpdateStatusToAccepted(nino, responseStatus = 204)
+      givenCleanMetricRegistry()
+      val result = await(acaConnector.updateStatusToAccepted(nino, HMRCMTDIT))
+      result shouldBe true
+      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-updateStatusToAccepted-PUT")
     }
   }
 }

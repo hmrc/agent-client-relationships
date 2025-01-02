@@ -90,7 +90,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     "vrnExistsInEtmp"
   )
 
-  val CheckCESADetailsFields: Seq[String] =
+  val CheckCESADetailsAndPartialAuthFields: Seq[String] =
     Seq("agentCode", "credId", "arn", "saAgentRef", "CESARelationship", "nino", "partialAuth")
 
   val CheckESDetailsFields: Seq[String] = Seq("agentCode", "credId", "oldAgentCodes", "vrn", "arn", "ESRelationship")
@@ -154,7 +154,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
       collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat)
     )
 
-  def sendCheckCESAAuditEvent(implicit
+  def sendCheckCESAAndPartialAuthAuditEvent(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -163,7 +163,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     auditEvent(
       AgentClientRelationshipEvent.CheckCESA,
       "check-cesa",
-      collectDetails(auditData.getDetails, CheckCESADetailsFields)
+      collectDetails(auditData.getDetails, CheckCESADetailsAndPartialAuthFields)
     )
 
   def sendCheckESAuditEvent(implicit

@@ -246,7 +246,7 @@ class RelationshipsController @Inject() (
               if (matching.nonEmpty) {
                 auditData.set("saAgentRef", matching.mkString(","))
                 auditData.set("CESARelationship", matching.nonEmpty)
-                auditService.sendCheckCESAAuditEvent
+                auditService.sendCheckCESAAndPartialAuthAuditEvent
                 NoContent // a legacy SA relationship was found and it is mapped to the Arn
               } else Ok // A legacy SA relationship was found but it is not mapped to the Arn
             }

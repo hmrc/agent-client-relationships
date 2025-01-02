@@ -101,7 +101,6 @@ trait RelationshipsBaseControllerISpec
         "agent.cache.enabled"                                   -> true,
         "agent.trackPage.cache.expires"                         -> "1 millis",
         "agent.trackPage.cache.enabled"                         -> true,
-        "alt-itsa.enabled"                                      -> true,
         "mongodb.uri"                                           -> mongoUri,
         "internal-auth.token"                                   -> "internalAuthToken"
       )
