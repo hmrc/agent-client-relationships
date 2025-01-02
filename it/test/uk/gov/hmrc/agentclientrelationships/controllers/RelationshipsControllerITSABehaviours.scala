@@ -53,7 +53,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
     def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
     def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
 
-    def doRequest = doAgentGetRequest(requestPath)
+    def doRequest = doGetRequest(requestPath)
 
     "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" should {
       // CESA CHECK UNHAPPY PATHS
@@ -259,7 +259,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
         await(partialAuthRepository.findActive(HMRCMTDITSUPP, nino, arn)).isDefined shouldBe true
 
-        val result = doAgentGetRequest(
+        val result = doGetRequest(
           s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT-SUPP/client/MTDITID/${mtdItId.value}"
         )
         result.status shouldBe 200
@@ -430,7 +430,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       val requestPath: String =
         s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
 
       // HAPPY PATH :-)
 
@@ -465,7 +465,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
       val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/IR-SA/client/ni/${nino.value}"
 
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
 
       // CESA CHECK UNHAPPY PATHS
 
@@ -1071,7 +1071,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
     "GET /agent/:arn/client/:nino/legacy-mapped-relationship" should {
       val requestPath: String = s"/agent-client-relationships/agent/$arn/client/$nino/legacy-mapped-relationship"
-      def doRequest = doAgentGetRequest(requestPath)
+      def doRequest = doGetRequest(requestPath)
       val req = FakeRequest()
 
       "find legacy mapped relationship" in {
