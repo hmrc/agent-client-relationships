@@ -118,7 +118,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         and(
           equal("arn", arn),
           in("service", services: _*),
-          in(if (isSuppliedClientId) "suppliedClientId" else "clientId", clientIds: _*)
+          in(if (isSuppliedClientId) "suppliedClientId" else "clientId", clientIds.map(_.replaceAll(" ", "")): _*)
         )
       )
       .toFuture()
