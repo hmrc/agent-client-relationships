@@ -38,6 +38,30 @@ import java.time.{Instant, LocalDate, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
+trait RelationshipConnector {
+  def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[RegistrationRelationshipResponse]]
+
+  def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[RegistrationRelationshipResponse]]
+
+  def getActiveClientRelationships(
+    taxIdentifier: TaxIdentifier
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]]
+
+  def getInactiveClientRelationships(
+    taxIdentifier: TaxIdentifier
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]]
+
+  def getInactiveRelationships(
+    arn: Arn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]]
+}
+
 @Singleton
 class HIPConnector @Inject() (
   httpClient: HttpClientV2,
@@ -47,7 +71,8 @@ class HIPConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val appConfig: AppConfig
-) extends HttpAPIMonitor
+) extends RelationshipConnector
+    with HttpAPIMonitor
     with Logging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
@@ -151,7 +176,7 @@ class HIPConnector @Inject() (
   // Old IF API #1168 (for agent)
   def getInactiveRelationships(
     arn: Arn
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Seq[InactiveRelationship]] = {
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDays).toString

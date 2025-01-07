@@ -15,6 +15,10 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.controllers
+
 import uk.gov.hmrc.agentclientrelationships.stubs._
 
-trait RelationshipsBaseControllerISpec extends BaseControllerISpec with AgentClientRelationshipStub
+trait RelationshipsBaseIFControllerISpec extends RelationshipsBaseControllerISpec with IFAgentClientRelationshipStub {
+
+  override def additionalConfig: Map[String, Any] = Map("hip.enabled" -> false)
+}

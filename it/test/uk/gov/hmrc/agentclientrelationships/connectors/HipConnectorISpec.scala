@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HIPStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HIPAgentClientRelationshipStub}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -41,7 +41,7 @@ class HipConnectorISpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
-    with HIPStubs
+    with HIPAgentClientRelationshipStub
     with DataStreamStub
     with MetricTestSupport {
 
@@ -113,19 +113,19 @@ class HipConnectorISpec
   "HIPConnector CreateAgentRelationship" should {
 
     "create relationship between agent and client and return 200" in {
-      givenAgentCanBeAllocatedInHIP(mtdItId, Arn("bar"))
+      givenAgentCanBeAllocated(mtdItId, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "not create relationship between agent and client and return nothing" in {
-      givenAgentCanNotBeAllocatedInHIP(status = 404)
+      givenAgentCanNotBeAllocated(status = 404)
       givenAuditConnector()
       await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
     }
 
     "request body contains regime as ITSA when client Id is an MtdItId" in {
-      givenAgentCanBeAllocatedInHIP(mtdItId, Arn("someArn"))
+      givenAgentCanBeAllocated(mtdItId, Arn("someArn"))
       givenAuditConnector()
 
       await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("someArn")))
@@ -150,7 +150,7 @@ class HipConnectorISpec
     }
 
     "request body contains regime as ITSA for Supporting Agent when client Id is an MtdItId" in {
-      givenAgentCanBeAllocatedInHIP(mtdItId, Arn("someArn"))
+      givenAgentCanBeAllocated(mtdItId, Arn("someArn"))
       givenAuditConnector()
 
       await(hipConnector.createAgentRelationship(mtdItSuppEnrolmentKey, Arn("someArn")))
@@ -175,7 +175,7 @@ class HipConnectorISpec
     }
 
     "request body contains regime as VATC and idType as VRN when client Id is a Vrn" in {
-      givenAgentCanBeAllocatedInHIP(vrn, Arn("someArn"))
+      givenAgentCanBeAllocated(vrn, Arn("someArn"))
       givenAuditConnector()
 
       await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn")))
@@ -199,7 +199,7 @@ class HipConnectorISpec
     }
 
     "request body contains regime as TRS and idType as UTR when client Id is a UTR" in {
-      givenAgentCanBeAllocatedInHIP(utr, Arn("someArn"))
+      givenAgentCanBeAllocated(utr, Arn("someArn"))
       givenAuditConnector()
 
       await(hipConnector.createAgentRelationship(trustEnrolmentKey, Arn("someArn")))
@@ -221,7 +221,7 @@ class HipConnectorISpec
     }
 
     "request body contains regime as TRS and idType as URN when client Id is a URN" in {
-      givenAgentCanBeAllocatedInHIP(urn, Arn("someArn"))
+      givenAgentCanBeAllocated(urn, Arn("someArn"))
       givenAuditConnector()
 
       await(hipConnector.createAgentRelationship(trustNTEnrolmentKey, Arn("someArn")))
@@ -243,7 +243,7 @@ class HipConnectorISpec
     }
 
     "request body contains regime as PPT and idType as ZPPT when client Id is a PptRef" in {
-      givenAgentCanBeAllocatedInHIP(pptRef, Arn("someArn"))
+      givenAgentCanBeAllocated(pptRef, Arn("someArn"))
       givenAuditConnector()
 
       await(hipConnector.createAgentRelationship(pptEnrolmentKey, Arn("someArn")))
@@ -265,7 +265,7 @@ class HipConnectorISpec
     }
 
     "request body contains regime as PLR and idType as PLR when client Id is a PlrId" in {
-      givenAgentCanBeAllocatedInHIP(plrId, Arn("someArn"))
+      givenAgentCanBeAllocated(plrId, Arn("someArn"))
       givenAuditConnector()
 
       await(hipConnector.createAgentRelationship(plrEnrolmentKey, Arn("someArn")))
@@ -293,13 +293,13 @@ class HipConnectorISpec
     }
 
     "return nothing when IF is throwing errors" in {
-      givenHIPReturnsServerError()
+      givenReturnsServerError()
       givenAuditConnector()
       await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
 
     "return nothing when IF is unavailable" in {
-      givenHIPReturnsServiceUnavailable()
+      givenReturnsServiceUnavailable()
       givenAuditConnector()
       await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
@@ -307,13 +307,13 @@ class HipConnectorISpec
 
   "HIPConnector DeleteAgentRelationship" should {
     "delete relationship between agent and client and return 200 for ItSa service" in {
-      givenAgentCanBeDeallocatedInHIP(mtdItId, Arn("bar"))
+      givenAgentCanBeDeallocated(mtdItId, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for ItSa Supp service" in {
-      givenAgentCanBeDeallocatedInHIP(mtdItId, Arn("bar"))
+      givenAgentCanBeDeallocated(mtdItId, Arn("bar"))
       givenAuditConnector()
       await(
         hipConnector.deleteAgentRelationship(mtdItSuppEnrolmentKey, Arn("bar"))
@@ -321,43 +321,43 @@ class HipConnectorISpec
     }
 
     "delete relationship between agent and client and return 200 for Vat service" in {
-      givenAgentCanBeDeallocatedInHIP(vrn, Arn("bar"))
+      givenAgentCanBeDeallocated(vrn, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service" in {
-      givenAgentCanBeDeallocatedInHIP(utr, Arn("bar"))
+      givenAgentCanBeDeallocated(utr, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(trustEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service with URN" in {
-      givenAgentCanBeDeallocatedInHIP(urn, Arn("bar"))
+      givenAgentCanBeDeallocated(urn, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(trustNTEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for PPT service with PptRef" in {
-      givenAgentCanBeDeallocatedInHIP(pptRef, Arn("bar"))
+      givenAgentCanBeDeallocated(pptRef, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(pptEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Pillar2 service with PlrId" in {
-      givenAgentCanBeDeallocatedInHIP(plrId, Arn("bar"))
+      givenAgentCanBeDeallocated(plrId, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(plrEnrolmentKey, Arn("bar"))).get.processingDate should not be null
     }
 
     "not delete relationship between agent and client and return nothing for ItSa service" in {
-      givenAgentCanNotBeDeallocatedInHIP(status = 404)
+      givenAgentCanNotBeDeallocated(status = 404)
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
     }
 
     "not delete relationship between agent and client and return nothing for Vat service" in {
-      givenAgentCanNotBeDeallocatedInHIP(status = 404)
+      givenAgentCanNotBeDeallocated(status = 404)
       givenAuditConnector()
       await(hipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
     }
@@ -369,12 +369,12 @@ class HipConnectorISpec
     }
 
     "return nothing when IF is throwing errors" in {
-      givenHIPReturnsServerError()
+      givenReturnsServerError()
       await(hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
 
     "return nothing when IF is unavailable" in {
-      givenHIPReturnsServiceUnavailable()
+      givenReturnsServiceUnavailable()
       await(hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
   }
@@ -732,7 +732,7 @@ class HipConnectorISpec
     }
 
     "return empty Seq when IF is unavailable" in {
-      givenHIPReturnsServiceUnavailable()
+      givenReturnsServiceUnavailable()
       givenAuditConnector()
       await(hipConnector.getInactiveClientRelationships(mtdItId)) shouldBe empty
     }

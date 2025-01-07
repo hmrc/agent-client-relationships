@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.support.TestData
 import java.time.{Instant, LocalDate, ZoneId}
 import scala.concurrent.ExecutionContext
 
-class AuthorisationRequestInfoControllerISpec extends RelationshipsBaseControllerISpec with TestData {
+class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with TestData {
 
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]

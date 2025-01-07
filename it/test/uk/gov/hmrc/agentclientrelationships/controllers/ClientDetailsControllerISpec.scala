@@ -33,7 +33,7 @@ import uk.gov.hmrc.domain.Nino
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
-class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with ClientDetailsStub {
+class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub {
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]

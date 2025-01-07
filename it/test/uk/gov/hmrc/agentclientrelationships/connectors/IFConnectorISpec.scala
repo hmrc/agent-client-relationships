@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{containing, equalToJson, postRequestedFor, urlPathEqualTo, verify}
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -26,11 +25,12 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, IFStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, IFAgentClientRelationshipStub, IFStubs}
 import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -40,6 +40,7 @@ class IFConnectorISpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with IFStubs
+    with IFAgentClientRelationshipStub
     with DataStreamStub
     with MetricTestSupport {
 
@@ -77,7 +78,10 @@ class IFConnectorISpec
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val ifConnector =
-    new IFConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
+    new IFConnector(httpClient, ec)(metrics, appConfig)
+
+  val relationshipConnector =
+    new IFRelationshipConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
@@ -129,13 +133,13 @@ class IFConnectorISpec
     }
 
     "return nothing when IF is unavailable" in {
-      givenIFReturnsServiceUnavailable()
+      givenReturnsServiceUnavailable()
       givenAuditConnector()
       await(ifConnector.getNinoFor(mtdItId)) shouldBe None
     }
 
     "return nothing when IF is throwing errors" in {
-      givenIFReturnsServerError()
+      givenReturnsServerError()
       givenAuditConnector()
       await(ifConnector.getNinoFor(mtdItId)) shouldBe None
     }
@@ -163,22 +167,24 @@ class IFConnectorISpec
 
   "IFConnector CreateAgentRelationship" should {
     "create relationship between agent and client and return 200" in {
-      givenAgentCanBeAllocatedInIF(mtdItId, Arn("bar"))
+      givenAgentCanBeAllocated(mtdItId, Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(
+        relationshipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
     }
 
     "not create relationship between agent and client and return nothing" in {
-      givenAgentCanNotBeAllocatedInIF(status = 404)
+      givenAgentCanNotBeAllocated(status = 404)
       givenAuditConnector()
-      await(ifConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
+      await(relationshipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
     }
 
     "request body contains regime as ITSA when client Id is an MtdItId" in {
-      givenAgentCanBeAllocatedInIF(mtdItId, Arn("someArn"))
+      givenAgentCanBeAllocated(mtdItId, Arn("someArn"))
       givenAuditConnector()
 
-      await(ifConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("someArn")))
+      await(relationshipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("someArn")))
 
       verify(
         1,
@@ -201,10 +207,10 @@ class IFConnectorISpec
     }
 
     "request body contains regime as ITSA for Supporting Agent when client Id is an MtdItId" in {
-      givenAgentCanBeAllocatedInIF(mtdItId, Arn("someArn"))
+      givenAgentCanBeAllocated(mtdItId, Arn("someArn"))
       givenAuditConnector()
 
-      await(ifConnector.createAgentRelationship(mtdItSuppEnrolmentKey, Arn("someArn")))
+      await(relationshipConnector.createAgentRelationship(mtdItSuppEnrolmentKey, Arn("someArn")))
 
       verify(
         1,
@@ -227,10 +233,10 @@ class IFConnectorISpec
     }
 
     "request body contains regime as VATC and idType as VRN when client Id is a Vrn" in {
-      givenAgentCanBeAllocatedInIF(vrn, Arn("someArn"))
+      givenAgentCanBeAllocated(vrn, Arn("someArn"))
       givenAuditConnector()
 
-      await(ifConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn")))
+      await(relationshipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn")))
 
       verify(
         1,
@@ -251,10 +257,10 @@ class IFConnectorISpec
     }
 
     "request body contains regime as TRS and idType as UTR when client Id is a UTR" in {
-      givenAgentCanBeAllocatedInIF(utr, Arn("someArn"))
+      givenAgentCanBeAllocated(utr, Arn("someArn"))
       givenAuditConnector()
 
-      await(ifConnector.createAgentRelationship(trustEnrolmentKey, Arn("someArn")))
+      await(relationshipConnector.createAgentRelationship(trustEnrolmentKey, Arn("someArn")))
 
       verify(
         1,
@@ -273,10 +279,10 @@ class IFConnectorISpec
     }
 
     "request body contains regime as TRS and idType as URN when client Id is a URN" in {
-      givenAgentCanBeAllocatedInIF(urn, Arn("someArn"))
+      givenAgentCanBeAllocated(urn, Arn("someArn"))
       givenAuditConnector()
 
-      await(ifConnector.createAgentRelationship(trustNTEnrolmentKey, Arn("someArn")))
+      await(relationshipConnector.createAgentRelationship(trustNTEnrolmentKey, Arn("someArn")))
 
       verify(
         1,
@@ -295,10 +301,10 @@ class IFConnectorISpec
     }
 
     "request body contains regime as PPT and idType as ZPPT when client Id is a PptRef" in {
-      givenAgentCanBeAllocatedInIF(pptRef, Arn("someArn"))
+      givenAgentCanBeAllocated(pptRef, Arn("someArn"))
       givenAuditConnector()
 
-      await(ifConnector.createAgentRelationship(pptEnrolmentKey, Arn("someArn")))
+      await(relationshipConnector.createAgentRelationship(pptEnrolmentKey, Arn("someArn")))
 
       verify(
         1,
@@ -317,10 +323,10 @@ class IFConnectorISpec
     }
 
     "request body contains regime as PLR and idType as PLR when client Id is a PlrId" in {
-      givenAgentCanBeAllocatedInIF(plrId, Arn("someArn"))
+      givenAgentCanBeAllocated(plrId, Arn("someArn"))
       givenAuditConnector()
 
-      await(ifConnector.createAgentRelationship(plrEnrolmentKey, Arn("someArn")))
+      await(relationshipConnector.createAgentRelationship(plrEnrolmentKey, Arn("someArn")))
 
       verify(
         1,
@@ -340,92 +346,104 @@ class IFConnectorISpec
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(
-        ifConnector.createAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
+        relationshipConnector.createAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
       )
     }
 
     "return nothing when IF is throwing errors" in {
-      givenIFReturnsServerError()
-      await(ifConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      givenReturnsServerError()
+      await(relationshipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
 
     "return nothing when IF is unavailable" in {
-      givenIFReturnsServiceUnavailable()
-      await(ifConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      givenReturnsServiceUnavailable()
+      await(relationshipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
   }
 
   "IFConnector DeleteAgentRelationship" should {
     "delete relationship between agent and client and return 200 for ItSa service" in {
-      givenAgentCanBeDeallocatedInIF(mtdItId, Arn("bar"))
+      givenAgentCanBeDeallocated(mtdItId, Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(
+        relationshipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for ItSa Supp service" in {
-      givenAgentCanBeDeallocatedInIF(mtdItId, Arn("bar"))
+      givenAgentCanBeDeallocated(mtdItId, Arn("bar"))
       givenAuditConnector()
       await(
-        ifConnector.deleteAgentRelationship(mtdItSuppEnrolmentKey, Arn("bar"))
+        relationshipConnector.deleteAgentRelationship(mtdItSuppEnrolmentKey, Arn("bar"))
       ).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Vat service" in {
-      givenAgentCanBeDeallocatedInIF(vrn, Arn("bar"))
+      givenAgentCanBeDeallocated(vrn, Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(
+        relationshipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service" in {
-      givenAgentCanBeDeallocatedInIF(utr, Arn("bar"))
+      givenAgentCanBeDeallocated(utr, Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(trustEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(
+        relationshipConnector.deleteAgentRelationship(trustEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Trust service with URN" in {
-      givenAgentCanBeDeallocatedInIF(urn, Arn("bar"))
+      givenAgentCanBeDeallocated(urn, Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(trustNTEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(
+        relationshipConnector.deleteAgentRelationship(trustNTEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for PPT service with PptRef" in {
-      givenAgentCanBeDeallocatedInIF(pptRef, Arn("bar"))
+      givenAgentCanBeDeallocated(pptRef, Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(pptEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(
+        relationshipConnector.deleteAgentRelationship(pptEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
     }
 
     "delete relationship between agent and client and return 200 for Pillar2 service with PlrId" in {
-      givenAgentCanBeDeallocatedInIF(plrId, Arn("bar"))
+      givenAgentCanBeDeallocated(plrId, Arn("bar"))
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(plrEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(
+        relationshipConnector.deleteAgentRelationship(plrEnrolmentKey, Arn("bar"))
+      ).get.processingDate should not be null
     }
 
     "not delete relationship between agent and client and return nothing for ItSa service" in {
-      givenAgentCanNotBeDeallocatedInIF(status = 404)
+      givenAgentCanNotBeDeallocated(status = 404)
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
+      await(relationshipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
     }
 
     "not delete relationship between agent and client and return nothing for Vat service" in {
-      givenAgentCanNotBeDeallocatedInIF(status = 404)
+      givenAgentCanNotBeDeallocated(status = 404)
       givenAuditConnector()
-      await(ifConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
+      await(relationshipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
       an[IllegalArgumentException] should be thrownBy await(
-        ifConnector.deleteAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
+        relationshipConnector.deleteAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
       )
     }
 
     "return nothing when IF is throwing errors" in {
-      givenIFReturnsServerError()
-      await(ifConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      givenReturnsServerError()
+      await(relationshipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
 
     "return nothing when IF is unavailable" in {
-      givenIFReturnsServiceUnavailable()
-      await(ifConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      givenReturnsServiceUnavailable()
+      await(relationshipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
     }
   }
 
@@ -435,28 +453,28 @@ class IFConnectorISpec
       getActiveRelationshipsViaClient(mtdItId, agentARN)
       givenAuditConnector()
 
-      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Vat service" in {
       getActiveRelationshipsViaClient(vrn, agentARN)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(vrn))
+      val result = await(relationshipConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for CGT service" in {
       getActiveRelationshipsViaClient(cgt, agentARN)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(cgt))
+      val result = await(relationshipConnector.getActiveClientRelationships(cgt))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for TRS (UTR) service" in {
       getActiveRelationshipsViaClient(utr, agentARN)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(utr))
+      val result = await(relationshipConnector.getActiveClientRelationships(utr))
       result.get.arn shouldBe agentARN
 
     }
@@ -464,7 +482,7 @@ class IFConnectorISpec
     "return existing active relationships for specified clientId for TRS (URN) service" in {
       getActiveRelationshipsViaClient(urn, agentARN)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(urn))
+      val result = await(relationshipConnector.getActiveClientRelationships(urn))
       result.get.arn shouldBe agentARN
 
     }
@@ -472,84 +490,84 @@ class IFConnectorISpec
     "return existing active relationships for specified clientId for PPT service" in {
       getActiveRelationshipsViaClient(pptRef, agentARN)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(pptRef))
+      val result = await(relationshipConnector.getActiveClientRelationships(pptRef))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Pillar2 service" in {
       getActiveRelationshipsViaClient(plrId, agentARN)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(plrId))
+      val result = await(relationshipConnector.getActiveClientRelationships(plrId))
       result.get.arn shouldBe agentARN
     }
 
     "return None if IF returns 404 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if IF returns 404 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(vrn))
+      val result = await(relationshipConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "return None if IF returns 404 for CGT service" in {
       getActiveRelationshipFailsWith(cgt, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(cgt))
+      val result = await(relationshipConnector.getActiveClientRelationships(cgt))
       result shouldBe None
     }
 
     "return None if IF returns 404 for TRS (UTR) service" in {
       getActiveRelationshipFailsWith(utr, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(utr))
+      val result = await(relationshipConnector.getActiveClientRelationships(utr))
       result shouldBe None
     }
 
     "return None if IF returns 404 for TRS (URN) service" in {
       getActiveRelationshipFailsWith(urn, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(urn))
+      val result = await(relationshipConnector.getActiveClientRelationships(urn))
       result shouldBe None
     }
 
     "return None if IF returns 404 for PPT service" in {
       getActiveRelationshipFailsWith(pptRef, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(pptRef))
+      val result = await(relationshipConnector.getActiveClientRelationships(pptRef))
       result shouldBe None
     }
 
     "return None if IF returns 404 for Pillar2 service" in {
       getActiveRelationshipFailsWith(plrId, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(plrId))
+      val result = await(relationshipConnector.getActiveClientRelationships(plrId))
       result shouldBe None
     }
 
     "return None if IF returns 400 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 400)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getActiveClientRelationships(mtdItId))
       result shouldBe None
     }
 
     "return None if IF returns 400 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 400)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(vrn))
+      val result = await(relationshipConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
     "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(vrn))
+      val result = await(relationshipConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
 
@@ -557,7 +575,7 @@ class IFConnectorISpec
       givenCleanMetricRegistry()
       givenAuditConnector()
       getActiveRelationshipsViaClient(mtdItId, agentARN)
-      val result = await(ifConnector.getActiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getActiveClientRelationships(mtdItId))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetActiveClientRelationships-GET")
     }
@@ -567,7 +585,7 @@ class IFConnectorISpec
       givenAuditConnector()
       getActiveRelationshipsViaClient(vrn, agentARN)
 
-      val result = await(ifConnector.getActiveClientRelationships(vrn))
+      val result = await(relationshipConnector.getActiveClientRelationships(vrn))
       result.get.arn shouldBe agentARN
       timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetActiveClientRelationships-GET")
     }
@@ -579,7 +597,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for ItSa service" in {
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveRelationships(agentARN))
+      val result = await(relationshipConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
@@ -593,7 +611,7 @@ class IFConnectorISpec
     "return existing inactive relationships for specified clientId for Vat service" in {
       getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveRelationships(agentARN))
+      val result = await(relationshipConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
       result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
       result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
@@ -608,35 +626,35 @@ class IFConnectorISpec
     "return empty sequence if IF returns 404 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveRelationships(agentARN))
+      val result = await(relationshipConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if IF returns 404 for Vat service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 404)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveRelationships(agentARN))
+      val result = await(relationshipConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if IF returns 400 for ItSa service" in {
       getFailAgentInactiveRelationships(encodedArn, status = 400)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveRelationships(agentARN))
+      val result = await(relationshipConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return empty sequence if IF returns 400 for Vat service" in {
       getFailWithSuspendedAgentInactiveRelationships(encodedArn)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveRelationships(agentARN))
+      val result = await(relationshipConnector.getInactiveRelationships(agentARN))
       result shouldBe Seq.empty
     }
 
     "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
       givenAuditConnector()
-      val result = await(ifConnector.getActiveClientRelationships(vrn))
+      val result = await(relationshipConnector.getActiveClientRelationships(vrn))
       result shouldBe None
     }
   }
@@ -649,15 +667,15 @@ class IFConnectorISpec
       ActiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")))
     "return true when the relationship has no end date" in {
       givenAuditConnector()
-      ifConnector.isActive(noEndRelationship) shouldBe true
+      relationshipConnector.isActive(noEndRelationship) shouldBe true
     }
     "return true when the end date is after the current date" in {
       givenAuditConnector()
-      ifConnector.isActive(afterCurrentDateRelationship) shouldBe true
+      relationshipConnector.isActive(afterCurrentDateRelationship) shouldBe true
     }
     "return false when the end date is before the current date" in {
       givenAuditConnector()
-      ifConnector.isActive(beforeCurrentDateRelationship) shouldBe false
+      relationshipConnector.isActive(beforeCurrentDateRelationship) shouldBe false
     }
   }
 
@@ -692,15 +710,15 @@ class IFConnectorISpec
 
     "return false when the relationship is active" in {
       givenAuditConnector()
-      ifConnector.isNotActive(noEndRelationship) shouldBe false
+      relationshipConnector.isNotActive(noEndRelationship) shouldBe false
     }
     "return true when the end date is before the current date" in {
       givenAuditConnector()
-      ifConnector.isNotActive(endsBeforeCurrentDate) shouldBe true
+      relationshipConnector.isNotActive(endsBeforeCurrentDate) shouldBe true
     }
     "return true when the end date is equal to the current date" in {
       givenAuditConnector()
-      ifConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
+      relationshipConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
     }
   }
 
@@ -711,7 +729,7 @@ class IFConnectorISpec
       getInactiveRelationshipsForClient(mtdItId)
       givenAuditConnector()
 
-      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getInactiveClientRelationships(mtdItId))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -728,7 +746,7 @@ class IFConnectorISpec
       getInactiveRelationshipsForClient(vrn)
       givenAuditConnector()
 
-      val result = await(ifConnector.getInactiveClientRelationships(vrn))
+      val result = await(relationshipConnector.getInactiveClientRelationships(vrn))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -745,7 +763,7 @@ class IFConnectorISpec
       getInactiveRelationshipsForClient(utr)
       givenAuditConnector()
 
-      val result = await(ifConnector.getInactiveClientRelationships(utr))
+      val result = await(relationshipConnector.getInactiveClientRelationships(utr))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -762,7 +780,7 @@ class IFConnectorISpec
       getInactiveRelationshipsForClient(urn)
       givenAuditConnector()
 
-      val result = await(ifConnector.getInactiveClientRelationships(urn))
+      val result = await(relationshipConnector.getInactiveClientRelationships(urn))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -779,7 +797,7 @@ class IFConnectorISpec
       getInactiveRelationshipsForClient(cgt)
       givenAuditConnector()
 
-      val result = await(ifConnector.getInactiveClientRelationships(cgt))
+      val result = await(relationshipConnector.getInactiveClientRelationships(cgt))
 
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
@@ -796,7 +814,7 @@ class IFConnectorISpec
       getInactiveRelationshipsForClient(plrId)
       givenAuditConnector()
 
-      val result = await(ifConnector.getInactiveClientRelationships(plrId))
+      val result = await(relationshipConnector.getInactiveClientRelationships(plrId))
       result.head shouldBe InactiveRelationship(
         arn = agentARN,
         dateTo = Some(LocalDate.parse("2018-09-09")),
@@ -811,7 +829,7 @@ class IFConnectorISpec
 
       getNoInactiveRelationshipsForClient(mtdItId)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
@@ -819,7 +837,7 @@ class IFConnectorISpec
 
       getFailInactiveRelationshipsForClient(mtdItId, 400)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
@@ -827,7 +845,7 @@ class IFConnectorISpec
 
       getFailInactiveRelationshipsForClient(mtdItId, 404)
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
@@ -840,14 +858,14 @@ class IFConnectorISpec
         )
       )
       givenAuditConnector()
-      val result = await(ifConnector.getInactiveClientRelationships(mtdItId))
+      val result = await(relationshipConnector.getInactiveClientRelationships(mtdItId))
       result.isEmpty shouldBe true
     }
 
     "return empty Seq when IF is unavailable" in {
-      givenIFReturnsServiceUnavailable()
+      givenReturnsServiceUnavailable()
       givenAuditConnector()
-      await(ifConnector.getInactiveClientRelationships(mtdItId)) shouldBe empty
+      await(relationshipConnector.getInactiveClientRelationships(mtdItId)) shouldBe empty
     }
   }
 }

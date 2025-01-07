@@ -40,22 +40,73 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCacheProvider, val ec: ExecutionContext)(
-  implicit
+class IFConnector @Inject() (val httpClient: HttpClient, val ec: ExecutionContext)(implicit
   val metrics: Metrics,
   val appConfig: AppConfig
-) extends HttpAPIMonitor
+) extends IFConnectorCommon
+    with HttpAPIMonitor
+    with Logging {
+
+  private val ifBaseUrl = appConfig.ifPlatformBaseUrl
+
+  private val ifAPI1171Token = appConfig.ifAPI1171Token
+  private val ifEnv = appConfig.ifEnvironment
+
+  /*
+  API#1171 Get Business Details (for ITSA customers)
+  https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
+          None
+      }
+    }
+  }
+
+  /*
+    API#1171 Get Business Details (for ITSA customers)
+    https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
+          None
+      }
+    }
+  }
+
+}
+
+class IFRelationshipConnector @Inject() (
+  val httpClient: HttpClient,
+  agentCacheProvider: AgentCacheProvider,
+  val ec: ExecutionContext
+)(implicit
+  val metrics: Metrics,
+  val appConfig: AppConfig
+) extends IFConnectorCommon
+    with RelationshipConnector
+    with HttpAPIMonitor
     with Logging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 
   private val ifAuthToken = appConfig.ifAuthToken
-  private val ifAPI1171Token = appConfig.ifAPI1171Token
   private val ifEnv = appConfig.ifEnvironment
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
-
-  private val Environment = "Environment"
-  private val CorrelationId = "CorrelationId"
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
@@ -223,42 +274,6 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
     }
   }
 
-  /*
-  API#1171 Get Business Details (for ITSA customers)
-  https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
-   * */
-  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
-
-    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
-      result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
-        case NOT_FOUND => None
-        case other =>
-          logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
-  /*
-    API#1171 Get Business Details (for ITSA customers)
-    https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
-   * */
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
-
-    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
-      result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
-        case NOT_FOUND => None
-        case other =>
-          logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
   private def inactiveClientRelationshipIFUrl(taxIdentifier: TaxIdentifier, encodedClientId: String) = {
     val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
     val from = LocalDate.parse(fromDateString).toString
@@ -299,63 +314,6 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
       case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 
     }
-  }
-
-  private def isInternalHost(url: URL): Boolean =
-    appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
-  private def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[HttpResponse] = {
-
-    val isInternal = isInternalHost(url)
-
-    monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env, isInternal))(
-        implicitly[HttpReads[HttpResponse]],
-        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
-        ec
-      )
-    }
-  }
-
-  private def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[HttpResponse] = {
-
-    val isInternal = isInternalHost(url)
-
-    monitor(s"ConsumedAPI-IF-$apiName-POST") {
-      httpClient.POST(url.toString, body, ifHeaders(authToken, env, isInternal))(
-        implicitly[Writes[JsValue]],
-        implicitly[HttpReads[HttpResponse]],
-        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
-        ec
-      )
-    }
-  }
-
-  /*
-   * If the service being called is external (e.g. DES/IF in QA or Prod):
-   * headers from HeaderCarrier are removed (except user-agent header).
-   * Therefore, required headers must be explicitly set.
-   * See https://github.com/hmrc/http-verbs?tab=readme-ov-file#propagation-of-headers
-   * */
-  def ifHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
-    hc: HeaderCarrier
-  ): Seq[(String, String)] = {
-
-    val additionalHeaders =
-      if (isInternalHost) Seq.empty
-      else
-        Seq(
-          HeaderNames.authorisation -> s"Bearer $authToken",
-          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
-        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
-    val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
-    commonHeaders ++ additionalHeaders
   }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
@@ -451,4 +409,73 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
   private val idType = "idType"
   private val authProfile = "authProfile"
   private val relationshipType = "relationshipType"
+}
+
+trait IFConnectorCommon extends HttpAPIMonitor {
+
+  val httpClient: HttpClient
+  val ec: ExecutionContext
+  val metrics: Metrics
+  val appConfig: AppConfig
+
+  private val Environment = "Environment"
+  private val CorrelationId = "CorrelationId"
+
+  private def isInternalHost(url: URL): Boolean =
+    appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+
+  private[connectors] def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] = {
+
+    val isInternal = isInternalHost(url)
+
+    monitor(s"ConsumedAPI-IF-$apiName-GET") {
+      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env, isInternal))(
+        implicitly[HttpReads[HttpResponse]],
+        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
+        ec
+      )
+    }
+  }
+
+  private[connectors] def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
+    implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] = {
+
+    val isInternal = isInternalHost(url)
+
+    monitor(s"ConsumedAPI-IF-$apiName-POST") {
+      httpClient.POST(url.toString, body, ifHeaders(authToken, env, isInternal))(
+        implicitly[Writes[JsValue]],
+        implicitly[HttpReads[HttpResponse]],
+        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
+        ec
+      )
+    }
+  }
+
+  /*
+   * If the service being called is external (e.g. DES/IF in QA or Prod):
+   * headers from HeaderCarrier are removed (except user-agent header).
+   * Therefore, required headers must be explicitly set.
+   * See https://github.com/hmrc/http-verbs?tab=readme-ov-file#propagation-of-headers
+   * */
+  def ifHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
+    hc: HeaderCarrier
+  ): Seq[(String, String)] = {
+
+    val additionalHeaders =
+      if (isInternalHost) Seq.empty
+      else
+        Seq(
+          HeaderNames.authorisation -> s"Bearer $authToken",
+          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
+        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
+    val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
+    commonHeaders ++ additionalHeaders
+  }
 }

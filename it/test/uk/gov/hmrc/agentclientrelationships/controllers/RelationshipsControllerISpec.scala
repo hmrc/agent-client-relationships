@@ -31,7 +31,11 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{LocalDate, LocalDateTime}
 import java.util.Base64
 
-class RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
+class RelationshipsIFControllerISpec extends RelationshipsControllerISpec with RelationshipsBaseIFControllerISpec
+
+class RelationshipsHIPControllerISpec extends RelationshipsControllerISpec with RelationshipsBaseHIPControllerISpec
+
+trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
 
   val relationshipCopiedSuccessfully: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,

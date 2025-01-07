@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -27,6 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,7 +35,7 @@ import scala.util.control.NonFatal
 @Singleton
 class CreateRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
-  ifConnector: IFConnector,
+  relationshipConnector: RelationshipConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: RecoveryLockService,
   deleteRecordRepository: DeleteRecordRepository,
@@ -107,7 +107,7 @@ class CreateRelationshipsService @Inject() (
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
       maybeResponse <-
-        ifConnector
+        relationshipConnector
           .createAgentRelationship(enrolmentKey, arn)
       if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipCreated", true)

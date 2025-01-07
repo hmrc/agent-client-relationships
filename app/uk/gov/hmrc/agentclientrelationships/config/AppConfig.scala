@@ -71,6 +71,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val hipPlatformBaseUrl = servicesConfig.baseUrl("hip")
   val hipAuthToken = getConfigString("hip.authorization-token")
+  val hipEnabled = servicesConfig.getBoolean("hip.enabled")
 
   val eisBaseUrl = servicesConfig.baseUrl("eis")
   val eisEnvironment = getConfigString("eis.environment")

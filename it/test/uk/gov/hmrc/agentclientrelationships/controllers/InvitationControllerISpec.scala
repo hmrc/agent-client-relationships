@@ -38,7 +38,7 @@ import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
-    extends RelationshipsBaseControllerISpec
+    extends BaseControllerISpec
     with ClientDetailsStub
     with AfiRelationshipStub
     with AgentAssuranceStubs
