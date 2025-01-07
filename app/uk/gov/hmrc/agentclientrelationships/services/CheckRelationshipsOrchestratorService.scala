@@ -185,7 +185,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
     auditData.set("arn", arn)
 
     checkOldAndCopyService
-      .hasLegacyRelationshipInCesaOrHasPartialAuth(arn, nino)
+      .hasPartialAuthOrLegacyRelationshipInCesa(arn, nino)
       .map {
         case true  => CheckRelationshipFound
         case false => CheckRelationshipNotFound()

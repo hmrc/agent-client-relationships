@@ -30,7 +30,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, RegistrationRelationshipResponse}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship, RegistrationRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
@@ -42,6 +42,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -92,12 +93,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val configuration = resettingMock[Configuration]
   val agentCacheProvider = resettingMock[AgentCacheProvider]
   val aucdConnector = resettingMock[AgentUserClientDetailsConnector]
+  val partialAuthRepository = resettingMock[PartialAuthRepository]
+  val invitationsRepository = resettingMock[InvitationsRepository]
 
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
-  when(servicesConfig.getBoolean(eqs("alt-itsa.enabled"))).thenReturn(true)
   when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]]))
     .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
   implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
@@ -108,12 +110,24 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val hc = HeaderCarrier()
   val ec = implicitly[ExecutionContext]
 
-  "checkCesaForOldRelationshipAndCopyForMtdIt" should {
+  "tryCreateITSARelationshipFromPartialAuthOrCopyAcross" should {
 
     needsRetryStatuses.foreach { status =>
       s"create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
+
+        val auditData = new AuditData()
+        val request = FakeRequest()
+
+        ninoExists()
+        partialAuthDoesNotExistInAca()
+        cesaRelationshipExists()
+        adminUserExistsForArn()
+        relationshipWillBeCreated(mtdItEnrolmentKey)
+        metricsStub()
+
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
+
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
           ifConnector,
@@ -132,17 +146,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             aucdConnector,
             metrics
           ),
+          partialAuthRepository,
+          invitationsRepository,
           auditService,
           metrics
         )
-
-        val auditData = new AuditData()
-        val request = FakeRequest()
-
-        cesaRelationshipExists()
-        adminUserExistsForArn()
-        relationshipWillBeCreated(mtdItEnrolmentKey)
-        metricsStub()
 
         val check = relationshipsService
           .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
@@ -180,6 +188,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -187,6 +197,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          ninoExists()
+          partialAuthDoesNotExistInAca()
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
@@ -207,7 +219,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     // We ignore the RelationshipCopyRecord if there is no relationship in CESA as a failsafe in case we have made a logic error.
     // However we will probably need to change this when we implement recovery for relationships that were created explicitly (i.e. not copied from CESA).
     needsRetryStatuses.foreach { status =>
-      s"not create ETMP relationship if no relationship currently exists in CESA (and there is no PartialAuth invitation)" +
+      s"not create ETMP relationship if no relationship currently exists in CESA and there is no PartialAuth invitation" +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
@@ -229,6 +241,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -236,12 +250,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          ninoExists()
+          partialAuthDoesNotExistInAca()
           cesaRelationshipDoesNotExist()
-          tryCreateRelationshipFromAltItsa()
 
           val check = relationshipsService
             .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
-          await(check) shouldBe AltItsaNotFoundOrFailed
+          await(check) shouldBe NotFound
 
           verifyEtmpRecordNotCreated()
         }
@@ -283,6 +298,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -290,6 +307,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          ninoExists()
+          partialAuthDoesNotExistInAca()
           arnExistsForGroupId()
           previousRelationshipWillBeRemoved(mtdItEnrolmentKey)
           cesaRelationshipExists()
@@ -333,6 +352,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -340,6 +361,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          ninoExists()
+          partialAuthDoesNotExistInAca()
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
@@ -361,7 +384,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     }
 
     needsRetryStatuses.foreach { status =>
-      s"not create ES relationship if no relationship currently exists in CESA (and no AltItsa invitation) " +
+      s"not create ES relationship if no relationship currently exists in CESA and no AltItsa invitation " +
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = $status" in {
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
@@ -383,6 +406,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -390,12 +415,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          ninoExists()
+          partialAuthDoesNotExistInAca()
           cesaRelationshipDoesNotExist()
-          tryCreateRelationshipFromAltItsa()
 
           val check = relationshipsService
             .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
-          await(check) shouldBe AltItsaNotFoundOrFailed
+          await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
           verifyEtmpRecordNotCreated()
@@ -428,6 +454,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -435,6 +463,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          ninoExists()
+          partialAuthDoesNotExistInAca()
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
@@ -481,6 +511,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -488,12 +520,13 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val auditData = new AuditData()
           val request = FakeRequest()
 
+          ninoExists()
+          partialAuthDoesNotExistInAca()
           cesaRelationshipDoesNotExist()
-          tryCreateRelationshipFromAltItsa()
 
           val check = relationshipsService
             .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
-          await(check) shouldBe AltItsaNotFoundOrFailed
+          await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
           verifyEtmpRecordNotCreated()
@@ -521,13 +554,18 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
       val auditData = new AuditData()
       val request = FakeRequest()
 
+      ninoExists()
+      partialAuthDoesNotExistInAca()
       mappingServiceUnavailable()
+
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
 
@@ -559,6 +597,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
@@ -566,6 +606,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val auditData = new AuditData()
       val request = FakeRequest()
 
+      ninoExists()
+      partialAuthDoesNotExistInAca()
       cesaRelationshipExists()
       relationshipWillBeCreated(mtdItEnrolmentKey)
 
@@ -606,6 +648,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             aucdConnector,
             metrics
           ),
+          partialAuthRepository,
+          invitationsRepository,
           auditService,
           metrics
         )
@@ -613,6 +657,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditData = new AuditData()
         val request = FakeRequest()
 
+        ninoExists()
+        partialAuthDoesNotExistInAca()
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItEnrolmentKey)
 
@@ -649,6 +695,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             aucdConnector,
             metrics
           ),
+          partialAuthRepository,
+          invitationsRepository,
           auditService,
           metrics
         )
@@ -656,6 +704,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val auditData = new AuditData()
         val request = FakeRequest()
 
+        ninoExists()
+        partialAuthDoesNotExistInAca()
         cesaRelationshipExists()
         metricsStub()
 
@@ -694,6 +744,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             aucdConnector,
             metrics
           ),
+          partialAuthRepository,
+          invitationsRepository,
           auditService,
           metrics
         )
@@ -719,44 +771,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)) shouldBe None
       }
 
-    "create relationship when there is no legacy relationship in CESA but there is a alt-itsa authorisation in place. " +
-      "Note - the relationship is created from agent-client-authorisation" in {
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-        val lockService = new FakeLockService
-        val relationshipsService = new CheckAndCopyRelationshipsService(
-          es,
-          ifConnector,
-          des,
-          mapping,
-          ugs,
-          aca,
-          relationshipCopyRepository,
-          new CreateRelationshipsService(
-            es,
-            relationshipConnector,
-            relationshipCopyRepository,
-            lockService,
-            deleteRecordRepository,
-            agentUserService,
-            aucdConnector,
-            metrics
-          ),
-          auditService,
-          metrics
-        )
-
-        val auditData = new AuditData()
-        val request = FakeRequest()
-
-        cesaRelationshipDoesNotExist()
-        tryCreateRelationshipFromAltItsa(created = true)
-
-        val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
-        await(check) shouldBe AltItsaCreateRelationshipSuccess
-      }
-
-    "create relationship when there is an alt-itsa authorisation in place for supporting agent type. " in {
+    "create relationship when there is no legacy relationship in CESA but there is a alt-itsa authorisation in place." in {
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
@@ -777,6 +792,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
@@ -784,12 +801,107 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val auditData = new AuditData()
       val request = FakeRequest()
 
-      when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
-      tryCreateRelationshipFromAltItsa(service = HMRCMTDITSUPP, created = true)
+      ninoExists()
+      partialAuthExistsInAcr(HMRCMTDIT)
+      adminUserExistsForArn()
+      previousRelationshipWillBeRemoved(mtdItEnrolmentKey)
+      relationshipWillBeCreated(mtdItEnrolmentKey)
+      partialAuthDeleted(HMRCMTDIT)
+      partialAuthStatusUpdatedToAcceptedInACR(HMRCMTDIT)
+      metricsStub()
+      auditStub()
+
+      val check = relationshipsService
+        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+      await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDIT)
+    }
+
+    "create relationship when there is an alt-itsa authorisation in place for SUPP agent type. " in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService = new CheckAndCopyRelationshipsService(
+        es,
+        ifConnector,
+        des,
+        mapping,
+        ugs,
+        aca,
+        relationshipCopyRepository,
+        new CreateRelationshipsService(
+          es,
+          relationshipConnector,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          agentUserService,
+          aucdConnector,
+          metrics
+        ),
+        partialAuthRepository,
+        invitationsRepository,
+        auditService,
+        metrics
+      )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      ninoExists()
+      partialAuthExistsInAcr(HMRCMTDITSUPP)
+      adminUserExistsForArn()
+      relationshipWillBeCreated(mtdItSuppEnrolmentKey)
+      partialAuthDeleted(HMRCMTDITSUPP)
+      partialAuthStatusUpdatedToAcceptedInACR(HMRCMTDITSUPP)
+      metricsStub()
+      auditStub()
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(ec, hc, request, auditData)
-      await(check) shouldBe AltItsaCreateRelationshipSuccess
+      await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDITSUPP)
+    }
+
+    "create relationship when there is an alt-itsa MAIN authorisation in place from ACA " in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService = new CheckAndCopyRelationshipsService(
+        es,
+        ifConnector,
+        des,
+        mapping,
+        ugs,
+        aca,
+        relationshipCopyRepository,
+        new CreateRelationshipsService(
+          es,
+          ifConnector,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          agentUserService,
+          aucdConnector,
+          metrics
+        ),
+        partialAuthRepository,
+        invitationsRepository,
+        auditService,
+        metrics
+      )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      ninoExists()
+      partialAuthExistsInAca(HMRCMTDIT)
+      adminUserExistsForArn()
+      relationshipWillBeCreated(mtdItEnrolmentKey)
+      previousRelationshipWillBeRemoved(mtdItEnrolmentKey)
+      partialAuthStatusUpdatedToAcceptedInACA(HMRCMTDIT)
+      metricsStub()
+      auditStub()
+
+      val check = relationshipsService
+        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+      await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDIT)
     }
   }
 
@@ -817,6 +929,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             aucdConnector,
             metrics
           ),
+          partialAuthRepository,
+          invitationsRepository,
           auditService,
           metrics
         )
@@ -868,6 +982,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -919,6 +1035,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -958,6 +1076,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
@@ -1008,6 +1128,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -1060,6 +1182,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -1112,6 +1236,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -1157,6 +1283,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -1211,6 +1339,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               aucdConnector,
               metrics
             ),
+            partialAuthRepository,
+            invitationsRepository,
             auditService,
             metrics
           )
@@ -1251,6 +1381,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
@@ -1289,6 +1421,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
@@ -1336,6 +1470,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             aucdConnector,
             metrics
           ),
+          partialAuthRepository,
+          invitationsRepository,
           auditService,
           metrics
         )
@@ -1380,6 +1516,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
@@ -1417,6 +1555,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           aucdConnector,
           metrics
         ),
+        partialAuthRepository,
+        invitationsRepository,
         auditService,
         metrics
       )
@@ -1472,6 +1612,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
                 aucdConnector,
                 metrics
               ),
+              partialAuthRepository,
+              invitationsRepository,
               auditService,
               metrics
             )(appConfig)
@@ -1516,6 +1658,42 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
+  private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] =
+    when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
+
+  private def partialAuthExistsInAcr(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
+    when(partialAuthRepository.findActive(eqs(nino), eqs(arn)))
+      .thenReturn(
+        Future.successful(
+          Some(PartialAuthRelationship(Instant.now(), arn.value, service, nino.value, active = true, Instant.now()))
+        )
+      )
+
+  private def partialAuthDeleted(service: String): OngoingStubbing[Future[Boolean]] =
+    when(partialAuthRepository.deleteActivePartialAuth(eqs(service), eqs(nino), eqs(arn)))
+      .thenReturn(Future.successful(true))
+
+  private def partialAuthStatusUpdatedToAcceptedInACR(service: String): OngoingStubbing[Future[Boolean]] =
+    when(invitationsRepository.updatePartialAuthToAcceptedStatus(eqs(arn), eqs(service), eqs(nino), eqs(mtdItId)))
+      .thenReturn(Future.successful(true))
+
+  private def partialAuthStatusUpdatedToAcceptedInACA(service: String): OngoingStubbing[Future[Boolean]] = {
+    when(partialAuthRepository.deleteActivePartialAuth(eqs(service), eqs(nino), eqs(arn)))
+      .thenReturn(Future.successful(false))
+    when(aca.updateStatusToAccepted(eqs(nino), eqs(service))(eqs(hc), eqs(ec)))
+      .thenReturn(Future.successful(true))
+  }
+
+  private def partialAuthExistsInAca(service: String): OngoingStubbing[Future[List[String]]] = {
+    when(partialAuthRepository.findActive(eqs(nino), eqs(arn))).thenReturn(Future.successful(None))
+    when(aca.getPartialAuth(eqs(nino), eqs(arn))(eqs(hc))).thenReturn(Future.successful(List(service)))
+  }
+
+  private def partialAuthDoesNotExistInAca(): OngoingStubbing[Future[List[String]]] = {
+    when(partialAuthRepository.findActive(eqs(nino), eqs(arn))).thenReturn(Future.successful(None))
+    when(aca.getPartialAuth(eqs(nino), eqs(arn))(eqs(hc))).thenReturn(Future.successful(List()))
+  }
+
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
@@ -1549,10 +1727,10 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
     when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[HeaderCarrier]()))
-      .thenReturn(Future.successful(Set("foo", "bar")))
+      .thenReturn(Future.successful(Set("foo")))
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc))).thenReturn(Future.successful(Some(arn)))
+    when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
     when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[HeaderCarrier]()))
-      .thenReturn(Future.successful(()))
-    when(es.deallocateEnrolmentFromAgent(eqs("bar"), eqs(enrolmentKey))(any[HeaderCarrier]()))
       .thenReturn(Future.successful(()))
   }
 
@@ -1572,12 +1750,6 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       aucdConnector.cacheRefresh(eqs(arn))(eqs(hc), eqs(ec))
     ).thenReturn(Future successful (()))
   }
-
-  private def tryCreateRelationshipFromAltItsa(
-    service: String = HMRCMTDIT,
-    created: Boolean = false
-  ): OngoingStubbing[Future[Boolean]] =
-    when(aca.updateAltItsaFor(eqs(nino), eqs(service))(eqs(hc), eqs(ec))).thenReturn(Future successful created)
 
   private def metricsStub(): OngoingStubbing[MetricRegistry] =
     when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
@@ -1636,7 +1808,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
     verify(auditService)
-      .sendCheckCESAAuditEvent(
+      .sendCheckCESAAndPartialAuthAuditEvent(
         any[HeaderCarrier],
         any[Request[Any]],
         auditDataCaptor.capture(),
