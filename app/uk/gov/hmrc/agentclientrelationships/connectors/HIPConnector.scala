@@ -50,11 +50,13 @@ trait RelationshipConnector {
   ): Future[Option[RegistrationRelationshipResponse]]
 
   def getActiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]]
 
   def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]]
 
   def getInactiveRelationships(
@@ -85,7 +87,8 @@ class HIPConnector @Inject() (
   ): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/RESTAdapter/rosm/agent-relationship")
-    val requestBody = createAgentRelationshipHipInputJson(enrolmentKey, arn.value)
+    val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
+    val requestBody = createAgentRelationshipHipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
     postRelationship("CreateAgentRelationship", url, requestBody)
       .map {
@@ -124,9 +127,11 @@ class HIPConnector @Inject() (
 
   // IF API #1168
   def getActiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
-    val url = getActiveClientRelationshipsHipUrl(taxIdentifier)
+    val authProfile = getAuthProfile(service.id)
+    val url = getActiveClientRelationshipsHipUrl(taxIdentifier, authProfile)
 
     implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
 
@@ -149,11 +154,13 @@ class HIPConnector @Inject() (
 
   // Old IF API #1168
   def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
 
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
-    val url = inactiveClientRelationshipHipUrl(taxIdentifier, encodedClientId)
+    val authProfile = getAuthProfile(service.id)
+    val url = inactiveClientRelationshipHipUrl(taxIdentifier, encodedClientId, authProfile)
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
     getRelationship(s"GetInactiveClientRelationships", url)
@@ -244,18 +251,26 @@ class HIPConnector @Inject() (
   }
 
   // TODO WG - refactor
-  private def inactiveClientRelationshipHipUrl(taxIdentifier: TaxIdentifier, encodedClientId: String) = {
+  private def inactiveClientRelationshipHipUrl(
+    taxIdentifier: TaxIdentifier,
+    encodedClientId: String,
+    authProfile: String
+  ) = {
     val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
     val from = LocalDate.parse(fromDateString).toString
     val now = LocalDate.now().toString
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(taxIdentifier)}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=$authProfile"
         )
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(taxIdentifier)}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=$authProfile"
         )
       case Utr(_) =>
         new URL(
@@ -267,11 +282,15 @@ class HIPConnector @Inject() (
         )
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(taxIdentifier)}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=$authProfile"
         )
       case PptRef(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(taxIdentifier)}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&dateFrom=$from&dateTo=$now&relationshipType=ZA01&authProfile=$authProfile"
         )
       case CbcId(_) =>
         new URL(
@@ -286,16 +305,19 @@ class HIPConnector @Inject() (
   }
 
   // TODO WG - refactor
-  private def getActiveClientRelationshipsHipUrl(taxIdentifier: TaxIdentifier): URL = {
+  private def getActiveClientRelationshipsHipUrl(
+    taxIdentifier: TaxIdentifier,
+    authProfile: String
+  ): URL = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=$authProfile"
         )
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=$authProfile"
         )
       case Utr(_) =>
         new URL(
@@ -307,11 +329,11 @@ class HIPConnector @Inject() (
         )
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=$authProfile"
         )
       case PptRef(_) =>
         new URL(
-          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=ALL00001"
+          s"$baseUrl/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=$authProfile"
         )
       case CbcId(_) =>
         new URL(
@@ -339,7 +361,8 @@ class HIPConnector @Inject() (
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
-  private def createAgentRelationshipHipInputJson(enrolmentKey: EnrolmentKey, arn: String) =
+  // TODO WG - set isExclusiveAgent to false for Supp
+  private def createAgentRelationshipHipInputJson(enrolmentKey: EnrolmentKey, arn: String, isExclusiveAgent: Boolean) =
     includeIdTypeIfNeeded(enrolmentKey)(
       Json
         .parse(s"""{
@@ -347,7 +370,7 @@ class HIPConnector @Inject() (
           "refNumber": "${enrolmentKey.oneIdentifier().value}",
           "regime": "${getRegimeFor(enrolmentKey.oneTaxIdentifier())}",
           "action": "0001",
-          "isExclusiveAgent": true
+          "isExclusiveAgent": $isExclusiveAgent
        }""")
         .as[JsObject]
     )
@@ -364,16 +387,23 @@ class HIPConnector @Inject() (
         .as[JsObject]
     )
 
+  private def getAuthProfile(service: String): String = service match {
+    case HMRCMTDITSUPP => "ALL00002"
+    case _             => "ALL00001"
+  }
+
+  private def getIsExclusiveAgent(service: String): Boolean = service match {
+    case HMRCMTDITSUPP => false
+    case _             => true
+  }
+
   private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject = (enrolmentKey: EnrolmentKey) => { request =>
     val idType = "idType"
     val authProfile = "authProfile"
     val relationshipType = "relationshipType"
 
     val clientId = enrolmentKey.oneTaxIdentifier()
-    val authProfileForService = enrolmentKey.service match {
-      case HMRCMTDITSUPP => "ALL00002"
-      case _             => "ALL00001"
-    }
+    val authProfileForService = getAuthProfile(enrolmentKey.service)
 
     (request \ "regime").asOpt[String] match {
       case Some("VATC") =>

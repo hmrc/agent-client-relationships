@@ -121,16 +121,16 @@ class IFRelationshipConnector @Inject() (
       )
   }
 
-  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {
+  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier, authProfile: String): URL = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case Utr(_) =>
         new URL(
@@ -142,11 +142,11 @@ class IFRelationshipConnector @Inject() (
         )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case CbcId(_) =>
         new URL(
@@ -161,11 +161,15 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
+  // TODO WG - select "ALL00002" for SUP
   // IF API #1168
   def getActiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
-    val url = getActiveClientRelationshipsUrl(taxIdentifier)
+
+    val authProfile = getAuthProfile(service.id)
+    val url = getActiveClientRelationshipsUrl(taxIdentifier, authProfile)
     getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
         case Status.OK =>
@@ -180,13 +184,16 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
+  // TODO WG - select "ALL00002" for SUP
   // IF API #1168
   def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
 
-    val url = inactiveClientRelationshipIFUrl(taxIdentifier, encodedClientId)
+    val authProfile = getAuthProfile(service.id)
+    val url = inactiveClientRelationshipIFUrl(taxIdentifier, encodedClientId, authProfile)
 
     getWithIFHeaders("GetInactiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
@@ -274,18 +281,26 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
-  private def inactiveClientRelationshipIFUrl(taxIdentifier: TaxIdentifier, encodedClientId: String) = {
+  private def inactiveClientRelationshipIFUrl(
+    taxIdentifier: TaxIdentifier,
+    encodedClientId: String,
+    authProfile: String
+  ) = {
     val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
     val from = LocalDate.parse(fromDateString).toString
     val now = LocalDate.now().toString
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case Utr(_) =>
         new URL(
@@ -297,11 +312,15 @@ class IFRelationshipConnector @Inject() (
         )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case CbcId(_) =>
         new URL(
@@ -359,13 +378,14 @@ class IFRelationshipConnector @Inject() (
      }""")
         .as[JsObject]
     )
+  private def getAuthProfile(service: String): String = service match {
+    case HMRCMTDITSUPP => "ALL00002"
+    case _             => "ALL00001"
+  }
 
   private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject = (enrolmentKey: EnrolmentKey) => { request =>
     val clientId = enrolmentKey.oneTaxIdentifier()
-    val authProfileForService = enrolmentKey.service match {
-      case HMRCMTDITSUPP => "ALL00002"
-      case _             => "ALL00001"
-    }
+    val authProfileForService = getAuthProfile(enrolmentKey.service)
 
     (request \ "regime").asOpt[String] match {
       case Some("VATC") =>

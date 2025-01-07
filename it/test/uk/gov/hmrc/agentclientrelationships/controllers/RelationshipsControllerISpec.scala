@@ -23,6 +23,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model.{Identifier, MtdItId, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
@@ -47,6 +48,7 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   case class TestClient(service: String, regime: String, clientId: TaxIdentifier)
 
   val itsaClient: TestClient = TestClient(Service.MtdIt.id, "ITSA", mtdItId)
+  val itsaSupClient: TestClient = TestClient(Service.MtdItSupp.id, "ITSA", mtdItId)
   val vatClient: TestClient = TestClient(Service.Vat.id, "VATC", vrn)
   val trustClient: TestClient = TestClient(Service.Trust.id, "TRS", utr)
   val trustNTClient: TestClient = TestClient(Service.TrustNT.id, "TRS", urn)
@@ -56,10 +58,12 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val cbcNonUkClient: TestClient = TestClient(Service.CbcNonUk.id, "CBC", cbcId)
   val pillar2Client: TestClient = TestClient(Service.Pillar2.id, "PLRID", plrId)
 
-  val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
+  // TODO WG -test for Supp
+  val individualList = List(itsaClient /*, itsaSupClient*/, vatClient, cgtClient, pptClient)
   val businessList =
     List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
 
+  // TODO WG -test for Supp
   val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
 
   val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
@@ -90,6 +94,10 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       runActiveRelationshipsErrorScenario(client, isLoggedInClientInd = false, isLoggedInBusiness = true)
     }
   }
+//  private def getAuthProfile(service: String): String = service match {
+//    case HMRCMTDITSUPP => "ALL00002"
+//    case _             => "ALL00001"
+//  }
 
   def runActiveRelationshipsScenario(
     testClient: TestClient,
@@ -105,6 +113,8 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipsViaClient(testClient.clientId, arn)
+        // TODO WG - test Supp
+        // getActiveRelationshipsViaClient(testClient.clientId, arn, getAuthProfile(testClient.service))
 
         val result: HttpResponse = doRequest()
         result.status shouldBe 200
@@ -273,6 +283,7 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     "return 200 with a map of relationships and filter only on active ones" in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
+      // TODO WG - test Supp
       getActiveRelationshipsViaClient(mtdItId, arn)
       getActiveRelationshipsViaClient(vrn, arn2)
       getActiveRelationshipsViaClient(utr, arn)
