@@ -175,7 +175,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenNinoIsKnownFor(mtdItId, nino)
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
-        givenAgentCanBeAllocatedInIF(mtdItId, arn)
+        givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
         val now = Instant.now()
@@ -223,7 +223,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenNinoIsKnownFor(mtdItId, nino)
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
-        givenAgentCanBeAllocatedInIF(mtdItId, arn)
+        givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId, "bar")
 
         val now = Instant.now()

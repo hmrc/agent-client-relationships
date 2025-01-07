@@ -873,7 +873,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
