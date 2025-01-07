@@ -267,7 +267,7 @@ class RemoveAuthorisationControllerISpec
       ).status shouldBe 204
 
       val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
-        .find(MtdIt.id, nino, arn)
+        .findActive(MtdIt.id, nino, arn)
         .futureValue
 
       partialAuthInvitations.isDefined shouldBe false
@@ -282,7 +282,7 @@ class RemoveAuthorisationControllerISpec
       result.status >= 400 && result.status < 600
 
       val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
-        .find(MtdIt.id, nino, arn)
+        .findActive(MtdIt.id, nino, arn)
         .futureValue
 
       partialAuthInvitations.isDefined shouldBe false

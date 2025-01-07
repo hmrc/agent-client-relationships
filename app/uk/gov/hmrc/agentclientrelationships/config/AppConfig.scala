@@ -111,9 +111,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val inactiveRelationshipsClientRecordStartDate =
     servicesConfig.getString("inactive-relationships-client.record-start-date")
 
-  val altItsaEnabled =
-    servicesConfig.getBoolean("alt-itsa.enabled")
-
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
   val supportedServicesWithoutPir: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
   val supportedServices: Seq[Service] = Service.supportedServices
