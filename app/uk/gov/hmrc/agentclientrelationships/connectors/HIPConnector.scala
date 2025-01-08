@@ -390,7 +390,7 @@ class HIPConnector @Inject() (
     )
 
   private def getAuthProfile(service: String): String = service match {
-    case HMRCMTDITSUPP => "ALL00002"
+    case HMRCMTDITSUPP => "ITSAS001"
     case _             => "ALL00001"
   }
 
