@@ -200,7 +200,7 @@ class HIPConnector @Inject() (
       getRelationship(s"GetInactiveRelationships", url)
         .map {
           case Right(response) =>
-            response.json.as[Seq[InactiveRelationship]].filter(isNotActive)
+            (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
           case Left(errorResponse) =>
             errorResponse.statusCode match {
               case Status.BAD_REQUEST | Status.NOT_FOUND => Seq.empty[InactiveRelationship]

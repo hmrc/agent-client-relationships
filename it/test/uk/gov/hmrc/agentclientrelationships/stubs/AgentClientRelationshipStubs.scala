@@ -210,7 +210,8 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
           aResponse()
             .withStatus(200)
             .withBody(s"""
-                         |[
+                         |{
+                         |"relationshipDisplayResponse":[
                          |{
                          |  "refNumber" : "${taxIdentifier.value}",
                          |  "arn" : "${arn.value}",
@@ -222,7 +223,8 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |  "contractAccountCategory" : "01",
                          |  "activity" : "09"
                          |}
-                         |]""".stripMargin)
+                         |]
+                         |}""".stripMargin)
         )
     )
 
@@ -237,7 +239,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
           aResponse()
             .withStatus(200)
             .withBody(s"""
-                         |[
+                         |{"relationshipDisplayResponse": [
                          |{
                          |  "refNumber" : "${taxIdentifier.value}",
                          |  "arn" : "$agentArn",
@@ -249,7 +251,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |  "contractAccountCategory" : "01",
                          |  "activity" : "09"
                          |}
-                         |]""".stripMargin)
+                         |]}""".stripMargin)
         )
     )
 
@@ -266,7 +268,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
           aResponse()
             .withStatus(200)
             .withBody(s"""
-                         |[
+                         |{"relationshipDisplayResponse":[
                          |{
                          |  "refNumber" : "$taxIdentifier",
                          |  "arn" : "$agentArn1",
@@ -300,7 +302,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |  "contractAccountCategory" : "03",
                          |  "activity" : "11"
                          |}
-                         |]""".stripMargin)
+                         |]}""".stripMargin)
         )
     )
 
@@ -330,7 +332,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
             .withStatus(200)
             .withBody(
               s"""
-                 |[
+                 |{"relationshipDisplayResponse":[
                  |{
                  |  "refNumber" : "${taxIdentifier.value}",
                  |  "arn" : "ABCDE123456", """.stripMargin + individualOrOrganisationJson + s"""
@@ -347,7 +349,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                                                                                                                                                                              |  "contractAccountCategory" : "01",
                                                                                                                                                                              |  "activity" : "09"
                                                                                                                                                                              |  }
-                                                                                                                                                                             |]""".stripMargin
+                                                                                                                                                                             |]}""".stripMargin
             )
         )
     )
@@ -363,7 +365,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
           aResponse()
             .withStatus(200)
             .withBody(s"""
-                         |[
+                         |{"relationshipDisplayResponse":[
                          |{
                          |  "refNumber" : "${taxIdentifier.value}",
                          |  "arn" : "ABCDE123456",
@@ -375,7 +377,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |  "contractAccountCategory" : "01",
                          |  "activity" : "09"
                          |}
-                         |]""".stripMargin)
+                         |]}""".stripMargin)
         )
     )
 
@@ -414,7 +416,8 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
             .withStatus(200)
             .withBody(
               s"""
-                 |[
+                 |{
+                 |"relationshipDisplayResponse" : [
                  |${otherInactiveRelationship(otherTaxIdentifier)(arn)},
                  |{
                  |  "refNumber" : "${taxIdentifier.value}",
@@ -425,7 +428,8 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                    |  "contractAccountCategory" : "01",
                    |  "activity" : "09"
                    |}
-                   |]""".stripMargin
+                   |]
+                   |}""".stripMargin
             )
         )
     )
@@ -442,7 +446,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
           aResponse()
             .withStatus(200)
             .withBody(s"""
-                         |[
+                         |{"relationshipDisplayResponse":[
                          |{
                          |  "refNumber" : "$clientId",
                          |  "arn" : "$agentArn",
@@ -454,7 +458,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |  "contractAccountCategory" : "01",
                          |  "activity" : "09"
                          |}
-                         |]""".stripMargin)
+                         |]}""".stripMargin)
         )
     )
 
@@ -493,7 +497,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
           aResponse()
             .withStatus(200)
             .withBody(s"""
-                         |[
+                         |{"relationshipDisplayResponse":[
                          |{
                          |  "refNumber" : "$clientId",
                          |  "arn" : "${arn.value}",
@@ -504,7 +508,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |  "contractAccountCategory" : "01",
                          |  "activity" : "09"
                          |}
-                         |]""".stripMargin)
+                         |]}""".stripMargin)
         )
     )
 
