@@ -81,7 +81,6 @@ class AuthorisationAcceptController @Inject() (
                   case err                      => throw err
                 }
             }
-          // non blocking email request
           // non blocking friendly name update
           // audit
         } yield result

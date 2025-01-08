@@ -96,7 +96,8 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       .find(
         and(
           equal("service", HMRCMTDIT),
-          equal("nino", nino)
+          equal("nino", nino),
+          equal("active", true)
         )
       )
       .headOption()
