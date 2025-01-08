@@ -55,10 +55,9 @@ class AuthorisationAcceptService @Inject() (
     request: Request[_],
     currentUser: CurrentUser,
     auditData: AuditData
-  ) = {
+  ): Future[Option[Invitation]] = {
     val timestamp = Instant.now
-    val isAltItsa = Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service) &&
-      invitation.clientId == invitation.suppliedClientId
+    val isAltItsa = invitation.isAltItsa
     val nextStatus = if (isAltItsa) PartialAuth else Accepted
     for {
       // Remove existing main/supp relationship for arn when changing for same client

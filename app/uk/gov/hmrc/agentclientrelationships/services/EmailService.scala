@@ -18,8 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, EmailConnector}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation}
+import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation, PartialAuth}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.format.DateTimeFormatter
@@ -40,7 +41,6 @@ class EmailService @Inject() (
     sendEmail(invitation, "client_expired_authorisation_request")
   }
 
-  @unused
   def sendAcceptedEmail(invitation: Invitation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =
     sendEmail(invitation, "client_accepted_authorisation_request")
 
@@ -72,18 +72,13 @@ class EmailService @Inject() (
         "agencyName" -> agentDetailsDesResponse.agencyDetails.agencyName,
         "clientName" -> invitation.clientName,
         "expiryDate" -> invitation.expiryDate.format(dateFormatter),
-        "service"    -> invitation.service
-        // TODO WG - handling for AltItsa
-//        "additionalInfo" -> {
-//          if (isAltItsa(invitation))
-//            s"You must now sign ${invitation.clientName} up to Making Tax Digital for Income Tax."
-//          else ""
-//        }
+        "service"    -> invitation.service,
+        "additionalInfo" -> {
+          if (invitation.isAltItsa)
+            s"You must now sign ${invitation.clientName} up to Making Tax Digital for Income Tax."
+          else ""
+        }
       )
     )
   }
-
-  // TODO WG - handling for AltItsa - now logic is incorrect
-//  private def isAltItsa(invitation: Invitation): Boolean =
-//    invitation.service == Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.clientId) == invitation.suppliedClientId || invitation.status == PartialAuth
 }

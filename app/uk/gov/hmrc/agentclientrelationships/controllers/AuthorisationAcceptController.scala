@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.services.{AuthorisationAcceptService, CreateRelationshipLocked, InvitationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.InternalServerException
@@ -38,6 +38,7 @@ class AuthorisationAcceptController @Inject() (
   invitationService: InvitationService,
   authorisationAcceptService: AuthorisationAcceptService,
   validationService: ValidationService,
+  friendlyNameService: FriendlyNameService,
   auditService: AuditService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
@@ -81,7 +82,8 @@ class AuthorisationAcceptController @Inject() (
                   case err                      => throw err
                 }
             }
-          // non blocking friendly name update
+          // friendly name update (non blocking)
+          _ <- if (result == NoContent) friendlyNameService.updateFriendlyName(invitation, enrolment) else Future.unit
           // audit
         } yield result
       case Some(_) =>
