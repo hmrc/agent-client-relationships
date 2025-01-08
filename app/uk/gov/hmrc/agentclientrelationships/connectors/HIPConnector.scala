@@ -110,7 +110,8 @@ class HIPConnector @Inject() (
   ): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/RESTAdapter/rosm/agent-relationship")
-    val requestBody = deleteAgentRelationshipInputJson(enrolmentKey, arn.value)
+    val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
+    val requestBody = deleteAgentRelationshipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
     postRelationship("DeleteAgentRelationship", url, requestBody)
       .map {
@@ -138,7 +139,7 @@ class HIPConnector @Inject() (
     getRelationship(s"GetActiveClientRelationships", url)
       .map {
         case Right(response) =>
-          response.json.as[Seq[ActiveRelationship]].find(isActive)
+          (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
         case Left(errorResponse) =>
           errorResponse.statusCode match {
             case Status.BAD_REQUEST | Status.NOT_FOUND => None
@@ -166,7 +167,7 @@ class HIPConnector @Inject() (
     getRelationship(s"GetInactiveClientRelationships", url)
       .map {
         case Right(response) =>
-          response.json.as[Seq[InactiveRelationship]].filter(isNotActive)
+          (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
         case Left(errorResponse) =>
           errorResponse.statusCode match {
             case Status.BAD_REQUEST | Status.NOT_FOUND => Seq.empty[InactiveRelationship]
@@ -375,14 +376,15 @@ class HIPConnector @Inject() (
         .as[JsObject]
     )
 
-  private def deleteAgentRelationshipInputJson(enrolmentKey: EnrolmentKey, arn: String) =
+  private def deleteAgentRelationshipInputJson(enrolmentKey: EnrolmentKey, arn: String, isExclusiveAgent: Boolean) =
     includeIdTypeIfNeeded(enrolmentKey)(
       Json
         .parse(s"""{
           "refNumber": "${enrolmentKey.oneIdentifier().value}",
           "arn": "$arn",
           "regime": "${getRegimeFor(enrolmentKey.oneTaxIdentifier())}",
-          "action": "0002"
+          "action": "0002",
+          "isExclusiveAgent": $isExclusiveAgent
      }""")
         .as[JsObject]
     )
