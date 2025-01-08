@@ -34,6 +34,7 @@ import java.time.{Instant, LocalDateTime, ZoneId}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
+// scalastyle:off method.length
 @Singleton
 class AuthorisationAcceptService @Inject() (
   appConfig: AppConfig,
@@ -58,30 +59,48 @@ class AuthorisationAcceptService @Inject() (
   ): Future[Option[Invitation]] = {
     val timestamp = Instant.now
     val isAltItsa = invitation.isAltItsa
+    val isItsa = Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)
     val nextStatus = if (isAltItsa) PartialAuth else Accepted
     for {
-      // Remove existing main/supp relationship for arn when changing for same client
-      _ <- deleteSameAgentRelationshipForItsa(
-             invitation.service,
-             invitation.arn,
-             invitation.clientId,
-             isAltItsa,
-             timestamp
-           )
+      // Remove existing main/supp relationship for arn when changing between main/supp
+      _ <- if (isItsa)
+             deleteSameAgentRelationshipForItsa(
+               invitation.service,
+               invitation.arn,
+               if (isAltItsa) None else Some(invitation.clientId),
+               invitation.suppliedClientId,
+               timestamp
+             )
+           else Future.unit
       // Create relationship
       _ <- createRelationship(invitation, enrolment, isAltItsa, timestamp)
       // Update invitation
       updated <- invitationsRepository.updateStatus(invitation.invitationId, nextStatus, Some(timestamp))
       // Deauth previously accepted invitations (non blocking)
       _ <- Future.successful(
-             deauthAcceptedInvitations(
-               invitation.service,
-               None,
-               invitation.clientId,
-               Some(invitation.invitationId),
-               isAltItsa,
-               timestamp
-             )
+             if (invitation.service != HMRCMTDITSUPP)
+               deauthAcceptedInvitations(
+                 invitation.service,
+                 None,
+                 invitation.clientId,
+                 Some(invitation.invitationId),
+                 isAltItsa,
+                 timestamp
+               )
+             else Future.unit
+           )
+      // Deauth previously accepted alt itsa invitations in case the client is mtd itsa (non blocking)
+      _ <- Future.successful(
+             if (invitation.service == HMRCMTDIT && !isAltItsa)
+               deauthAcceptedInvitations(
+                 invitation.service,
+                 None,
+                 invitation.suppliedClientId,
+                 Some(invitation.invitationId),
+                 isAltItsa = true,
+                 timestamp
+               )
+             else Future.unit
            )
       // Accept confirmation email (non blocking)
       _ <- Future.successful(emailService.sendAcceptedEmail(invitation))
@@ -91,8 +110,8 @@ class AuthorisationAcceptService @Inject() (
   def deleteSameAgentRelationshipForItsa(
     service: String,
     arn: String,
-    clientId: String,
-    isAltItsa: Boolean,
+    optMtdItId: Option[String],
+    nino: String,
     timestamp: Instant = Instant.now()
   )(implicit
     hc: HeaderCarrier,
@@ -104,26 +123,34 @@ class AuthorisationAcceptService @Inject() (
         val serviceToCheck = Service.forId(if (service == HMRCMTDIT) HMRCMTDITSUPP else HMRCMTDIT)
         for {
           // Attempt to remove existing alt itsa partial auth
-          altItsa <- partialAuthRepository.deauthorise(serviceToCheck.id, Nino(clientId), Arn(arn), timestamp)
-          // Check for existing itsa relationship
-          itsa <- checkRelationshipsOrchestratorService
-                    .checkForRelationship(Arn(arn), serviceToCheck.id, MtdItIdType.enrolmentId, clientId, None)
-          // Remove existing itsa relationship
-          _ <- if (itsa == CheckRelationshipFound)
-                 deleteRelationshipsService.deleteRelationship(
-                   Arn(arn),
-                   EnrolmentKey(
-                     serviceToCheck,
-                     MtdItId(clientId)
-                   ),
-                   currentUser.affinityGroup
-                 )
-               else Future.unit
+          altItsa <- partialAuthRepository.deauthorise(serviceToCheck.id, Nino(nino), Arn(arn), timestamp)
+          // Attempt to remove existing itsa relationship
+          itsa <- optMtdItId.fold(Future.successful(false)) { mtdItId =>
+                    checkRelationshipsOrchestratorService
+                      .checkForRelationship(Arn(arn), serviceToCheck.id, MtdItIdType.enrolmentId, mtdItId, None)
+                      .flatMap {
+                        case CheckRelationshipFound =>
+                          deleteRelationshipsService
+                            .deleteRelationship(
+                              Arn(arn),
+                              EnrolmentKey(
+                                serviceToCheck,
+                                MtdItId(mtdItId)
+                              ),
+                              currentUser.affinityGroup
+                            )
+                            .map(_ => true)
+                        case _ => Future.successful(false)
+                      }
+                  }
           // Clean up accepted invitations
           _ <- Future.successful(
-                 deauthAcceptedInvitations(serviceToCheck.id, Some(arn), clientId, None, isAltItsa, timestamp)
+                 deauthAcceptedInvitations(serviceToCheck.id, Some(arn), nino, None, isAltItsa = true, timestamp)
                )
-        } yield altItsa || (itsa == CheckRelationshipFound)
+          _ <- Future.successful(optMtdItId.fold(Future.unit) { mtdItId =>
+                 deauthAcceptedInvitations(serviceToCheck.id, Some(arn), mtdItId, None, isAltItsa = false, timestamp)
+               })
+        } yield altItsa || itsa
       case _ => Future.successful(false)
     }
 
@@ -137,34 +164,42 @@ class AuthorisationAcceptService @Inject() (
     auditData: AuditData
   ) =
     invitation.service match {
-      case `HMRCMTDITSUPP` if isAltItsa =>
+      case `HMRCMTDITSUPP` if isAltItsa => // Does not need to deauthorise current agent
         partialAuthRepository.create(
           timestamp,
           Arn(invitation.arn),
           invitation.service,
           Nino(invitation.clientId)
         )
-      case `HMRCMTDIT` if isAltItsa =>
-        for {
-          optMainAuth <- partialAuthRepository.findMainAgent(invitation.clientId)
-          _ <- optMainAuth.fold(Future.successful(false)) { mainAuth =>
-                 partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp)
-               }
-          newAuth <- partialAuthRepository.create(
-                       timestamp,
-                       Arn(invitation.arn),
-                       invitation.service,
-                       Nino(invitation.clientId)
-                     )
-        } yield newAuth
-      case `HMRCPIR` =>
+      case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
+        deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
+          partialAuthRepository.create(
+            timestamp,
+            Arn(invitation.arn),
+            invitation.service,
+            Nino(invitation.clientId)
+          )
+        }
+      case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
+        deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
+          relationshipsService
+            .createRelationship(
+              Arn(invitation.arn),
+              enrolment,
+              Set(),
+              failIfCreateRecordFails = false,
+              failIfAllocateAgentInESFails = true
+            )
+            .map(_.getOrElse(throw CreateRelationshipLocked))
+        }
+      case `HMRCPIR` => // AFI handles its own deauthorisations
         agentFiRelationshipConnector.createRelationship(
           Arn(invitation.arn),
           invitation.service,
           invitation.clientId,
           LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
         )
-      case _ =>
+      case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
         relationshipsService
           .createRelationship(
             Arn(invitation.arn),
@@ -174,6 +209,13 @@ class AuthorisationAcceptService @Inject() (
             failIfAllocateAgentInESFails = true
           )
           .map(_.getOrElse(throw CreateRelationshipLocked))
+    }
+
+  private def deauthPartialAuth(nino: String, timestamp: Instant) =
+    partialAuthRepository.findMainAgent(nino).flatMap {
+      case Some(mainAuth) =>
+        partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp)
+      case None => Future.successful(false)
     }
 
   private def deauthAcceptedInvitations(

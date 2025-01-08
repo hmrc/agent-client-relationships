@@ -42,7 +42,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
         IndexModel(
           Indexes.ascending("service", "nino", "arn"),
           IndexOptions()
-            .partialFilterExpression(BsonDocument("active" -> "true"))
+            .partialFilterExpression(BsonDocument("active" -> true))
             .unique(true)
             .name("activeRelationshipsIndex")
         ),
@@ -108,7 +108,8 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
         and(
           equal("service", serviceId),
           equal("nino", nino.value),
-          equal("arn", arn.value)
+          equal("arn", arn.value),
+          equal("active", true)
         ),
         combine(set("active", false), set("lastUpdated", updated))
       )

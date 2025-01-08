@@ -18,9 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, EmailConnector}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation, PartialAuth}
+import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.format.DateTimeFormatter
