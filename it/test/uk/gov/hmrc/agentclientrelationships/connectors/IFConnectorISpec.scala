@@ -223,7 +223,7 @@ class IFConnectorISpec
               s"""
                  |{
                  |"regime": "ITSA",
-                 |"authProfile": "ALL00002",
+                 |"authProfile": "ITSAS001",
                  |"relationshipType": "ZA01"
                  |}""".stripMargin,
               true,
@@ -459,7 +459,7 @@ class IFConnectorISpec
     }
 
     "return existing active relationships for specified clientId for ItSa Supp service" in {
-      getActiveRelationshipsViaClient(mtdItId, agentARN, "ALL00002")
+      getActiveRelationshipsViaClient(mtdItId, agentARN, "ITSAS001")
       givenAuditConnector()
 
       val result = await(relationshipConnector.getActiveClientRelationships(mtdItId, MtdItSupp))
@@ -752,7 +752,7 @@ class IFConnectorISpec
 
     "return existing inactive relationships for specified clientId for ItSa Supp service" in {
 
-      getInactiveRelationshipsForClient(mtdItId, "ALL00002")
+      getInactiveRelationshipsForClient(mtdItId, "ITSAS001")
       givenAuditConnector()
 
       val result = await(relationshipConnector.getInactiveClientRelationships(mtdItId, MtdItSupp))

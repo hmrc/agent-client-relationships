@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.mongo.lock.Lock
 
 import java.time.{Instant, LocalDate, ZoneOffset}
 
@@ -191,7 +192,6 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         extraSetup(serviceId, clientIdType)
       }
 
-      // TODO WG - that fails
       "return 201 when the relationship exists and de-allocation of previous relationship fails" in new StubsForThisScenario {
         givenUserIsSubscribedClient(clientId)
         givenDelegatedGroupIdsExistForEnrolmentKey(enrolmentKey, "zoo")
@@ -203,7 +203,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         if (enrolmentKey.service == Service.HMRCMTDITSUPP) verifyNoEnrolmentHasBeenDeallocated()
         else verifyEnrolmentDeallocationAttempt(groupId = "zoo", enrolmentKey = enrolmentKey)
       }
-      /*
+
       "return 201 when the relationship exists and the clientId matches that of current Client user" in new StubsForThisScenario {
         givenUserIsSubscribedClient(clientId)
 
@@ -351,7 +351,6 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 403
       }
-       */
     }
   }
 

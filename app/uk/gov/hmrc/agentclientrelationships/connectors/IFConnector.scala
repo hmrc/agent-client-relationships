@@ -161,7 +161,6 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
-  // TODO WG - select "ALL00002" for SUP
   // IF API #1168
   def getActiveClientRelationships(
     taxIdentifier: TaxIdentifier,
@@ -184,7 +183,6 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
-  // TODO WG - select "ALL00002" for SUP
   // IF API #1168
   def getInactiveClientRelationships(
     taxIdentifier: TaxIdentifier,
@@ -379,7 +377,7 @@ class IFRelationshipConnector @Inject() (
         .as[JsObject]
     )
   private def getAuthProfile(service: String): String = service match {
-    case HMRCMTDITSUPP => "ALL00002"
+    case HMRCMTDITSUPP => "ITSAS001"
     case _             => "ALL00001"
   }
 

@@ -80,7 +80,7 @@ class HIPConnector @Inject() (
   private val baseUrl = appConfig.hipPlatformBaseUrl
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
-  // OLD IF API #1167 Create/Update Agent Relationship
+  //HIP API #EPID1521 Create/Update Agent Relationship
   def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -103,7 +103,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  // IF API #1167 Create/Update Agent Relationship
+  //HIP API #EPID1521 Create/Update Agent Relationship
   def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -126,7 +126,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  // IF API #1168
+  //HIP API #EPID1521 Create/Update Agent Relationship
   def getActiveClientRelationships(
     taxIdentifier: TaxIdentifier,
     service: Service
@@ -153,7 +153,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  // Old IF API #1168
+  //HIP API #EPID1521 Create/Update Agent Relationship
   def getInactiveClientRelationships(
     taxIdentifier: TaxIdentifier,
     service: Service
@@ -181,7 +181,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  // Old IF API #1168 (for agent)
+  //HIP API #EPID1521 Create/Update Agent Relationship (agent)
   def getInactiveRelationships(
     arn: Arn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
@@ -362,7 +362,6 @@ class HIPConnector @Inject() (
       case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
-  // TODO WG - set isExclusiveAgent to false for Supp
   private def createAgentRelationshipHipInputJson(enrolmentKey: EnrolmentKey, arn: String, isExclusiveAgent: Boolean) =
     includeIdTypeIfNeeded(enrolmentKey)(
       Json

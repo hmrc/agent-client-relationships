@@ -59,12 +59,12 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val pillar2Client: TestClient = TestClient(Service.Pillar2.id, "PLRID", plrId)
 
   // TODO WG -test for Supp
-  val individualList = List(itsaClient /*, itsaSupClient*/, vatClient, cgtClient, pptClient)
+  val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
   val businessList =
     List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
 
-  // TODO WG -test for Supp
-  val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
+  val servicesInIF =
+    List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
 
   val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
 
@@ -94,10 +94,6 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       runActiveRelationshipsErrorScenario(client, isLoggedInClientInd = false, isLoggedInBusiness = true)
     }
   }
-//  private def getAuthProfile(service: String): String = service match {
-//    case HMRCMTDITSUPP => "ALL00002"
-//    case _             => "ALL00001"
-//  }
 
   def runActiveRelationshipsScenario(
     testClient: TestClient,
@@ -113,8 +109,6 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipsViaClient(testClient.clientId, arn)
-        // TODO WG - test Supp
-        // getActiveRelationshipsViaClient(testClient.clientId, arn, getAuthProfile(testClient.service))
 
         val result: HttpResponse = doRequest()
         result.status shouldBe 200
