@@ -53,7 +53,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
         getCgtClientDetails(clientId)
       case "HMRC-PPT-ORG" =>
         getPptClientDetails(clientId)
-      case "HMRC-CBC-ORG" | "HMRC-CBC-NONUK-ORG" =>
+      case "HMRC-CBC-ORG" =>
         getCbcClientDetails(clientId)
       case "HMRC-PILLAR2-ORG" =>
         getPillar2ClientDetails(clientId)
