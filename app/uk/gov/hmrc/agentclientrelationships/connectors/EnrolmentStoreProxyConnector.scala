@@ -16,19 +16,19 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, JsObject, Json, OWrites}
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Service, Vrn}
+import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -44,6 +44,10 @@ object ES2Response {
   implicit val format: Format[ES2Response] = Json.format[ES2Response]
 }
 
+case class ES19Request(friendlyName: String)
+object ES19Request {
+  implicit val format: Format[ES19Request] = Json.format[ES19Request]
+}
 // Note: knownFacts accepts identifier or verifier (key/value object), but we only need by identifier
 case class ES20Request(service: String, knownFacts: Seq[Identifier])
 object ES20Request {
@@ -198,6 +202,26 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient)(implicit
       http.DELETE[HttpResponse](url.toString).map { response =>
         response.status match {
           case Status.NO_CONTENT => ()
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
+  }
+
+  // ES19 - Update an enrolment's friendly name
+  def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit] = {
+    val url = new URL(
+      espBaseUrl,
+      s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name"
+    )
+    monitor(s"ConsumedAPI-ES-updateEnrolmentFriendlyName-PUT") {
+      http.PUT[ES19Request, HttpResponse](url.toString, ES19Request(friendlyName)).map { response =>
+        response.status match {
+          case Status.NO_CONTENT =>
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }
