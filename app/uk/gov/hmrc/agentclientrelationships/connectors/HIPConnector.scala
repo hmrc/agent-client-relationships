@@ -80,7 +80,7 @@ class HIPConnector @Inject() (
   private val baseUrl = appConfig.hipPlatformBaseUrl
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
-  //HIP API #EPID1521 Create/Update Agent Relationship
+  // HIP API #EPID1521 Create/Update Agent Relationship
   def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -103,7 +103,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  //HIP API #EPID1521 Create/Update Agent Relationship
+  // HIP API #EPID1521 Create/Update Agent Relationship
   def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -126,7 +126,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  //HIP API #EPID1521 Create/Update Agent Relationship
+  // HIP API #EPID1521 Create/Update Agent Relationship
   def getActiveClientRelationships(
     taxIdentifier: TaxIdentifier,
     service: Service
@@ -153,7 +153,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  //HIP API #EPID1521 Create/Update Agent Relationship
+  // HIP API #EPID1521 Create/Update Agent Relationship
   def getInactiveClientRelationships(
     taxIdentifier: TaxIdentifier,
     service: Service
@@ -181,7 +181,7 @@ class HIPConnector @Inject() (
       }
   }
 
-  //HIP API #EPID1521 Create/Update Agent Relationship (agent)
+  // HIP API #EPID1521 Create/Update Agent Relationship (agent)
   def getInactiveRelationships(
     arn: Arn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
