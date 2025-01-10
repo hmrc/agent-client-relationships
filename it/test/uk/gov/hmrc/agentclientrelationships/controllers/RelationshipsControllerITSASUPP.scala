@@ -62,7 +62,7 @@ trait RelationshipsControllerITSASUPP {
         givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
         givenNinoIsKnownFor(mtdItId, nino)
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenAgentCanBeAllocatedInIF(mtdItId, arn)
+        givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId, "bar")
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")

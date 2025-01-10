@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.controllers
-import uk.gov.hmrc.agentclientrelationships.stubs._
+package uk.gov.hmrc.agentclientrelationships.connectors.helpers
 
-trait RelationshipsBaseControllerISpec extends BaseControllerISpec with AgentClientRelationshipStub
+import java.util.UUID
+import javax.inject.Singleton
+
+@Singleton
+class RandomUUIDGenerator() {
+  def uuid: String = UUID.randomUUID().toString
+}

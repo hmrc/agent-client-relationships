@@ -165,7 +165,7 @@ class RelationshipsController @Inject() (
 
   def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = Action.async { implicit request =>
     authorisedAsClient(service) { implicit clientId =>
-      findService.getActiveRelationshipsForClient(clientId).map {
+      findService.getActiveRelationshipsForClient(clientId, Service(service)).map {
         case Some(relationship) => Ok(Json.toJson(relationship))
         case None               => NotFound
       }
@@ -178,10 +178,10 @@ class RelationshipsController @Inject() (
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
-            val relationships = if (service == Service.MtdIt.id) {
-              findService.getItsaRelationshipForClient(Nino(taxIdentifier.value))
+            val relationships = if (service == Service.MtdIt.id || service == Service.MtdItSupp.id) {
+              findService.getItsaRelationshipForClient(Nino(taxIdentifier.value), Service(service))
             } else {
-              findService.getActiveRelationshipsForClient(taxIdentifier)
+              findService.getActiveRelationshipsForClient(taxIdentifier, Service(service))
             }
             relationships.map {
               case Some(relationship) => Ok(Json.toJson(relationship))

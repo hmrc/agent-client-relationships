@@ -18,7 +18,14 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
-class RelationshipsControllerServiceISpec
+class RelationshipsControllerIFServiceISpec
+    extends RelationshipsControllerServiceISpec
+    with RelationshipsBaseIFControllerISpec
+class RelationshipsControllerHIPServiceISpec
+    extends RelationshipsControllerServiceISpec
+    with RelationshipsBaseHIPControllerISpec
+
+trait RelationshipsControllerServiceISpec
     extends RelationshipsBaseControllerISpec
     with RelationshipsControllerGenericBehaviours
     with RelationshipsControllerVATBehaviours

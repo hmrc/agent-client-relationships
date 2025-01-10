@@ -519,7 +519,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
     val checkService: CheckRelationshipsService = mock[CheckRelationshipsService]
     val agentUserService: AgentUserService = mock[AgentUserService]
     val metrics: Metrics = mock[Metrics]
-    val ifConnector: IFConnector = mock[IFConnector]
+    val relationshipConnector: RelationshipConnector = mock[RelationshipConnector]
     val aca: AgentClientAuthorisationConnector = mock[AgentClientAuthorisationConnector]
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
     val acaDeAuthoriseInvitationService: AcaDeAuthoriseInvitationService = new AcaDeAuthoriseInvitationService(aca)
@@ -538,7 +538,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
     val underTest = new DeleteRelationshipsServiceWithAca(
       es,
-      ifConnector,
+      relationshipConnector,
       repo,
       aucdConnector,
       lockService,
@@ -567,13 +567,15 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
     def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        ifConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
+        relationshipConnector
+          .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       )
         .thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
 
     def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        ifConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
+        relationshipConnector
+          .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       )
         .thenReturn(Future.failed(new Exception))
 
@@ -635,11 +637,11 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
         .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[HeaderCarrier])
 
     def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(ifConnector, times(1))
+      verify(relationshipConnector, times(1))
         .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
     def verifyETMPDeAuthorisationHasNOTBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(ifConnector, never)
+      verify(relationshipConnector, never)
         .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
   }

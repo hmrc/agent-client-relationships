@@ -38,7 +38,7 @@ import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
-    extends RelationshipsBaseControllerISpec
+    extends BaseControllerISpec
     with ClientDetailsStub
     with AfiRelationshipStub
     with AgentAssuranceStubs
@@ -102,7 +102,6 @@ class InvitationControllerISpec
     DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
   "create invitation link" should {
 
-    // TODO WG - test expiry date of Invitation
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
         val inputData: CreateInvitationRequest = allServices(taxService)

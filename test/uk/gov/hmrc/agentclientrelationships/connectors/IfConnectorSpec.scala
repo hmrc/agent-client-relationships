@@ -33,7 +33,7 @@ class IfConnectorSpec extends UnitSpec with MockitoSugar {
   val metrics: Metrics = mock[Metrics]
   val agentCacheProvider: AgentCacheProvider = mock[AgentCacheProvider]
 
-  val underTest = new IFConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
+  val underTest = new IFConnector(httpClient, ec)(metrics, appConfig)
 
   "ifHeaders" should {
     "contain correct headers" when {

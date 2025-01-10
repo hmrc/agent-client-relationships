@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 import scala.concurrent.ExecutionContext
 
-class AgentDetailsControllerISpec extends RelationshipsBaseControllerISpec with TestData {
+class AgentDetailsControllerISpec extends BaseControllerISpec with TestData {
 
   val uid = "TestUID"
   val normalizedAgentName = "TestNormalizedAgentName"
