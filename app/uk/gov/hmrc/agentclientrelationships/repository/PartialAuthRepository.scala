@@ -39,14 +39,14 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       collectionName = "partial-auth",
       domainFormat = PartialAuthRelationship.format,
       indexes = Seq(
+        IndexModel(Indexes.ascending("service", "nino", "arn", "active")),
         IndexModel(
           Indexes.ascending("service", "nino", "arn"),
           IndexOptions()
             .partialFilterExpression(BsonDocument("active" -> true))
             .unique(true)
             .name("activeRelationshipsIndex")
-        ),
-        IndexModel(Indexes.ascending("service", "nino", "arn", "active"))
+        )
       ),
       replaceIndexes = true
     )

@@ -85,7 +85,8 @@ class RemoveAuthorisationController @Inject() (
   ): Future[Either[InvitationFailureResponse, Result]] =
     validRequest.service match {
 
-      // TODO WG - do audit for PersonalIncome
+      // TODO WG - do audit for PersonalIncome - check agent-fi-relationship
+      // TODO update invitation status if one still exists
       case Service.PersonalIncomeRecord =>
         agentFiRelationshipConnector
           .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
