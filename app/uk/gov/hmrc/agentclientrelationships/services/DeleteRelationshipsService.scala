@@ -332,23 +332,17 @@ private[services] abstract class DeleteRelationshipsService(
 
   protected def setAuditDataForUser(currentUser: CurrentUser, arn: Arn, enrolmentKey: EnrolmentKey): AuditData = {
     val auditData = new AuditData()
-    if (currentUser.credentials.providerType == "GovernmentGateway") {
-      auditData.set("agentReferenceNumber", arn.value)
-      auditData.set("clientId", enrolmentKey.oneIdentifier().value)
-      auditData.set("clientIdType", enrolmentKey.oneIdentifier().key)
-      auditData.set("service", enrolmentKey.service)
-      auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
-      auditData.set("authProviderId", currentUser.credentials.providerId)
-      auditData.set("authProviderIdType", currentUser.credentials.providerType)
-      auditData
-    } else if (currentUser.credentials.providerType == "PrivilegedApplication") {
-      auditData.set("authProviderId", currentUser.credentials.providerId)
-      auditData.set("authProviderIdType", currentUser.credentials.providerType)
-      auditData.set("agentReferenceNumber", arn.value)
-      auditData.set("clientId", enrolmentKey.oneIdentifier().value)
-      auditData.set("service", enrolmentKey.service)
-      auditData
-    } else throw new IllegalStateException("No providerType found")
+    auditData.set("agentReferenceNumber", arn.value)
+    auditData.set("clientId", enrolmentKey.oneIdentifier().value)
+    auditData.set("clientIdType", enrolmentKey.oneIdentifier().key)
+    auditData.set("service", enrolmentKey.service)
+    auditData.set("currentUserAffinityGroup", currentUser.affinityGroup.map(_.toString).getOrElse("unknown"))
+    auditData.set(
+      "authProviderId",
+      currentUser.credentials.map(_.providerId).getOrElse("unknown")
+    ) // TODO do we need this?
+    auditData.set("authProviderIdType", currentUser.credentials.map(_.providerType).getOrElse("unknown"))
+    auditData
   }
 
   protected def sendDeleteRelationshipAuditEvent(currentUser: CurrentUser)(implicit
@@ -357,11 +351,10 @@ private[services] abstract class DeleteRelationshipsService(
     auditData: AuditData,
     ec: ExecutionContext
   ): Future[Unit] =
-    if (currentUser.credentials.providerType == "GovernmentGateway")
-      auditService.sendDeleteRelationshipAuditEvent
-    else if (currentUser.credentials.providerType == "PrivilegedApplication")
-      auditService.sendHmrcLedDeleteRelationshipAuditEvent
-    else throw new IllegalStateException("No Client Provider Type Found")
+    currentUser.credentials.map(_.providerType) match {
+      case Some("PrivilegedApplication") => auditService.sendHmrcLedDeleteRelationshipAuditEvent
+      case _                             => auditService.sendDeleteRelationshipAuditEvent
+    }
 
   private[services] def enrolmentKeyFallback(deleteRecord: DeleteRecord): EnrolmentKey = {
     logger.warn("DeleteRecord did not store the whole enrolment key. Performing fallback determination of service.")

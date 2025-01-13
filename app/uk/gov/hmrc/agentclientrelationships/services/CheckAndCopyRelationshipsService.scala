@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
@@ -26,8 +27,9 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.auth.core.AffinityGroup.Agent
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -92,6 +94,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   createRelationshipsService: CreateRelationshipsService,
   partialAuthRepo: PartialAuthRepository,
   invitationsRepository: InvitationsRepository,
+  itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   val auditService: AuditService,
   val metrics: Metrics
 )(implicit val appConfig: AppConfig)
@@ -118,7 +121,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     enrolmentKey.oneTaxIdentifier() match {
       case mtdItId @ MtdItId(_) =>
         ifEnabled(copyMtdItRelationshipFlag)(
-          tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, enrolmentKey.service)
+          tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, Some(enrolmentKey.service), mNino = None)
         )
       case vrn @ Vrn(_) =>
         ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
@@ -131,7 +134,8 @@ class CheckAndCopyRelationshipsService @Inject() (
     ec: ExecutionContext,
     hc: HeaderCarrier,
     request: Request[Any],
-    auditData: AuditData
+    auditData: AuditData,
+    currentUser: CurrentUser
   ): Future[CheckAndCopyResult] = {
 
     auditData.set("Journey", "CopyExistingCESARelationship")
@@ -152,16 +156,26 @@ class CheckAndCopyRelationshipsService @Inject() (
                         arn,
                         EnrolmentKey(Service.MtdIt, mtdItId)
                       )
-                        .map {
+                        .flatMap {
                           case Some(_) =>
-                            auditService.sendCreateRelationshipAuditEvent
-                            mark("Count-CopyRelationship-ITSA-FoundAndCopied")
-                            FoundAndCopied
+                            for {
+                              _ <- auditService.sendCreateRelationshipAuditEvent
+                              _ <-
+                                nino.fold[Future[Boolean]](Future.failed(new RuntimeException("nino not found")))(ni =>
+                                  itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+                                    HMRCMTDIT,
+                                    arn.value,
+                                    Some(mtdItId.value),
+                                    ni.value
+                                  )
+                                )
+                              _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
+                            } yield FoundAndCopied
                           case None =>
                             auditService.sendCreateRelationshipAuditEvent
                             mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
                             logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
-                            FoundButLockedCouldNotCopy
+                            Future.successful(FoundButLockedCouldNotCopy)
                         }
                         .recover { case NonFatal(ex) =>
                           logger.warn(
@@ -204,33 +218,34 @@ class CheckAndCopyRelationshipsService @Inject() (
       auditData.set("nino", ni)
       partialAuthRepo.findActive(ni, arn).map(_.map(_.service)).flatMap {
         case Some(svc) => Future.successful(Option(svc))
-        case None      => aca.getPartialAuth(ni, arn).map(_.headOption)
+        case None =>
+          logger.warn(s"partialAuth not found in ACR, looking in ACA...")
+          aca.getPartialAuth(ni, arn).map(_.headOption)
       }
     }
 
   private def tryCreateRelationshipFromPartialAuth(
     service: String,
-    mPartialAuth: Option[String],
     arn: Arn,
     mtdItId: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext, auditData: AuditData): Future[Option[DbUpdateStatus]] =
-    if (mPartialAuth.contains(service)) {
-      auditData.set("service", s"$service")
-      auditData.set("Journey", "PartialAuth")
-      createRelationshipsService
-        .createRelationship(
-          arn,
-          EnrolmentKey(s"$service~MTDITID~${mtdItId.value}"),
-          Set.empty,
-          failIfCreateRecordFails = true,
-          failIfAllocateAgentInESFails = true
-        )
-    } else Future.successful(None)
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, auditData: AuditData): Future[Option[DbUpdateStatus]] = {
+    auditData.set("service", s"$service")
+    auditData.set("Journey", "PartialAuth")
+    createRelationshipsService
+      .createRelationship(
+        arn,
+        EnrolmentKey(s"$service~MTDITID~${mtdItId.value}"),
+        Set.empty,
+        failIfCreateRecordFails = true,
+        failIfAllocateAgentInESFails = true
+      )
+  }
 
-  private def tryCreateITSARelationshipFromPartialAuthOrCopyAcross(
+  def tryCreateITSARelationshipFromPartialAuthOrCopyAcross(
     arn: Arn,
     mtdItId: MtdItId,
-    service: String
+    mService: Option[String],
+    mNino: Option[Nino]
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -240,19 +255,47 @@ class CheckAndCopyRelationshipsService @Inject() (
 
     auditData.set("clientId", mtdItId)
     auditData.set("clientIdType", "mtditid")
+    auditData.set("arn", s"${arn.value}")
+
+    implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
 
     for {
-      mNino          <- ifConnector.getNinoFor(mtdItId)
-      mPartialAuth   <- findPartialAuth(arn, mNino)
-      partialAuthRes <- tryCreateRelationshipFromPartialAuth(service, mPartialAuth, arn, mtdItId)
-      createRelResult <- if (partialAuthRes.contains(DbUpdateSucceeded)) {
-                           auditService.sendCreateRelationshipAuditEvent
-                           endPartialAuth(arn, service, mNino, mtdItId)
-                             .map(_ => AltItsaCreateRelationshipSuccess(service))
-                         } else if (service == HMRCMTDIT) checkCesaAndCopy(arn, mtdItId, mNino)
-                         else Future.successful(AltItsaNotFoundOrFailed)
+      mNino        <- mNino.fold(ifConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
+      mPartialAuth <- findPartialAuth(arn, mNino)
+      createFromPartialAuthRes <-
+        mPartialAuth.fold[Future[CheckAndCopyResult]](Future.successful(AltItsaNotFoundOrFailed))(partialAuth =>
+          if (mService.orElse(Some(partialAuth)).contains(partialAuth))
+            tryCreateRelationshipFromPartialAuth(partialAuth, arn, mtdItId).flatMap {
+              case Some(DbUpdateSucceeded) =>
+                for {
+                  _ <- auditService.sendCreateRelationshipAuditEvent
+                  _ <- endPartialAuth(arn, partialAuth, mNino, mtdItId)
+                  _ <- itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+                         partialAuth,
+                         arn.value,
+                         Some(mtdItId.value),
+                         mNino.getOrElse(throw new Exception("nino missing")).value
+                       )
+                } yield AltItsaCreateRelationshipSuccess(partialAuth)
+              case _ => Future.successful(AltItsaNotFoundOrFailed)
+            }
+          else Future.successful(NotFound)
+        )
+
+      createRelResult <- if (isEligibleForCopyAcross(createFromPartialAuthRes, mService, mPartialAuth))
+                           checkCesaAndCopy(arn, mtdItId, mNino)
+                         else Future.successful(createFromPartialAuthRes)
     } yield createRelResult
   }
+
+  private def isEligibleForCopyAcross(
+    createFromPartialAuthRes: CheckAndCopyResult,
+    mService: Option[String],
+    mPartialAuth: Option[String]
+  ): Boolean =
+    List(AltItsaNotFoundOrFailed, NotFound).contains(createFromPartialAuthRes) && !mService.contains(
+      HMRCMTDITSUPP
+    ) && mPartialAuth.isEmpty
 
   private def findOrCreateRelationshipCopyRecordAndCopy(
     references: Set[RelationshipReference],

@@ -34,7 +34,7 @@ import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
-case class CurrentUser(credentials: Credentials, affinityGroup: Option[AffinityGroup])
+case class CurrentUser(credentials: Option[Credentials], affinityGroup: Option[AffinityGroup])
 
 trait AuthActions extends AuthorisedFunctions with Logging {
   me: Results =>
@@ -56,7 +56,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
             creds
         }
         .map { creds =>
-          body(CurrentUser(creds, affinity))
+          body(CurrentUser(Option(creds), affinity))
         }
         .getOrElse(Future successful NoPermissionToPerformOperation)
     }
@@ -74,7 +74,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
             creds
         }
         .map { creds =>
-          body(CurrentUser(creds, affinity))
+          body(CurrentUser(Option(creds), affinity))
         }
         .getOrElse(Future successful NoPermissionToPerformOperation)
     }

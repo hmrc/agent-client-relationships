@@ -17,30 +17,30 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
-import play.api.{ConfigLoader, Configuration}
 import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import play.api.{ConfigLoader, Configuration}
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship, RegistrationRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar}
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar, UnitSpec}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -95,6 +95,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val aucdConnector = resettingMock[AgentUserClientDetailsConnector]
   val partialAuthRepository = resettingMock[PartialAuthRepository]
   val invitationsRepository = resettingMock[InvitationsRepository]
+  val itsaDeauthAndCleanupService = resettingMock[ItsaDeauthAndCleanupService]
 
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
@@ -124,6 +125,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         adminUserExistsForArn()
         relationshipWillBeCreated(mtdItEnrolmentKey)
         metricsStub()
+        sendCreateRelationshipAuditEvent()
+        deleteSameAgentOtherItsaService()
 
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
@@ -148,6 +151,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           ),
           partialAuthRepository,
           invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
           metrics
         )
@@ -190,6 +194,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -243,6 +248,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -279,6 +285,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             agentUserService.getAgentAdminUserFor(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
           )
             .thenReturn(Future.successful(agentUserForAsAgent))
+          sendCreateRelationshipAuditEvent()
+          deleteSameAgentOtherItsaService()
 
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
@@ -300,6 +308,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -354,6 +363,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -408,6 +418,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -456,6 +467,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -469,6 +481,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
           auditStub()
+          sendCreateRelationshipAuditEvent()
+          deleteSameAgentOtherItsaService()
 
           val check = relationshipsService
             .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
@@ -513,6 +527,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -531,6 +546,48 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           verifyEsRecordNotCreated()
           verifyEtmpRecordNotCreated()
         }
+    }
+
+    s"not create relationship if Partialauth is for $HMRCMTDITSUPP but the request is for $HMRCMTDIT" in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService = new CheckAndCopyRelationshipsService(
+        es,
+        ifConnector,
+        des,
+        mapping,
+        ugs,
+        aca,
+        relationshipCopyRepository,
+        new CreateRelationshipsService(
+          es,
+          relationshipConnector,
+          relationshipCopyRepository,
+          lockService,
+          deleteRecordRepository,
+          agentUserService,
+          aucdConnector,
+          metrics
+        ),
+        partialAuthRepository,
+        invitationsRepository,
+        itsaDeauthAndCleanupService,
+        auditService,
+        metrics
+      )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      ninoExists()
+      partialAuthExistsInAcr(HMRCMTDITSUPP)
+
+      val check = relationshipsService
+        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+      await(check) shouldBe NotFound
+
+      verifyEsRecordNotCreated()
+      verifyEtmpRecordNotCreated()
     }
 
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
@@ -556,6 +613,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -599,6 +657,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -650,6 +709,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           ),
           partialAuthRepository,
           invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
           metrics
         )
@@ -697,6 +757,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           ),
           partialAuthRepository,
           invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
           metrics
         )
@@ -746,6 +807,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           ),
           partialAuthRepository,
           invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
           metrics
         )
@@ -794,6 +856,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -810,6 +873,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       partialAuthStatusUpdatedToAcceptedInACR(HMRCMTDIT)
       metricsStub()
       auditStub()
+      sendCreateRelationshipAuditEvent()
+      deleteSameAgentOtherItsaService()
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
@@ -839,6 +904,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -854,6 +920,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       partialAuthStatusUpdatedToAcceptedInACR(HMRCMTDITSUPP)
       metricsStub()
       auditStub()
+      sendCreateRelationshipAuditEvent()
+      deleteSameAgentOtherItsaService()
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(ec, hc, request, auditData)
@@ -883,6 +951,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -898,6 +967,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       partialAuthStatusUpdatedToAcceptedInACA(HMRCMTDIT)
       metricsStub()
       auditStub()
+      sendCreateRelationshipAuditEvent()
+      deleteSameAgentOtherItsaService()
 
       val check = relationshipsService
         .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
@@ -931,6 +1002,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           ),
           partialAuthRepository,
           invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
           metrics
         )
@@ -984,6 +1056,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -1037,6 +1110,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -1078,6 +1152,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -1130,6 +1205,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -1184,6 +1260,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -1238,6 +1315,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -1285,6 +1363,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -1341,6 +1420,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             ),
             partialAuthRepository,
             invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
             metrics
           )
@@ -1383,6 +1463,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -1423,6 +1504,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -1472,6 +1554,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           ),
           partialAuthRepository,
           invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
           metrics
         )
@@ -1518,6 +1601,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -1557,6 +1641,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         ),
         partialAuthRepository,
         invitationsRepository,
+        itsaDeauthAndCleanupService,
         auditService,
         metrics
       )
@@ -1614,6 +1699,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               ),
               partialAuthRepository,
               invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
               metrics
             )(appConfig)
@@ -1760,6 +1846,25 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         .sendCheckESAuditEvent(any[HeaderCarrier], any[Request[Any]], any[AuditData], any[ExecutionContext])
     )
       .thenReturn(Future.successful(()))
+
+  private def sendCreateRelationshipAuditEvent(): OngoingStubbing[Future[Unit]] =
+    when(
+      auditService
+        .sendCreateRelationshipAuditEvent(any[HeaderCarrier], any[Request[Any]], any[AuditData], any[ExecutionContext])
+    )
+      .thenReturn(Future.successful(()))
+
+  private def deleteSameAgentOtherItsaService(): OngoingStubbing[Future[Boolean]] =
+    when(
+      itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+        any[String],
+        eqs(arn.value),
+        eqs(Some(mtdItId.value)),
+        eqs(nino.value),
+        any[Instant]
+      )(any[HeaderCarrier], any[CurrentUser], any[Request[_]])
+    )
+      .thenReturn(Future.successful(true))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
     verify(relationshipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))

@@ -104,9 +104,9 @@ trait BaseControllerISpec
         "agent.cache.enabled"                                   -> true,
         "agent.trackPage.cache.expires"                         -> "1 millis",
         "agent.trackPage.cache.enabled"                         -> true,
-        "alt-itsa.enabled"                                      -> true,
         "mongodb.uri"                                           -> mongoUri,
-        "internal-auth.token"                                   -> "internalAuthToken"
+        "internal-auth.token"                                   -> "internalAuthToken",
+        "hip.enabled"                                           -> true
       )
       .overrides(moduleWithOverrides)
       .configure(additionalConfig)

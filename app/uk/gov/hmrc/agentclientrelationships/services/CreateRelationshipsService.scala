@@ -219,7 +219,7 @@ class CreateRelationshipsService @Inject() (
                       case Some(removedArn) =>
                         deleteRecordRepository
                           .remove(removedArn, enrolmentKey)
-                          .map(_ > 0)
+                          .map(_ > 0) // TODO send audit event for terminating relationship
                           .recoverWith { case NonFatal(ex) =>
                             logger.warn(
                               s"Removing delete record from mongo failed for ${removedArn.value}, ${enrolmentKey.tag}",

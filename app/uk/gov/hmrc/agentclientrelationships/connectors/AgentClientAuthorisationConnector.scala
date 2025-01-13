@@ -65,7 +65,9 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
                 .value
                 .map(x => (x \ "service").as[String])
                 .toList)
-            case _ => List.empty
+            case _ =>
+              logger.warn(s"no partialAuth found in ACA")
+              List.empty
           }
         }
     }

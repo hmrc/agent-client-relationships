@@ -69,7 +69,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
       implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
+        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
       verifyESDeAllocateHasBeenPerformed
@@ -85,7 +85,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
       implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
+        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
       an[Exception] shouldBe thrownBy {
         await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
       }
@@ -107,7 +107,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
       implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
+        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
       an[Exception] shouldBe thrownBy {
         await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
       }
@@ -135,7 +135,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
       implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
+        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
       verifyESDeAllocateHasBeenPerformed
@@ -154,7 +154,7 @@ class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitS
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
       implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Credentials("GG-00001", "GovernmentGateway"), affinityGroup = None)
+        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
       verifyESDeAllocateHasBeenPerformed
