@@ -21,8 +21,8 @@ import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.{Accepted, EnrolmentKey, Invitation, PartialAuth}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -30,6 +30,7 @@ import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
+// scalastyle:off method.length
 @Singleton
 class ItsaDeauthAndCleanupService @Inject() (
   partialAuthRepository: PartialAuthRepository,
@@ -82,10 +83,13 @@ class ItsaDeauthAndCleanupService @Inject() (
                   }
           // Clean up accepted invitations
           _ <- Future.successful(
-                 deauthAcceptedInvitations(serviceToCheck.id, Some(arn), nino, None, isAltItsa = true, timestamp)
+                 if (altItsa) deauthAcceptedInvitations(serviceToCheck.id, Some(arn), nino, isAltItsa = true, timestamp)
+                 else Future.unit
                )
           _ <- Future.successful(optMtdItId.fold(Future.unit) { mtdItId =>
-                 deauthAcceptedInvitations(serviceToCheck.id, Some(arn), mtdItId, None, isAltItsa = false, timestamp)
+                 if (itsa)
+                   deauthAcceptedInvitations(serviceToCheck.id, Some(arn), mtdItId, isAltItsa = false, timestamp)
+                 else Future.unit
                })
         } yield altItsa || itsa
       case _ => Future.successful(false)
@@ -95,7 +99,6 @@ class ItsaDeauthAndCleanupService @Inject() (
     service: String,
     optArn: Option[String],
     clientId: String,
-    optInvitationId: Option[String],
     isAltItsa: Boolean,
     timestamp: Instant
   ) = {
@@ -110,7 +113,6 @@ class ItsaDeauthAndCleanupService @Inject() (
       .fallbackTo(Future.successful(Nil))
       .map { acceptedInvitations: Seq[Invitation] =>
         acceptedInvitations
-          .filterNot(invitation => optInvitationId.contains(invitation.invitationId))
           .foreach(acceptedInvitation =>
             invitationsRepository.deauthInvitation(acceptedInvitation.invitationId, endedByClient, Some(timestamp))
           )

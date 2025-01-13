@@ -211,8 +211,7 @@ class EnrolmentStoreProxyConnector @Inject() (http: HttpClient)(implicit
 
   // ES19 - Update an enrolment's friendly name
   def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    hc: HeaderCarrier
   ): Future[Unit] = {
     val url = new URL(
       espBaseUrl,

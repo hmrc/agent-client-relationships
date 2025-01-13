@@ -27,10 +27,11 @@ import java.net.URLEncoder
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) extends Logging {
+class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector)(implicit
+  executionContext: ExecutionContext
+) extends Logging {
 
   def updateFriendlyName(invitation: Invitation, enrolment: EnrolmentKey)(implicit
-    ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Unit] =
     invitation.service match {
@@ -40,7 +41,6 @@ class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStor
     }
 
   private def doUpdateFriendlyName(invitation: Invitation, enrolment: EnrolmentKey)(implicit
-    ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Unit] = {
     val clientName: String = URLEncoder.encode(invitation.clientName, "UTF-8")

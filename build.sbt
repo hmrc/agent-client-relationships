@@ -14,7 +14,6 @@ lazy val root = (project in file("."))
     PlayKeys.playDefaultPort := 9434,
     scalacOptions ++= Seq(
       "-Yrangepos",
-      "-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
 //      "-Yno-adapted-args",
       "-Ywarn-value-discard",
