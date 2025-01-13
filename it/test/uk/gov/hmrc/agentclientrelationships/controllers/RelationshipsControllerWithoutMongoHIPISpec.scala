@@ -24,27 +24,16 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-import javax.inject.Inject
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
-    extends MongoRelationshipCopyRecordRepository(moduleComponent) {
-  override def create(record: RelationshipCopyRecord): Future[Int] =
-    Future.failed(new Exception("Could not connect the mongo db."))
-}
-
-class RelationshipsControllerWithoutMongoISpec
+class RelationshipsControllerWithoutMongoHIPISpec
     extends UnitSpec
     with MongoSupport
     with GuiceOneServerPerSuite
@@ -52,7 +41,7 @@ class RelationshipsControllerWithoutMongoISpec
     with RelationshipStubs
     with DesStubs
     with IFStubs
-    with IFAgentClientRelationshipStub
+    with HIPAgentClientRelationshipStub
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
@@ -81,7 +70,7 @@ class RelationshipsControllerWithoutMongoISpec
         "agent.cache.expires"                                   -> "1 millis",
         "agent.cache.enabled"                                   -> true,
         "mongodb.uri"                                           -> mongoUri,
-        "hip.enabled"                                           -> false
+        "hip.enabled"                                           -> true
       )
       .overrides(new AbstractModule {
         override def configure(): Unit = {

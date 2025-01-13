@@ -33,7 +33,7 @@ import uk.gov.hmrc.domain.Nino
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
-class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with ClientDetailsStub {
+class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub {
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -154,6 +154,25 @@ class ClientDetailsControllerISpec extends RelationshipsBaseControllerISpec with
             "knownFactType"              -> "PostalCode",
             "hasPendingInvitation"       -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
+          )
+        }
+
+        "there is an existing relationship for an overseas client" in {
+          // we call using CBC uk service then we discover the client is overseas
+          val request = FakeRequest("GET", s"/agent-client-relationships/client/HMRC-CBC-ORG/details/${cbcId.value}")
+          setupCommonStubs(request)
+          givenCbcDetailsExist(isGBUser = false)
+          givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-CBC-NONUK-ORG", cbcId), Set("foo"))
+
+          val result = doGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                       -> "CFG Solutions",
+            "isOverseas"                 -> true,
+            "knownFacts"                 -> Json.arr("test@email.com", "test2@email.com"),
+            "knownFactType"              -> "Email",
+            "hasPendingInvitation"       -> false,
+            "hasExistingRelationshipFor" -> "HMRC-CBC-NONUK-ORG"
           )
         }
 

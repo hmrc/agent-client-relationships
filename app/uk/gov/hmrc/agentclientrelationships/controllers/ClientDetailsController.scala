@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCCBCNONUKORG, HMRCCBCORG, HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
@@ -53,17 +53,38 @@ class ClientDetailsController @Inject() (
   private def existingRelationshipFound(results: Seq[Result]): Boolean =
     results.exists(result => result.header.status == 200)
 
+  private def mapOverseasRefinement(
+    clientDetailsResponse: Either[ClientDetailsFailureResponse, ClientDetailsResponse],
+    service: String
+  ): String =
+    clientDetailsResponse match {
+      case Right(details) if service == HMRCCBCORG && details.isOverseas.contains(true) => HMRCCBCNONUKORG
+      case _                                                                            => service
+    }
+
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
   def findClientDetails(service: String, clientId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
       for {
         clientDetailsResponse <- clientDetailsService.findClientDetails(service, clientId)
-        clientIdType = Service(service).supportedSuppliedClientIdType.enrolmentId
+        refinedService = mapOverseasRefinement(clientDetailsResponse, service)
+        clientIdType = Service(refinedService).supportedSuppliedClientIdType.enrolmentId
         pendingRelResponse <-
-          invitationsRepository.findAllForAgent(arn.value, Seq(service), Seq(clientId), isSuppliedClientId = true)
+          invitationsRepository.findAllForAgent(
+            arn.value,
+            Seq(refinedService),
+            Seq(clientId),
+            isSuppliedClientId = true
+          )
         existingRelResponseMain <-
-          relationshipsController.checkForRelationship(arn, service, clientIdType, clientId, None)(request)
+          relationshipsController.checkForRelationship(
+            arn,
+            refinedService,
+            clientIdType,
+            clientId,
+            None
+          )(request)
         existingRelResponseSupp <- if (multiAgentServices.contains(service))
                                      relationshipsController.checkForRelationship(
                                        arn,
@@ -82,7 +103,7 @@ class ClientDetailsController @Inject() (
           val pendingRelationship = pendingRelResponse.exists(_.status == Pending)
           val existingRelationship =
             (existingRelResponseMain.header.status, existingRelResponseSupp.header.status) match {
-              case (OK, _) => Some(service)
+              case (OK, _) => Some(mapOverseasRefinement(clientDetailsResponse, service))
               case (_, OK) => Some(multiAgentServices(service))
               case _       => additionalInvitations
             }

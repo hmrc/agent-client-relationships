@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.controllers
-import uk.gov.hmrc.agentclientrelationships.stubs._
+package uk.gov.hmrc.agentclientrelationships.util
 
-trait RelationshipsBaseControllerISpec extends BaseControllerISpec with AgentClientRelationshipStub
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+
+object DateTimeHelper {
+  def formatISOInstantSeconds(now: Instant): String =
+    DateTimeFormatter.ISO_INSTANT.format(now.truncatedTo(ChronoUnit.SECONDS))
+}

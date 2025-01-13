@@ -31,24 +31,28 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class FindRelationshipsService @Inject() (
-  des: DesConnector,
   ifConnector: IFConnector,
+  relationshipConnector: RelationshipConnector,
   appConfig: AppConfig,
   val metrics: Metrics
 ) extends Monitoring
     with Logging {
 
   def getItsaRelationshipForClient(
-    nino: Nino
+    nino: Nino,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     for {
       mtdItId <- ifConnector.getMtdIdFor(nino)
       relationships <-
-        mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(ifConnector.getActiveClientRelationships(_))
+        mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
+          relationshipConnector.getActiveClientRelationships(_, service)
+        )
     } yield relationships
 
   def getActiveRelationshipsForClient(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
     // If the tax id type is among one of the supported ones...
     if (
@@ -56,7 +60,7 @@ class FindRelationshipsService @Inject() (
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     )
-      ifConnector.getActiveClientRelationships(taxIdentifier)
+      relationshipConnector.getActiveClientRelationships(taxIdentifier, service)
     else {
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(None)
@@ -65,7 +69,7 @@ class FindRelationshipsService @Inject() (
   def getInactiveRelationshipsForAgent(
     arn: Arn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
-    ifConnector.getInactiveRelationships(arn)
+    relationshipConnector.getInactiveRelationships(arn)
 
   def getActiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
@@ -74,7 +78,7 @@ class FindRelationshipsService @Inject() (
       .traverse(appConfig.supportedServicesWithoutPir) { service =>
         identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
           case Some(taxId) =>
-            getActiveRelationshipsForClient(taxId).map(_.map(r => (service, r.arn)))
+            getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
           case None => Future.successful(None)
         }
       }
@@ -86,14 +90,15 @@ class FindRelationshipsService @Inject() (
     Future
       .traverse(appConfig.supportedServicesWithoutPir) { service =>
         identifiers.get(service) match {
-          case Some(taxId) => getInactiveRelationshipsForClient(taxId)
+          case Some(taxId) => getInactiveRelationshipsForClient(taxId, service)
           case None        => Future.successful(Seq.empty)
         }
       }
       .map(_.flatten)
 
   def getInactiveRelationshipsForClient(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
     // if it is one of the tax ids that we support...
     if (
@@ -101,7 +106,7 @@ class FindRelationshipsService @Inject() (
         _.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId
       )
     ) {
-      ifConnector.getInactiveClientRelationships(taxIdentifier)
+      relationshipConnector.getInactiveClientRelationships(taxIdentifier, service)
     } else { // otherwise...
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(Seq.empty)

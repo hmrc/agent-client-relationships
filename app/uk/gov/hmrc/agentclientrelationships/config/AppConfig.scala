@@ -69,6 +69,10 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val ifAPI1495Token = getConfigString("if.authorization-api1495-token")
   val ifAPI2143Token = getConfigString("if.authorization-api2143-token")
 
+  val hipPlatformBaseUrl = servicesConfig.baseUrl("hip")
+  val hipAuthToken = getConfigString("hip.authorization-token")
+  val hipEnabled = servicesConfig.getBoolean("hip.enabled")
+
   val eisBaseUrl = servicesConfig.baseUrl("eis")
   val eisEnvironment = getConfigString("eis.environment")
   val eisAuthToken = getConfigString("eis.authorization-token")

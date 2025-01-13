@@ -40,22 +40,73 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCacheProvider, val ec: ExecutionContext)(
-  implicit
+class IFConnector @Inject() (val httpClient: HttpClient, val ec: ExecutionContext)(implicit
   val metrics: Metrics,
   val appConfig: AppConfig
-) extends HttpAPIMonitor
+) extends IFConnectorCommon
+    with HttpAPIMonitor
+    with Logging {
+
+  private val ifBaseUrl = appConfig.ifPlatformBaseUrl
+
+  private val ifAPI1171Token = appConfig.ifAPI1171Token
+  private val ifEnv = appConfig.ifEnvironment
+
+  /*
+  API#1171 Get Business Details (for ITSA customers)
+  https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
+          None
+      }
+    }
+  }
+
+  /*
+    API#1171 Get Business Details (for ITSA customers)
+    https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
+          None
+      }
+    }
+  }
+
+}
+
+class IFRelationshipConnector @Inject() (
+  val httpClient: HttpClient,
+  agentCacheProvider: AgentCacheProvider,
+  val ec: ExecutionContext
+)(implicit
+  val metrics: Metrics,
+  val appConfig: AppConfig
+) extends IFConnectorCommon
+    with RelationshipConnector
+    with HttpAPIMonitor
     with Logging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 
   private val ifAuthToken = appConfig.ifAuthToken
-  private val ifAPI1171Token = appConfig.ifAPI1171Token
   private val ifEnv = appConfig.ifEnvironment
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
-
-  private val Environment = "Environment"
-  private val CorrelationId = "CorrelationId"
 
   def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
     case None    => true
@@ -70,16 +121,16 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
       )
   }
 
-  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {
+  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier, authProfile: String): URL = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case Utr(_) =>
         new URL(
@@ -91,11 +142,11 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
         )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
         )
       case CbcId(_) =>
         new URL(
@@ -112,9 +163,12 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
 
   // IF API #1168
   def getActiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
-    val url = getActiveClientRelationshipsUrl(taxIdentifier)
+
+    val authProfile = getAuthProfile(service.id)
+    val url = getActiveClientRelationshipsUrl(taxIdentifier, authProfile)
     getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
         case Status.OK =>
@@ -131,11 +185,13 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
 
   // IF API #1168
   def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
 
-    val url = inactiveClientRelationshipIFUrl(taxIdentifier, encodedClientId)
+    val authProfile = getAuthProfile(service.id)
+    val url = inactiveClientRelationshipIFUrl(taxIdentifier, encodedClientId, authProfile)
 
     getWithIFHeaders("GetInactiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
@@ -223,54 +279,26 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
     }
   }
 
-  /*
-  API#1171 Get Business Details (for ITSA customers)
-  https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
-   * */
-  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
-
-    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
-      result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
-        case NOT_FOUND => None
-        case other =>
-          logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
-  /*
-    API#1171 Get Business Details (for ITSA customers)
-    https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
-   * */
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
-
-    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
-      result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
-        case NOT_FOUND => None
-        case other =>
-          logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
-  private def inactiveClientRelationshipIFUrl(taxIdentifier: TaxIdentifier, encodedClientId: String) = {
+  private def inactiveClientRelationshipIFUrl(
+    taxIdentifier: TaxIdentifier,
+    encodedClientId: String,
+    authProfile: String
+  ) = {
     val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
     val from = LocalDate.parse(fromDateString).toString
     val now = LocalDate.now().toString
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case Utr(_) =>
         new URL(
@@ -282,11 +310,15 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
         )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now&relationship=ZA01&auth-profile=ALL00001"
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
+            taxIdentifier
+          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
         )
       case CbcId(_) =>
         new URL(
@@ -299,63 +331,6 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
       case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 
     }
-  }
-
-  private def isInternalHost(url: URL): Boolean =
-    appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
-  private def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[HttpResponse] = {
-
-    val isInternal = isInternalHost(url)
-
-    monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env, isInternal))(
-        implicitly[HttpReads[HttpResponse]],
-        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
-        ec
-      )
-    }
-  }
-
-  private def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[HttpResponse] = {
-
-    val isInternal = isInternalHost(url)
-
-    monitor(s"ConsumedAPI-IF-$apiName-POST") {
-      httpClient.POST(url.toString, body, ifHeaders(authToken, env, isInternal))(
-        implicitly[Writes[JsValue]],
-        implicitly[HttpReads[HttpResponse]],
-        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
-        ec
-      )
-    }
-  }
-
-  /*
-   * If the service being called is external (e.g. DES/IF in QA or Prod):
-   * headers from HeaderCarrier are removed (except user-agent header).
-   * Therefore, required headers must be explicitly set.
-   * See https://github.com/hmrc/http-verbs?tab=readme-ov-file#propagation-of-headers
-   * */
-  def ifHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
-    hc: HeaderCarrier
-  ): Seq[(String, String)] = {
-
-    val additionalHeaders =
-      if (isInternalHost) Seq.empty
-      else
-        Seq(
-          HeaderNames.authorisation -> s"Bearer $authToken",
-          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
-        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
-    val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
-    commonHeaders ++ additionalHeaders
   }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
@@ -401,13 +376,14 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
      }""")
         .as[JsObject]
     )
+  private def getAuthProfile(service: String): String = service match {
+    case HMRCMTDITSUPP => "ITSAS001"
+    case _             => "ALL00001"
+  }
 
   private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject = (enrolmentKey: EnrolmentKey) => { request =>
     val clientId = enrolmentKey.oneTaxIdentifier()
-    val authProfileForService = enrolmentKey.service match {
-      case HMRCMTDITSUPP => "ALL00002"
-      case _             => "ALL00001"
-    }
+    val authProfileForService = getAuthProfile(enrolmentKey.service)
 
     (request \ "regime").asOpt[String] match {
       case Some("VATC") =>
@@ -451,4 +427,73 @@ class IFConnector @Inject() (httpClient: HttpClient, agentCacheProvider: AgentCa
   private val idType = "idType"
   private val authProfile = "authProfile"
   private val relationshipType = "relationshipType"
+}
+
+trait IFConnectorCommon extends HttpAPIMonitor {
+
+  val httpClient: HttpClient
+  val ec: ExecutionContext
+  val metrics: Metrics
+  val appConfig: AppConfig
+
+  private val Environment = "Environment"
+  private val CorrelationId = "CorrelationId"
+
+  private def isInternalHost(url: URL): Boolean =
+    appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+
+  private[connectors] def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] = {
+
+    val isInternal = isInternalHost(url)
+
+    monitor(s"ConsumedAPI-IF-$apiName-GET") {
+      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env, isInternal))(
+        implicitly[HttpReads[HttpResponse]],
+        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
+        ec
+      )
+    }
+  }
+
+  private[connectors] def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
+    implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] = {
+
+    val isInternal = isInternalHost(url)
+
+    monitor(s"ConsumedAPI-IF-$apiName-POST") {
+      httpClient.POST(url.toString, body, ifHeaders(authToken, env, isInternal))(
+        implicitly[Writes[JsValue]],
+        implicitly[HttpReads[HttpResponse]],
+        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
+        ec
+      )
+    }
+  }
+
+  /*
+   * If the service being called is external (e.g. DES/IF in QA or Prod):
+   * headers from HeaderCarrier are removed (except user-agent header).
+   * Therefore, required headers must be explicitly set.
+   * See https://github.com/hmrc/http-verbs?tab=readme-ov-file#propagation-of-headers
+   * */
+  def ifHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
+    hc: HeaderCarrier
+  ): Seq[(String, String)] = {
+
+    val additionalHeaders =
+      if (isInternalHost) Seq.empty
+      else
+        Seq(
+          HeaderNames.authorisation -> s"Bearer $authToken",
+          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
+        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
+    val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
+    commonHeaders ++ additionalHeaders
+  }
 }

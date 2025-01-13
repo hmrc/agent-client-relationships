@@ -46,6 +46,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
     with RelationshipStubs
     with DataStreamStub
     with IFStubs
+    with IFAgentClientRelationshipStub
     with ACAStubs
     with AUCDStubs
     with BeforeAndAfterEach {
@@ -112,7 +113,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
 
     "attempt to recover if a DeleteRecord exists and it requires only ETMP (because ES had already succeeded)" in {
 
-      givenAgentCanBeDeallocatedInIF(mtdItId, arn)
+      givenAgentCanBeDeallocated(mtdItId, arn)
       givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
 
@@ -141,7 +142,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
       givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
       givenGroupInfo("foo", "bar")
       givenAdminUser("foo", "userId")
-      givenAgentCanBeDeallocatedInIF(mtdItId, arn)
+      givenAgentCanBeDeallocated(mtdItId, arn)
       givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
       givenCacheRefresh(arn)
@@ -171,7 +172,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
       givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
       givenGroupInfo("foo", "bar")
       givenAdminUser("foo", "userId")
-      givenAgentCanBeDeallocatedInIF(mtdItId, arn)
+      givenAgentCanBeDeallocated(mtdItId, arn)
       givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
       givenCacheRefresh(arn)
@@ -209,7 +210,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
           syncToETMPStatus = Some(SyncStatus.Failed)
         )
 
-        givenAgentCanBeDeallocatedInIF(iMtdItId, arn)
+        givenAgentCanBeDeallocated(iMtdItId, arn)
         givenSetRelationshipEnded(iMtdItId, arn)
         givenAuditConnector()
         givenCacheRefresh(arn)
@@ -249,7 +250,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
         if (index == 0)
           givenEnrolmentDeallocationFailsWith(503)("foo", deleteRecord.enrolmentKey.get)
         else {
-          givenAgentCanBeDeallocatedInIF(iMtdItId, arn)
+          givenAgentCanBeDeallocated(iMtdItId, arn)
           givenSetRelationshipEnded(iMtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, iMtdItId))
           givenCacheRefresh(arn)

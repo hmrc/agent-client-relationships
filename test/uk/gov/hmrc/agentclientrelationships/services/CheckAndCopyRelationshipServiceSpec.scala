@@ -80,6 +80,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val es = resettingMock[EnrolmentStoreProxyConnector]
   val des = resettingMock[DesConnector]
   val ifConnector = resettingMock[IFConnector]
+  val relationshipConnector = resettingMock[RelationshipConnector]
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]
   val aca = resettingMock[AgentClientAuthorisationConnector]
@@ -137,7 +138,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            ifConnector,
+            relationshipConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
@@ -179,7 +180,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -232,7 +233,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -289,7 +290,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -343,7 +344,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -397,7 +398,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -445,7 +446,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -502,7 +503,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -545,7 +546,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -588,7 +589,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -639,7 +640,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            ifConnector,
+            relationshipConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
@@ -686,7 +687,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            ifConnector,
+            relationshipConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
@@ -735,7 +736,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            ifConnector,
+            relationshipConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
@@ -783,7 +784,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -828,7 +829,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -872,7 +873,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -920,7 +921,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            ifConnector,
+            relationshipConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
@@ -973,7 +974,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -1026,7 +1027,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -1067,7 +1068,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -1119,7 +1120,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -1173,7 +1174,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -1227,7 +1228,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -1274,7 +1275,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -1330,7 +1331,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              ifConnector,
+              relationshipConnector,
               relationshipCopyRepository,
               lockService,
               deleteRecordRepository,
@@ -1372,7 +1373,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -1412,7 +1413,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -1461,7 +1462,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            ifConnector,
+            relationshipConnector,
             relationshipCopyRepository,
             lockService,
             deleteRecordRepository,
@@ -1507,7 +1508,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -1546,7 +1547,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          ifConnector,
+          relationshipConnector,
           relationshipCopyRepository,
           lockService,
           deleteRecordRepository,
@@ -1603,7 +1604,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               relationshipCopyRepository,
               new CreateRelationshipsService(
                 es,
-                ifConnector,
+                relationshipConnector,
                 relationshipCopyRepository,
                 lockService,
                 deleteRecordRepository,
@@ -1694,6 +1695,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   }
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
+    when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
       .thenReturn(Future successful Seq(saAgentRef))
@@ -1736,7 +1738,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(ifConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(eqs(hc), eqs(ec)))
+    when(relationshipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
@@ -1760,16 +1762,16 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future.successful(()))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(relationshipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(relationshipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(relationshipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(ifConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(relationshipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEsRecordCreated(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(

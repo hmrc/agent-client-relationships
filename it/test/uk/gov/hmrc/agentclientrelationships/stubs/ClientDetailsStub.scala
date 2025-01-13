@@ -259,7 +259,7 @@ trait ClientDetailsStub {
         .willReturn(aResponse().withStatus(status))
     )
 
-  def givenCbcDetailsExist(): StubMapping =
+  def givenCbcDetailsExist(isGBUser: Boolean = true): StubMapping =
     stubFor(
       post(urlEqualTo("/dac6/dct50d/v1"))
         .willReturn(
@@ -267,7 +267,7 @@ trait ClientDetailsStub {
             .withBody(s"""{
                          |  "displaySubscriptionForCBCResponse": {
                          |    "responseDetail": {
-                         |      "isGBUser": true,
+                         |      "isGBUser": $isGBUser,
                          |      "tradingName": "CFG Solutions",
                          |      "primaryContact": [
                          |        {

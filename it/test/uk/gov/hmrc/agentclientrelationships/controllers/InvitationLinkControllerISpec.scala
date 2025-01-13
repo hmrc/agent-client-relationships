@@ -32,7 +32,7 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
-class InvitationLinkControllerISpec extends RelationshipsBaseControllerISpec with TestData {
+class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
 
   val uid = "TestUID"
   val existingAgentUid = "ExitingAgentUid"

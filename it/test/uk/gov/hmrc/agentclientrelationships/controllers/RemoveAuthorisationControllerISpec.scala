@@ -22,22 +22,29 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsRepository, PartialAuthRepository, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{CbcId, ClientIdentifier, Identifier, MtdItId, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
 import java.time.{Instant, LocalDateTime}
 import scala.concurrent.ExecutionContext
 
-class RemoveAuthorisationControllerISpec
+class RemoveAuthorisationControllerIFISpec
+    extends RemoveAuthorisationControllerISpec
+    with RelationshipsBaseIFControllerISpec
+class RemoveAuthorisationControllerHIPISpec
+    extends RemoveAuthorisationControllerISpec
+    with RelationshipsBaseHIPControllerISpec
+
+trait RemoveAuthorisationControllerISpec
     extends RelationshipsBaseControllerISpec
     with ClientDetailsStub
     with AfiRelationshipStub
@@ -133,7 +140,7 @@ class RemoveAuthorisationControllerISpec
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
-        givenAgentCanBeDeallocatedInIF(taxIdentifier, arn)
+        givenAgentCanBeDeallocated(taxIdentifier, arn)
         givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
         givenAdminUser("foo", "any")
         givenCacheRefresh(arn)
