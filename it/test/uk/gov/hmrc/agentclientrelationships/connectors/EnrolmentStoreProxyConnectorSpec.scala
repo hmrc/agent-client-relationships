@@ -32,6 +32,7 @@ import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.http
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 
 import scala.concurrent.ExecutionContext
 
@@ -146,6 +147,24 @@ class EnrolmentStoreProxyConnectorSpec(implicit val ec: ExecutionContext)
       givenAuditConnector()
       givenEnrolmentNotExistsForGroupId("bar")
       await(connector.getAgentReferenceNumberFor("bar")) shouldBe None
+    }
+
+    "return a success when updating friendly name" in {
+      val testGroupId = "testGroupId"
+      val testEnrolment = EnrolmentKey(MtdIt, MtdItId("ABCDEF123456789")).toString
+      givenAuditConnector()
+      givenUpdateEnrolmentFriendlyNameResponse(testGroupId, testEnrolment, NO_CONTENT)
+      await(connector.updateEnrolmentFriendlyName(testGroupId, testEnrolment, "testName"))
+    }
+
+    "throw an error when updating friendly name returns an unexpected status" in {
+      val testGroupId = "testGroupId"
+      val testEnrolment = EnrolmentKey(MtdIt, MtdItId("ABCDEF123456789")).toString
+      givenAuditConnector()
+      givenUpdateEnrolmentFriendlyNameResponse(testGroupId, testEnrolment, INTERNAL_SERVER_ERROR)
+      intercept[UpstreamErrorResponse](
+        await(connector.updateEnrolmentFriendlyName(testGroupId, testEnrolment, "testName"))
+      )
     }
 
     "return some utr for cbcId (known fact)" in {

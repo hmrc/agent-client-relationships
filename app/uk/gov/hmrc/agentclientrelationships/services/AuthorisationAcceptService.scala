@@ -25,8 +25,8 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnec
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, MtdItIdType, Service}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -37,11 +37,9 @@ import scala.concurrent.{ExecutionContext, Future}
 // scalastyle:off method.length
 @Singleton
 class AuthorisationAcceptService @Inject() (
-  appConfig: AppConfig,
-  relationshipsService: CreateRelationshipsService,
-  checkRelationshipsOrchestratorService: CheckRelationshipsOrchestratorService,
+  createRelationshipsService: CreateRelationshipsService,
   emailService: EmailService,
-  deleteRelationshipsService: DeleteRelationshipsServiceWithAcr,
+  itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   agentFiRelationshipConnector: AgentFiRelationshipConnector
@@ -64,7 +62,7 @@ class AuthorisationAcceptService @Inject() (
     for {
       // Remove existing main/supp relationship for arn when changing between main/supp
       _ <- if (isItsa)
-             deleteSameAgentRelationshipForItsa(
+             itsaDeauthAndCleanupService.deleteSameAgentRelationship(
                invitation.service,
                invitation.arn,
                if (isAltItsa) None else Some(invitation.clientId),
@@ -107,53 +105,6 @@ class AuthorisationAcceptService @Inject() (
     } yield updated
   }
 
-  def deleteSameAgentRelationshipForItsa(
-    service: String,
-    arn: String,
-    optMtdItId: Option[String],
-    nino: String,
-    timestamp: Instant = Instant.now()
-  )(implicit
-    hc: HeaderCarrier,
-    currentUser: CurrentUser,
-    request: Request[_]
-  ): Future[Boolean] =
-    service match {
-      case `HMRCMTDIT` | `HMRCMTDITSUPP` =>
-        val serviceToCheck = Service.forId(if (service == HMRCMTDIT) HMRCMTDITSUPP else HMRCMTDIT)
-        for {
-          // Attempt to remove existing alt itsa partial auth
-          altItsa <- partialAuthRepository.deauthorise(serviceToCheck.id, Nino(nino), Arn(arn), timestamp)
-          // Attempt to remove existing itsa relationship
-          itsa <- optMtdItId.fold(Future.successful(false)) { mtdItId =>
-                    checkRelationshipsOrchestratorService
-                      .checkForRelationship(Arn(arn), serviceToCheck.id, MtdItIdType.enrolmentId, mtdItId, None)
-                      .flatMap {
-                        case CheckRelationshipFound =>
-                          deleteRelationshipsService
-                            .deleteRelationship(
-                              Arn(arn),
-                              EnrolmentKey(
-                                serviceToCheck,
-                                MtdItId(mtdItId)
-                              ),
-                              currentUser.affinityGroup
-                            )
-                            .map(_ => true)
-                        case _ => Future.successful(false)
-                      }
-                  }
-          // Clean up accepted invitations
-          _ <- Future.successful(
-                 deauthAcceptedInvitations(serviceToCheck.id, Some(arn), nino, None, isAltItsa = true, timestamp)
-               )
-          _ <- Future.successful(optMtdItId.fold(Future.unit) { mtdItId =>
-                 deauthAcceptedInvitations(serviceToCheck.id, Some(arn), mtdItId, None, isAltItsa = false, timestamp)
-               })
-        } yield altItsa || itsa
-      case _ => Future.successful(false)
-    }
-
   private def createRelationship(
     invitation: Invitation,
     enrolment: EnrolmentKey,
@@ -182,7 +133,7 @@ class AuthorisationAcceptService @Inject() (
         }
       case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
         deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
-          relationshipsService
+          createRelationshipsService
             .createRelationship(
               Arn(invitation.arn),
               enrolment,
@@ -200,7 +151,7 @@ class AuthorisationAcceptService @Inject() (
           LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
         )
       case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
-        relationshipsService
+        createRelationshipsService
           .createRelationship(
             Arn(invitation.arn),
             enrolment,
