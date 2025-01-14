@@ -102,19 +102,19 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   override def givenReturnsServerError(): StubMapping =
     stubFor(
-      any(urlMatching(s"/RESTAdapter/rosm/agent-relationship?.*"))
+      any(urlMatching(s"/etmp/RESTAdapter/rosm/agent-relationship?.*"))
         .willReturn(aResponse().withStatus(500))
     )
 
   override def givenReturnsServiceUnavailable(): StubMapping =
     stubFor(
-      any(urlMatching(s"/RESTAdapter/rosm/agent-relationship?.*"))
+      any(urlMatching(s"/etmp/RESTAdapter/rosm/agent-relationship?.*"))
         .willReturn(aResponse().withStatus(503))
     )
 
   override def givenAgentCanBeAllocated(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
-      post(urlEqualTo(s"/RESTAdapter/rosm/agent-relationship"))
+      post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
         .withRequestBody(containing(taxIdentifier.value))
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"0001\""))
@@ -127,7 +127,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   override def givenAgentCanNotBeAllocated(status: Int): StubMapping =
     stubFor(
-      post(urlEqualTo(s"/RESTAdapter/rosm/agent-relationship"))
+      post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
         .withRequestBody(containing("\"0001\""))
         .willReturn(
           aResponse()
@@ -138,7 +138,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   override def givenAgentCanBeDeallocated(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
-      post(urlEqualTo(s"/RESTAdapter/rosm/agent-relationship"))
+      post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
         .withRequestBody(containing(taxIdentifier.value))
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"0002\""))
@@ -151,7 +151,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   override def givenAgentHasNoActiveRelationship(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping =
     stubFor(
-      post(urlEqualTo(s"/RESTAdapter/rosm/agent-relationship"))
+      post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
         .withRequestBody(containing(taxIdentifier.value))
         .withRequestBody(containing(arn.value))
         .withRequestBody(containing("\"0002\""))
@@ -164,7 +164,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   override def givenAgentCanNotBeDeallocated(status: Int): StubMapping =
     stubFor(
-      post(urlEqualTo(s"/RESTAdapter/rosm/agent-relationship"))
+      post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
         .withRequestBody(containing("\"0002\""))
         .willReturn(
           aResponse()
@@ -515,21 +515,21 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
   private def url(taxIdentifier: TaxIdentifier, authProfile: String): String =
     taxIdentifier match {
       case MtdItId(mtdItId) =>
-        s"/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=true&regime=ITSA&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=true&regime=ITSA&relationshipType=ZA01&authProfile=$authProfile"
       case Vrn(vrn) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=true&regime=VATC&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=true&regime=VATC&relationshipType=ZA01&authProfile=$authProfile"
       case Utr(utr) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=true&regime=TRS"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=true&regime=TRS"
       case Urn(urn) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=true&regime=TRS"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=true&regime=TRS"
       case CgtRef(ref) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CGT&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CGT&relationshipType=ZA01&authProfile=$authProfile"
       case PptRef(ref) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PPT&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PPT&relationshipType=ZA01&authProfile=$authProfile"
       case CbcId(ref) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CBC"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CBC"
       case PlrId(ref) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PLR"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PLR"
       case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
     }
 
@@ -628,25 +628,25 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
-  private def inactiveUrl(arn: Arn) = s"/RESTAdapter/rosm/agent-relationship?arn=${arn.value}" +
+  private def inactiveUrl(arn: Arn) = s"/etmp/RESTAdapter/rosm/agent-relationship?arn=${arn.value}" +
     s"&isAnAgent=true&activeOnly=false&regime=AGSV&dateFrom=${LocalDate.now().minusDays(30).toString}&dateTo=${LocalDate.now().toString}"
 
   private def inactiveUrlClient(taxIdentifier: TaxIdentifier, authProfile: String): String =
     taxIdentifier match {
       case MtdItId(mtdItId) =>
-        s"/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=false&regime=ITSA&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=false&regime=ITSA&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
       case Vrn(vrn) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=false&regime=VATC&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=false&regime=VATC&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
       case Utr(utr) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=false&regime=TRS&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=false&regime=TRS&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
       case Urn(urn) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=false&regime=TRS&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=false&regime=TRS&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
       case CgtRef(ref) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=CGT&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=CGT&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
       case PptRef(ref) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=PPT&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=PPT&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
       case PlrId(ref) =>
-        s"/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=PLR&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=PLR&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
       case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
     }
 

@@ -133,7 +133,7 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/RESTAdapter/rosm/agent-relationship"))
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
           .withHeader("Authorization", containing("Bearer token"))
           .withRequestBody(
             equalToJson(
@@ -158,7 +158,7 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/RESTAdapter/rosm/agent-relationship"))
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
           .withHeader("Authorization", containing("Bearer token"))
           .withRequestBody(
             equalToJson(
@@ -183,7 +183,7 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/RESTAdapter/rosm/agent-relationship"))
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
           .withRequestBody(
             equalToJson(
               s"""{
@@ -207,7 +207,7 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/RESTAdapter/rosm/agent-relationship"))
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
           .withRequestBody(
             equalToJson(
               s"""{
@@ -229,7 +229,7 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/RESTAdapter/rosm/agent-relationship"))
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
           .withRequestBody(
             equalToJson(
               s"""{
@@ -251,7 +251,7 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/RESTAdapter/rosm/agent-relationship"))
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
           .withRequestBody(
             equalToJson(
               s"""{
@@ -273,7 +273,7 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/RESTAdapter/rosm/agent-relationship"))
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
           .withRequestBody(
             equalToJson(
               s"""{
