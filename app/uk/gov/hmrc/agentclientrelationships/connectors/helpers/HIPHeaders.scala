@@ -34,8 +34,7 @@ class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig:
 
   def subscriptionHeaders(): Seq[(String, String)] =
     Seq(
-      // TODO WG - get keycloack token not from config
-      (HeaderNames.AUTHORIZATION, s"Bearer ${appConfig.hipAuthToken}"),
+      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
       (correlationIdHeader, randomUUIDGenerator.uuid),
       (xOriginatingSystemHeader, mdtp),
       (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),

@@ -134,7 +134,7 @@ class HipConnectorISpec
       verify(
         1,
         postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
-          .withHeader("Authorization", containing("Bearer token"))
+          .withHeader("Authorization", containing("Basic token"))
           .withRequestBody(
             equalToJson(
               s"""
@@ -159,7 +159,7 @@ class HipConnectorISpec
       verify(
         1,
         postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
-          .withHeader("Authorization", containing("Bearer token"))
+          .withHeader("Authorization", containing("Basic token"))
           .withRequestBody(
             equalToJson(
               s"""
