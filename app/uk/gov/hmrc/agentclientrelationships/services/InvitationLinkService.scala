@@ -39,6 +39,11 @@ class InvitationLinkService @Inject() (
 
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
 
+  def migrateAgentReferenceRecord(record: AgentReferenceRecord): Future[Unit] =
+    agentReferenceRepository
+      .create(record)
+      .map(_ => ())
+
   def validateLink(uid: String, normalizedAgentName: String)(implicit
     hc: HeaderCarrier
   ): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {

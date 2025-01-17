@@ -60,6 +60,13 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
 
   def agentReferenceRepo: MongoAgentReferenceRepository = new MongoAgentReferenceRepository(mongoComponent)
 
+  "migrate agent reference record" should {
+    "create a record in the agentReferenceRepository" in {
+      await(agentReferenceService.migrateAgentReferenceRecord(agentReferenceRecord))
+      await(agentReferenceRepo.findBy(uid)).get shouldBe agentReferenceRecord
+    }
+  }
+
   "validate invitation link" should {
 
     "return 200 status and valid JSON when agent reference and details are found and agent is not suspended " in {

@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.MongoWriteException
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ValidateInvitationRequest, ValidateInvitationResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReferenceRecord, ValidateInvitationRequest, ValidateInvitationResponse}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsService, InvitationLinkService, InvitationService}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
@@ -133,4 +134,22 @@ class InvitationLinkController @Inject() (
         }
       }
     }
+
+  def migrateRecord: Action[AnyContent] = Action.async { implicit request =>
+    val record = request.body.asJson.get.as[AgentReferenceRecord]
+    agentReferenceService
+      .migrateAgentReferenceRecord(record)
+      .map(_ => NoContent)
+      .recoverWith {
+        case e: MongoWriteException if e.getError.getCode.equals(11000) =>
+          logger.warn(
+            s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion"
+          )
+          Future(
+            NoContent
+          )
+        case other => Future.failed(other)
+      }
+  }
+
 }
