@@ -88,7 +88,7 @@ class ItsaDeauthAndCleanupServiceSpec
       "check for partial auth and relationships, remove partial auth and update old alt itsa invitation then return true" in {
         mockDeauthorisePartialAuth(MtdItSupp.id, testNino, testArn)(Future.successful(true))
         mockCheckForRelationshipAgencyLevel(testArn, itsaSuppEnrolment)(Future.successful((false, "groupId")))
-        mockFindAllBy(Some(testArn.value), Seq(MtdItSupp.id), Some(testNino.value), Some(PartialAuth))(
+        mockFindAllBy(Some(testArn.value), Seq(MtdItSupp.id), Seq(testNino.value), Some(PartialAuth))(
           Future.successful(Seq(oldAltItsaInvitation))
         )
         mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
@@ -110,7 +110,7 @@ class ItsaDeauthAndCleanupServiceSpec
             any[CurrentUser]
           )
         verify(mockInvitationsRepository, times(1))
-          .findAllBy(any[Option[String]], any[Seq[String]], any[Option[String]], any[Option[InvitationStatus]])
+          .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
         verify(mockInvitationsRepository, times(1))
           .deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
@@ -120,7 +120,7 @@ class ItsaDeauthAndCleanupServiceSpec
         mockDeauthorisePartialAuth(MtdItSupp.id, testNino, testArn)(Future.successful(false))
         mockCheckForRelationshipAgencyLevel(testArn, itsaSuppEnrolment)(Future.successful((true, "groupId")))
         mockDeleteRelationship(testArn, itsaSuppEnrolment, currentUser.affinityGroup)()
-        mockFindAllBy(Some(testArn.value), Seq(MtdItSupp.id), Some(testMtdItId.value), Some(Accepted))(
+        mockFindAllBy(Some(testArn.value), Seq(MtdItSupp.id), Seq(testMtdItId.value), Some(Accepted))(
           Future.successful(Seq(oldItsaInvitation))
         )
         mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
@@ -142,7 +142,7 @@ class ItsaDeauthAndCleanupServiceSpec
             any[CurrentUser]
           )
         verify(mockInvitationsRepository, times(1))
-          .findAllBy(any[Option[String]], any[Seq[String]], any[Option[String]], any[Option[InvitationStatus]])
+          .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
         verify(mockInvitationsRepository, times(1))
           .deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
@@ -166,7 +166,7 @@ class ItsaDeauthAndCleanupServiceSpec
             any[CurrentUser]
           )
         verify(mockInvitationsRepository, times(0))
-          .findAllBy(any[Option[String]], any[Seq[String]], any[Option[String]], any[Option[InvitationStatus]])
+          .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
         verify(mockInvitationsRepository, times(0))
           .deauthInvitation(any[String], any[String], any[Option[Instant]])
       }

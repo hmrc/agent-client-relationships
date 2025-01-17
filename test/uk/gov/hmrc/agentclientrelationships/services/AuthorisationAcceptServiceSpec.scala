@@ -124,7 +124,7 @@ class AuthorisationAcceptServiceSpec
           mockUpdateStatus(vatInvitation.invitationId, Accepted)(
             Future.successful(Some(vatInvitation.copy(status = Accepted)))
           )
-          mockFindAllBy(None, Seq(vatEnrolment.service), Some(vatInvitation.clientId), Some(Accepted))(
+          mockFindAllBy(None, Seq(vatEnrolment.service), Seq(vatInvitation.clientId), Some(Accepted))(
             Future.successful(Seq(vatInvitation.copy(status = Accepted), oltVatInvitation))
           )
           mockDeauthInvitation(oltVatInvitation.invitationId, "Client")(
@@ -136,7 +136,7 @@ class AuthorisationAcceptServiceSpec
 
           // Verifying non blocking side effects actually happen
           verify(mockInvitationsRepository, times(1))
-            .findAllBy(any[Option[String]], any[Seq[String]], any[Option[String]], any[Option[InvitationStatus]])
+            .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
           verify(mockInvitationsRepository, times(1))
             .deauthInvitation(any[String], any[String], any[Option[Instant]])
           verify(mockEmailService, times(1))
@@ -152,7 +152,7 @@ class AuthorisationAcceptServiceSpec
           mockUpdateStatus(pirInvitation.invitationId, Accepted)(
             Future.successful(Some(pirInvitation.copy(status = Accepted)))
           )
-          mockFindAllBy(None, Seq(pirEnrolment.service), Some(pirInvitation.clientId), Some(Accepted))(
+          mockFindAllBy(None, Seq(pirEnrolment.service), Seq(pirInvitation.clientId), Some(Accepted))(
             Future.successful(Seq(pirInvitation.copy(status = Accepted), oldPirInvitation))
           )
           mockDeauthInvitation(oldPirInvitation.invitationId, "Client")(
@@ -164,7 +164,7 @@ class AuthorisationAcceptServiceSpec
 
           // Verifying non blocking side effects actually happen
           verify(mockInvitationsRepository, times(1))
-            .findAllBy(any[Option[String]], any[Seq[String]], any[Option[String]], any[Option[InvitationStatus]])
+            .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
           verify(mockInvitationsRepository, times(1))
             .deauthInvitation(any[String], any[String], any[Option[Instant]])
           verify(mockEmailService, times(1))
@@ -186,13 +186,13 @@ class AuthorisationAcceptServiceSpec
             mockUpdateStatus(itsaInvitation.invitationId, Accepted)(
               Future.successful(Some(itsaInvitation.copy(status = Accepted)))
             )
-            mockFindAllBy(None, Seq(itsaEnrolment.service), Some(itsaInvitation.clientId), Some(Accepted))(
+            mockFindAllBy(None, Seq(itsaEnrolment.service), Seq(itsaInvitation.clientId), Some(Accepted))(
               Future.successful(Seq(itsaInvitation.copy(status = Accepted), oldItsaInvitation))
             )
             mockDeauthInvitation(oldItsaInvitation.invitationId, "Client")(
               Future.successful(Some(oldItsaInvitation.copy(status = DeAuthorised)))
             )
-            mockFindAllBy(None, Seq(itsaEnrolment.service), Some(itsaInvitation.suppliedClientId), Some(PartialAuth))(
+            mockFindAllBy(None, Seq(itsaEnrolment.service), Seq(itsaInvitation.suppliedClientId), Some(PartialAuth))(
               Future.successful(Seq(oldAltItsaInvitation))
             )
             mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
@@ -206,7 +206,7 @@ class AuthorisationAcceptServiceSpec
 
             // Verifying non blocking side effects actually happen
             verify(mockInvitationsRepository, times(2))
-              .findAllBy(any[Option[String]], any[Seq[String]], any[Option[String]], any[Option[InvitationStatus]])
+              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
             verify(mockInvitationsRepository, times(2))
               .deauthInvitation(any[String], any[String], any[Option[Instant]])
             verify(mockEmailService, times(1))
@@ -254,7 +254,7 @@ class AuthorisationAcceptServiceSpec
             mockUpdateStatus(altItsaInvitation.invitationId, PartialAuth)(
               Future.successful(Some(altItsaInvitation.copy(status = PartialAuth)))
             )
-            mockFindAllBy(None, Seq(altItsaInvitation.service), Some(altItsaInvitation.clientId), Some(PartialAuth))(
+            mockFindAllBy(None, Seq(altItsaInvitation.service), Seq(altItsaInvitation.clientId), Some(PartialAuth))(
               Future.successful(Seq(altItsaInvitation.copy(status = PartialAuth), oldAltItsaInvitation))
             )
             mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
@@ -268,7 +268,7 @@ class AuthorisationAcceptServiceSpec
 
             // Verifying non blocking side effects actually happen
             verify(mockInvitationsRepository, times(1))
-              .findAllBy(any[Option[String]], any[Seq[String]], any[Option[String]], any[Option[InvitationStatus]])
+              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
             verify(mockInvitationsRepository, times(1))
               .deauthInvitation(any[String], any[String], any[Option[Instant]])
             verify(mockEmailService, times(1))

@@ -625,5 +625,15 @@ trait AuthStub {
       )
     )
 
+  def givenAuthorised(): StubMapping =
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(Json.obj().toString())
+        )
+    )
+
   case class Enrolment(serviceName: String, identifierName: String, identifierValue: String)
 }
