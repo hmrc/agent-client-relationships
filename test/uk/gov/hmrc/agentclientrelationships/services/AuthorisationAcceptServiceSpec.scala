@@ -135,12 +135,14 @@ class AuthorisationAcceptServiceSpec
           await(TestService.accept(vatInvitation, vatEnrolment)) shouldBe Some(vatInvitation.copy(status = Accepted))
 
           // Verifying non blocking side effects actually happen
-          verify(mockInvitationsRepository, times(1))
-            .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-          verify(mockInvitationsRepository, times(1))
-            .deauthInvitation(any[String], any[String], any[Option[Instant]])
-          verify(mockEmailService, times(1))
-            .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+          verifySideEffectsOccur { _ =>
+            verify(mockInvitationsRepository, times(1))
+              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+            verify(mockInvitationsRepository, times(1))
+              .deauthInvitation(any[String], any[String], any[Option[Instant]])
+            verify(mockEmailService, times(1))
+              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+          }
         }
       }
     }
@@ -163,12 +165,14 @@ class AuthorisationAcceptServiceSpec
           await(TestService.accept(pirInvitation, pirEnrolment)) shouldBe Some(pirInvitation.copy(status = Accepted))
 
           // Verifying non blocking side effects actually happen
-          verify(mockInvitationsRepository, times(1))
-            .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-          verify(mockInvitationsRepository, times(1))
-            .deauthInvitation(any[String], any[String], any[Option[Instant]])
-          verify(mockEmailService, times(1))
-            .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+          verifySideEffectsOccur { _ =>
+            verify(mockInvitationsRepository, times(1))
+              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+            verify(mockInvitationsRepository, times(1))
+              .deauthInvitation(any[String], any[String], any[Option[Instant]])
+            verify(mockEmailService, times(1))
+              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+          }
         }
       }
     }
@@ -205,12 +209,14 @@ class AuthorisationAcceptServiceSpec
             )
 
             // Verifying non blocking side effects actually happen
-            verify(mockInvitationsRepository, times(2))
-              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-            verify(mockInvitationsRepository, times(2))
-              .deauthInvitation(any[String], any[String], any[Option[Instant]])
-            verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            verifySideEffectsOccur { _ =>
+              verify(mockInvitationsRepository, times(2))
+                .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+              verify(mockInvitationsRepository, times(2))
+                .deauthInvitation(any[String], any[String], any[Option[Instant]])
+              verify(mockEmailService, times(1))
+                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            }
           }
         }
       }
@@ -234,8 +240,10 @@ class AuthorisationAcceptServiceSpec
             )
 
             // Verifying non blocking side effects actually happen
-            verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            verifySideEffectsOccur { _ =>
+              verify(mockEmailService, times(1))
+                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            }
           }
         }
       }
@@ -267,12 +275,14 @@ class AuthorisationAcceptServiceSpec
             )
 
             // Verifying non blocking side effects actually happen
-            verify(mockInvitationsRepository, times(1))
-              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-            verify(mockInvitationsRepository, times(1))
-              .deauthInvitation(any[String], any[String], any[Option[Instant]])
-            verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            verifySideEffectsOccur { _ =>
+              verify(mockInvitationsRepository, times(1))
+                .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+              verify(mockInvitationsRepository, times(1))
+                .deauthInvitation(any[String], any[String], any[Option[Instant]])
+              verify(mockEmailService, times(1))
+                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            }
           }
         }
       }
@@ -296,8 +306,10 @@ class AuthorisationAcceptServiceSpec
             )
 
             // Verifying non blocking side effects actually happen
-            verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            verifySideEffectsOccur { _ =>
+              verify(mockEmailService, times(1))
+                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+            }
           }
         }
       }
