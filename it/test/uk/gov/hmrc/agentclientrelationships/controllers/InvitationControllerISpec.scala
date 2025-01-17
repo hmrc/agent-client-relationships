@@ -431,4 +431,61 @@ class InvitationControllerISpec
 
   }
 
+  "replaceUrnWithUtr" should {
+
+    val urn = "XXTRUST12345678"
+    val utr = "1234567890"
+    val requestJson = Json.obj("utr" -> utr)
+
+    "return 204 when an invitation is found and updated" in {
+      await(
+        invitationRepo.create(
+          arn.value,
+          Service.forId(HMRCTERSORG),
+          Urn(urn),
+          Urn(urn),
+          "Erling Haal",
+          LocalDate.now(),
+          Some("personal")
+        )
+      )
+      val result = doAgentPostRequest(
+        s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
+        requestJson
+      )
+      val updatedInvitation = await(invitationRepo.findAllForAgent(arn.value)).head
+
+      result.status shouldBe 204
+      updatedInvitation.clientId shouldBe utr
+      updatedInvitation.clientIdType shouldBe UtrType.id
+      updatedInvitation.suppliedClientId shouldBe utr
+      updatedInvitation.suppliedClientIdType shouldBe UtrType.id
+    }
+
+    "return 404 when no invitation was found" in {
+      val result = doAgentPostRequest(
+        s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
+        requestJson
+      )
+      result.status shouldBe 404
+    }
+
+    "return 400 when request body is not JSON" in {
+      val result = doAgentPostRequest(
+        s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
+        "stringBody"
+      )
+      result.status shouldBe 400
+    }
+
+    "return 500 when the JSON body is invalid" in {
+      val invalidJson = Json.obj("abc" -> "xyz")
+      val result = doAgentPostRequest(
+        s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
+        invalidJson
+      )
+      result.status shouldBe 500
+      result.body should include("JsResultException")
+    }
+  }
 }

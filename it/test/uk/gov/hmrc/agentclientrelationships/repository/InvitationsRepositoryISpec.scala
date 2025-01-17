@@ -181,5 +181,21 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       ) shouldBe None
     }
 
+    "update a client ID and client ID type when a matching invitation is found" in {
+      await(repository.collection.insertOne(pendingInvitation).toFuture())
+      await(
+        repository.updateClientIdAndType(pendingInvitation.clientId, pendingInvitation.clientIdType, "ABC", "ABCType")
+      ) shouldBe true
+      val invitation = await(repository.findOneById(pendingInvitation.invitationId)).get
+      invitation.clientId shouldBe "ABC"
+      invitation.clientIdType shouldBe "ABCType"
+      invitation.suppliedClientId shouldBe "ABC"
+      invitation.suppliedClientIdType shouldBe "ABCType"
+    }
+
+    "fail to update a client ID and client ID type when no matching invitation is found" in {
+      await(repository.collection.insertOne(pendingInvitation).toFuture())
+      await(repository.updateClientIdAndType("XYZ", "XYZType", "ABC", "ABCType")) shouldBe false
+    }
   }
 }

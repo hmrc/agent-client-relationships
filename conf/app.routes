@@ -25,10 +25,12 @@ POST          /agent/:arn/authorisation-request                              @uk
 GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
 # TODO agree the response for and implement the GET all route
 # GET           /agent/:arn/authorisation-request-info                         @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.getAll
-POST          /agent/:arn/remove-authorisation                              @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+POST          /agent/:arn/remove-authorisation                               @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 PUT           /authorisation-response/accept/:invitationId                   @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationAcceptController.accept(invitationId: String)
 
-POST          /itsa-post-signup/create-relationship/:nino                   @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: uk.gov.hmrc.domain.Nino)
+POST          /itsa-post-signup/create-relationship/:nino                    @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: uk.gov.hmrc.domain.Nino)
+
+POST          /invitations/trusts-enrolment-orchestrator/:urn/update         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.replaceUrnWithUtr(urn: String)
 
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)

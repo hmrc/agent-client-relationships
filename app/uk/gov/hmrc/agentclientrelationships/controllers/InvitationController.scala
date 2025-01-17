@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service, UrnType, UtrType}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -116,4 +116,11 @@ class InvitationController @Inject() (
     }
   }
 
+  def replaceUrnWithUtr(urn: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    val utr = (request.body \ "utr").as[String]
+    invitationService.updateClientIdAndType(urn, UrnType.id, utr, UtrType.id).map {
+      case true  => NoContent
+      case false => NotFound
+    }
+  }
 }

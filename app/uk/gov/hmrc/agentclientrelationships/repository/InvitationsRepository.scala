@@ -202,6 +202,26 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .toFuture()
       .map(_.getModifiedCount == 1L)
 
+  def updateClientIdAndType(
+    clientId: String,
+    clientIdType: String,
+    newClientId: String,
+    newClientIdType: String
+  ): Future[Boolean] =
+    collection
+      .updateOne(
+        and(equal("clientId", clientId), equal("clientIdType", clientIdType)),
+        combine(
+          set("clientId", newClientId),
+          set("clientIdType", newClientIdType),
+          set("suppliedClientId", newClientId),
+          set("suppliedClientIdType", newClientIdType),
+          set("lastUpdated", Instant.now)
+        )
+      )
+      .toFuture()
+      .map(_.getModifiedCount == 1L)
+
   def deauthorise(
     arn: String,
     suppliedClientId: String,
