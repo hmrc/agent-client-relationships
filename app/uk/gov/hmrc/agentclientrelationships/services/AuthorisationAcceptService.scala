@@ -182,7 +182,7 @@ class AuthorisationAcceptService @Inject() (
       .findAllBy(
         arn = optArn,
         services = Seq(service),
-        clientId = Some(clientId),
+        clientIds = Seq(clientId),
         status = Some(acceptedStatus)
       )
       .fallbackTo(Future.successful(Nil))

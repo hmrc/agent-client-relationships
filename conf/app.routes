@@ -33,3 +33,8 @@ POST          /itsa-post-signup/create-relationship/:nino                   @uk.
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
 
+
+# Transitional Routes
+# --------------------------------
+
+GET             /lookup-invitations                                         @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitations(arn: Option[uk.gov.hmrc.agentmtdidentifiers.model.Arn] ?= None, services: Seq[String] ?= Nil, clientIds: Seq[String] ?= Nil, status: Option[uk.gov.hmrc.agentclientrelationships.model.InvitationStatus] ?= None)
