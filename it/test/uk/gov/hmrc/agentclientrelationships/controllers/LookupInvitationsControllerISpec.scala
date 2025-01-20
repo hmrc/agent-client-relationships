@@ -30,7 +30,8 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
-  val invitationsUrl = s"/agent-client-relationships/lookup-invitations"
+  val invitationUrl = s"/agent-client-relationships/lookup-invitation"
+  val invitationsUrl = "/agent-client-relationships/lookup-invitations"
   val testDate: LocalDate = LocalDate.now()
   val testTime: Instant = testDate.atStartOfDay(ZoneId.systemDefault()).toInstant
   val testArn: Arn = Arn("ARN1234567890")
@@ -158,6 +159,33 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(itsaInvitation, acceptedItsaInvitation))
+      }
+    }
+  }
+
+  s"GET $invitationUrl" should {
+    "return NotFound" when {
+      "queried with invitationId that does not match any data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        val result = doGetRequest(invitationUrl + s"/${itsaInvitation.invitationId}")
+
+        result.status shouldBe 404
+      }
+    }
+    "return OK with invitations" when {
+      "queried with invitationId that matches some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+
+        val result = doGetRequest(invitationUrl + s"/${itsaInvitation.invitationId}")
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(itsaInvitation)
       }
     }
   }

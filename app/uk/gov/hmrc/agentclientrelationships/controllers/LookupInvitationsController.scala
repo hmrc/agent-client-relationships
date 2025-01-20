@@ -53,4 +53,15 @@ class LookupInvitationsController @Inject() (
       }
     }
   }
+
+  def lookupInvitation(
+    invitationId: String
+  ): Action[AnyContent] = Action.async { implicit request =>
+    authorised() {
+      invitationsRepository.findOneById(invitationId).map {
+        case None             => NotFound
+        case Some(invitation) => Ok(Json.toJson(invitation))
+      }
+    }
+  }
 }
