@@ -157,6 +157,21 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
       updatedInvitation.lastUpdated.isAfter(pendingInvitation.lastUpdated)
     }
 
+    "update the status from Accepted to DeAuthorised with relationshipEndedBy of an invitation when a matching invitation is found" in {
+      await(repository.collection.insertOne(pendingInvitation.copy(status = Accepted)).toFuture())
+
+      val updatedInvitation =
+        await(
+          repository.updateStatusFromTo(
+            invitationId = pendingInvitation.invitationId,
+            fromStatus = Accepted,
+            toStatus = DeAuthorised,
+            relationshipEndedBy = Some("HMRC")
+          )
+        ).get
+      updatedInvitation.relationshipEndedBy shouldBe Some("HMRC")
+    }
+
     "fail to update fromTo the status of an invitation when a matching invitation is not found" in {
       await(repository.updateStatusFromTo("ABC", Pending, Rejected)) shouldBe None
     }

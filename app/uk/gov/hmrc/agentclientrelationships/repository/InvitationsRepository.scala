@@ -32,6 +32,7 @@ import java.time.{Instant, LocalDate}
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 @Singleton
 class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig: AppConfig)(implicit
@@ -167,7 +168,9 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   def updateStatusFromTo(
     invitationId: String,
     fromStatus: InvitationStatus,
-    toStatus: InvitationStatus
+    toStatus: InvitationStatus,
+    relationshipEndedBy: Option[String] = None,
+    lastUpdated: Option[Instant] = None
   ): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
@@ -176,8 +179,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           equal("status", Codecs.toBson[InvitationStatus](fromStatus))
         ),
         combine(
-          set("status", Codecs.toBson(toStatus)),
-          set("lastUpdated", Instant.now())
+          (Seq(
+            Some(set("status", Codecs.toBson(toStatus))),
+            Some(set("lastUpdated", lastUpdated.getOrElse(Instant.now()))),
+            relationshipEndedBy.map(set("relationshipEndedBy", _))
+          ).flatten): _*
         ),
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
