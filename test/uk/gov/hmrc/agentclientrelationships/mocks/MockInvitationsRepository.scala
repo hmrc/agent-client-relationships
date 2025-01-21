@@ -42,7 +42,7 @@ trait MockInvitationsRepository {
   def mockFindAllBy(
     arn: Option[String],
     services: Seq[String],
-    clientId: Option[String],
+    clientIds: Seq[String],
     status: Option[InvitationStatus]
   )(
     response: Future[Seq[Invitation]]
@@ -51,7 +51,7 @@ trait MockInvitationsRepository {
       mockInvitationsRepository.findAllBy(
         eqs(arn),
         eqs(services),
-        eqs(clientId),
+        eqs(clientIds),
         eqs(status)
       )
     )

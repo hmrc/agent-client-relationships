@@ -20,7 +20,6 @@ import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
@@ -182,7 +181,7 @@ class AuthorisationAcceptService @Inject() (
       .findAllBy(
         arn = optArn,
         services = Seq(service),
-        clientId = Some(clientId),
+        clientIds = Seq(clientId),
         status = Some(acceptedStatus)
       )
       .fallbackTo(Future.successful(Nil))

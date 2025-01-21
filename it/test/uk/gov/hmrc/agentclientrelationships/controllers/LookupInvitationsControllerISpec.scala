@@ -1,0 +1,193 @@
+/*
+ * Copyright 2025 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.agentclientrelationships.controllers
+
+import play.api.libs.json.Json
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.domain.Nino
+
+import java.time.{Instant, LocalDate, ZoneId}
+
+class LookupInvitationsControllerISpec extends BaseControllerISpec {
+
+  val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+
+  val invitationUrl = s"/agent-client-relationships/lookup-invitation"
+  val invitationsUrl = "/agent-client-relationships/lookup-invitations"
+  val testDate: LocalDate = LocalDate.now()
+  val testTime: Instant = testDate.atStartOfDay(ZoneId.systemDefault()).toInstant
+  val testArn: Arn = Arn("ARN1234567890")
+  val testArn2: Arn = Arn("ARN1234567899")
+  val testName = "testClientName"
+  val testNino: Nino = Nino("AB123456A")
+  val testMtdItId1: MtdItId = MtdItId("XAIT0000111122")
+  val testMtdItId2: MtdItId = MtdItId("XAIT0000111123")
+
+  val itsaInvitation: Invitation =
+    Invitation
+      .createNew(testArn.value, MtdIt, testMtdItId1, testNino, testName, LocalDate.now(), Some("personal"))
+      .copy(created = testTime, lastUpdated = testTime)
+  val suppItsaInvitation: Invitation =
+    Invitation
+      .createNew(testArn2.value, MtdItSupp, testMtdItId1, testNino, testName, LocalDate.now(), Some("personal"))
+      .copy(created = testTime, lastUpdated = testTime)
+  val acceptedItsaInvitation: Invitation =
+    Invitation
+      .createNew(testArn.value, MtdIt, testMtdItId2, testNino, testName, LocalDate.now(), Some("personal"))
+      .copy(created = testTime, lastUpdated = testTime, status = Accepted)
+
+  s"GET $invitationsUrl" should {
+    "return BadRequest" when {
+      "query has no parameters" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        val result = doGetRequest(invitationsUrl)
+
+        result.status shouldBe 400
+      }
+    }
+    "return NotFound" when {
+      "query matches nothing" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        val result = doGetRequest(invitationsUrl + s"?arn=${testArn.value}")
+
+        result.status shouldBe 404
+      }
+    }
+    "return OK with invitations" when {
+      "queried with arn that matches some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
+
+        val result = doGetRequest(invitationsUrl + s"?arn=${testArn.value}")
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(itsaInvitation, acceptedItsaInvitation))
+      }
+      "queried with clientId that matches some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
+
+        val result = doGetRequest(invitationsUrl + s"?clientIds=${testMtdItId1.value}")
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(itsaInvitation, suppItsaInvitation))
+      }
+      "queried with multiple clientIds that match some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
+
+        val result = doGetRequest(invitationsUrl + s"?clientIds=${testMtdItId1.value}&clientIds=${testMtdItId2.value}")
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(itsaInvitation, suppItsaInvitation, acceptedItsaInvitation))
+      }
+      "queried with clientId and services that match some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
+
+        val result =
+          doGetRequest(
+            invitationsUrl + s"?services=${MtdIt.id}&services=${MtdItSupp.id}&clientIds=${testMtdItId1.value}"
+          )
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(itsaInvitation, suppItsaInvitation))
+      }
+      "queried with status that matches some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
+
+        val result = doGetRequest(invitationsUrl + s"?status=$Accepted")
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(acceptedItsaInvitation))
+      }
+      "queried with multiple params that match some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
+
+        val result = doGetRequest(
+          invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}&services=${MtdItSupp.id}" +
+            s"&clientIds=${testMtdItId1.value}&clientIds=${testMtdItId2.value}"
+        )
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(itsaInvitation, acceptedItsaInvitation))
+      }
+    }
+  }
+
+  s"GET $invitationUrl" should {
+    "return NotFound" when {
+      "queried with invitationId that does not match any data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        val result = doGetRequest(invitationUrl + s"/${itsaInvitation.invitationId}")
+
+        result.status shouldBe 404
+      }
+    }
+    "return OK with invitations" when {
+      "queried with invitationId that matches some data" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
+
+        val result = doGetRequest(invitationUrl + s"/${itsaInvitation.invitationId}")
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(itsaInvitation)
+      }
+    }
+  }
+
+}

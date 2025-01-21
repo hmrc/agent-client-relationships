@@ -83,18 +83,19 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
 
   def findAllBy(
     arn: Option[String] = None,
-    services: Seq[String] = Seq.empty,
-    clientId: Option[String] = None,
+    services: Seq[String] = Nil,
+    clientIds: Seq[String] = Nil,
     status: Option[InvitationStatus] = None
   ): Future[Seq[Invitation]] =
     collection
       .find(
         and(
-          (Seq(
+          Seq(
             arn.map(equal("arn", _)),
-            clientId.map(equal("clientId", _)),
+            if (services.nonEmpty) Some(in("service", services: _*)) else None,
+            if (clientIds.nonEmpty) Some(in("clientId", clientIds: _*)) else None,
             status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
-          ).flatten :+ in("service", services: _*)): _*
+          ).flatten: _*
         )
       )
       .toFuture()
@@ -203,6 +204,26 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           set("lastUpdated", Instant.now),
           set("clientId", mtdItId.value),
           set("clientIdType", "MTDITID")
+        )
+      )
+      .toFuture()
+      .map(_.getModifiedCount == 1L)
+
+  def updateClientIdAndType(
+    clientId: String,
+    clientIdType: String,
+    newClientId: String,
+    newClientIdType: String
+  ): Future[Boolean] =
+    collection
+      .updateOne(
+        and(equal("clientId", clientId), equal("clientIdType", clientIdType)),
+        combine(
+          set("clientId", newClientId),
+          set("clientIdType", newClientIdType),
+          set("suppliedClientId", newClientId),
+          set("suppliedClientIdType", newClientIdType),
+          set("lastUpdated", Instant.now)
         )
       )
       .toFuture()

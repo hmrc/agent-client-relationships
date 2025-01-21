@@ -23,7 +23,6 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model.{Identifier, MtdItId, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
