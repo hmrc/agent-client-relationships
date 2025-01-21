@@ -39,5 +39,6 @@ GET           /relationships/service/:service/client/:clientIdType/:clientId @uk
 # Transitional Routes
 # --------------------------------
 
-GET             /lookup-invitations                                         @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitations(arn: Option[uk.gov.hmrc.agentmtdidentifiers.model.Arn] ?= None, services: Seq[String] ?= Nil, clientIds: Seq[String] ?= Nil, status: Option[uk.gov.hmrc.agentclientrelationships.model.InvitationStatus] ?= None)
-GET             /lookup-invitation/:invitationId                            @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitation(invitationId: String)
+GET          /lookup-invitations                                            @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitations(arn: Option[uk.gov.hmrc.agentmtdidentifiers.model.Arn] ?= None, services: Seq[String] ?= Nil, clientIds: Seq[String] ?= Nil, status: Option[uk.gov.hmrc.agentclientrelationships.model.InvitationStatus] ?= None)
+GET          /lookup-invitation/:invitationId                               @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitation(invitationId: String)
+POST         /migrate/agent-reference-record                                @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.migrateRecord
