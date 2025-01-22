@@ -109,7 +109,7 @@ class InvitationLinkService @Inject() (
     agentReferenceRepository
       .updateAgentName(uid, normalisedAgentNames)
 
-  private def createAgentReferenceRecord(arn: Arn, normalisedAgentNames: String): Future[AgentReferenceRecord] = {
+  def createAgentReferenceRecord(arn: Arn, normalisedAgentNames: String): Future[AgentReferenceRecord] = {
     val agentReferenceRecord = AgentReferenceRecord(
       uid = RandomStringUtils.random(8, codetable),
       arn = arn,

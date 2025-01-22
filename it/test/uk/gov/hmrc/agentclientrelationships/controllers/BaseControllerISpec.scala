@@ -174,6 +174,7 @@ trait BaseControllerISpec
   protected def doAgentPostRequest(route: String, json: JsValue) = new Resource(route, port).postAsJson(json.toString())
 
   protected def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
+  protected def doAgentPutRequest(route: String, body: JsValue) = new Resource(route, port).putAsJson(body.toString())
 
   protected def doAgentPutRequest(route: String, body: String) = new Resource(route, port).putAsJson(body)
 
