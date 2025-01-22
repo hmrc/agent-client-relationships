@@ -175,6 +175,8 @@ trait BaseControllerISpec
 
   protected def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
 
+  protected def doAgentPutRequest(route: String, body: String) = new Resource(route, port).putAsJson(body)
+
   protected def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
   protected def doAgentPostRequest(route: String, body: String) = new Resource(route, port).postAsJson(body)

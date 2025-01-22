@@ -42,6 +42,11 @@ object Http {
     request.post(EmptyBody)
   }
 
+  def put(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(implicit ws: WSClient): HttpResponse =
+    perform(url) { request =>
+      request.addHttpHeaders(headers: _*).put(body)
+    }
+
   def putEmpty(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
     request.put(EmptyBody)
   }
@@ -71,4 +76,8 @@ class Resource(path: String, port: Int) {
 
   def putEmpty()(implicit ws: WSClient): HttpResponse =
     Http.putEmpty(url())
+
+  def putAsJson(body: String)(implicit ws: WSClient): HttpResponse =
+    Http.put(url(), body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))
+
 }
