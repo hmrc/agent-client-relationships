@@ -18,12 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
-import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.auth.core.{AuthConnector, AuthorisedFunctions}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -38,12 +37,10 @@ class AgentReferenceController @Inject() (
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
-    with AuthActions {
-
-  override val supportedServices: Seq[Service] = appConfig.supportedServices
+    with AuthorisedFunctions {
 
   def fetchOrCreateRecord(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    withAuthorisedAsAgent { _ =>
+    authorised() {
       (request.body \ "normalisedAgentName")
         .validate[String]
         .fold(
