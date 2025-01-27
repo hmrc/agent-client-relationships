@@ -44,7 +44,7 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
 
   s"GET $fetchOrCreateUrl" should {
     "return Unauthorised" when {
-      "the user is not authorised as agent" in {
+      "the user is not authorised" in {
         requestIsNotAuthenticated()
         givenAuditConnector()
 
@@ -56,7 +56,7 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
     "return BadRequest" when {
       "request is missing a normalisedAgentName" in {
         givenAuditConnector()
-        givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+        givenAuthorised()
 
         val result = doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj())
 
@@ -66,7 +66,7 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
     "return Ok with an agent reference record" when {
       "there is already a record with the provided name" in {
         givenAuditConnector()
-        givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+        givenAuthorised()
 
         await(referenceRepo.collection.insertOne(testRecord).toFuture())
 
@@ -78,7 +78,7 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
       }
       "there is already a record, but it needs an update to add the new name" in {
         givenAuditConnector()
-        givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+        givenAuthorised()
 
         await(referenceRepo.collection.insertOne(testRecord).toFuture())
 
@@ -92,7 +92,7 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
       }
       "there is no agent record and a new one is inserted" in {
         givenAuditConnector()
-        givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+        givenAuthorised()
 
         val result =
           doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj("normalisedAgentName" -> testName1))
