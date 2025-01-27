@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.model.Filters.{and, equal, in}
 import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
+import org.mongodb.scala.result.InsertOneResult
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -65,6 +66,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     val invitation = Invitation.createNew(arn, service, clientId, suppliedClientId, clientName, expiryDate, clientType)
     collection.insertOne(invitation).toFuture().map(_ => invitation)
   }
+
+  def migrateActivePartialAuthInvitation(
+    invitation: Invitation
+  ): Future[InsertOneResult] =
+    collection.insertOne(invitation).toFuture()
 
   def findOneByIdForAgent(arn: String, invitationId: String): Future[Option[Invitation]] =
     collection
