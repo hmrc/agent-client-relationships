@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending, Rejected}
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
@@ -39,6 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
+  partialAuthRepository: PartialAuthRepository,
   ifConnector: IFConnector,
   emailService: EmailService,
   appConfig: AppConfig
@@ -158,6 +159,19 @@ class InvitationService @Inject() (
         Left(DuplicateInvitationError)
     }
   }
+
+  def migratePartialAuth(invitation: Invitation): Future[Unit] =
+    for {
+      _ <- partialAuthRepository.create(
+             invitation.created,
+             Arn(invitation.arn),
+             invitation.service,
+             Nino(invitation.clientId)
+           )
+      _ = if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
+            invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
+          } else Future.successful(())
+    } yield ()
 
   private def currentTime() = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
