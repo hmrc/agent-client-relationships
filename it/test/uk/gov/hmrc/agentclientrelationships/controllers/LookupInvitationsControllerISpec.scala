@@ -18,8 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation}
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, PartialAuth, PartialAuthRelationship}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.Nino
@@ -29,6 +29,7 @@ import java.time.{Instant, LocalDate, ZoneId}
 class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+  val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   val invitationUrl = s"/agent-client-relationships/lookup-invitation"
   val invitationsUrl = "/agent-client-relationships/lookup-invitations"
@@ -53,6 +54,13 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
     Invitation
       .createNew(testArn.value, MtdIt, testMtdItId2, testNino, testName, LocalDate.now(), Some("personal"))
       .copy(created = testTime, lastUpdated = testTime, status = Accepted)
+
+  val altItsaInvitation: Invitation =
+    Invitation
+      .createNew(testArn.value, MtdIt, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .copy(created = testTime, lastUpdated = testTime, status = PartialAuth)
+  val partialAuth: PartialAuthRelationship =
+    PartialAuthRelationship(testTime, testArn.value, MtdIt.id, testNino.value, active = true, testTime)
 
   s"GET $invitationsUrl" should {
     "return BadRequest" when {
@@ -159,6 +167,53 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(itsaInvitation, acceptedItsaInvitation))
+      }
+    }
+    "return OK with invitations combined with partial auths" when {
+      "queried for alt itsa invitations before invitation docs expire" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(altItsaInvitation).toFuture())
+        await(partialAuthRepo.collection.insertOne(partialAuth).toFuture())
+
+        val result = doGetRequest(
+          invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}" +
+            s"&clientIds=${testNino.value}&status=$PartialAuth"
+        )
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(altItsaInvitation))
+      }
+      "queried for alt itsa invitations after invitation docs expire" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(partialAuthRepo.collection.insertOne(partialAuth).toFuture())
+
+        val result = doGetRequest(
+          invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}" +
+            s"&clientIds=${testNino.value}&status=$PartialAuth"
+        )
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(Seq(partialAuth.asInvitation))
+      }
+      "queried for all agent invitations" in {
+        givenAuditConnector()
+        givenAuthorised()
+
+        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+        await(partialAuthRepo.collection.insertOne(partialAuth).toFuture())
+
+        val result = doGetRequest(
+          invitationsUrl + s"?arn=${testArn.value}"
+        )
+
+        result.status shouldBe 200
+        result.json shouldBe Json.toJson(
+          Seq(itsaInvitation, partialAuth.asInvitation)
+        )
       }
     }
   }

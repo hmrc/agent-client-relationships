@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.{and, equal, in}
+import org.mongodb.scala.model.Updates._
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
@@ -26,7 +27,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import org.mongodb.scala.model.Updates._
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -129,4 +129,24 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       )
       .toFuture()
       .map(_.getDeletedCount == 1L)
+
+  // DO NOT USE, transitional code
+  def findAllBy(
+    arn: Option[String],
+    services: Seq[String],
+    nino: Option[String],
+    isActive: Option[Boolean]
+  ): Future[Seq[PartialAuthRelationship]] =
+    collection
+      .find(
+        and(
+          Seq(
+            arn.map(equal("arn", _)),
+            if (services.nonEmpty) Some(in("service", services: _*)) else None,
+            nino.map(equal("nino", _)),
+            isActive.map(equal("active", _))
+          ).flatten: _*
+        )
+      )
+      .toFuture()
 }
