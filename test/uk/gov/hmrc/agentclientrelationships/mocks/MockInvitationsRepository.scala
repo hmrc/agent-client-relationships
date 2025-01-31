@@ -65,4 +65,11 @@ trait MockInvitationsRepository {
         .deauthInvitation(eqs(invitationId), eqs("Client"), any[Option[Instant]])
     )
       .thenReturn(response)
+
+  def mockFindAllPendingForClient(clientId: String, services: Seq[String])(
+    response: Seq[Invitation]
+  ): OngoingStubbing[Future[Seq[Invitation]]] =
+    when(
+      mockInvitationsRepository.findAllPendingForClient(clientId, services)
+    ).thenReturn(Future.successful(response))
 }

@@ -20,6 +20,7 @@ import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
+import uk.gov.hmrc.agentclientrelationships.model.IrvRelationship
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
@@ -40,5 +41,13 @@ trait MockAgentFiRelationshipConnector {
         .createRelationship(eqs(arn), eqs(service), eqs(clientId), any[LocalDateTime])(any[HeaderCarrier])
     )
       .thenReturn(response)
+
+  def mockFindRelationshipForClient(
+    clientId: String
+  )(response: Option[IrvRelationship]): OngoingStubbing[Future[Option[IrvRelationship]]] =
+    when(
+      mockAgentFiRelationshipConnector
+        .findRelationshipForClient(eqs(clientId))(any[HeaderCarrier])
+    ).thenReturn(Future.successful(response))
 
 }
