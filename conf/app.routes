@@ -36,7 +36,7 @@ GET           /customer-status                                               @uk
 
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
-
+GET           /stride/client-details/service/:service/client/:clientIdType/:clientId       @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.get(service: String, clientIdType: String, clientId: String)
 
 # Transitional Routes
 # --------------------------------

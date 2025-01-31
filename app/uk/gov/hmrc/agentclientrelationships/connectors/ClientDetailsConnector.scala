@@ -91,6 +91,7 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
       }
     }
 
+  // API#1171 Get Business Details
   def getItsaBusinessDetails(
     nino: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
@@ -152,6 +153,7 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
     }
   }
 
+  // API#1495 Agent Trust Known Facts
   def getTrustName(
     trustTaxIdentifier: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, String]] = {
@@ -210,6 +212,7 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
     }
   }
 
+  // API#1712 Get PPT Subscription Display
   def getPptSubscriptionDetails(
     pptRef: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = {
@@ -237,6 +240,7 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
     }
   }
 
+  // DCT 50d
   def getCbcSubscriptionDetails(
     cbcId: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {

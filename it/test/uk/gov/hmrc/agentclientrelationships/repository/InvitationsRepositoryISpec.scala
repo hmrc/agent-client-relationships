@@ -25,7 +25,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, Invitation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 
 import java.time.temporal.ChronoUnit
@@ -211,6 +211,21 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
     "fail to update a client ID and client ID type when no matching invitation is found" in {
       await(repository.collection.insertOne(pendingInvitation).toFuture())
       await(repository.updateClientIdAndType("XYZ", "XYZType", "ABC", "ABCType")) shouldBe false
+    }
+
+    "retrieve all pending invitations for client" in {
+      val listOfInvitations = Seq(
+        pendingInvitation,
+        pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDIT),
+        pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDITSUPP)
+      )
+      await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+      await(repository.findAllPendingForClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe
+        Seq(
+          pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDIT),
+          pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDITSUPP)
+        )
     }
   }
 }
