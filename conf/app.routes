@@ -32,6 +32,8 @@ POST          /itsa-post-signup/create-relationship/:nino                    @uk
 
 POST          /invitations/trusts-enrolment-orchestrator/:urn/update         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.replaceUrnWithUtr(urn: String)
 
+GET           /customer-status                                               @uk.gov.hmrc.agentclientrelationships.controllers.CustomerStatusController.customerStatus
+
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
 

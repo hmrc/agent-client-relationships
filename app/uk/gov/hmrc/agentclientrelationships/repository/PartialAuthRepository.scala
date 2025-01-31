@@ -46,7 +46,8 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
             .partialFilterExpression(BsonDocument("active" -> true))
             .unique(true)
             .name("activeRelationshipsIndex")
-        )
+        ),
+        IndexModel(Indexes.ascending("nino"))
       ),
       replaceIndexes = true
     )
@@ -89,6 +90,9 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
         )
       )
       .headOption()
+
+  def findByNino(nino: Nino): Future[Option[PartialAuthRelationship]] =
+    collection.find(equal("nino", nino.value)).headOption()
 
   /* this will only find partially authorised ITSA main agents for a given nino string */
   def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] =

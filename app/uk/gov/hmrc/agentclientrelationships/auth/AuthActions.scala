@@ -177,6 +177,14 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         }
       }
 
+  def withAuthorisedAsClientForStatus(
+    body: EnrolmentsWithNino => Future[Result]
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
+      .retrieve(allEnrolments and nino) { case enrolments ~ nino =>
+        body(new EnrolmentsWithNino(enrolments, nino))
+      }
+
   protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
     body: String => Future[Result]
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =

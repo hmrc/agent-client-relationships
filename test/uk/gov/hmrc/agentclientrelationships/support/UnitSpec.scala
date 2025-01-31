@@ -35,7 +35,7 @@ trait UnitSpec extends AnyWordSpecLike with Matchers with OptionValues with Scal
   def status(result: Result): Int = result.header.status
   def status(result: Future[Result]): Int = Helpers.status(result)
   def bodyOf(result: Result): String = Helpers.contentAsString(Future.successful(result))
-  def redirectLocation(result: Result) = Helpers.redirectLocation(Future.successful(result))
+  def redirectLocation(result: Result): Option[String] = Helpers.redirectLocation(Future.successful(result))
   def contentAsString(result: Result): String = Helpers.contentAsString(Future.successful(result))
   def contentAsJson(result: Result): JsValue = Helpers.contentAsJson(Future.successful(result))
   def contentType(result: Result): Option[String] =
@@ -50,7 +50,7 @@ trait UnitSpec extends AnyWordSpecLike with Matchers with OptionValues with Scal
   def verifySideEffectsOccur(assertion: Unit => Any*): Seq[Assertion] =
     eventually(timeout(Span(5, Seconds)), interval(Span(50, Millis))) {
       assertion.map { func =>
-        noException should be thrownBy func()
+        noException should be thrownBy func
       }
     }
 }

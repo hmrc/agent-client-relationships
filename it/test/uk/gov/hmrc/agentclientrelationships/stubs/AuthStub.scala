@@ -518,6 +518,29 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
+  def givenAuthorisedItsaClientWithNino(request: FakeRequest[?], mtdItId: MtdItId, nino: Nino): FakeRequest[?] = {
+    givenAuthorisedFor(
+      Json.obj("retrieve" -> Json.arr("allEnrolments", "nino")).toString,
+      Json
+        .obj(
+          "allEnrolments" -> Json.arr(
+            Json.obj(
+              "key"         -> "HMRC-MTD-IT",
+              "identifiers" -> Json.arr(Json.obj("key" -> "MTDITID", "value" -> mtdItId))
+            ),
+            Json.obj(
+              "key"         -> "HMRC-PT",
+              "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino))
+            )
+          ),
+          "nino" -> nino.value
+        )
+        .toString
+    )
+
+    request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
+  }
+
   def givenAuthorisedAsValidAgent[A](request: FakeRequest[A], arn: String) =
     authenticatedAgent(request, Enrolment("HMRC-AS-AGENT", "AgentReferenceNumber", arn))
 
