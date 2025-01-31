@@ -138,6 +138,18 @@ class PartialAuthRepositoryISpec
     }
   }
 
+  ".findByNino" should {
+
+    "retrieve a record for a given nino" in {
+      await(repo.collection.insertOne(partialAuth).toFuture())
+      await(repo.findByNino(Nino("SX579189D"))) shouldBe Some(partialAuth)
+    }
+
+    "fail to retrieve records when none are found for the given nino" in {
+      await(repo.findByNino(Nino("AA111111A"))) shouldBe None
+    }
+  }
+
   "deauthorise" should {
     "deauthorise PartialAuth invitation success" in {
       await(
