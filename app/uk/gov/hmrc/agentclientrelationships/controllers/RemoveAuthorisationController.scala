@@ -99,24 +99,14 @@ class RemoveAuthorisationController @Inject() (
           }
 
       case Service.MtdIt | Service.MtdItSupp =>
-        deauthorisationService
-          .findPartialAuthInvitation(arn, validRequest.suppliedClientId, validRequest.service)
-          .flatMap {
-            case Some(_) =>
-              deauthorisationService
-                .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
-                .map { result =>
-                  if (result) Right[InvitationFailureResponse, Result](NoContent)
-                  else
-                    Left[InvitationFailureResponse, Result](
-                      RelationshipDeleteFailed("Remove PartialAuth invitation failed.")
-                    )
-                }
-
-            case None =>
-              getEnrolmentAndDeleteRelationship(arn, validRequest)
-
-          }
+        (for {
+          invitationStoreResults <- EitherT(getEnrolmentAndDeleteRelationship(arn, validRequest))
+          _ <- EitherT.right[InvitationFailureResponse](
+                 deauthorisationService
+                   .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
+                   .map(_ => NoContent)
+               )
+        } yield invitationStoreResults).value
 
       case _ => getEnrolmentAndDeleteRelationship(arn, validRequest)
 

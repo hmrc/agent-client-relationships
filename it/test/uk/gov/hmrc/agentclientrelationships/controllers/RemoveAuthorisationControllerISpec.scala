@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsRepository, PartialAuthRepository, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub}
@@ -34,7 +34,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 
-import java.time.{Instant, LocalDateTime}
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
 class RemoveAuthorisationControllerIFISpec
@@ -134,6 +134,7 @@ trait RemoveAuthorisationControllerISpec
         case PersonalIncomeRecord => PersonalIncomeRecord.id
         case s                    => s.id
       }
+      val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
       trait StubsForThisScenario {
         givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
@@ -191,6 +192,12 @@ trait RemoveAuthorisationControllerISpec
 
       s"when the relationship exists and the Arn matches that of current Agent user  for ${service.id}" should {
         s"resume an ongoing de-auth if unfinished ES delete record found  for ${service.id}" in new StubsForThisScenario {
+          val newInvitation: Invitation = Invitation
+            .createNew(arn.value, service, nino, nino, "TestClientName", expiryDate, None)
+            .copy(status = Accepted)
+
+          await(invitationRepo.collection.insertOne(newInvitation).toFuture())
+
           await(
             deleteRecordRepository.create(
               DeleteRecord(
@@ -202,12 +209,15 @@ trait RemoveAuthorisationControllerISpec
               )
             )
           )
+
           doAgentPostRequest(
             requestPath,
             Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId)).toString()
           ).status shouldBe 204
-          verifyDeleteRecordNotExists
 
+          await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
+
+          verifyDeleteRecordNotExists
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn = arn.value,
             clientId = clientId.value,
@@ -257,16 +267,44 @@ trait RemoveAuthorisationControllerISpec
       }
     }
   )
+
   "for alt Itsa relationship" should {
+    val taxIdentifier = mtdItId
+    val service = MtdIt
+    val enrolmentKey: EnrolmentKey = EnrolmentKey(MtdIt.id, taxIdentifier)
+    val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
+
     trait StubsForThisScenario {
       givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
       givenPrincipalAgentUser(arn, "foo")
       givenGroupInfo("foo", "bar")
+      givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
+      givenAgentCanBeDeallocated(taxIdentifier, arn)
+      givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
+      givenAdminUser("foo", "any")
+      givenCacheRefresh(arn)
       givenMtdItIdIsKnownFor(nino, mtdItId)
+
     }
 
     "return 204 when PartialAuth exists in PartialAuth Repo" in new StubsForThisScenario {
+      val newInvitation: Invitation = Invitation
+        .createNew(arn.value, service, nino, nino, "TestClientName", expiryDate, None)
+        .copy(status = PartialAuth)
+
+      await(
+        deleteRecordRepository.create(
+          DeleteRecord(
+            arn = arn.value,
+            enrolmentKey = Some(EnrolmentKey(service.enrolmentKey, nino)),
+            dateTime = LocalDateTime.now.minusMinutes(1),
+            syncToETMPStatus = Some(SyncStatus.Success),
+            syncToESStatus = Some(SyncStatus.Failed)
+          )
+        )
+      )
       await(partialAuthRepository.create(Instant.now(), arn, MtdIt.id, nino))
+      await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
       doAgentPostRequest(
         requestPath,
@@ -278,6 +316,9 @@ trait RemoveAuthorisationControllerISpec
         .futureValue
 
       partialAuthInvitations.isDefined shouldBe false
+      verifyDeleteRecordNotExists
+      await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
+
     }
 
     "return None when PartialAuth do not exists in PartialAuth Repo" in new StubsForThisScenario {
