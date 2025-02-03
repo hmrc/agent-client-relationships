@@ -99,14 +99,35 @@ class RemoveAuthorisationController @Inject() (
           }
 
       case Service.MtdIt | Service.MtdItSupp =>
-        (for {
-          invitationStoreResults <- EitherT(getEnrolmentAndDeleteRelationship(arn, validRequest))
-          _ <- EitherT.right[InvitationFailureResponse](
-                 deauthorisationService
-                   .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
-                   .map(_ => NoContent)
-               )
-        } yield invitationStoreResults).value
+        deauthorisationService
+          .findPartialAuthInvitation(arn, validRequest.suppliedClientId, validRequest.service)
+          .flatMap {
+            // AltItsa
+            case Some(_) =>
+              (for {
+                invitationStoreResults <-
+                  EitherT.right[InvitationFailureResponse](
+                    deauthorisationService
+                      .deauthAltItsaInvitation(arn, validRequest.suppliedClientId, validRequest.service)
+                      .map(_ => NoContent)
+                  )
+                _ <- EitherT.right[InvitationFailureResponse](
+                       deauthorisationService
+                         .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
+                         .map { result =>
+                           if (result) Right[InvitationFailureResponse, Result](NoContent)
+                           else
+                             Left[InvitationFailureResponse, Result](
+                               RelationshipDeleteFailed("Remove PartialAuth invitation failed.")
+                             )
+                         }
+                     )
+              } yield invitationStoreResults).value
+
+            case None =>
+              getEnrolmentAndDeleteRelationship(arn, validRequest)
+
+          }
 
       case _ => getEnrolmentAndDeleteRelationship(arn, validRequest)
 
@@ -149,12 +170,19 @@ class RemoveAuthorisationController @Inject() (
                                   validRequest.suppliedClientId.value
                                 )
                               ).leftMap(_ => EnrolmentKeyNotFound)
-
+      _ = println(
+            s"${Console.MAGENTA} Wojciech getEnrolmentKey suppliedEnrolmentKey:$suppliedEnrolmentKey ${Console.RESET}"
+          )
       enrolmentKey <-
         EitherT(
           deauthorisationService
             .replaceEnrolmentKeyForItsa(validRequest.suppliedClientId, suppliedEnrolmentKey, validRequest.service)
         )
+
+      _ = println(
+            s"${Console.MAGENTA} Wojciech getEnrolmentKey enrolmentKey:$enrolmentKey ${Console.RESET}"
+          )
+
     } yield enrolmentKey
     resultT.value
   }
