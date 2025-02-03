@@ -27,8 +27,8 @@ class CustomerStatusSpec extends UnitSpec {
       val model =
         CustomerStatus(hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = true)
       val json = Json.obj(
-        "hasPendingInvitations" -> true,
-        "hasInvitationsHistory" -> true,
+        "hasPendingInvitations"    -> true,
+        "hasInvitationsHistory"    -> true,
         "hasExistingRelationships" -> true
       )
 
