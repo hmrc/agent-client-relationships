@@ -170,18 +170,11 @@ class RemoveAuthorisationController @Inject() (
                                   validRequest.suppliedClientId.value
                                 )
                               ).leftMap(_ => EnrolmentKeyNotFound)
-      _ = println(
-            s"${Console.MAGENTA} Wojciech getEnrolmentKey suppliedEnrolmentKey:$suppliedEnrolmentKey ${Console.RESET}"
-          )
       enrolmentKey <-
         EitherT(
           deauthorisationService
             .replaceEnrolmentKeyForItsa(validRequest.suppliedClientId, suppliedEnrolmentKey, validRequest.service)
         )
-
-      _ = println(
-            s"${Console.MAGENTA} Wojciech getEnrolmentKey enrolmentKey:$enrolmentKey ${Console.RESET}"
-          )
 
     } yield enrolmentKey
     resultT.value
