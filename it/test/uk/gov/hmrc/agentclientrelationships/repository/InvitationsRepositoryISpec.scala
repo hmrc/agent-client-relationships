@@ -226,8 +226,8 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
 
       await(repository.findAllPendingForClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe
         Seq(
-          pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDIT),
-          pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDITSUPP)
+          pendingInvitation.copy(invitationId = "234", suppliedClientId = "678", service = HMRCMTDIT),
+          pendingInvitation.copy(invitationId = "345", suppliedClientId = "678", service = HMRCMTDITSUPP)
         )
     }
   }
