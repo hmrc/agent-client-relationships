@@ -218,9 +218,10 @@ class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp
         pendingInvitation,
         pendingInvitation.copy(invitationId = "234", suppliedClientId = "678", service = HMRCMTDIT),
         pendingInvitation.copy(invitationId = "345", suppliedClientId = "678", service = HMRCMTDITSUPP),
-        pendingInvitation.copy(invitationId = "456", suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired),
+        pendingInvitation
+          .copy(invitationId = "456", suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired),
         pendingInvitation.copy(invitationId = "567", suppliedClientId = "789", service = HMRCMTDITSUPP),
-        pendingInvitation.copy(invitationId = "678", suppliedClientId = "678", service = HMRCPIR),
+        pendingInvitation.copy(invitationId = "678", suppliedClientId = "678", service = HMRCPIR)
       )
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 

@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, Invitation}
+import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
+import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, MtdIt, PersonalIncomeRecord}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
@@ -60,14 +61,17 @@ class StrideClientDetailsService @Inject() (
 
   private def getNonSuspendedInvitations(clientId: String, services: Seq[String])(implicit
     hc: HeaderCarrier
-  ): Future[Seq[Invitation]] =
+  ): Future[Seq[InvitationWithAgentName]] =
     for {
       invitations <- invitationsRepository.findAllPendingForClient(clientId, services)
       nonSuspended <- Future.sequence(
                         invitations.map(i =>
                           agentAssuranceConnector
                             .getAgentRecordWithChecks(Arn(i.arn))
-                            .map(agentRecord => if (agentIsSuspended(agentRecord)) None else Some(i))
+                            .map(agentRecord =>
+                              if (agentIsSuspended(agentRecord)) None
+                              else Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
+                            )
                         )
                       )
     } yield nonSuspended.flatten
@@ -109,7 +113,7 @@ class StrideClientDetailsService @Inject() (
         )
     }
 
-  private def getClientName(invitations: Seq[Invitation], service: String, clientId: String)(implicit
+  private def getClientName(invitations: Seq[InvitationWithAgentName], service: String, clientId: String)(implicit
     hc: HeaderCarrier
   ): Future[Option[String]] =
     for {

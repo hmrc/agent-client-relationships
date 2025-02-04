@@ -19,6 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
+import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuthRelationship, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HIPAgentClientRelationshipStub}
@@ -75,6 +77,14 @@ class StrideClientDetailsControllerISpec
     active = true,
     lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
   )
+
+  def agentDetailsDesResponse(suspended: Boolean = false) = AgentDetailsDesResponse(
+    agencyDetails = AgencyDetails("ABC Ltd", ""),
+    suspensionDetails = Option(SuspensionDetails(suspended, Some(Set("AGSV"))))
+  )
+
+  def invitationWithAgentName(invitation: Invitation, suspended: Boolean = false) =
+    InvitationWithAgentName.fromInvitationAndAgentRecord(invitation, agentDetailsDesResponse(suspended))
 
   val testEndpoint = "/agent-client-relationships/stride/client-details/service/"
 
@@ -175,7 +185,7 @@ class StrideClientDetailsControllerISpec
           .toJson(
             ClientDetailsStrideResponse(
               clientName = pendingInvitation.clientName,
-              pendingInvitations = Seq(pendingInvitation),
+              pendingInvitations = Seq(invitationWithAgentName(pendingInvitation)),
               activeMainAgent = None
             )
           )
@@ -208,7 +218,7 @@ class StrideClientDetailsControllerISpec
           .toJson(
             ClientDetailsStrideResponse(
               clientName = pendingInvitation.clientName,
-              pendingInvitations = Seq(pendingInvitation),
+              pendingInvitations = Seq(invitationWithAgentName(pendingInvitation)),
               activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-VAT"))
             )
           )
@@ -281,7 +291,7 @@ class StrideClientDetailsControllerISpec
           .toJson(
             ClientDetailsStrideResponse(
               clientName = altItsaPendingInvitation.clientName,
-              pendingInvitations = Seq(altItsaPendingInvitation),
+              pendingInvitations = Seq(invitationWithAgentName(altItsaPendingInvitation)),
               activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-IT"))
             )
           )
@@ -318,7 +328,7 @@ class StrideClientDetailsControllerISpec
           .toJson(
             ClientDetailsStrideResponse(
               clientName = itsaPendingInvitation.clientName,
-              pendingInvitations = Seq(itsaPendingInvitation),
+              pendingInvitations = Seq(invitationWithAgentName(itsaPendingInvitation)),
               activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-IT"))
             )
           )
@@ -358,7 +368,7 @@ class StrideClientDetailsControllerISpec
           .toJson(
             ClientDetailsStrideResponse(
               clientName = irvPendingInvitation.clientName,
-              pendingInvitations = Seq(irvPendingInvitation),
+              pendingInvitations = Seq(invitationWithAgentName(irvPendingInvitation)),
               activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "PERSONAL-INCOME-RECORD"))
             )
           )
@@ -400,7 +410,7 @@ class StrideClientDetailsControllerISpec
           .toJson(
             ClientDetailsStrideResponse(
               clientName = cbcPendingInvitation.clientName,
-              pendingInvitations = Seq(cbcPendingInvitation),
+              pendingInvitations = Seq(invitationWithAgentName(cbcPendingInvitation)),
               activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-CBC-ORG"))
             )
           )
@@ -443,7 +453,7 @@ class StrideClientDetailsControllerISpec
           .toJson(
             ClientDetailsStrideResponse(
               clientName = cbcPendingInvitation.clientName,
-              pendingInvitations = Seq(cbcPendingInvitation),
+              pendingInvitations = Seq(invitationWithAgentName(cbcPendingInvitation)),
               activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-CBC-NONUK-ORG"))
             )
           )

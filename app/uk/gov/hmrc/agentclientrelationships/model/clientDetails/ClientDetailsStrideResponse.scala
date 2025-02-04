@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
 
 case class ActiveMainAgent(agentName: String, arn: String, service: String)
 
@@ -27,7 +27,7 @@ object ActiveMainAgent {
 
 case class ClientDetailsStrideResponse(
   clientName: String,
-  pendingInvitations: Seq[Invitation],
+  pendingInvitations: Seq[InvitationWithAgentName],
   activeMainAgent: Option[ActiveMainAgent]
 )
 
