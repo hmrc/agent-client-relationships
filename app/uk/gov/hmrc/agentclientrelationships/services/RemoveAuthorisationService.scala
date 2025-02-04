@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, InvalidClientId, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
@@ -37,6 +37,7 @@ import scala.util.control.NonFatal
 @Singleton
 class RemoveAuthorisationService @Inject() (
   partialAuthRepository: PartialAuthRepository,
+  invitationsRepository: InvitationsRepository,
   ifConnector: IFConnector
 )(implicit ec: ExecutionContext)
     extends Logging {
@@ -65,6 +66,15 @@ class RemoveAuthorisationService @Inject() (
       case NinoType.id =>
         partialAuthRepository
           .deauthorise(service.id, Nino(clientId.value), arn, Instant.now)
+      case _ => Future.successful(false)
+    }
+
+  def deauthAltItsaInvitation(arn: Arn, clientId: ClientId, service: Service): Future[Boolean] =
+    clientId.typeId match {
+      case NinoType.id =>
+        invitationsRepository
+          .updatePartialAuthToDeAuthorisedStatus(arn, service.id, Nino(clientId.value), "HMRC")
+          .map(_.fold(false)(_ => true))
       case _ => Future.successful(false)
     }
 

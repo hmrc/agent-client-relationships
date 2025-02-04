@@ -283,11 +283,11 @@ trait RemoveAuthorisationControllerISpec
       givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
       givenAdminUser("foo", "any")
       givenCacheRefresh(arn)
-      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenMtdItIdIsUnKnownFor(nino)
 
     }
 
-    "return 204 when PartialAuth exists in PartialAuth Repo" in new StubsForThisScenario {
+    "return 204 when PartialAuth exists in PartialAuth and Invitation Repo" in new StubsForThisScenario {
       val newInvitation: Invitation = Invitation
         .createNew(arn.value, service, nino, nino, "TestClientName", expiryDate, None)
         .copy(status = PartialAuth)
@@ -318,6 +318,23 @@ trait RemoveAuthorisationControllerISpec
       partialAuthInvitations.isDefined shouldBe false
       verifyDeleteRecordNotExists
       await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
+
+    }
+
+    "return 204 when PartialAuth exists in PartialAuth Repo and not not exists in InvitationRepo" in new StubsForThisScenario {
+      await(partialAuthRepository.create(Instant.now(), arn, MtdIt.id, nino))
+
+      doAgentPostRequest(
+        requestPath,
+        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
+      ).status shouldBe 204
+
+      val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
+        .findActive(MtdIt.id, nino, arn)
+        .futureValue
+
+      partialAuthInvitations.isDefined shouldBe false
+      await(invitationRepo.findAllForAgent(arn.value)) shouldBe Seq.empty
 
     }
 

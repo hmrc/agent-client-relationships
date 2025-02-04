@@ -279,6 +279,29 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFuture()
 
+  def updatePartialAuthToDeAuthorisedStatus(
+    arn: Arn,
+    service: String,
+    nino: Nino,
+    relationshipEndedBy: String
+  ): Future[Option[Invitation]] =
+    collection
+      .findOneAndUpdate(
+        and(
+          equal("arn", arn.value),
+          equal("clientId", nino.value),
+          equal("service", service),
+          equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
+        ),
+        combine(
+          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
+          set("relationshipEndedBy", relationshipEndedBy),
+          set("lastUpdated", Instant.now)
+        ),
+        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
+      )
+      .toFutureOption()
+
 }
 
 object InvitationsRepository {
