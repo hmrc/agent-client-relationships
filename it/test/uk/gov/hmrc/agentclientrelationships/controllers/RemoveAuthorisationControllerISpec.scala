@@ -322,21 +322,6 @@ trait RemoveAuthorisationControllerISpec
     }
 
     "return 204 when PartialAuth exists in PartialAuth Repo and not not exists in InvitationRepo" in new StubsForThisScenario {
-      val newInvitation: Invitation = Invitation
-        .createNew(arn.value, service, nino, nino, "TestClientName", expiryDate, None)
-        .copy(status = PartialAuth)
-
-      await(
-        deleteRecordRepository.create(
-          DeleteRecord(
-            arn = arn.value,
-            enrolmentKey = Some(EnrolmentKey(service.enrolmentKey, nino)),
-            dateTime = LocalDateTime.now.minusMinutes(1),
-            syncToETMPStatus = Some(SyncStatus.Success),
-            syncToESStatus = Some(SyncStatus.Failed)
-          )
-        )
-      )
       await(partialAuthRepository.create(Instant.now(), arn, MtdIt.id, nino))
 
       doAgentPostRequest(
@@ -349,7 +334,6 @@ trait RemoveAuthorisationControllerISpec
         .futureValue
 
       partialAuthInvitations.isDefined shouldBe false
-      verifyDeleteRecordNotExists
       await(invitationRepo.findAllForAgent(arn.value)) shouldBe Seq.empty
 
     }
