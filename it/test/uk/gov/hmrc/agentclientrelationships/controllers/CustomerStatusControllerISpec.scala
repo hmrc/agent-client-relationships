@@ -68,9 +68,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         await(partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture())
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = true
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = true,
+            hasInvitationsHistory = true,
+            hasExistingRelationships = true
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK
@@ -82,9 +86,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         getActiveRelationshipsViaClient(mtdItId, arn)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = true
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = true,
+            hasInvitationsHistory = true,
+            hasExistingRelationships = true
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK
@@ -96,9 +104,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = false
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = true,
+            hasInvitationsHistory = true,
+            hasExistingRelationships = false
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK
@@ -109,9 +121,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuditConnector()
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         await(partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture())
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = false, hasInvitationsHistory = true, hasExistingRelationships = true
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = false,
+            hasInvitationsHistory = true,
+            hasExistingRelationships = true
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK
@@ -123,9 +139,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         getActiveRelationshipsViaClient(mtdItId, arn)
         await(partialAuthRepo.collection.insertOne(inactivePartialAuthRelationship).toFuture())
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = false, hasInvitationsHistory = true, hasExistingRelationships = true
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = false,
+            hasInvitationsHistory = true,
+            hasExistingRelationships = true
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK
@@ -136,9 +156,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuditConnector()
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         getActiveRelationshipsViaClient(mtdItId, arn)
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = false, hasInvitationsHistory = false, hasExistingRelationships = true
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = false,
+            hasInvitationsHistory = false,
+            hasExistingRelationships = true
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK
@@ -150,9 +174,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         await(partialAuthRepo.collection.insertOne(inactivePartialAuthRelationship).toFuture())
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = false, hasInvitationsHistory = true, hasExistingRelationships = false
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = false,
+            hasInvitationsHistory = true,
+            hasExistingRelationships = false
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK
@@ -163,9 +191,13 @@ class CustomerStatusControllerISpec extends BaseControllerISpec with HIPAgentCli
         givenAuditConnector()
         givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
-        val expectedBody = Json.toJson(CustomerStatus(
-          hasPendingInvitations = false, hasInvitationsHistory = false, hasExistingRelationships = false
-        ))
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = false,
+            hasInvitationsHistory = false,
+            hasExistingRelationships = false
+          )
+        )
 
         val result = doGetRequest(request.uri)
         result.status shouldBe OK

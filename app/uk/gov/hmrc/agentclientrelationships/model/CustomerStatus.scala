@@ -18,9 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.{Json, OWrites}
 
-case class CustomerStatus(hasPendingInvitations: Boolean,
-                          hasInvitationsHistory: Boolean,
-                          hasExistingRelationships: Boolean)
+case class CustomerStatus(
+  hasPendingInvitations: Boolean,
+  hasInvitationsHistory: Boolean,
+  hasExistingRelationships: Boolean
+)
 
 object CustomerStatus {
   implicit val writes: OWrites[CustomerStatus] = Json.writes[CustomerStatus]

@@ -23,6 +23,7 @@ import org.mongodb.scala.result.InsertOneResult
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys.{arnKey, clientIdKey, invitationIdKey, serviceKey, statusKey, suppliedClientIdKey}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.domain.Nino
@@ -34,6 +35,15 @@ import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
+object FieldKeys {
+  val arnKey: String = "arn"
+  val invitationIdKey: String = "invitationId"
+  val clientIdKey: String = "clientId"
+  val suppliedClientIdKey: String = "suppliedClientId"
+  val serviceKey: String = "service"
+  val statusKey: String = "status"
+}
+
 @Singleton
 class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig: AppConfig)(implicit
   ec: ExecutionContext
@@ -42,12 +52,13 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       collectionName = "invitations",
       domainFormat = Invitation.mongoFormat,
       indexes = Seq(
-        IndexModel(Indexes.ascending("arn"), IndexOptions().name("arnIndex")),
-        IndexModel(Indexes.ascending("invitationId"), IndexOptions().name("invitationIdIndex").unique(true)),
+        IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
+        IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
         IndexModel(
           Indexes.ascending("created"),
           IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
-        )
+        ),
+        IndexModel(Indexes.ascending(suppliedClientIdKey, statusKey, serviceKey))
       ),
       replaceIndexes = true
     )
@@ -75,15 +86,15 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection
       .find(
         combine(
-          equal("arn", arn),
-          equal("invitationId", invitationId)
+          equal(arnKey, arn),
+          equal(invitationIdKey, invitationId)
         )
       )
       .headOption()
 
   def findOneById(invitationId: String): Future[Option[Invitation]] =
     collection
-      .find(equal("invitationId", invitationId))
+      .find(equal(invitationIdKey, invitationId))
       .headOption()
 
   def findAllBy(
@@ -96,9 +107,9 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .find(
         and(
           Seq(
-            arn.map(equal("arn", _)),
-            if (services.nonEmpty) Some(in("service", services: _*)) else None,
-            if (clientIds.nonEmpty) Some(in("clientId", clientIds: _*)) else None,
+            arn.map(equal(arnKey, _)),
+            if (services.nonEmpty) Some(in(serviceKey, services: _*)) else None,
+            if (clientIds.nonEmpty) Some(in(clientIdKey, clientIds: _*)) else None,
             status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
           ).flatten: _*
         )
@@ -108,12 +119,12 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   def findOneByIdForClient(invitationId: String): Future[Option[Invitation]] =
     collection
       .find(
-        equal("invitationId", invitationId)
+        equal(invitationIdKey, invitationId)
       )
       .headOption()
 
   def findAllForAgent(arn: String): Future[Seq[Invitation]] =
-    collection.find(equal("arn", arn)).toFuture()
+    collection.find(equal(arnKey, arn)).toFuture()
 
   def findAllForAgent(
     arn: String,
@@ -124,8 +135,8 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection
       .find(
         and(
-          equal("arn", arn),
-          in("service", services: _*),
+          equal(arnKey, arn),
+          in(serviceKey, services: _*),
           in(if (isSuppliedClientId) "suppliedClientId" else "clientId", clientIds.map(_.replaceAll(" ", "")): _*)
         )
       )
@@ -134,7 +145,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   def findByArnClientIdService(arn: Arn, suppliedClientId: ClientId, service: Service): Future[Seq[Invitation]] =
     collection
       .find(
-        and(equal("arn", arn.value), equal("suppliedClientId", suppliedClientId.value), equal("service", service.id))
+        and(equal(arnKey, arn.value), equal("suppliedClientId", suppliedClientId.value), equal("service", service.id))
       )
       .toFuture()
 
@@ -145,7 +156,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   ): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
-        equal("invitationId", invitationId),
+        equal(invitationIdKey, invitationId),
         combine(
           set("status", Codecs.toBson(status)),
           set("lastUpdated", timestamp.getOrElse(Instant.now()))
@@ -161,7 +172,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   ): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
-        equal("invitationId", invitationId),
+        equal(invitationIdKey, invitationId),
         combine(
           set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
           set("lastUpdated", timestamp.getOrElse(Instant.now())),
@@ -181,7 +192,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection
       .findOneAndUpdate(
         and(
-          equal("invitationId", invitationId),
+          equal(invitationIdKey, invitationId),
           equal("status", Codecs.toBson[InvitationStatus](fromStatus))
         ),
         combine(
@@ -199,7 +210,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection
       .updateOne(
         and(
-          equal("arn", arn.value),
+          equal(arnKey, arn.value),
           equal("clientId", nino.value),
           equal("service", service),
           equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
@@ -243,7 +254,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection
       .findOneAndUpdate(
         and(
-          equal("arn", arn),
+          equal(arnKey, arn),
           equal("service", service),
           equal("suppliedClientId", suppliedClientId),
           equal("status", Codecs.toBson[InvitationStatus](Accepted)) // TODO This will not work for partial auth
@@ -256,6 +267,17 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
       .toFutureOption()
+
+  def findAllPendingForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(
+          equal(suppliedClientIdKey, clientId),
+          equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
+          in(serviceKey, services: _*)
+        )
+      )
+      .toFuture()
 
 }
 
