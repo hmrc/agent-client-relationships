@@ -32,14 +32,16 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class CustomerStatusController @Inject()(findRelationshipsService: FindRelationshipsService,
-                                         invitationsRepository: InvitationsRepository,
-                                         partialAuthRepository: PartialAuthRepository,
-                                         val authConnector: AuthConnector,
-                                         appConfig: AppConfig,
-                                         cc: ControllerComponents
-                                        )(implicit ec: ExecutionContext)
-  extends BackendController(cc) with AuthActions {
+class CustomerStatusController @Inject() (
+  findRelationshipsService: FindRelationshipsService,
+  invitationsRepository: InvitationsRepository,
+  partialAuthRepository: PartialAuthRepository,
+  val authConnector: AuthConnector,
+  appConfig: AppConfig,
+  cc: ControllerComponents
+)(implicit ec: ExecutionContext)
+    extends BackendController(cc)
+    with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
@@ -50,23 +52,25 @@ class CustomerStatusController @Inject()(findRelationshipsService: FindRelations
       for {
         invitations <- invitationsRepository.findAllBy(None, services, identifiers, None)
         partialAuthRecord <- authResponse.getNino match {
-          case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
-          case None => Future.successful(None)
-        }
-        existingRelationships <- if(partialAuthRecord.exists(_.active == true)) {
-          Future.successful(true)
-        } else {
-          findRelationshipsService.getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
-            .map(_.nonEmpty)
-        }
-      } yield {
-        Ok(Json.toJson(CustomerStatus(
-          hasPendingInvitations = invitations.exists(_.status == Pending),
-          hasInvitationsHistory = invitations.nonEmpty || partialAuthRecord.nonEmpty,
-          hasExistingRelationships = existingRelationships
-        )))
-      }
+                               case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
+                               case None     => Future.successful(None)
+                             }
+        existingRelationships <- if (partialAuthRecord.exists(_.active == true)) {
+                                   Future.successful(true)
+                                 } else {
+                                   findRelationshipsService
+                                     .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
+                                     .map(_.nonEmpty)
+                                 }
+      } yield Ok(
+        Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = invitations.exists(_.status == Pending),
+            hasInvitationsHistory = invitations.nonEmpty || partialAuthRecord.nonEmpty,
+            hasExistingRelationships = existingRelationships
+          )
+        )
+      )
     }
   }
 }
-
