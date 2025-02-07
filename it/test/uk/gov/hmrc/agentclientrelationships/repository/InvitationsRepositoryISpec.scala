@@ -21,9 +21,10 @@ import org.mongodb.scala.model.Indexes
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, DeAuthorised, Expired, Invitation, Pending, Rejected}
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
@@ -35,9 +36,13 @@ import scala.concurrent.duration.DAYS
 
 class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp with GuiceOneAppPerSuite {
 
-  val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  override lazy val app: Application =
+    new GuiceApplicationBuilder()
+      .configure(mongoConfiguration)
+      .build()
+
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  val repository: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
+  val repository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
   val pendingInvitation: Invitation = Invitation(
     "123",

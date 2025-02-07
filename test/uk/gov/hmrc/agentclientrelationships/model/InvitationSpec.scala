@@ -20,11 +20,14 @@ import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText, SymmetricCryptoFactory}
 
-import java.time.LocalDate
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 class InvitationSpec extends UnitSpec {
+
+  implicit val crypto: Encrypter with Decrypter =
+    SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val fullModel: Invitation = Invitation(
     "123",
@@ -47,11 +50,11 @@ class InvitationSpec extends UnitSpec {
     "invitationId"         -> "123",
     "arn"                  -> "XARN1234567",
     "service"              -> "HMRC-MTD-VAT",
-    "clientId"             -> "123456789",
+    "clientId"             -> crypto.encrypt(PlainText("123456789")).value,
     "clientIdType"         -> "vrn",
-    "suppliedClientId"     -> "234567890",
+    "suppliedClientId"     -> crypto.encrypt(PlainText("234567890")).value,
     "suppliedClientIdType" -> "vrn",
-    "clientName"           -> "Macrosoft",
+    "clientName"           -> crypto.encrypt(PlainText("Macrosoft")).value,
     "status"               -> "Pending",
     "relationshipEndedBy"  -> "Me",
     "clientType"           -> "personal",
@@ -64,28 +67,27 @@ class InvitationSpec extends UnitSpec {
   val optionalModel: Invitation = fullModel.copy(relationshipEndedBy = None, clientType = None)
 
   "Invitation" should {
-
     "read from JSON" when {
-
       "all optional fields are present" in {
         fullJson.as[Invitation](Invitation.mongoFormat) shouldBe fullModel
       }
-
       "all optional fields are missing" in {
         optionalJson.as[Invitation](Invitation.mongoFormat) shouldBe optionalModel
       }
     }
 
     "write to JSON" when {
-
       "all optional fields are present" in {
         Json.toJson(fullModel)(Invitation.mongoFormat) shouldBe fullJson
       }
-
       "all optional fields are missing" in {
         Json.toJson(optionalModel)(Invitation.mongoFormat) shouldBe optionalJson
       }
     }
+
+    "read from mongo JSON" when {}
+
+    "write to mongo JSON" when {}
   }
 
   "Invitation.createNew" should {

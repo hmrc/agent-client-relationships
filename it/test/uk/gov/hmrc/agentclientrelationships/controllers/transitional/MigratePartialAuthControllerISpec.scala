@@ -53,8 +53,8 @@ class MigratePartialAuthControllerISpec
       stubControllerComponents()
     )
 
-  def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
-  def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
+  def invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+  def partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   val clientName = "DummyClientName"
   private val now = LocalDateTime.now().truncatedTo(MILLIS)
@@ -116,19 +116,19 @@ class MigratePartialAuthControllerISpec
 
       result.status shouldBe 204
 
-      val storedPartialAuth = partialAuthRepository
+      lazy val storedPartialAuth = partialAuthRepository
         .findActive(Nino(activePartialAuthInvitation.clientId), Arn(activePartialAuthInvitation.arn))
         .futureValue
 
       storedPartialAuth shouldBe defined
 
-      val activeInvitation = invitationRepo
+      lazy val activeInvitation = invitationRepo
         .findOneById(activePartialAuthInvitation.invitationId)
         .futureValue
 
       activeInvitation shouldBe defined
 
-      val storedInvitation = activeInvitation.get
+      lazy val storedInvitation = activeInvitation.get
 
       storedInvitation.status shouldBe PartialAuth
       storedInvitation.suppliedClientId shouldBe activePartialAuthInvitation.clientId
@@ -148,13 +148,13 @@ class MigratePartialAuthControllerISpec
 
       result.status shouldBe 204
 
-      val storedPartialAuth = partialAuthRepository
+      lazy val storedPartialAuth = partialAuthRepository
         .findActive(Nino(expiredPartialAuthInvitation.clientId), Arn(expiredPartialAuthInvitation.arn))
         .futureValue
 
       storedPartialAuth shouldBe defined
 
-      val activeInvitation = invitationRepo
+      lazy val activeInvitation = invitationRepo
         .findOneById(activePartialAuthInvitation.invitationId)
         .futureValue
 

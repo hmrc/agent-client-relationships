@@ -23,16 +23,18 @@ import org.mongodb.scala.result.InsertOneResult
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys.{arnKey, clientIdKey, invitationIdKey, serviceKey, statusKey, suppliedClientIdKey}
+import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
+import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.time.{Instant, LocalDate}
 import java.util.concurrent.TimeUnit
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 object FieldKeys {
@@ -46,7 +48,8 @@ object FieldKeys {
 
 @Singleton
 class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig: AppConfig)(implicit
-  ec: ExecutionContext
+  ec: ExecutionContext,
+  @Named("aes") crypto: Encrypter with Decrypter
 ) extends PlayMongoRepository[Invitation](
       mongoComponent = mongoComponent,
       collectionName = "invitations",
@@ -109,7 +112,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           Seq(
             arn.map(equal(arnKey, _)),
             if (services.nonEmpty) Some(in(serviceKey, services: _*)) else None,
-            if (clientIds.nonEmpty) Some(in(clientIdKey, clientIds: _*)) else None,
+            if (clientIds.nonEmpty) Some(in(clientIdKey, clientIds.map(encryptedString): _*)) else None,
             status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
           ).flatten: _*
         )
@@ -137,7 +140,10 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         and(
           equal(arnKey, arn),
           in(serviceKey, services: _*),
-          in(if (isSuppliedClientId) "suppliedClientId" else "clientId", clientIds.map(_.replaceAll(" ", "")): _*)
+          in(
+            if (isSuppliedClientId) "suppliedClientId" else "clientId",
+            clientIds.map(_.replaceAll(" ", "")).map(encryptedString): _*
+          )
         )
       )
       .toFuture()
@@ -145,7 +151,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   def findByArnClientIdService(arn: Arn, suppliedClientId: ClientId, service: Service): Future[Seq[Invitation]] =
     collection
       .find(
-        and(equal(arnKey, arn.value), equal("suppliedClientId", suppliedClientId.value), equal("service", service.id))
+        and(
+          equal(arnKey, arn.value),
+          equal("suppliedClientId", encryptedString(suppliedClientId.value)),
+          equal("service", service.id)
+        )
       )
       .toFuture()
 
@@ -211,14 +221,14 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .updateOne(
         and(
           equal(arnKey, arn.value),
-          equal("clientId", nino.value),
+          equal("clientId", encryptedString(nino.value)),
           equal("service", service),
           equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
         ),
         combine(
           set("status", Codecs.toBson[InvitationStatus](Accepted)),
           set("lastUpdated", Instant.now),
-          set("clientId", mtdItId.value),
+          set("clientId", encryptedString(mtdItId.value)),
           set("clientIdType", "MTDITID")
         )
       )
@@ -233,11 +243,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   ): Future[Boolean] =
     collection
       .updateOne(
-        and(equal("clientId", clientId), equal("clientIdType", clientIdType)),
+        and(equal("clientId", encryptedString(clientId)), equal("clientIdType", clientIdType)),
         combine(
-          set("clientId", newClientId),
+          set("clientId", encryptedString(newClientId)),
           set("clientIdType", newClientIdType),
-          set("suppliedClientId", newClientId),
+          set("suppliedClientId", encryptedString(newClientId)),
           set("suppliedClientIdType", newClientIdType),
           set("lastUpdated", Instant.now)
         )
@@ -256,7 +266,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         and(
           equal(arnKey, arn),
           equal("service", service),
-          equal("suppliedClientId", suppliedClientId),
+          equal("suppliedClientId", encryptedString(suppliedClientId)),
           equal("status", Codecs.toBson[InvitationStatus](Accepted)) // TODO This will not work for partial auth
         ),
         combine(
@@ -272,7 +282,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection
       .find(
         and(
-          equal(suppliedClientIdKey, clientId),
+          equal(suppliedClientIdKey, encryptedString(clientId)),
           equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
           in(serviceKey, services: _*)
         )
@@ -289,7 +299,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .findOneAndUpdate(
         and(
           equal("arn", arn.value),
-          equal("clientId", nino.value),
+          equal("clientId", encryptedString(nino.value)),
           equal("service", service),
           equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
         ),
