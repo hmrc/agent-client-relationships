@@ -16,7 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.model.Filters.{and, equal, in}
+import org.mongodb.scala.bson.conversions
+import org.mongodb.scala.model.Accumulators.addToSet
+import org.mongodb.scala.model.Aggregates.facet
+import org.mongodb.scala.model.Filters.{and, equal, in, or}
 import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import org.mongodb.scala.result.InsertOneResult
@@ -32,6 +35,7 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
+import java.net.URLDecoder
 import java.time.{Instant, LocalDate}
 import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Named, Singleton}
@@ -44,6 +48,7 @@ object FieldKeys {
   val suppliedClientIdKey: String = "suppliedClientId"
   val serviceKey: String = "service"
   val statusKey: String = "status"
+  val clientNameKey: String = "clientName"
 }
 
 @Singleton
@@ -64,9 +69,13 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         IndexModel(Indexes.ascending(clientIdKey)),
         IndexModel(Indexes.ascending(suppliedClientIdKey)),
         IndexModel(Indexes.ascending(statusKey)),
-        IndexModel(Indexes.ascending(serviceKey))
+        IndexModel(Indexes.ascending(serviceKey)),
+        IndexModel(Indexes.ascending(clientNameKey))
       ),
-      replaceIndexes = true
+      replaceIndexes = true,
+      extraCodecs = Seq(
+        Codecs.playFormatCodec(MongoTrackRequestsResult.format)
+      )
     )
     with Logging {
 
@@ -315,6 +324,65 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFutureOption()
 
+  private def makeTrackRequestsFilters(
+    statusFilter: Option[String],
+    clientName: Option[String]
+  ): conversions.Bson = Aggregates.filter(
+    and(
+      statusFilter
+        .map(status =>
+          if (status == "Accepted") or(equal(statusKey, status), equal(statusKey, PartialAuth.toString))
+          else equal(statusKey, status)
+        )
+        .getOrElse(Filters.exists(statusKey)),
+      clientName
+        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name))))
+        .getOrElse(Filters.exists(clientNameKey))
+    )
+  )
+
+  def trackRequests(
+    arn: String,
+    statusFilter: Option[String],
+    clientName: Option[String],
+    pageNumber: Int,
+    pageSize: Int
+  ): Future[TrackRequestsResult] = {
+    val filters = makeTrackRequestsFilters(statusFilter, clientName)
+    val fullAggregatePipeline = Seq(
+      Aggregates.filter(equal(arnKey, arn)),
+      facet(
+        Facet("clientNamesFacet", Aggregates.group(null, addToSet("clientNames", "$clientName"))),
+        Facet("availableFiltersFacet", Aggregates.group(null, addToSet("availableFilters", "$status"))),
+        Facet("totalResultsFacet", filters, Aggregates.count("count")),
+        Facet(
+          "requests",
+          filters,
+          Aggregates.sort(Sorts.descending("created")),
+          Aggregates.skip((pageNumber - 1) * pageSize),
+          Aggregates.limit(pageSize)
+        )
+      )
+    )
+    for {
+      results <- collection
+                   .aggregate[MongoTrackRequestsResult](fullAggregatePipeline)
+                   .toFuture()
+                   .map(_.headOption.getOrElse(MongoTrackRequestsResult()))
+    } yield TrackRequestsResult(
+      requests = results.requests,
+      clientNames = results.clientNamesFacet.headOption.map(_.clientNames.sorted).getOrElse(Nil),
+      availableFilters = results.availableFiltersFacet.headOption.map(_.availableFilters.sorted).getOrElse(Nil),
+      totalResults = results.totalResultsFacet.headOption.map(_.count).getOrElse(0),
+      pageNumber = pageNumber,
+      filtersApplied = (statusFilter, clientName) match {
+        case (Some(f), Some(c)) => Some(Map("statusFilter" -> f, "clientFilter" -> c))
+        case (Some(f), None)    => Some(Map("statusFilter" -> f))
+        case (None, Some(c))    => Some(Map("clientFilter" -> c))
+        case _                  => None
+      }
+    )
+  }
 }
 
 object InvitationsRepository {

@@ -58,6 +58,31 @@ class AuthorisationRequestInfoController @Inject() (
     }
   }
 
+  def trackRequests(
+    arn: Arn,
+    statusFilter: Option[String],
+    clientName: Option[String],
+    pageNumber: Int,
+    pageSize: Int
+  ): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent {
+      case agentArn: Arn if agentArn == arn =>
+        invitationService
+          .trackRequests(
+            arn,
+            statusFilter.filter(_.nonEmpty),
+            clientName.filter(_.nonEmpty),
+            pageNumber,
+            pageSize
+          )
+          .map { result =>
+            Ok(Json.toJson(result))
+          }
+      case _ =>
+        Future.successful(Forbidden)
+    }
+  }
+
   def getForClient(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     invitationService.findInvitationForClient(invitationId).flatMap {
       case Some(invitation) =>
