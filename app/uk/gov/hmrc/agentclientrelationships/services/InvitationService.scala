@@ -20,7 +20,7 @@ import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IFConnector}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending, Rejected}
@@ -41,6 +41,7 @@ class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   ifConnector: IFConnector,
+  agentAssuranceConnector: AgentAssuranceConnector,
   emailService: EmailService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
@@ -93,6 +94,24 @@ class InvitationService @Inject() (
 
   def findInvitationForClient(invitationId: String): Future[Option[Invitation]] =
     invitationsRepository.findOneByIdForClient(invitationId)
+
+  def findNonSuspendedClientInvitations(services: Seq[String], clientIds: Seq[String])(implicit
+    hc: HeaderCarrier
+  ): Future[Seq[Invitation]] = {
+    def getSuspendedArns(arns: Seq[String]) =
+      Future
+        .sequence(arns.map { arn =>
+          agentAssuranceConnector
+            .getAgentRecordWithChecks(Arn(arn))
+            .map(record => if (record.suspensionDetails.exists(_.suspensionStatus)) Some(arn) else None)
+        })
+        .map(_.flatten)
+
+    for {
+      invitations   <- invitationsRepository.findAllBy(arn = None, services, clientIds, status = None)
+      suspendedArns <- getSuspendedArns(invitations.map(_.arn).distinct)
+    } yield invitations.filterNot(invitation => suspendedArns.contains(invitation.arn))
+  }
 
   def findAllForAgent(
     arn: String,
