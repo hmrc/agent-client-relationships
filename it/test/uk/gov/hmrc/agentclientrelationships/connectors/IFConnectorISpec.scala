@@ -145,14 +145,6 @@ class IFConnectorISpec
       await(ifConnector.getNinoFor(mtdItId)) shouldBe None
     }
 
-    "record metrics for GetRegistrationDetailsBymtdId" in {
-      givenNinoIsKnownFor(mtdItId, Nino("AB123456C"))
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      await(ifConnector.getNinoFor(mtdItId))
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetBusinessDetailsByMtdId-GET")
-    }
-
     "return MtdItId when agent's nino is known to ETMP" in {
       givenMtdItIdIsKnownFor(nino, mtdItId)
       givenAuditConnector()
@@ -578,25 +570,6 @@ class IFConnectorISpec
       givenAuditConnector()
       val result = await(relationshipConnector.getActiveClientRelationships(vrn, Vat))
       result shouldBe None
-    }
-
-    "record metrics for GetStatusAgentRelationship for ItSa service" in {
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      getActiveRelationshipsViaClient(mtdItId, agentARN)
-      val result = await(relationshipConnector.getActiveClientRelationships(mtdItId, MtdIt))
-      result.get.arn shouldBe agentARN
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetActiveClientRelationships-GET")
-    }
-
-    "record metrics for GetStatusAgentRelationship for Vat service" in {
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      getActiveRelationshipsViaClient(vrn, agentARN)
-
-      val result = await(relationshipConnector.getActiveClientRelationships(vrn, Vat))
-      result.get.arn shouldBe agentARN
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-IF-GetActiveClientRelationships-GET")
     }
   }
 

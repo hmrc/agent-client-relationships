@@ -116,19 +116,19 @@ class MigratePartialAuthControllerISpec
 
       result.status shouldBe 204
 
-      lazy val storedPartialAuth = partialAuthRepository
+      val storedPartialAuth = partialAuthRepository
         .findActive(Nino(activePartialAuthInvitation.clientId), Arn(activePartialAuthInvitation.arn))
         .futureValue
 
       storedPartialAuth shouldBe defined
 
-      lazy val activeInvitation = invitationRepo
+      val activeInvitation = invitationRepo
         .findOneById(activePartialAuthInvitation.invitationId)
         .futureValue
 
       activeInvitation shouldBe defined
 
-      lazy val storedInvitation = activeInvitation.get
+      val storedInvitation = activeInvitation.get
 
       storedInvitation.status shouldBe PartialAuth
       storedInvitation.suppliedClientId shouldBe activePartialAuthInvitation.clientId
@@ -148,13 +148,13 @@ class MigratePartialAuthControllerISpec
 
       result.status shouldBe 204
 
-      lazy val storedPartialAuth = partialAuthRepository
+      val storedPartialAuth = partialAuthRepository
         .findActive(Nino(expiredPartialAuthInvitation.clientId), Arn(expiredPartialAuthInvitation.arn))
         .futureValue
 
       storedPartialAuth shouldBe defined
 
-      lazy val activeInvitation = invitationRepo
+      val activeInvitation = invitationRepo
         .findOneById(activePartialAuthInvitation.invitationId)
         .futureValue
 
