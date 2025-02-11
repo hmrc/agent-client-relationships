@@ -187,9 +187,9 @@ class InvitationService @Inject() (
              invitation.service,
              Nino(invitation.clientId)
            )
-      _ = if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
-            invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
-          } else Future.successful(())
+      _ <- if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
+             invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
+           } else Future.unit
     } yield ()
 
   private def currentTime() = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
