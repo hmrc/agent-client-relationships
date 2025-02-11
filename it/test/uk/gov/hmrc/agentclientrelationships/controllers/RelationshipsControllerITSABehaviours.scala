@@ -50,8 +50,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
     implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
     implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-    def invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
-    def partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
+    val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+    val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
     def doRequest = doGetRequest(requestPath)
 

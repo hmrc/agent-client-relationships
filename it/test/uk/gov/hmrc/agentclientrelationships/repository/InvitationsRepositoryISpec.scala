@@ -25,20 +25,24 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DAYS
 
-class InvitationsRepositoryISpec extends AnyWordSpec with Matchers with MongoApp with GuiceOneAppPerSuite {
+class InvitationsRepositoryISpec
+    extends AnyWordSpec
+    with Matchers
+    with GuiceOneAppPerSuite
+    with DefaultPlayMongoRepositorySupport[Invitation] {
 
   override lazy val app: Application =
     new GuiceApplicationBuilder()
-      .configure(mongoConfiguration)
+      .configure("mongodb.uri" -> mongoUri)
       .build()
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]

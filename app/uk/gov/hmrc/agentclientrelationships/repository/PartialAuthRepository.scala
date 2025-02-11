@@ -22,22 +22,26 @@ import org.mongodb.scala.model.Updates._
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.Instant
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[PartialAuthRelationship](
+class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
+  ec: ExecutionContext,
+  @Named("aes") crypto: Encrypter with Decrypter
+) extends PlayMongoRepository[PartialAuthRelationship](
       mongoComponent = mongoComponent,
       collectionName = "partial-auth",
-      domainFormat = PartialAuthRelationship.format,
+      domainFormat = PartialAuthRelationship.mongoFormat,
       indexes = Seq(
         IndexModel(Indexes.ascending("service", "nino", "arn", "active")),
         IndexModel(
@@ -72,7 +76,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       .find(
         and(
           in("service", HMRCMTDIT, HMRCMTDITSUPP),
-          equal("nino", nino.value),
+          equal("nino", encryptedString(nino.value)),
           equal("arn", arn.value),
           equal("active", true)
         )
@@ -84,7 +88,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       .find(
         and(
           equal("service", serviceId),
-          equal("nino", nino.value),
+          equal("nino", encryptedString(nino.value)),
           equal("arn", arn.value),
           equal("active", true)
         )
@@ -92,7 +96,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       .headOption()
 
   def findByNino(nino: Nino): Future[Option[PartialAuthRelationship]] =
-    collection.find(equal("nino", nino.value)).headOption()
+    collection.find(equal("nino", encryptedString(nino.value))).headOption()
 
   /* this will only find partially authorised ITSA main agents for a given nino string */
   def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] =
@@ -100,7 +104,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       .find(
         and(
           equal("service", HMRCMTDIT),
-          equal("nino", nino),
+          equal("nino", encryptedString(nino)),
           equal("active", true)
         )
       )
@@ -111,7 +115,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       .updateOne(
         and(
           equal("service", serviceId),
-          equal("nino", nino.value),
+          equal("nino", encryptedString(nino.value)),
           equal("arn", arn.value),
           equal("active", true)
         ),
@@ -126,7 +130,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
       .deleteOne(
         and(
           equal("service", serviceId),
-          equal("nino", nino.value),
+          equal("nino", encryptedString(nino.value)),
           equal("arn", arn.value),
           equal("active", true)
         )
@@ -147,7 +151,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit 
           Seq(
             arn.map(equal("arn", _)),
             if (services.nonEmpty) Some(in("service", services: _*)) else None,
-            nino.map(equal("nino", _)),
+            nino.map(str => equal("nino", encryptedString(str))),
             isActive.map(equal("active", _))
           ).flatten: _*
         )
