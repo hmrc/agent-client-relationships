@@ -57,6 +57,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
     )
     with Logging {
 
+  // Permanent store of alt itsa authorisations
   override lazy val requiresTtlIndex: Boolean = false
 
   def create(

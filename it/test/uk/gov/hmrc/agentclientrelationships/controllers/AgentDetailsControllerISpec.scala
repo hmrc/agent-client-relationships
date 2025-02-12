@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-import uk.gov.hmrc.agentclientrelationships.repository.MongoAgentReferenceRepository
+import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 import scala.concurrent.ExecutionContext
@@ -37,7 +37,7 @@ class AgentDetailsControllerISpec extends BaseControllerISpec with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  def agentReferenceRepo: MongoAgentReferenceRepository = new MongoAgentReferenceRepository(mongoComponent)
+  val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
   val testUrl: String = s"/agent-client-relationships/agent/${arn.value}/details"
 

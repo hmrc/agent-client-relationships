@@ -22,7 +22,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReferenceRecord, ExistingMainAgent, ValidateInvitationResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, MongoAgentReferenceRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, MtdIt, MtdItSupp}
@@ -52,13 +52,12 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
 
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
+  val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
   val agentReferenceService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-
-  def agentReferenceRepo: MongoAgentReferenceRepository = new MongoAgentReferenceRepository(mongoComponent)
 
   "migrate agent reference record" should {
     "create a record in the agentReferenceRepository" in {

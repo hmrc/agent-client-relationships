@@ -16,41 +16,34 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import com.google.inject.ImplementedBy
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.addToSet
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.{Logger, Logging}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
+import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[MongoAgentReferenceRepository])
-trait AgentReferenceRepository {
-  def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit]
-  def findBy(uid: String): Future[Option[AgentReferenceRecord]]
-  def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]]
-  def updateAgentName(uid: String, newAgentName: String): Future[Unit]
-  def delete(arn: Arn): Future[Unit]
-}
-
 @Singleton
-class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[AgentReferenceRecord](
+class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
+  ec: ExecutionContext,
+  @Named("aes") crypto: Encrypter with Decrypter
+) extends PlayMongoRepository[AgentReferenceRecord](
       mongoComponent = mongo,
       collectionName = "agent-reference",
-      domainFormat = AgentReferenceRecord.formats,
+      domainFormat = AgentReferenceRecord.mongoFormat,
       indexes = List(
         IndexModel(ascending("uid"), IndexOptions().unique(true)),
         IndexModel(ascending("arn"), IndexOptions().unique(true))
       )
     )
-    with AgentReferenceRepository
     with Logging {
 
   val localLogger: Logger = logger
@@ -58,32 +51,32 @@ class MongoAgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit e
 // to support static link for agents there is no TTL
   override lazy val requiresTtlIndex: Boolean = false
 
-  override def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] =
+  def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] =
     collection
       .insertOne(agentReferenceRecord)
       .toFuture()
       .map(_ => ())
 
-  override def findBy(uid: String): Future[Option[AgentReferenceRecord]] =
+  def findBy(uid: String): Future[Option[AgentReferenceRecord]] =
     collection
       .find(equal("uid", uid))
       .headOption()
 
-  override def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]] =
+  def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]] =
     collection
       .find(equal("arn", arn.value))
       .headOption()
 
-  override def updateAgentName(uid: String, newAgentName: String): Future[Unit] =
+  def updateAgentName(uid: String, newAgentName: String): Future[Unit] =
     collection
-      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", newAgentName))
+      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", encryptedString(newAgentName)))
       .toFuture()
       .map { updateOneResult =>
         if (updateOneResult.getModifiedCount == 1) ()
         else throw new RuntimeException("could not update agent reference name, no matching uid found.")
       }
 
-  override def delete(arn: Arn): Future[Unit] =
+  def delete(arn: Arn): Future[Unit] =
     collection
       .deleteOne(equal("arn", arn.value))
       .toFuture()

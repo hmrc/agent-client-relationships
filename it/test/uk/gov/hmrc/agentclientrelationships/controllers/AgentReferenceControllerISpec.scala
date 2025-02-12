@@ -21,12 +21,12 @@ import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-import uk.gov.hmrc.agentclientrelationships.repository.MongoAgentReferenceRepository
+import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 class AgentReferenceControllerISpec extends BaseControllerISpec {
 
-  val referenceRepo: MongoAgentReferenceRepository = app.injector.instanceOf[MongoAgentReferenceRepository]
+  val referenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
   val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
   val fetchOrCreateUrl = s"/agent-client-relationships/agent-reference"
