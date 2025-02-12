@@ -43,7 +43,7 @@ class InvitationsRepositoryISpec
 
   override lazy val app: Application =
     new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri)
+      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
       .build()
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]

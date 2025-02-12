@@ -36,7 +36,7 @@ class AgentReferenceRepositoryISpec
 
   override lazy val app: Application =
     new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri)
+      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
       .build()
 
   val repository: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
