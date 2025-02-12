@@ -33,6 +33,7 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DAYS
+import scala.util.Random
 
 class InvitationsRepositoryISpec
     extends AnyWordSpec
@@ -48,22 +49,21 @@ class InvitationsRepositoryISpec
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
-  val pendingInvitation: Invitation = Invitation(
-    "123",
-    "XARN1234567",
-    "HMRC-MTD-VAT",
-    "123456789",
-    "vrn",
-    "234567890",
-    "vrn",
-    "Macrosoft",
-    Pending,
-    None,
-    Some("personal"),
-    LocalDate.parse("2020-01-01"),
-    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-    Instant.now().truncatedTo(ChronoUnit.SECONDS)
-  )
+  def pendingInvitation: Invitation = Invitation
+    .createNew(
+      "XARN1234567",
+      Vat,
+      Vrn("123456789"),
+      Vrn("234567890"),
+      "Macrosoft",
+      LocalDate.of(2020, 1, 1),
+      Some("personal")
+    )
+    .copy(
+      invitationId = Random.between(100000, 999999).toString, // making sure duplicates aren't generated
+      created = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+      lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+    )
 
   "InvitationsRepository" should {
 
@@ -131,26 +131,25 @@ class InvitationsRepositoryISpec
       }
 
       "the filter for the service is not satisfied" in {
-        val listOfInvitations = Seq(pendingInvitation, pendingInvitation, pendingInvitation)
-        await(repository.collection.insertMany(listOfInvitations).toFuture())
+        await(repository.collection.insertOne(pendingInvitation).toFuture())
 
         await(repository.findAllForAgent("XARN1234567", Seq("HMRC-XYZ"), Seq("123456789"))) shouldBe Seq()
       }
 
       "the filter for the clientId is not satisfied" in {
-        val listOfInvitations = Seq(pendingInvitation, pendingInvitation, pendingInvitation)
-        await(repository.collection.insertMany(listOfInvitations).toFuture())
+        await(repository.collection.insertOne(pendingInvitation).toFuture())
 
         await(repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("1"))) shouldBe Seq()
       }
     }
 
     "update the status of an invitation when a matching invitation is found" in {
-      await(repository.collection.insertOne(pendingInvitation).toFuture())
+      val invitation = pendingInvitation
+      await(repository.collection.insertOne(invitation).toFuture())
 
-      val updatedInvitation = await(repository.updateStatus(pendingInvitation.invitationId, Accepted)).get
+      lazy val updatedInvitation = await(repository.updateStatus(invitation.invitationId, Accepted)).get
       updatedInvitation.status shouldBe Accepted
-      updatedInvitation.lastUpdated.isAfter(pendingInvitation.lastUpdated)
+      updatedInvitation.lastUpdated.isAfter(invitation.lastUpdated)
     }
 
     "fail to update the status of an invitation when a matching invitation is not found" in {
@@ -158,21 +157,23 @@ class InvitationsRepositoryISpec
     }
 
     "update the status from Pending to Rejected of an invitation when a matching invitation is found" in {
-      await(repository.collection.insertOne(pendingInvitation).toFuture())
+      val invitation = pendingInvitation
+      await(repository.collection.insertOne(invitation).toFuture())
 
-      val updatedInvitation =
-        await(repository.updateStatusFromTo(pendingInvitation.invitationId, Pending, Rejected)).get
+      lazy val updatedInvitation =
+        await(repository.updateStatusFromTo(invitation.invitationId, Pending, Rejected)).get
       updatedInvitation.status shouldBe Rejected
-      updatedInvitation.lastUpdated.isAfter(pendingInvitation.lastUpdated)
+      updatedInvitation.lastUpdated.isAfter(invitation.lastUpdated)
     }
 
     "update the status from Accepted to DeAuthorised with relationshipEndedBy of an invitation when a matching invitation is found" in {
-      await(repository.collection.insertOne(pendingInvitation.copy(status = Accepted)).toFuture())
+      val invitation = pendingInvitation.copy(status = Accepted)
+      await(repository.collection.insertOne(invitation).toFuture())
 
-      val updatedInvitation =
+      lazy val updatedInvitation =
         await(
           repository.updateStatusFromTo(
-            invitationId = pendingInvitation.invitationId,
+            invitationId = invitation.invitationId,
             fromStatus = Accepted,
             toStatus = DeAuthorised,
             relationshipEndedBy = Some("HMRC")
@@ -188,9 +189,14 @@ class InvitationsRepositoryISpec
     "de-authorise Accepted invitation when a matching arn, service, suppliedClientId is found" in {
       await(repository.collection.insertOne(pendingInvitation.copy(status = Accepted)).toFuture())
 
-      val updatedInvitation = await(
+      lazy val updatedInvitation = await(
         repository
-          .deauthorise(pendingInvitation.arn, pendingInvitation.suppliedClientId, pendingInvitation.service, "This guy")
+          .deauthorise(
+            pendingInvitation.arn,
+            pendingInvitation.suppliedClientId,
+            pendingInvitation.service,
+            "This guy"
+          )
       ).get
       updatedInvitation.status shouldBe DeAuthorised
       updatedInvitation.relationshipEndedBy shouldBe Some("This guy")
@@ -201,20 +207,23 @@ class InvitationsRepositoryISpec
       await(repository.collection.insertOne(pendingInvitation.copy(status = DeAuthorised)).toFuture())
 
       await(
-        repository.deauthorise(pendingInvitation.arn, pendingInvitation.clientId, pendingInvitation.service, "This guy")
+        repository
+          .deauthorise(pendingInvitation.arn, pendingInvitation.clientId, pendingInvitation.service, "This guy")
       ) shouldBe None
     }
 
     "update a client ID and client ID type when a matching invitation is found" in {
-      await(repository.collection.insertOne(pendingInvitation).toFuture())
+      val invitation = pendingInvitation
+      await(repository.collection.insertOne(invitation).toFuture())
       await(
-        repository.updateClientIdAndType(pendingInvitation.clientId, pendingInvitation.clientIdType, "ABC", "ABCType")
+        repository
+          .updateClientIdAndType(invitation.clientId, invitation.clientIdType, "ABC", "ABCType")
       ) shouldBe true
-      val invitation = await(repository.findOneById(pendingInvitation.invitationId)).get
-      invitation.clientId shouldBe "ABC"
-      invitation.clientIdType shouldBe "ABCType"
-      invitation.suppliedClientId shouldBe "ABC"
-      invitation.suppliedClientIdType shouldBe "ABCType"
+      lazy val updatedInvitation = await(repository.findOneById(invitation.invitationId)).get
+      updatedInvitation.clientId shouldBe "ABC"
+      updatedInvitation.clientIdType shouldBe "ABCType"
+      updatedInvitation.suppliedClientId shouldBe "ABC"
+      updatedInvitation.suppliedClientIdType shouldBe "ABCType"
     }
 
     "fail to update a client ID and client ID type when no matching invitation is found" in {

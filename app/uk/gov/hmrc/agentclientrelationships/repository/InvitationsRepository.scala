@@ -61,7 +61,10 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           Indexes.ascending("created"),
           IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
         ),
-        IndexModel(Indexes.ascending(suppliedClientIdKey, statusKey, serviceKey))
+        IndexModel(Indexes.ascending(clientIdKey)),
+        IndexModel(Indexes.ascending(suppliedClientIdKey)),
+        IndexModel(Indexes.ascending(statusKey)),
+        IndexModel(Indexes.ascending(serviceKey))
       ),
       replaceIndexes = true
     )
