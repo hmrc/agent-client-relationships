@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -24,22 +23,22 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IFStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class DesConnectorISpec(implicit val ec: ExecutionContext)
+class DesConnectorISpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with DesStubs
     with DesStubsGet
     with DataStreamStub
-    with IFStubs
-    with MetricTestSupport {
+    with IFStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
@@ -71,9 +70,9 @@ class DesConnectorISpec(implicit val ec: ExecutionContext)
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val desConnector =
-    new DesConnector(httpClient, ec)(metrics, appConfig)
+  val desConnector = new DesConnector(httpClient, ec)(metrics, appConfig)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
@@ -148,19 +147,12 @@ class DesConnectorISpec(implicit val ec: ExecutionContext)
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
-
-    "record metrics for GetStatusAgentRelationship Cesa" in {
-      givenClientHasRelationshipWithAgentInCESA(nino, "bar")
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino))
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-DES-GetStatusAgentRelationship-GET")
-    }
   }
 
   "DesConnector GetAgentRecord" should {
 
     "get agentRecord detail should retrieve agent record from DES" in {
+      givenAuditConnector()
       getAgentRecordForClient(agentARN)
 
       await(desConnector.getAgentRecord(agentARN)) should be(

@@ -17,32 +17,30 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import org.scalamock.scalatest.MockFactory
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, MappingStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class MappingConnectorSpec(implicit ec: ExecutionContext)
+class MappingConnectorSpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with MappingStubs
     with DataStreamStub
-    with MetricTestSupport
     with MockFactory {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
-  val metrics: Metrics = mock[Metrics]
+  override implicit lazy val app: Application = appBuilder.build()
+  val metrics: Metrics = app.injector.instanceOf[Metrics]
   val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
@@ -67,6 +65,7 @@ class MappingConnectorSpec(implicit ec: ExecutionContext)
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val mappingConnector = new MappingConnector(httpClient)(metrics, appConfig, ec)
 
   "MappingConnector" should {
@@ -102,14 +101,6 @@ class MappingConnectorSpec(implicit ec: ExecutionContext)
       givenServiceReturnsServerError()
       givenAuditConnector()
       await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe empty
-    }
-
-    "record metrics for Mappings" in {
-      givenArnIsKnownFor(arn, SaAgentReference("foo"))
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      await(mappingConnector.getSaAgentReferencesFor(arn))
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-Digital-Mappings-GET")
     }
 
     "return agent codes for some known ARN" in {

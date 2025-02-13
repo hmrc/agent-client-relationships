@@ -16,33 +16,30 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, UsersGroupsSearchStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpClient
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class UsersGroupsSearchConnectorSpec(implicit ec: ExecutionContext)
+class UsersGroupsSearchConnectorSpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with DataStreamStub
-    with MetricTestSupport
     with UsersGroupsSearchStubs {
 
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpClient = app.injector.instanceOf[HttpClient]
+  val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -66,6 +63,7 @@ class UsersGroupsSearchConnectorSpec(implicit ec: ExecutionContext)
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   val connector =
     new UsersGroupsSearchConnector(httpClient)(app.injector.instanceOf[Metrics], app.injector.instanceOf[AppConfig], ec)

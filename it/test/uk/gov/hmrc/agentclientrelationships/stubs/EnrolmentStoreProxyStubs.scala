@@ -268,7 +268,7 @@ trait EnrolmentStoreProxyStubs extends Eventually {
   // ES19 - updateEnrolmentFriendlyName
   def givenUpdateEnrolmentFriendlyNameResponse(groupId: String, enrolment: String, responseStatus: Int): StubMapping =
     stubFor(
-      get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments/$enrolment/friendly_name"))
+      put(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments/$enrolment/friendly_name"))
         .willReturn(
           aResponse()
             .withStatus(responseStatus)

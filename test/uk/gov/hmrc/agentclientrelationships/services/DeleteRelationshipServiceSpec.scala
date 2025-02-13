@@ -42,9 +42,10 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
-class DeleteRelationshipServiceSpec(implicit ec: ExecutionContext) extends UnitSpec {
+class DeleteRelationshipServiceSpec extends UnitSpec {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val testAuditData: AuditData = new AuditData
 
   def now: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime

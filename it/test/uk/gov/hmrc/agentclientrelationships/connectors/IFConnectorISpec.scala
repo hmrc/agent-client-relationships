@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, IFAgentClientRelationshipStub, IFStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, MtdIt, MtdItSupp, Pillar2, Ppt, Trust, TrustNT, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -42,8 +42,7 @@ class IFConnectorISpec
     with WireMockSupport
     with IFStubs
     with IFAgentClientRelationshipStub
-    with DataStreamStub
-    with MetricTestSupport {
+    with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()

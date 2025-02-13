@@ -37,7 +37,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
+class RecoverySchedulerISpec
     extends TestKit(ActorSystem("testSystem"))
     with UnitSpec
     with MongoSupport
@@ -45,8 +45,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
     with WireMockSupport
     with RelationshipStubs
     with DataStreamStub
-    with IFStubs
-    with IFAgentClientRelationshipStub
+    with HIPAgentClientRelationshipStub
     with ACAStubs
     with AUCDStubs
     with BeforeAndAfterEach {
@@ -57,7 +56,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
         "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
         "microservice.services.tax-enrolments.port"             -> wireMockPort,
         "microservice.services.users-groups-search.port"        -> wireMockPort,
-        "microservice.services.if.port"                         -> wireMockPort,
+        "microservice.services.hip.port"                        -> wireMockPort,
         "auditing.consumer.baseUri.host"                        -> wireMockHost,
         "auditing.consumer.baseUri.port"                        -> wireMockPort,
         "features.copy-relationship.mtd-it"                     -> true,
@@ -66,7 +65,6 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
         "microservice.services.agent-user-client-details.port"  -> wireMockPort,
         "features.recovery-enable"                              -> false,
         "auditing.enabled"                                      -> true,
-        "metrics.enabled"                                       -> true,
         "mongodb.uri"                                           -> mongoUri
       )
 
@@ -78,6 +76,7 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
 
   override implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
+  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   private val arn: Arn = Arn("AARN0000002")
   private val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
@@ -86,10 +85,9 @@ class RecoverySchedulerISpec(implicit val ec: ExecutionContext)
   override def beforeEach(): Unit = {
     super.beforeEach()
     deleteRepo.collection.drop().toFuture().futureValue
-    ()
   }
 
-  override def afterAll() = {
+  override def afterAll(): Unit = {
     super.afterAll()
     TestKit.shutdownActorSystem(system)
   }

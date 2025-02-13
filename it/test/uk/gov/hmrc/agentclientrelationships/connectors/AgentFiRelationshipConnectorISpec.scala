@@ -23,7 +23,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -36,8 +36,7 @@ class AgentFiRelationshipConnectorISpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
-    with AfiRelationshipStub
-    with MetricTestSupport {
+    with AfiRelationshipStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()

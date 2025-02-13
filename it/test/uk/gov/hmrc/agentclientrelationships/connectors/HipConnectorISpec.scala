@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HIPAgentClientRelationshipStub}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, MtdIt, MtdItSupp, Pillar2, Ppt, Trust, TrustNT, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -43,8 +43,7 @@ class HipConnectorISpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with HIPAgentClientRelationshipStub
-    with DataStreamStub
-    with MetricTestSupport {
+    with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()
