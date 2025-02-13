@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText, SymmetricCryptoFactory}
@@ -50,11 +51,11 @@ class InvitationSpec extends UnitSpec {
     "invitationId"         -> "123",
     "arn"                  -> "XARN1234567",
     "service"              -> "HMRC-MTD-VAT",
-    "clientId"             -> crypto.encrypt(PlainText("123456789")).value,
+    "clientId"             -> encryptedString("123456789"),
     "clientIdType"         -> "vrn",
-    "suppliedClientId"     -> crypto.encrypt(PlainText("234567890")).value,
+    "suppliedClientId"     -> encryptedString("234567890"),
     "suppliedClientIdType" -> "vrn",
-    "clientName"           -> crypto.encrypt(PlainText("Macrosoft")).value,
+    "clientName"           -> encryptedString("Macrosoft"),
     "status"               -> "Pending",
     "relationshipEndedBy"  -> "Me",
     "clientType"           -> "personal",
@@ -84,10 +85,6 @@ class InvitationSpec extends UnitSpec {
         Json.toJson(optionalModel)(Invitation.mongoFormat) shouldBe optionalJson
       }
     }
-
-    "read from mongo JSON" when {}
-
-    "write to mongo JSON" when {}
   }
 
   "Invitation.createNew" should {

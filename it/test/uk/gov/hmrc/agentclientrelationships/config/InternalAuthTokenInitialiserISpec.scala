@@ -63,8 +63,7 @@ class InternalAuthTokenInitialiserISpec
           "microservice.services.internal-auth.port" -> wireMockPort,
           "appName"                                  -> appName,
           "internal-auth-token-enabled-on-start"     -> true,
-          "internal-auth.token"                      -> authToken,
-          "metrics.enabled"                          -> false
+          "internal-auth.token"                      -> authToken
         )
         .build()
 
@@ -111,8 +110,7 @@ class InternalAuthTokenInitialiserISpec
             "microservice.services.internal-auth.port" -> wireMockPort,
             "appName"                                  -> appName,
             "internal-auth-token-enabled-on-start"     -> true,
-            "internal-auth.token"                      -> authToken,
-            "metrics.enabled"                          -> false
+            "internal-auth.token"                      -> authToken
           )
           .build()
       }
@@ -149,8 +147,7 @@ class InternalAuthTokenInitialiserISpec
           "microservice.services.internal-auth.port" -> wireMockPort,
           "appName"                                  -> appName,
           "internal-auth-token-enabled-on-start"     -> true,
-          "internal-auth.token"                      -> authToken,
-          "metrics.enabled"                          -> false
+          "internal-auth.token"                      -> authToken
         )
         .build()
 
@@ -185,8 +182,7 @@ class InternalAuthTokenInitialiserISpec
           "microservice.services.internal-auth.port" -> wireMockPort,
           "appName"                                  -> appName,
           "internal-auth-token-enabled-on-start"     -> false,
-          "internal-auth.token"                      -> authToken,
-          "metrics.enabled"                          -> false
+          "internal-auth.token"                      -> authToken
         )
         .build()
 
