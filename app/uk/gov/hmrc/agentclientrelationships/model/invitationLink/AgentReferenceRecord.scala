@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
+import play.api.libs.json.{Format, Json, __}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 
 import scala.collection.Seq
 
@@ -29,4 +32,13 @@ case class AgentReferenceRecord(
 
 object AgentReferenceRecord {
   implicit val formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
+
+  def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[AgentReferenceRecord] =
+    (
+      (__ \ "uid").format[String] and
+        (__ \ "arn").format[Arn] and {
+          implicit val cryptoFormat: Format[String] = stringEncrypterDecrypter
+          (__ \ "normalisedAgentNames").format[Seq[String]]
+        }
+    )(AgentReferenceRecord.apply, unlift(AgentReferenceRecord.unapply))
 }

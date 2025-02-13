@@ -33,8 +33,8 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
-  def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
+  val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+  val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   def allActions: Map[String, Set[InvitationStatus]] = Map(
     "accept" -> Set(Accepted, PartialAuth),

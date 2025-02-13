@@ -17,20 +17,29 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoWriteException
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-class MongoAgentReferenceRepositoryISpec
-    extends UnitSpec
+class AgentReferenceRepositoryISpec
+    extends AnyWordSpec
+    with Matchers
+    with GuiceOneAppPerSuite
     with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
     with LogCapturing {
 
-  val repository = new MongoAgentReferenceRepository(mongoComponent)
+  override lazy val app: Application =
+    new GuiceApplicationBuilder()
+      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
+      .build()
+
+  val repository: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
   "AgentReferenceRepository" when {
     def agentReferenceRecord(uid: String, arn: String) = AgentReferenceRecord(uid, Arn(arn), Seq("stan-lee"))
@@ -122,6 +131,7 @@ trait LogCapturing {
   import ch.qos.logback.classic.{Level, Logger => LogbackLogger}
   import ch.qos.logback.core.read.ListAppender
   import play.api.LoggerLike
+
   import scala.jdk.CollectionConverters.ListHasAsScala
 
   def withCaptureOfErrorLogging(logger: LoggerLike)(body: (=> List[ILoggingEvent]) => Unit): Unit = {

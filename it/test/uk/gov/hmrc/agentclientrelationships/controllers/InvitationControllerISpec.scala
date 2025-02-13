@@ -63,8 +63,8 @@ class InvitationControllerISpec
       stubControllerComponents()
     )
 
-  def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
-  def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
+  val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+  val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   val clientName = "DummyClientName"
   val baseInvitationInputData: CreateInvitationRequest =

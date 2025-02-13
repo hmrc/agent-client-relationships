@@ -123,7 +123,6 @@ trait BaseControllerISpec
     super.beforeEach()
     givenAuditConnector()
     await(mongoComponent.database.drop().toFuture())
-    ()
   }
 
   val arn = Arn("AARN0000002")

@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers.transitional
 
-import play.api.libs.json.Json
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseControllerISpec
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, InvitationStatus, PartialAuth}
+import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuth}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, ClientDetailsStub, EmailStubs}
@@ -31,7 +30,7 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 
 import java.time.temporal.ChronoUnit.MILLIS
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
+import java.time.{LocalDate, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
 class MigratePartialAuthControllerISpec
@@ -53,8 +52,8 @@ class MigratePartialAuthControllerISpec
       stubControllerComponents()
     )
 
-  def invitationRepo: InvitationsRepository = new InvitationsRepository(mongoComponent, appConfig)
-  def partialAuthRepository: PartialAuthRepository = new PartialAuthRepository(mongoComponent)
+  val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+  val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   val clientName = "DummyClientName"
   private val now = LocalDateTime.now().truncatedTo(MILLIS)
@@ -116,19 +115,15 @@ class MigratePartialAuthControllerISpec
 
       result.status shouldBe 204
 
-      val storedPartialAuth = partialAuthRepository
+      partialAuthRepository
         .findActive(Nino(activePartialAuthInvitation.clientId), Arn(activePartialAuthInvitation.arn))
-        .futureValue
-
-      storedPartialAuth shouldBe defined
+        .futureValue shouldBe defined
 
       val activeInvitation = invitationRepo
         .findOneById(activePartialAuthInvitation.invitationId)
         .futureValue
 
-      activeInvitation shouldBe defined
-
-      val storedInvitation = activeInvitation.get
+      lazy val storedInvitation = activeInvitation.get
 
       storedInvitation.status shouldBe PartialAuth
       storedInvitation.suppliedClientId shouldBe activePartialAuthInvitation.clientId
@@ -148,18 +143,13 @@ class MigratePartialAuthControllerISpec
 
       result.status shouldBe 204
 
-      val storedPartialAuth = partialAuthRepository
+      partialAuthRepository
         .findActive(Nino(expiredPartialAuthInvitation.clientId), Arn(expiredPartialAuthInvitation.arn))
-        .futureValue
+        .futureValue shouldBe defined
 
-      storedPartialAuth shouldBe defined
-
-      val activeInvitation = invitationRepo
+      invitationRepo
         .findOneById(activePartialAuthInvitation.invitationId)
-        .futureValue
-
-      activeInvitation shouldBe None
-
+        .futureValue shouldBe None
     }
 
     "return BadRequest 400 status when invitation is not partial auth" in {

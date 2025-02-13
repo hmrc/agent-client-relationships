@@ -16,7 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
+import play.api.libs.json.{Format, Json, __}
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.{Instant, LocalDate}
@@ -48,6 +51,17 @@ case class PartialAuthRelationship(
 }
 
 object PartialAuthRelationship {
-  implicit val instantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val format: Format[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
+
+  def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[PartialAuthRelationship] = {
+    implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
+    (
+      (__ \ "created").format[Instant] and
+        (__ \ "arn").format[String] and
+        (__ \ "service").format[String] and
+        (__ \ "nino").format[String](stringEncrypterDecrypter) and
+        (__ \ "active").format[Boolean] and
+        (__ \ "lastUpdated").format[Instant]
+    )(PartialAuthRelationship.apply, unlift(PartialAuthRelationship.unapply))
+  }
 }

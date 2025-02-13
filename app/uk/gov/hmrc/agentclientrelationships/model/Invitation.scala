@@ -22,6 +22,8 @@ import uk.gov.hmrc.agentclientrelationships.model.transitional.{DetailsForEmail,
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{InvitationId, Service}
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.{Instant, LocalDate, ZoneOffset}
@@ -52,10 +54,25 @@ case class Invitation(
 object Invitation {
   implicit val format: Format[Invitation] = Json.format[Invitation]
 
-  val mongoFormat: Format[Invitation] = {
+  def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[Invitation] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     implicit val mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
-    Json.format[Invitation]
+    (
+      (__ \ "invitationId").format[String] and
+        (__ \ "arn").format[String] and
+        (__ \ "service").format[String] and
+        (__ \ "clientId").format[String](stringEncrypterDecrypter) and
+        (__ \ "clientIdType").format[String] and
+        (__ \ "suppliedClientId").format[String](stringEncrypterDecrypter) and
+        (__ \ "suppliedClientIdType").format[String] and
+        (__ \ "clientName").format[String](stringEncrypterDecrypter) and
+        (__ \ "status").format[InvitationStatus] and
+        (__ \ "relationshipEndedBy").formatNullable[String] and
+        (__ \ "clientType").formatNullable[String] and
+        (__ \ "expiryDate").format[LocalDate] and
+        (__ \ "created").format[Instant] and
+        (__ \ "lastUpdated").format[Instant]
+    )(Invitation.apply, unlift(Invitation.unapply))
   }
 
   def createNew(

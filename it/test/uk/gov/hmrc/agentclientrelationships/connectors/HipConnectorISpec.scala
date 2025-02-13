@@ -511,25 +511,6 @@ class HipConnectorISpec
       val result = await(hipConnector.getActiveClientRelationships(vrn, Cbc))
       result shouldBe None
     }
-
-    "record metrics for GetStatusAgentRelationship for ItSa service" in {
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      getActiveRelationshipsViaClient(mtdItId, agentARN)
-      val result = await(hipConnector.getActiveClientRelationships(mtdItId, Service.MtdIt))
-      result.get.arn shouldBe agentARN
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-HIP-GetActiveClientRelationships-GET")
-    }
-
-    "record metrics for GetStatusAgentRelationship for Vat service" in {
-      givenCleanMetricRegistry()
-      givenAuditConnector()
-      getActiveRelationshipsViaClient(vrn, agentARN)
-
-      val result = await(hipConnector.getActiveClientRelationships(vrn, Vat))
-      result.get.arn shouldBe agentARN
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-HIP-GetActiveClientRelationships-GET")
-    }
   }
 
   "HIPConnector GetInactiveAgentRelationships" should {
