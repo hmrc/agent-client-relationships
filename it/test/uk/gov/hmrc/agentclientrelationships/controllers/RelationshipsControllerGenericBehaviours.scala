@@ -425,12 +425,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 204" in new StubsForThisScenario {
+        "return 204 and send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-        }
-
-        "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             clientId.value,
@@ -478,12 +474,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           extraSetup(serviceId)
         }
 
-        "return 204" in new StubsForThisScenario {
+        "return 204 and send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-        }
-
-        "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyHmrcRemovedAgentServiceAuthorisation(
             arn.value,
             clientId.value,
