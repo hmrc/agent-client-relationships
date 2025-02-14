@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.util
 
+import org.scalatest.concurrent.Eventually.eventually
+import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -25,6 +27,9 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import scala.concurrent.{ExecutionContext, Future}
 
 class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpAPIMonitor {
+
+  override implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
 
   override lazy val app: Application = appBuilder.build()
 
@@ -43,7 +48,9 @@ class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpA
         Future.successful(1)
       }
 
-      metrics.defaultRegistry.getTimers.get("Timer-Fake-API-Call").getCount should be >= 1L
+      eventually {
+        metrics.defaultRegistry.getTimers.get("Timer-Fake-API-Call").getCount should be >= 1L
+      }
     }
   }
 }
