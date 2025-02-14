@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -24,25 +23,23 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, MtdItId, Service, Vrn}
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.http
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class EnrolmentStoreProxyConnectorSpec(implicit val ec: ExecutionContext)
+class EnrolmentStoreProxyConnectorSpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with EnrolmentStoreProxyStubs
     with DataStreamStub
-    with MetricTestSupport
     with MockitoSugar {
 
   override implicit lazy val app: Application = appBuilder
@@ -69,6 +66,7 @@ class EnrolmentStoreProxyConnectorSpec(implicit val ec: ExecutionContext)
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   val httpClient: HttpClient = app.injector.instanceOf[http.HttpClient]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -170,6 +168,7 @@ class EnrolmentStoreProxyConnectorSpec(implicit val ec: ExecutionContext)
     "return some utr for cbcId (known fact)" in {
       val cbcId = CbcId("XACBC4940653845")
       val expectedUtr = "1172123849"
+      givenAuditConnector()
       givenCbcUkExistsInES(cbcId, expectedUtr)
       await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain(
         Identifier("UTR", expectedUtr)
@@ -179,6 +178,7 @@ class EnrolmentStoreProxyConnectorSpec(implicit val ec: ExecutionContext)
     "return some utr for plrId (known fact)" in {
       val cbcId = CbcId("XACBC4940653845")
       val expectedUtr = "1172123849"
+      givenAuditConnector()
       givenCbcUkExistsInES(cbcId, expectedUtr)
       await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain(
         Identifier("UTR", expectedUtr)

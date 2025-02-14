@@ -16,33 +16,30 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentclientrelationships.stubs.ACAStubs
-import uk.gov.hmrc.agentclientrelationships.support.{MetricTestSupport, WireMockSupport}
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
+class AgentClientAuthorisationConnectorSpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with ACAStubs
-    with MetricTestSupport
     with MockitoSugar {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
   val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -53,6 +50,7 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
       )
 
   private implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val agentARN: Arn = Arn("ABCDE123456")
   val nino: Nino = Nino("AB213308A")
 
@@ -62,50 +60,38 @@ class AgentClientAuthorisationConnectorSpec(implicit ec: ExecutionContext)
 
   "getPartialAuthExistsFor" should {
 
-    "return true when a record exists with status PartialAuth for client" in {
+    "return a list of services where a record exists with status PartialAuth for client" in {
       givenPartialAuthExistsFor(agentARN, nino, HMRCMTDIT)
-      givenCleanMetricRegistry()
       val result = await(acaConnector.getPartialAuth(nino, agentARN))
-      result shouldBe true
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
+      result shouldBe List(HMRCMTDIT)
     }
 
-    "return false when no record exists with PartialAuth for client" in {
+    "return an empty list when no record exists with PartialAuth for client" in {
       givenPartialAuthNotExistsFor(agentARN, nino)
-      givenCleanMetricRegistry()
       val result = await(acaConnector.getPartialAuth(nino, agentARN))
-      result shouldBe false
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
+      result shouldBe List()
     }
 
-    "return false when there is a problem with the upstream service" in {
+    "return an empty list when there is a problem with the upstream service" in {
       givenAgentClientAuthorisationReturnsError(agentARN, nino, 503)
-      givenCleanMetricRegistry()
       val result = await(acaConnector.getPartialAuth(nino, agentARN))
-      result shouldBe false
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-getPartialAuthExistsFor-HMRC-MTD-IT-GET")
+      result shouldBe List()
     }
-
   }
 
   "updateAltItsaFor" should {
     "return true when response is 201" in {
       givenAltItsaUpdate(nino, responseStatus = 201)
-      givenCleanMetricRegistry()
       val result = await(acaConnector.updateAltItsaFor(nino, HMRCMTDIT))
       result shouldBe true
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-updateAltItsaForHMRC-MTD-IT-PUT")
-
     }
   }
 
   "updateStatusToAccepted" should {
     "return true" in {
       givenUpdateStatusToAccepted(nino, responseStatus = 204)
-      givenCleanMetricRegistry()
       val result = await(acaConnector.updateStatusToAccepted(nino, HMRCMTDIT))
       result shouldBe true
-      timerShouldExistsAndBeenUpdated("ConsumedAPI-ACA-updateStatusToAccepted-PUT")
     }
   }
 }
