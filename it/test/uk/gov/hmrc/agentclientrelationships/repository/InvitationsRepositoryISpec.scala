@@ -56,6 +56,8 @@ class InvitationsRepositoryISpec
       Vrn("123456789"),
       Vrn("234567890"),
       "Macrosoft",
+      "testAgentName",
+      "agent@email.com",
       LocalDate.of(2020, 1, 1),
       Some("personal")
     )
@@ -99,6 +101,8 @@ class InvitationsRepositoryISpec
           Vrn("123456789"),
           Vrn("234567890"),
           "Macrosoft",
+          "testAgentName",
+          "agent@email.com",
           LocalDate.parse("2020-01-01"),
           Some("personal")
         )

@@ -56,6 +56,8 @@ class MigratePartialAuthControllerISpec
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   val clientName = "DummyClientName"
+  val testAgentName = "testAgentName"
+  val testAgentEmail = "agent@email.com"
   private val now = LocalDateTime.now().truncatedTo(MILLIS)
   val activeExpiryDate: LocalDate = now.plusDays(21).toLocalDate
   val outOfRangeCreatedDate: LocalDateTime = now.minusDays(30)
@@ -67,6 +69,8 @@ class MigratePartialAuthControllerISpec
       mtdItId,
       nino,
       clientName,
+      testAgentName,
+      testAgentEmail,
       activeExpiryDate,
       Some("personal")
     )

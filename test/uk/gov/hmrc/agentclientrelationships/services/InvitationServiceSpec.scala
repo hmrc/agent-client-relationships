@@ -57,11 +57,11 @@ class InvitationServiceSpec
   val testArn2 = "ARN1234567892"
   val testArn3 = "ARN1234567893"
   val invitation1: Invitation =
-    Invitation.createNew(testArn1, Vat, testVrn, testVrn, "", LocalDate.now(), Some("personal"))
+    Invitation.createNew(testArn1, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
   val invitation2: Invitation =
-    Invitation.createNew(testArn2, Vat, testVrn, testVrn, "", LocalDate.now(), Some("personal"))
+    Invitation.createNew(testArn2, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
   val invitation3: Invitation =
-    Invitation.createNew(testArn3, Vat, testVrn, testVrn, "", LocalDate.now(), Some("personal"))
+    Invitation.createNew(testArn3, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
   val testAgentDetailsDesResponse: AgentDetailsDesResponse =
     AgentDetailsDesResponse(
       agencyDetails = AgencyDetails("ABC Ltd", ""),

@@ -44,6 +44,8 @@ class CustomerStatusControllerISpec
     mtdItId.value,
     "MTDITID",
     "Macrosoft",
+    "testAgentName",
+    "agent@email.com",
     Pending,
     None,
     Some("personal"),

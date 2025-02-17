@@ -193,7 +193,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation =
         await(
-          invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now(), Some("personal"))
+          invitationsRepo.create(
+            arn.value,
+            MtdIt,
+            mtdItId,
+            mtdItId,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
         )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
@@ -223,7 +233,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
       val pendingInvitation =
         await(
-          invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now(), Some("personal"))
+          invitationsRepo.create(
+            arn.value,
+            MtdIt,
+            mtdItId,
+            mtdItId,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
         )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
@@ -254,7 +274,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
       val pendingInvitation =
         await(
           invitationsRepo
-            .create(existingAgentArn.value, MtdItSupp, mtdItId, nino, "Erling Haal", LocalDate.now(), Some("personal"))
+            .create(
+              existingAgentArn.value,
+              MtdItSupp,
+              mtdItId,
+              nino,
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
         )
 
       val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
@@ -283,7 +313,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
       await(agentReferenceRepo.create(agentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
       val pendingInvitation =
-        await(invitationsRepo.create(arn.value, MtdIt, nino, nino, "Erling Haal", LocalDate.now(), Some("personal")))
+        await(
+          invitationsRepo.create(
+            arn.value,
+            MtdIt,
+            nino,
+            nino,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
+        )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-NI", "HMRC-PT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -312,7 +354,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
       val pendingInvitation =
         await(
           invitationsRepo
-            .create(existingAgentArn.value, MtdItSupp, nino, nino, "Erling Haal", LocalDate.now(), Some("personal"))
+            .create(
+              existingAgentArn.value,
+              MtdItSupp,
+              nino,
+              nino,
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
         )
 
       val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-PT"))
@@ -339,7 +391,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation =
         await(
-          invitationsRepo.create(arn.value, MtdItSupp, mtdItId, nino, "Erling Haal", LocalDate.now(), Some("personal"))
+          invitationsRepo.create(
+            arn.value,
+            MtdItSupp,
+            mtdItId,
+            nino,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
         )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
@@ -367,7 +429,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation =
-        await(invitationsRepo.create(arn.value, Cbc, cbcId, cbcId, "Erling Haal", LocalDate.now(), Some("personal")))
+        await(
+          invitationsRepo.create(
+            arn.value,
+            Cbc,
+            cbcId,
+            cbcId,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
+        )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-CBC-ORG"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -404,7 +478,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
         givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
-          invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now(), Some("personal"))
+          invitationsRepo.create(
+            arn.value,
+            MtdIt,
+            mtdItId,
+            mtdItId,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
         )
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
@@ -419,7 +503,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
         givenAgentRecordFound(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
-          invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now(), Some("personal"))
+          invitationsRepo.create(
+            arn.value,
+            MtdIt,
+            mtdItId,
+            mtdItId,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
         )
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MADE-UP"))
@@ -449,7 +543,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
         givenAgentRecordFound(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
-          invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now(), Some("personal"))
+          invitationsRepo.create(
+            arn.value,
+            MtdIt,
+            mtdItId,
+            mtdItId,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
         )
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-VAT"))
@@ -463,7 +567,17 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
         givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
         givenAgentDetailsErrorResponse(arn, NOT_FOUND)
         await(
-          invitationsRepo.create(arn.value, MtdIt, mtdItId, mtdItId, "Erling Haal", LocalDate.now(), Some("personal"))
+          invitationsRepo.create(
+            arn.value,
+            MtdIt,
+            mtdItId,
+            mtdItId,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
         )
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
