@@ -22,8 +22,8 @@ import uk.gov.hmrc.agentclientrelationships.model.transitional.{DetailsForEmail,
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{InvitationId, Service}
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.{Instant, LocalDate, ZoneOffset}

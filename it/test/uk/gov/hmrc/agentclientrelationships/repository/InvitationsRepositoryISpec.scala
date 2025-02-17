@@ -249,5 +249,25 @@ class InvitationsRepositoryISpec
           pendingInvitation.copy(invitationId = "345", suppliedClientId = "678", service = HMRCMTDITSUPP)
         )
     }
+
+    "produce a TrackRequestsResult with the correct pagination" in {
+      val listOfInvitations = Seq(
+        pendingInvitation,
+        pendingInvitation.copy(invitationId = "234", suppliedClientId = "678", service = HMRCMTDIT),
+        pendingInvitation.copy(invitationId = "345", suppliedClientId = "678", service = HMRCMTDITSUPP),
+        pendingInvitation
+          .copy(invitationId = "456", suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired),
+        pendingInvitation.copy(invitationId = "567", suppliedClientId = "789", service = HMRCMTDITSUPP),
+        pendingInvitation.copy(invitationId = "678", suppliedClientId = "678", service = HMRCPIR)
+      )
+      await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+      val result = await(repository.trackRequests("XARN1234567", None, None, 1, 10))
+      result.totalResults shouldBe 6
+      result.pageNumber shouldBe 1
+      result.requests shouldBe listOfInvitations
+      result.clientNames shouldBe listOfInvitations.map(_.clientName).distinct.sorted
+      result.availableFilters shouldBe listOfInvitations.map(i => i.status.toString).distinct.sorted
+    }
   }
 }

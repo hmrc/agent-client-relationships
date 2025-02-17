@@ -813,13 +813,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenCacheRefresh(arn)
         }
 
-        "return 204" in new StubsForThisScenario {
+        "return 204 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-          verifyDeleteRecordNotExists
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
@@ -846,13 +841,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenCacheRefresh(arn)
         }
 
-        "return 204" in new StubsForThisScenario {
+        "return 204 and send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
-        }
-
-        "send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyHmrcRemovedAgentServiceAuthorisation(
             arn.value,
             mtdItId.value,
@@ -876,13 +867,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAdminUser("foo", "any")
         }
 
-        "return 500" in new StubsForThisScenario {
+        "return 500 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyDeleteRecordHasStatuses(None, Some(SyncStatus.IncompleteInputParams))
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
@@ -908,13 +894,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAdminUser("foo", "any")
         }
 
-        "return 500" in new StubsForThisScenario {
+        "return 500 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyDeleteRecordHasStatuses(None, Some(SyncStatus.IncompleteInputParams))
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
@@ -941,13 +922,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenCacheRefresh(arn)
         }
 
-        "return 204" in new StubsForThisScenario {
+        "return 204 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-          verifyDeleteRecordNotExists
-        }
-
-        "send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath)
           verifyClientRemovedAgentServiceAuthorisationAuditSent(
             arn.value,
             mtdItId.value,
