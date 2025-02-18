@@ -66,6 +66,8 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
         case taxId      => ClientIdentifier(taxId)
       }
       val clientName = "TestClientName"
+      val agentName = "testAgentName"
+      val agentEmail = "agent@email.com"
       val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
       val serviceId = service match {
         case PersonalIncomeRecord => PersonalIncomeRecord.id
@@ -89,7 +91,17 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
       s"when invitation exists with the status Accepted in invitationStore for ${service.id}" should {
         s"update status to " in {
           val newInvitation: Invitation = Invitation
-            .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+            .createNew(
+              arn.value,
+              service,
+              clientId,
+              suppliedClientId,
+              clientName,
+              agentName,
+              agentEmail,
+              expiryDate,
+              None
+            )
             .copy(status = Accepted)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -108,7 +120,17 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
       s"when invitation exists with the status DeAuthorised in invitationStore for ${service.id}" should {
         s"update return NOT_FOUND 404 " in {
           val newInvitation = Invitation
-            .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+            .createNew(
+              arn.value,
+              service,
+              clientId,
+              suppliedClientId,
+              clientName,
+              agentName,
+              agentEmail,
+              expiryDate,
+              None
+            )
             .copy(status = DeAuthorised)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -133,6 +155,8 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
     val suppliedClientId = ClientIdentifier(nino)
     val clientName = "TestClientName"
+    val agentName = "testAgentName"
+    val agentEmail = "agent@email.com"
     val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
     s"when no invitation record for ${service.id}" should {
@@ -152,7 +176,17 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     s"when invitation exists with the status PartialAuth in invitationStore for ${service.id}" should {
       s"update status to " in {
         val newInvitation = Invitation
-          .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+          .createNew(
+            arn.value,
+            service,
+            clientId,
+            suppliedClientId,
+            clientName,
+            agentName,
+            agentEmail,
+            expiryDate,
+            None
+          )
           .copy(status = PartialAuth)
 
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -175,7 +209,17 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           PartialAuthRelationship(created, arn.value, service.id, nino.value, active = true, lastUpdated = created)
 
         val newInvitation = Invitation
-          .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+          .createNew(
+            arn.value,
+            service,
+            clientId,
+            suppliedClientId,
+            clientName,
+            agentName,
+            agentEmail,
+            expiryDate,
+            None
+          )
           .copy(status = PartialAuth)
 
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -215,7 +259,17 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     s"when invitation exists with the status DeAuthorised in invitationStore for ${service.id}" should {
       s"update return NOT_FOUND 404 " in {
         val newInvitation = Invitation
-          .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+          .createNew(
+            arn.value,
+            service,
+            clientId,
+            suppliedClientId,
+            clientName,
+            agentName,
+            agentEmail,
+            expiryDate,
+            None
+          )
           .copy(status = DeAuthorised)
 
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())

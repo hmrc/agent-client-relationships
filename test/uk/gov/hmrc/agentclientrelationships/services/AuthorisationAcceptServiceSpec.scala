@@ -68,6 +68,8 @@ class AuthorisationAcceptServiceSpec
   val testArn2: Arn = Arn("ARN1234567899")
   val testArn3: Arn = Arn("ARN1234567895")
   val testName = "testClientName"
+  val testAgentName = "testAgentName"
+  val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
   val testVrn: Vrn = Vrn("1234567890")
   val testNino: Nino = Nino("AB123456A")
@@ -76,44 +78,144 @@ class AuthorisationAcceptServiceSpec
   val vatEnrolment: EnrolmentKey = EnrolmentKey(Vat, testVrn)
   val vatInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, Vat, testVrn, testVrn, testName, LocalDate.now(), Some("business"))
+      .createNew(
+        testArn.value,
+        Vat,
+        testVrn,
+        testVrn,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("business")
+      )
   val oltVatInvitation: Invitation =
     Invitation
-      .createNew(testArn2.value, Vat, testVrn, testVrn, testName, LocalDate.now(), Some("business"))
+      .createNew(
+        testArn2.value,
+        Vat,
+        testVrn,
+        testVrn,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("business")
+      )
       .copy(status = Accepted)
 
   val pirEnrolment: EnrolmentKey = EnrolmentKey(PersonalIncomeRecord, testNino)
   val pirInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, PersonalIncomeRecord, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        PersonalIncomeRecord,
+        testNino,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
   val oldPirInvitation: Invitation =
     Invitation
-      .createNew(testArn2.value, PersonalIncomeRecord, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn2.value,
+        PersonalIncomeRecord,
+        testNino,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(status = Accepted)
 
   val itsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, testMtdItId)
   val itsaInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdIt, testMtdItId, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdIt,
+        testMtdItId,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
   val altItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdIt, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdIt,
+        testNino,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
   val oldItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn2.value, MtdIt, testMtdItId, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn2.value,
+        MtdIt,
+        testMtdItId,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(status = Accepted)
   val oldAltItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn3.value, MtdIt, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn3.value,
+        MtdIt,
+        testNino,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(status = PartialAuth)
   val oldAltItsaPartialAuth: PartialAuthRelationship =
     PartialAuthRelationship(Instant.now(), testArn3.value, MtdIt.id, testNino.nino, active = true, Instant.now())
   val itsaSuppInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdItSupp, testMtdItId, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdItSupp,
+        testMtdItId,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
   val altItsaSuppInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdItSupp, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdItSupp,
+        testNino,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
 
   "accept" when {
     // GENERIC CASES

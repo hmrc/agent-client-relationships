@@ -41,6 +41,8 @@ case class PartialAuthRelationship(
     suppliedClientId = this.nino,
     suppliedClientIdType = "ni",
     clientName = "",
+    agencyName = "",
+    agencyEmail = "",
     status = if (this.active) PartialAuth else DeAuthorised,
     relationshipEndedBy = if (this.active) None else Some(""),
     clientType = None,

@@ -98,6 +98,19 @@ class InvitationControllerISpec
     HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
   )
 
+  val testAgentRecord: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
+    uniqueTaxReference = None,
+    agencyDetails = Some(
+      TestAgencyDetails(
+        agencyName = Some("testAgentName"),
+        agencyEmail = Some("agent@email.com"),
+        agencyTelephone = None,
+        agencyAddress = None
+      )
+    ),
+    suspensionDetails = None
+  )
+
   val dateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
   "create invitation link" should {
@@ -118,9 +131,7 @@ class InvitationControllerISpec
           givenMtdItIdIsKnownFor(nino, mtdItId)
         }
 
-        invitationRepo
-          .findAllForAgent(arn.value)
-          .futureValue shouldBe empty
+        givenAgentRecordFound(arn, testAgentRecord)
 
         val result =
           doAgentPostRequest(
@@ -172,9 +183,7 @@ class InvitationControllerISpec
       givenAuditConnector()
       givenMtdItIdIsUnKnownFor(nino)
 
-      invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue shouldBe empty
+      givenAgentRecordFound(arn, testAgentRecord)
 
       val result =
         doAgentPostRequest(
@@ -385,6 +394,8 @@ class InvitationControllerISpec
             clientIdentifier,
             clientIdentifier,
             "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
             LocalDate.now(),
             Some("personal")
           )
@@ -445,6 +456,8 @@ class InvitationControllerISpec
           Urn(urn),
           Urn(urn),
           "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
           LocalDate.now(),
           Some("personal")
         )

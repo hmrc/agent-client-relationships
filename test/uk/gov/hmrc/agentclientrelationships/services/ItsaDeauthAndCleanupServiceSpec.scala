@@ -61,6 +61,8 @@ class ItsaDeauthAndCleanupServiceSpec
 
   val testArn: Arn = Arn("ARN1234567890")
   val testName = "testClientName"
+  val testAgentName = "testAgentName"
+  val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
 
   val testNino: Nino = Nino("AB123456A")
@@ -71,11 +73,31 @@ class ItsaDeauthAndCleanupServiceSpec
 
   val oldItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdIt, testMtdItId, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdIt,
+        testMtdItId,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(status = Accepted)
   val oldAltItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdIt, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdIt,
+        testNino,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(status = PartialAuth)
 
   "deleteSameAgentRelationship" when {

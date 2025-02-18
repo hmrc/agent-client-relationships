@@ -101,6 +101,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
                 Nino("AA000001B"),
                 Nino("AA000001B"),
                 "Erling Haal",
+                "testAgentName",
+                "agent@email.com",
                 LocalDate.now(),
                 Some("personal")
               )
@@ -249,6 +251,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
                 Nino("AA000001B"),
                 Nino("AA000001B"),
                 "Erling Haal",
+                "testAgentName",
+                "agent@email.com",
                 LocalDate.now(),
                 Some("personal")
               )
@@ -299,6 +303,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
               Vrn("101747641"),
               Vrn("101747641"),
               "My Name",
+              "testAgentName",
+              "agent@email.com",
               LocalDate.now(),
               Some("personal")
             )
@@ -343,6 +349,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
               Vrn("101747641"),
               Vrn("101747641"),
               "My Name",
+              "testAgentName",
+              "agent@email.com",
               LocalDate.now(),
               Some("personal")
             )
