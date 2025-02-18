@@ -236,22 +236,16 @@ class InvitationsRepositoryISpec
     }
 
     "retrieve all pending invitations for client" in {
-      val listOfInvitations = Seq(
-        pendingInvitation,
-        pendingInvitation.copy(invitationId = "234", suppliedClientId = "678", service = HMRCMTDIT),
-        pendingInvitation.copy(invitationId = "345", suppliedClientId = "678", service = HMRCMTDITSUPP),
-        pendingInvitation
-          .copy(invitationId = "456", suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired),
-        pendingInvitation.copy(invitationId = "567", suppliedClientId = "789", service = HMRCMTDITSUPP),
-        pendingInvitation.copy(invitationId = "678", suppliedClientId = "678", service = HMRCPIR)
-      )
+      val itsaInv = pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDIT)
+      val itsaSuppInv = pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDITSUPP)
+      val otherClientItsaSuppInv = pendingInvitation.copy(suppliedClientId = "789", service = HMRCMTDITSUPP)
+      val expiredInv = pendingInvitation.copy(suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired)
+      val irvInv = pendingInvitation.copy(suppliedClientId = "678", service = HMRCPIR)
+      val listOfInvitations = Seq(itsaInv, itsaSuppInv, otherClientItsaSuppInv, expiredInv, irvInv)
+
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
-      await(repository.findAllPendingForClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe
-        Seq(
-          pendingInvitation.copy(invitationId = "234", suppliedClientId = "678", service = HMRCMTDIT),
-          pendingInvitation.copy(invitationId = "345", suppliedClientId = "678", service = HMRCMTDITSUPP)
-        )
+      await(repository.findAllPendingForClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe Seq(itsaInv, itsaSuppInv)
     }
 
     "produce a TrackRequestsResult with the correct pagination" in {
