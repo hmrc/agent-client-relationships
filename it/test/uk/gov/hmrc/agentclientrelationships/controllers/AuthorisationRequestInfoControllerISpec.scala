@@ -77,15 +77,6 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
 
       val uid = await(agentReferenceRepo.findByArn(arn)).get.uid
       result.json shouldBe Json.obj(
-        "agentDetails" -> Json.obj(
-          "agencyDetails" -> Json.obj(
-            "agencyName"  -> "My Agency",
-            "agencyEmail" -> "abc@abc.com"
-          ),
-          "suspensionDetails" -> Json.obj(
-            "suspensionStatus" -> false
-          )
-        ),
         "agentLink" -> Json.obj(
           "uid"                 -> uid,
           "normalizedAgentName" -> "my-agency"
