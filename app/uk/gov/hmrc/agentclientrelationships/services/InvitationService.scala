@@ -23,8 +23,8 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IFConnector}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, Invitation, Pending, Rejected, TrackRequestsResult}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending, Rejected, TrackRequestsResult}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
@@ -105,6 +105,15 @@ class InvitationService @Inject() (
     } yield invitation)
       .map(_ => ())
       .value
+
+  def cancelInvitation(
+    arn: Arn,
+    invitationId: String
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Unit]] =
+    invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
+      case true => Right(())
+      case _    => Left(NoPendingInvitation)
+    }
 
   def findInvitationForClient(invitationId: String): Future[Option[Invitation]] =
     invitationsRepository.findOneByIdForClient(invitationId)

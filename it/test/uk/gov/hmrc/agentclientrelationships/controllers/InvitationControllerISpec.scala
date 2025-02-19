@@ -18,15 +18,16 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
-import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Pending, Rejected}
+import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, ClientDetailsStub, EmailStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, AuthStub, ClientDetailsStub, EmailStubs}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -43,7 +44,8 @@ class InvitationControllerISpec
     with AfiRelationshipStub
     with AgentAssuranceStubs
     with EmailStubs
-    with TestData {
+    with TestData
+    with AuthStub {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -500,5 +502,71 @@ class InvitationControllerISpec
       result.status shouldBe 500
       result.body should include("JsResultException")
     }
+  }
+
+  "cancel invitation" should {
+
+    allServices.keySet.foreach(taxService =>
+      s"return 204 status when invitation is cancelled for $taxService" in {
+        val inputData: CreateInvitationRequest = allServices(taxService)
+        val clientId =
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.clientId
+        val clientIdType =
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) MtdItIdType.id
+          else inputData.suppliedClientIdType
+
+        val clientIdentifier = ClientIdentifier(clientId, clientIdType)
+
+        await(
+          invitationRepo.create(
+            arn.value,
+            Service.forId(taxService),
+            clientIdentifier,
+            clientIdentifier,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          )
+        )
+
+        val pendingInvitation = invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
+          .head
+        val testUrl = s"/agent-client-relationships/agent/cancel-invitation/${pendingInvitation.invitationId}"
+        val fakeRequest = FakeRequest("PUT", testUrl)
+        givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+
+        val result = doAgentPutRequest(testUrl)
+        result.status shouldBe 204
+
+        val invitationSeq = invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
+
+        invitationSeq.size shouldBe 1
+        invitationSeq.head.status shouldBe Cancelled
+
+      }
+    )
+
+    s"return NoFound status when no Pending Invitation " in {
+
+      val result =
+        doAgentPutRequest(
+          s"/agent-client-relationships/agent/cancel-invitation/123456"
+        )
+      result.status shouldBe 404
+
+      val invitationSeq = invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue
+
+      invitationSeq.size shouldBe 0
+
+    }
+
   }
 }
