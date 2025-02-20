@@ -22,8 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentDetailsDe
 
 case class AuthorisationRequestInfo(
   authorisationRequest: Invitation,
-  agentLink: CreateLinkResponse,
-  agentDetails: AgentDetailsDesResponse
+  agentLink: CreateLinkResponse
 )
 
 object AuthorisationRequestInfo {
