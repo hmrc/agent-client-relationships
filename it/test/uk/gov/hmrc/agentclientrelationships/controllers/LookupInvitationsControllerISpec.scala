@@ -38,26 +38,68 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
   val testArn: Arn = Arn("ARN1234567890")
   val testArn2: Arn = Arn("ARN1234567899")
   val testName = "testClientName"
+  val testAgentName = "testAgentName"
+  val testAgentEmail = "agent@email.com"
   val testNino: Nino = Nino("AB123456A")
   val testMtdItId1: MtdItId = MtdItId("XAIT0000111122")
   val testMtdItId2: MtdItId = MtdItId("XAIT0000111123")
 
   val itsaInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdIt, testMtdItId1, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdIt,
+        testMtdItId1,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(created = testTime, lastUpdated = testTime)
   val suppItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn2.value, MtdItSupp, testMtdItId1, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn2.value,
+        MtdItSupp,
+        testMtdItId1,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(created = testTime, lastUpdated = testTime)
   val acceptedItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdIt, testMtdItId2, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdIt,
+        testMtdItId2,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(created = testTime, lastUpdated = testTime, status = Accepted)
 
   val altItsaInvitation: Invitation =
     Invitation
-      .createNew(testArn.value, MtdIt, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+      .createNew(
+        testArn.value,
+        MtdIt,
+        testNino,
+        testNino,
+        testName,
+        testAgentName,
+        testAgentEmail,
+        LocalDate.now(),
+        Some("personal")
+      )
       .copy(created = testTime, lastUpdated = testTime, status = PartialAuth)
   val partialAuth: PartialAuthRelationship =
     PartialAuthRelationship(testTime, testArn.value, MtdIt.id, testNino.value, active = true, testTime)

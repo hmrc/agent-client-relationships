@@ -49,9 +49,8 @@ class AuthorisationRequestInfoController @Inject() (
       invitationService.findInvitationForAgent(arn.value, invitationId).flatMap {
         case Some(invitation) =>
           for {
-            agentLink    <- invitationLinkService.createLink(arn)
-            agentDetails <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
-          } yield Ok(Json.toJson(AuthorisationRequestInfo(invitation, agentLink, agentDetails)))
+            agentLink <- invitationLinkService.createLink(arn)
+          } yield Ok(Json.toJson(AuthorisationRequestInfo(invitation, agentLink)))
         case _ =>
           Future.successful(NotFound)
       }

@@ -70,6 +70,8 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
           case taxId      => ClientIdentifier(taxId)
         }
         val clientName = "TestClientName"
+        val agentName = "testAgentName"
+        val agentEmail = "agent@email.com"
         val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
         s"when no invitation record for ${service.id}" should {
@@ -85,7 +87,17 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         s"when invitation exists with Pending status in invitationStore for ${service.id}" should {
           s"update status to " in {
             val newInvitation: Invitation = Invitation
-              .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+              .createNew(
+                arn.value,
+                service,
+                clientId,
+                suppliedClientId,
+                clientName,
+                agentName,
+                agentEmail,
+                expiryDate,
+                None
+              )
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
             doAgentPutRequest(
@@ -105,7 +117,17 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         s"when invitation exists with the status DeAuthorised in invitationStore for ${service.id}" should {
           s"update return NOT_FOUND 404 " in {
             val newInvitation = Invitation
-              .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+              .createNew(
+                arn.value,
+                service,
+                clientId,
+                suppliedClientId,
+                clientName,
+                agentName,
+                agentEmail,
+                expiryDate,
+                None
+              )
               .copy(status = DeAuthorised)
 
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -129,6 +151,8 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
     val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
     val suppliedClientId = ClientIdentifier(nino)
     val clientName = "TestClientName"
+    val agentName = "testAgentName"
+    val agentEmail = "agent@email.com"
     val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
     s"when invitation exists with the status Pending in invitationStore for ${service.id} accept" should {
@@ -137,7 +161,17 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
 
         val newInvitation = Invitation
-          .createNew(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, None)
+          .createNew(
+            arn.value,
+            service,
+            clientId,
+            suppliedClientId,
+            clientName,
+            agentName,
+            agentEmail,
+            expiryDate,
+            None
+          )
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
         doAgentPutRequest(

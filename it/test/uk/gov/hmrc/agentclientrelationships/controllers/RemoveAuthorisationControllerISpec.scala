@@ -193,7 +193,17 @@ trait RemoveAuthorisationControllerISpec
       s"when the relationship exists and the Arn matches that of current Agent user  for ${service.id}" should {
         s"resume an ongoing de-auth if unfinished ES delete record found  for ${service.id}" in new StubsForThisScenario {
           val newInvitation: Invitation = Invitation
-            .createNew(arn.value, service, nino, nino, "TestClientName", expiryDate, None)
+            .createNew(
+              arn.value,
+              service,
+              nino,
+              nino,
+              "TestClientName",
+              "testAgentName",
+              "agent@email.com",
+              expiryDate,
+              None
+            )
             .copy(status = Accepted)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -289,7 +299,17 @@ trait RemoveAuthorisationControllerISpec
 
     "return 204 when PartialAuth exists in PartialAuth and Invitation Repo" in new StubsForThisScenario {
       val newInvitation: Invitation = Invitation
-        .createNew(arn.value, service, nino, nino, "TestClientName", expiryDate, None)
+        .createNew(
+          arn.value,
+          service,
+          nino,
+          nino,
+          "TestClientName",
+          "testAgentName",
+          "agent@email.com",
+          expiryDate,
+          None
+        )
         .copy(status = PartialAuth)
 
       await(

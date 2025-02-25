@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Format, Json, Reads, __}
-import uk.gov.hmrc.agentclientrelationships.model.transitional.{DetailsForEmail, StatusChangeEvent}
+import uk.gov.hmrc.agentclientrelationships.model.transitional.StatusChangeEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{InvitationId, Service}
@@ -37,6 +37,8 @@ case class Invitation(
   suppliedClientId: String,
   suppliedClientIdType: String,
   clientName: String,
+  agencyName: String,
+  agencyEmail: String,
   status: InvitationStatus,
   relationshipEndedBy: Option[String] = None,
   clientType: Option[String],
@@ -66,6 +68,8 @@ object Invitation {
         (__ \ "suppliedClientId").format[String](stringEncrypterDecrypter) and
         (__ \ "suppliedClientIdType").format[String] and
         (__ \ "clientName").format[String](stringEncrypterDecrypter) and
+        (__ \ "agencyName").format[String](stringEncrypterDecrypter) and
+        (__ \ "agencyEmail").format[String](stringEncrypterDecrypter) and
         (__ \ "status").format[InvitationStatus] and
         (__ \ "relationshipEndedBy").formatNullable[String] and
         (__ \ "clientType").formatNullable[String] and
@@ -75,12 +79,15 @@ object Invitation {
     )(Invitation.apply, unlift(Invitation.unapply))
   }
 
+  // scalastyle:off parameter.number
   def createNew(
     arn: String,
     service: Service,
     clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
+    agencyName: String,
+    agencyEmail: String,
     expiryDate: LocalDate,
     clientType: Option[String]
   ): Invitation =
@@ -93,6 +100,8 @@ object Invitation {
       suppliedClientId.value,
       suppliedClientId.typeId,
       clientName,
+      agencyName,
+      agencyEmail,
       Pending,
       None,
       clientType,
@@ -113,7 +122,9 @@ object Invitation {
         (__ \ "suppliedClientIdType").read[String] and
         (__ \ "expiryDate").read[LocalDate] and
         (__ \ "relationshipEndedBy").readNullable[String] and
-        (__ \ "detailsForEmail").readNullable[DetailsForEmail] and
+        (__ \ "detailsForEmail" \ "clientName").readWithDefault[String]("") and
+        (__ \ "detailsForEmail" \ "agencyName").readWithDefault[String]("") and
+        (__ \ "detailsForEmail" \ "agencyEmail").readWithDefault[String]("") and
         (__ \ "events").read[List[StatusChangeEvent]]
     ) {
       (
@@ -127,7 +138,9 @@ object Invitation {
         suppliedClientIdType,
         expiryDate,
         relationshipEndedBy,
-        detailsForEmail,
+        clientName,
+        agencyName,
+        agencyEmail,
         events
       ) =>
         Invitation(
@@ -138,7 +151,9 @@ object Invitation {
           clientId = clientId,
           suppliedClientId = suppliedClientId,
           expiryDate = expiryDate,
-          clientName = detailsForEmail.getOrElse(DetailsForEmail("", "", "")).clientName,
+          clientName = clientName,
+          agencyName = agencyName,
+          agencyEmail = agencyEmail,
           relationshipEndedBy = relationshipEndedBy,
           created = events.head.time.toInstant(ZoneOffset.UTC),
           lastUpdated = events.last.time.toInstant(ZoneOffset.UTC),

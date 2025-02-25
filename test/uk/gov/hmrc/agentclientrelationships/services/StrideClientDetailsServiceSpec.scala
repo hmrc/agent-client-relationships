@@ -56,6 +56,8 @@ class StrideClientDetailsServiceSpec
   val testArn: Arn = Arn("ARN1234567890")
   val testArn2: Arn = Arn("ARN1234567891")
   val testName = "testClientName"
+  val testAgentName = "testAgentName"
+  val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
 
   val testNino: Nino = Nino("AB123456A")
@@ -74,7 +76,17 @@ class StrideClientDetailsServiceSpec
     AgentDetailsDesResponse(agencyDetails = AgencyDetails("ABC Ltd", ""), suspensionDetails = None)
 
   val itsaInvitation: Invitation = Invitation
-    .createNew(testArn.value, MtdIt, testNino, testNino, testName, LocalDate.now(), Some("personal"))
+    .createNew(
+      testArn.value,
+      MtdIt,
+      testNino,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
 
   val itsaInvitationWithAgentName: InvitationWithAgentName =
     InvitationWithAgentName.fromInvitationAndAgentRecord(itsaInvitation, testAgentDetailsDesResponse)

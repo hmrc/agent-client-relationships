@@ -75,6 +75,8 @@ class StrideClientDetailsControllerISpec
     vrn.value,
     "vrn",
     "Macrosoft",
+    "testAgentName",
+    "agent@email.com",
     Pending,
     None,
     Some("personal"),

@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText, SymmetricCryptoFactory}
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter, SymmetricCryptoFactory}
 
 import java.time.{Instant, LocalDate}
 
@@ -39,6 +39,8 @@ class InvitationSpec extends UnitSpec {
     "234567890",
     "vrn",
     "Macrosoft",
+    "testAgentName",
+    "agent@email.com",
     Pending,
     Some("Me"),
     Some("personal"),
@@ -56,6 +58,8 @@ class InvitationSpec extends UnitSpec {
     "suppliedClientId"     -> encryptedString("234567890"),
     "suppliedClientIdType" -> "vrn",
     "clientName"           -> encryptedString("Macrosoft"),
+    "agencyName"           -> encryptedString("testAgentName"),
+    "agencyEmail"          -> encryptedString("agent@email.com"),
     "status"               -> "Pending",
     "relationshipEndedBy"  -> "Me",
     "clientType"           -> "personal",
@@ -96,6 +100,8 @@ class InvitationSpec extends UnitSpec {
         Vrn("123456789"),
         Vrn("234567890"),
         "Macrosoft",
+        "testAgentName",
+        "agent@email.com",
         LocalDate.parse("2020-01-01"),
         None
       )

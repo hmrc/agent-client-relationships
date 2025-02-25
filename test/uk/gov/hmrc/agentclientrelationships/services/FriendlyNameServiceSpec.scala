@@ -51,6 +51,8 @@ class FriendlyNameServiceSpec extends UnitSpec with MockitoSugar with BeforeAndA
     clientId = MtdItId("ABCDEF123456789"),
     suppliedClientId = Nino("AB123456A"),
     clientName = "test Name",
+    agencyName = "AgentName",
+    agencyEmail = "agent@email.com",
     expiryDate = LocalDate.now(),
     clientType = Some("personal")
   )

@@ -79,18 +79,32 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     )
     with Logging {
 
+  // scalastyle:off parameter.number
   def create(
     arn: String,
     service: Service,
     clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
+    agencyName: String,
+    agencyEmail: String,
     expiryDate: LocalDate,
     clientType: Option[String]
   ): Future[Invitation] = {
-    val invitation = Invitation.createNew(arn, service, clientId, suppliedClientId, clientName, expiryDate, clientType)
+    val invitation = Invitation.createNew(
+      arn,
+      service,
+      clientId,
+      suppliedClientId,
+      clientName,
+      agencyName,
+      agencyEmail,
+      expiryDate,
+      clientType
+    )
     collection.insertOne(invitation).toFuture().map(_ => invitation)
   }
+  // scalastyle:on
 
   def migrateActivePartialAuthInvitation(
     invitation: Invitation
@@ -106,6 +120,22 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         )
       )
       .headOption()
+
+  def cancelByIdForAgent(arn: String, invitationId: String): Future[Boolean] =
+    collection
+      .updateOne(
+        and(
+          equal(arnKey, arn),
+          equal(invitationIdKey, invitationId),
+          equal("status", Codecs.toBson[InvitationStatus](Pending))
+        ),
+        combine(
+          set("status", Codecs.toBson[InvitationStatus](Cancelled)),
+          set("lastUpdated", Instant.now())
+        )
+      )
+      .toFuture()
+      .map(_.getModifiedCount == 1L)
 
   def findOneById(invitationId: String): Future[Option[Invitation]] =
     collection

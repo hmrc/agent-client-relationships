@@ -23,7 +23,8 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IFConnector}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending, Rejected, TrackRequestsResult}
+import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, Invitation, Pending, Rejected, TrackRequestsResult}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
@@ -65,13 +66,17 @@ class InvitationService @Inject() (
       suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
       service          <- EitherT.fromEither[Future](createInvitationInputData.getService)
       clientType       <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
+      agentRecord      <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
+      clientId         <- EitherT(getClientId(suppliedClientId, service))
       invitation <- EitherT(
-                      makeInvitation(
+                      create(
                         arn,
-                        suppliedClientId,
                         service,
+                        clientId,
+                        suppliedClientId,
                         createInvitationInputData.clientName,
-                        clientType
+                        clientType,
+                        agentRecord.agencyDetails
                       )
                     )
     } yield invitation
@@ -100,6 +105,15 @@ class InvitationService @Inject() (
     } yield invitation)
       .map(_ => ())
       .value
+
+  def cancelInvitation(
+    arn: Arn,
+    invitationId: String
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Unit]] =
+    invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
+      case true => Right(())
+      case _    => Left(NoPendingInvitation)
+    }
 
   def findInvitationForClient(invitationId: String): Future[Option[Invitation]] =
     invitationsRepository.findOneByIdForClient(invitationId)
@@ -138,21 +152,6 @@ class InvitationService @Inject() (
   ): Future[Boolean] =
     invitationsRepository.updateClientIdAndType(clientId, clientIdType, newClientId, newClientIdType)
 
-  private def makeInvitation(
-    arn: Arn,
-    suppliedClientId: ClientId,
-    service: Service,
-    clientName: String,
-    clientType: Option[String]
-  )(implicit hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Invitation]] = {
-    val invitationT = for {
-      clientId   <- EitherT(getClientId(suppliedClientId, service))
-      invitation <- EitherT(create(arn, service, clientId, suppliedClientId, clientName, clientType))
-    } yield invitation
-
-    invitationT.value
-  }
-
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
     hc: HeaderCarrier
   ): Future[Either[InvitationFailureResponse, ClientId]] = (service, suppliedClientId.typeId) match {
@@ -173,12 +172,23 @@ class InvitationService @Inject() (
     clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
-    clientType: Option[String]
+    clientType: Option[String],
+    agentDetails: AgencyDetails
   )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
       invitation <-
-        invitationsRepository.create(arn.value, service, clientId, suppliedClientId, clientName, expiryDate, clientType)
+        invitationsRepository.create(
+          arn.value,
+          service,
+          clientId,
+          suppliedClientId,
+          clientName,
+          agentDetails.agencyName,
+          agentDetails.agencyEmail,
+          expiryDate,
+          clientType
+        )
     } yield {
       logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
       Right(invitation)

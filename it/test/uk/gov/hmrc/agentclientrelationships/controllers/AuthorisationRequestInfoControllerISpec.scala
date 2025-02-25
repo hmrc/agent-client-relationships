@@ -45,6 +45,8 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
     vrn.value,
     "vrn",
     "testName",
+    "testAgentName",
+    "agent@email.com",
     Pending,
     Some("Me"),
     Some("personal"),
@@ -75,15 +77,6 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
 
       val uid = await(agentReferenceRepo.findByArn(arn)).get.uid
       result.json shouldBe Json.obj(
-        "agentDetails" -> Json.obj(
-          "agencyDetails" -> Json.obj(
-            "agencyName"  -> "My Agency",
-            "agencyEmail" -> "abc@abc.com"
-          ),
-          "suspensionDetails" -> Json.obj(
-            "suspensionStatus" -> false
-          )
-        ),
         "agentLink" -> Json.obj(
           "uid"                 -> uid,
           "normalizedAgentName" -> "my-agency"
@@ -97,6 +90,8 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
           "suppliedClientId"     -> vrn.value,
           "suppliedClientIdType" -> "vrn",
           "clientName"           -> "testName",
+          "agencyName"           -> "testAgentName",
+          "agencyEmail"          -> "agent@email.com",
           "status"               -> "Pending",
           "relationshipEndedBy"  -> "Me",
           "clientType"           -> "personal",
