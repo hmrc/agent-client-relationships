@@ -39,7 +39,8 @@ class StrideClientDetailsServiceSpec
     with MockClientDetailsService
     with MockFindRelationshipsService
     with MockPartialAuthRepository
-    with MockInvitationsRepository {
+    with MockInvitationsRepository
+    with MockValidationService {
 
   object TestService
       extends StrideClientDetailsService(
@@ -48,7 +49,8 @@ class StrideClientDetailsServiceSpec
         agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
         clientDetailsService = mockClientDetailsService,
         agentAssuranceConnector = mockAgentAssuranceConnector,
-        findRelationshipsService = mockFindRelationshipService
+        findRelationshipsService = mockFindRelationshipService,
+        validationService = mockValidationService
       )
 
   val testArn: Arn = Arn("ARN1234567890")

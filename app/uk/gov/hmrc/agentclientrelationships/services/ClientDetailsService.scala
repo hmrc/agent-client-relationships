@@ -26,6 +26,8 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusinessDetails, ItsaCitizenDetails}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
+import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.LocalDate
@@ -36,6 +38,31 @@ import scala.concurrent.{ExecutionContext, Future}
 class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConnector, appConfig: AppConfig)(implicit
   ec: ExecutionContext
 ) extends Logging {
+
+  def findClientDetailsByTaxIdentifier(taxIdentifier: TaxIdentifier)(implicit
+    hc: HeaderCarrier
+  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+    taxIdentifier match {
+      case Nino(nino) =>
+        EitherT(getItsaClientDetails(nino))
+          .orElse(EitherT(getIrvClientDetails(nino)))
+          .value
+      case Vrn(vrn) =>
+        getVatClientDetails(vrn)
+      case Utr(utr) =>
+        getTrustClientDetails(utr)
+      case Urn(urn) =>
+        getTrustClientDetails(urn)
+      case CgtRef(cgtRef) =>
+        getCgtClientDetails(cgtRef)
+      case PptRef(pptRef) =>
+        getPptClientDetails(pptRef)
+      case CbcId(cbcId) =>
+        getCbcClientDetails(cbcId)
+      case PlrId(plrId) =>
+        getPillar2ClientDetails(plrId)
+      case _ => Future.successful(Left(ClientDetailsNotFound))
+    }
 
   def findClientDetails(service: String, clientId: String)(implicit
     hc: HeaderCarrier

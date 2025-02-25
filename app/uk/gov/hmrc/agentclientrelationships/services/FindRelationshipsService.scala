@@ -16,10 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import cats.data.EitherT
+import cats.implicits._
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -50,6 +53,18 @@ class FindRelationshipsService @Inject() (
         )
     } yield relationships
 
+  def getAllActiveItsaRelationshipForClient(
+    nino: Nino
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
+    (for {
+      mtdItId <- EitherT.fromOptionF(ifConnector.getMtdIdFor(nino), RelationshipFailureResponse.TaxIdentifierError)
+      relationships <-
+        EitherT(relationshipConnector.getAllRelationships(mtdItId)).leftFlatMap(recoverNotFoundRelationship)
+    } yield relationships.filter(_.isActive)).value
+
   def getActiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
     service: Service
@@ -64,6 +79,39 @@ class FindRelationshipsService @Inject() (
     else {
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(None)
+    }
+
+  def getAllActiveRelationshipsForClient(
+    taxIdentifier: TaxIdentifier
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
+    // If the tax id type is among one of the supported ones...
+    if (
+      appConfig.supportedServicesWithoutPir
+        .map(_.supportedClientIdType.enrolmentId)
+        .contains(ClientIdentifier(taxIdentifier).enrolmentId)
+    ) {
+      EitherT(relationshipConnector.getAllRelationships(taxIdentifier))
+        .leftFlatMap(recoverNotFoundRelationship)
+        .map(_.filter(_.isActive))
+        .value
+
+    } else {
+      logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
+      Future.successful(Left(RelationshipFailureResponse.TaxIdentifierError))
+    }
+
+  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
+    ec: ExecutionContext
+  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+    relationshipFailureResponse match {
+      case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
+        EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
+      case otherError =>
+        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+
     }
 
   def getInactiveRelationshipsForAgent(

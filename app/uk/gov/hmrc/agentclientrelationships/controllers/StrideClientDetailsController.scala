@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.stride.{ActiveClientsRelationshipResponse, ClientsRelationshipsRequest}
 import uk.gov.hmrc.agentclientrelationships.services.{StrideClientDetailsService, ValidationService}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -54,6 +56,38 @@ class StrideClientDetailsController @Inject() (
             }
           }
       }
+  }
+
+  def getActiveRelationships: Action[JsValue] = Action.async(parse.json) { implicit request =>
+    request.body
+      .validate[ClientsRelationshipsRequest]
+      .fold(
+        errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
+        clientsRelationshipsRequest =>
+          authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
+            strideClientDetailsService
+              .findAllActiveRelationship(clientsRelationshipsRequest)
+              .map {
+                case Right(activeRelationships) =>
+                  Ok(Json.toJson(ActiveClientsRelationshipResponse(activeRelationships)))
+
+                case Left(error) =>
+                  error match {
+                    case RelationshipFailureResponse.RelationshipBadRequest => BadRequest
+                    case RelationshipFailureResponse.TaxIdentifierError     => BadRequest
+                    case RelationshipFailureResponse.ClientDetailsNotFound  => BadRequest
+                    case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) =>
+                      InternalServerError(message)
+                    case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) =>
+                      InternalServerError(message)
+                    case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) =>
+                      InternalServerError(message)
+                    case _ => InternalServerError
+                  }
+
+              }
+          }
+      )
   }
 
 }

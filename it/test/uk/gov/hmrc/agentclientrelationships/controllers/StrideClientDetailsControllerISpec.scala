@@ -20,12 +20,13 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
-import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
+import uk.gov.hmrc.agentclientrelationships.model.stride.{ActiveClientsRelationshipResponse, ClientRelationshipRequest, ClientsRelationshipsRequest, InvitationWithAgentName}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuthRelationship, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HIPAgentClientRelationshipStub}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, CbcNonUk}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Identifier, SuspensionDetails}
+import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.domain.Nino
 
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
@@ -44,6 +45,19 @@ class StrideClientDetailsControllerISpec
     agencyDetails = Some(
       TestAgencyDetails(
         agencyName = Some("ABC Ltd"),
+        agencyEmail = None,
+        agencyTelephone = None,
+        agencyAddress = None
+      )
+    ),
+    suspensionDetails = None
+  )
+
+  val testAgentRecord2: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
+    uniqueTaxReference = None,
+    agencyDetails = Some(
+      TestAgencyDetails(
+        agencyName = Some("DEF Ltd"),
         agencyEmail = None,
         agencyTelephone = None,
         agencyAddress = None
@@ -460,6 +474,434 @@ class StrideClientDetailsControllerISpec
           .toString()
       }
     }
+  }
+
+  s"POST /stride/active-relationships" should {
+
+    val requestPath: String =
+      s"/agent-client-relationships/stride/active-relationships"
+
+    val req = FakeRequest()
+
+    "find relationships for all clientTypes and send back Json" in {
+
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        // TODO WG - do not know how to test PersonalIncome
+        Seq(
+          ClientRelationshipRequest(NinoType.id, nino.value),
+          ClientRelationshipRequest(VrnType.id, vrn.value),
+          ClientRelationshipRequest(UrnType.id, urn.value),
+          ClientRelationshipRequest(UtrType.id, utr.value),
+          ClientRelationshipRequest(CgtRefType.id, cgtRef.value),
+          ClientRelationshipRequest(PptRefType.id, pptRef.value),
+          ClientRelationshipRequest(CbcIdType.id, cbcId.value),
+          ClientRelationshipRequest(PlrIdType.id, plrId.value)
+        )
+      )
+
+      // set all required stub calls
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+
+        cr.clientIdType match {
+          case NinoType.id =>
+            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+            getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+            givenItsaCitizenDetailsExists(nino.value)
+            givenItsaDesignatoryDetailsExists(nino.value)
+            givenAgentRecordFound(arn, testAgentRecord)
+            givenAgentRecordFound(arn2, testAgentRecord2)
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenAgentRecordFound(arn, testAgentRecord)
+          case UtrType.id =>
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenTrustDetailsExist(taxIdentifier.value, UtrType.id.toUpperCase)
+            givenAgentRecordFound(arn, testAgentRecord)
+          case UrnType.id =>
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenTrustDetailsExist(taxIdentifier.value, UrnType.id.toUpperCase)
+            givenAgentRecordFound(arn, testAgentRecord)
+          case CgtRefType.id =>
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenCgtDetailsExist(taxIdentifier.value)
+            givenAgentRecordFound(arn, testAgentRecord)
+          case PptRefType.id =>
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenPptDetailsExist(taxIdentifier.value)
+            givenAgentRecordFound(arn, testAgentRecord)
+          case CbcIdType.id =>
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenKnownFactsQuery(Service.CbcNonUk, taxIdentifier, Some(Seq(Identifier("cbcId", taxIdentifier.value))))
+            givenCbcDetailsExist(true)
+            givenKnownFactsQuery(
+              Service.Cbc,
+              taxIdentifier,
+              Some(Seq(Identifier("cbcId", taxIdentifier.value), Identifier("UTR", utr.value)))
+            )
+            givenAgentRecordFound(arn, testAgentRecord)
+          case PlrIdType.id =>
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenPillar2DetailsExist(taxIdentifier.value)
+            givenAgentRecordFound(arn, testAgentRecord)
+        }
+
+      }
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      // validate result
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            val mainRelationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+            val suppRelationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
+            )
+
+            mainRelationships.size shouldBe 1
+            suppRelationships.size shouldBe 1
+
+          case VrnType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+            relationships.size shouldBe 1
+
+          case UtrType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Trust.id)
+            relationships.size shouldBe 1
+
+          case UrnType.id =>
+            val relationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.TrustNT.id
+            )
+            relationships.size shouldBe 1
+
+          case CgtRefType.id =>
+            val relationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.CapitalGains.id
+            )
+            relationships.size shouldBe 1
+
+          case PptRefType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Ppt.id)
+            relationships.size shouldBe 1
+
+          case CbcIdType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Cbc.id)
+            relationships.size shouldBe 1
+
+          case PlrIdType.id =>
+            val relationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.Pillar2.id
+            )
+            relationships.size shouldBe 1
+
+        }
+      }
+
+    }
+
+    "return only records when relationship exists and do not return when relationship not found" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(
+          ClientRelationshipRequest(NinoType.id, nino.value),
+          ClientRelationshipRequest(VrnType.id, vrn.value)
+        )
+      )
+
+      // set all required stub calls
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+
+        cr.clientIdType match {
+          case NinoType.id =>
+            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+            getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+            givenItsaCitizenDetailsExists(nino.value)
+            givenItsaDesignatoryDetailsExists(nino.value)
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenAgentRecordFound(arn, testAgentRecord)
+
+        }
+
+      }
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      // validate result
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            val mainRelationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+            val suppRelationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
+            )
+
+            mainRelationships.size shouldBe 0
+            suppRelationships.size shouldBe 0
+
+          case VrnType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+            relationships.size shouldBe 1
+
+        }
+      }
+
+    }
+    "return empty array and 200 when no relationships were found" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(
+          ClientRelationshipRequest(NinoType.id, nino.value),
+          ClientRelationshipRequest(VrnType.id, vrn.value)
+        )
+      )
+
+      // set all required stub calls
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+            getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+            givenItsaCitizenDetailsExists(nino.value)
+            givenItsaDesignatoryDetailsExists(nino.value)
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipFailsWith(vrn, status = 404)
+        }
+
+      }
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      // validate result
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            val mainRelationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+            val suppRelationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
+            )
+
+            mainRelationships.size shouldBe 0
+            suppRelationships.size shouldBe 0
+
+          case VrnType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+            relationships.size shouldBe 0
+
+        }
+      }
+
+      response.activeClientRelationships.size shouldBe 0
+
+    }
+
+    "return empty array and 200 when agent is suspended" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(
+          ClientRelationshipRequest(NinoType.id, nino.value),
+          ClientRelationshipRequest(VrnType.id, vrn.value)
+        )
+      )
+
+      // set all required stub calls
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+            getAllActiveRelationshipFailsWithSuspended(mtdItId)
+            givenItsaCitizenDetailsExists(nino.value)
+            givenItsaDesignatoryDetailsExists(nino.value)
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipFailsWithSuspended(vrn)
+        }
+
+      }
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      // validate result
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            val mainRelationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+            val suppRelationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
+            )
+            mainRelationships.size shouldBe 0
+            suppRelationships.size shouldBe 0
+
+          case VrnType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+            relationships.size shouldBe 0
+
+        }
+      }
+      response.activeClientRelationships.size shouldBe 0
+
+    }
+
+    "return 400 when one of the clientId is incorrect" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(
+          ClientRelationshipRequest(NinoType.id, "FAKENINO"),
+          ClientRelationshipRequest(VrnType.id, vrn.value)
+        )
+      )
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipFailsWithSuspended(vrn)
+        }
+
+      }
+
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 400
+
+    }
+
+    "return 500 when client details fail" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(
+          ClientRelationshipRequest(NinoType.id, nino.value),
+          ClientRelationshipRequest(VrnType.id, vrn.value)
+        )
+      )
+
+      // set all required stub calls
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+            getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+            givenItsaCitizenDetailsError(nino.value, 403)
+            givenItsaDesignatoryDetailsExists(nino.value)
+            givenAgentRecordFound(arn, testAgentRecord)
+            givenAgentRecordFound(arn2, testAgentRecord2)
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipsViaClient(vrn, arn)
+            givenAgentRecordFound(arn, testAgentRecord)
+        }
+
+      }
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 500
+
+    }
+
+    "return 404 when get agent data  fail" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(
+          ClientRelationshipRequest(NinoType.id, nino.value),
+          ClientRelationshipRequest(VrnType.id, vrn.value)
+        )
+      )
+
+      // set all required stub calls
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+            getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+            givenItsaCitizenDetailsExists(nino.value)
+            givenItsaDesignatoryDetailsExists(nino.value)
+            givenAgentRecordFound(arn, testAgentRecord)
+            givenAgentDetailsErrorResponse(arn2, 404)
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipsViaClient(vrn, arn)
+            givenAgentRecordFound(arn, testAgentRecord)
+        }
+
+      }
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 404
+
+    }
+
   }
 
 }
