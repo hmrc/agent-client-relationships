@@ -222,8 +222,21 @@ trait AuthActions extends AuthorisedFunctions with Logging {
             Future successful Unauthorized
         }
       case _ =>
-        logger.warn("No Authorization header found in the request for agent termination")
+        logger.warn("No Authorization header found in the request")
         Future successful Unauthorized
+    }
+
+  // If the first auth returns an NoActiveSession will attempt the second one
+  // Will not use fallback if user has a session but fails auth for other reasons
+  def attemptMultipleAuth(
+    firstAuth: (=> Future[Result]) => Future[Result],
+    secondAuth: (=> Future[Result]) => Future[Result]
+  )(
+    body: => Future[Result]
+  )(implicit executionContext: ExecutionContext): Future[Result] =
+    firstAuth(body).recoverWith { case err: NoActiveSession =>
+      logger.warn("No valid session found, attempting alternative auth")
+      secondAuth(body)
     }
 
   protected def withAuthorisedAsAgent[A](

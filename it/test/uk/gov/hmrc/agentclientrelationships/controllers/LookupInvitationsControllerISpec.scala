@@ -23,8 +23,11 @@ import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, P
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.HeaderNames
 
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{Instant, LocalDate, ZoneId}
+import java.util.Base64
 
 class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
@@ -121,6 +124,22 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         givenAuthorised()
 
         val result = doGetRequest(invitationsUrl + s"?arn=${testArn.value}")
+
+        result.status shouldBe 404
+      }
+      "query matches nothing and user authorised with basic auth for insolvent trader deletion" in {
+        givenAuditConnector()
+        givenUnauthorisedWith("MissingBearerToken") //Fail normal auth to trigger basic auth check
+
+        val result = await(
+          ws
+            .url(s"http://localhost:$port${invitationsUrl + s"?arn=${testArn.value}"}")
+            .addHttpHeaders(
+              HeaderNames.authorisation ->
+                s"Basic ${Base64.getEncoder.encodeToString("AgentTermDESUser:password".getBytes(UTF_8))}"
+            )
+            .get()
+        )
 
         result.status shouldBe 404
       }
