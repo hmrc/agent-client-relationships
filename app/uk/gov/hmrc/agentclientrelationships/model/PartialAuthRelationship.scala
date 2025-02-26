@@ -43,6 +43,8 @@ case class PartialAuthRelationship(
     clientName = "",
     agencyName = "",
     agencyEmail = "",
+    warningEmailSent = false,
+    expiredEmailSent = false,
     status = if (this.active) PartialAuth else DeAuthorised,
     relationshipEndedBy = if (this.active) None else Some(""),
     clientType = None,

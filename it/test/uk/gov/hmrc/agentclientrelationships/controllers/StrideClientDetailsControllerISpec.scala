@@ -77,6 +77,8 @@ class StrideClientDetailsControllerISpec
     "Macrosoft",
     "testAgentName",
     "agent@email.com",
+    warningEmailSent = false,
+    expiredEmailSent = false,
     Pending,
     None,
     Some("personal"),

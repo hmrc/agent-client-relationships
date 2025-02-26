@@ -39,6 +39,8 @@ case class Invitation(
   clientName: String,
   agencyName: String,
   agencyEmail: String,
+  warningEmailSent: Boolean,
+  expiredEmailSent: Boolean,
   status: InvitationStatus,
   relationshipEndedBy: Option[String] = None,
   clientType: Option[String],
@@ -70,6 +72,8 @@ object Invitation {
         (__ \ "clientName").format[String](stringEncrypterDecrypter) and
         (__ \ "agencyName").format[String](stringEncrypterDecrypter) and
         (__ \ "agencyEmail").format[String](stringEncrypterDecrypter) and
+        (__ \ "warningEmailSent").format[Boolean] and
+        (__ \ "expiredEmailSent").format[Boolean] and
         (__ \ "status").format[InvitationStatus] and
         (__ \ "relationshipEndedBy").formatNullable[String] and
         (__ \ "clientType").formatNullable[String] and
@@ -102,6 +106,8 @@ object Invitation {
       clientName,
       agencyName,
       agencyEmail,
+      warningEmailSent = false,
+      expiredEmailSent = false,
       Pending,
       None,
       clientType,
@@ -154,6 +160,8 @@ object Invitation {
           clientName = clientName,
           agencyName = agencyName,
           agencyEmail = agencyEmail,
+          warningEmailSent = false,
+          expiredEmailSent = false,
           relationshipEndedBy = relationshipEndedBy,
           created = events.head.time.toInstant(ZoneOffset.UTC),
           lastUpdated = events.last.time.toInstant(ZoneOffset.UTC),
