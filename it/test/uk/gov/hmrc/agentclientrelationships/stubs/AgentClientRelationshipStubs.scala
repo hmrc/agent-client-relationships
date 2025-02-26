@@ -18,6 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import org.scalatest.concurrent.Eventually.eventually
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -54,6 +56,32 @@ trait AgentClientRelationshipStub {
     taxIdentifier: TaxIdentifier,
     arn: Arn,
     authProfile: String = "ALL00001"
+  ): StubMapping
+
+  def getAllActiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn
+  ): StubMapping
+
+  def getItsaMainAndSupportingActiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arnMain: Arn,
+    arnSup: Arn
+  ): StubMapping
+
+  def verifyAllActiveRelationshipsViaClientCalled(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    count: Int
+  ): Unit
+
+  def getAllActiveRelationshipFailsWith(
+    taxIdentifier: TaxIdentifier,
+    status: Int
+  ): StubMapping
+
+  def getAllActiveRelationshipFailsWithSuspended(
+    taxIdentifier: TaxIdentifier
   ): StubMapping
 
   def getInactiveRelationshipViaClient(
@@ -227,6 +255,113 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |}""".stripMargin)
         )
     )
+
+  // TODO WG - all
+  override def getAllActiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationshipDisplayResponse":[
+                         |{
+                         |  "refNumber" : "${taxIdentifier.value}",
+                         |  "arn" : "${arn.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
+  override def getItsaMainAndSupportingActiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arnMain: Arn,
+    arnSup: Arn
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationshipDisplayResponse":[
+                         |{
+                         |  "refNumber" : "${taxIdentifier.value}",
+                         |  "arn" : "${arnMain.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someMainOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "01",
+                         |  "authProfile" : "ALL00001",
+                         |  "activity" : "09"
+                         |},
+                         |{
+                         |  "refNumber" : "${taxIdentifier.value}",
+                         |  "arn" : "${arnSup.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someSuppOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "01",
+                         |  "authProfile" : "ITSAS001",
+                         |  "activity" : "09"
+                         |}
+                         |
+                         |]
+                         |}""".stripMargin)
+        )
+    )
+
+  override def getAllActiveRelationshipFailsWith(
+    taxIdentifier: TaxIdentifier,
+    status: Int
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+        )
+    )
+
+  override def getAllActiveRelationshipFailsWithSuspended(
+    taxIdentifier: TaxIdentifier
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(422)
+            .withBody("suspended")
+        )
+    )
+
+  override def verifyAllActiveRelationshipsViaClientCalled(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    count: Int = 1
+  ): Unit =
+    eventually {
+      verify(
+        count,
+        getRequestedFor(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+      )
+    }
 
   override def getInactiveRelationshipViaClient(
     taxIdentifier: TaxIdentifier,
@@ -533,6 +668,27 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
       case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
     }
 
+  private def urlNoAuthProfile(taxIdentifier: TaxIdentifier): String =
+    taxIdentifier match {
+      case MtdItId(mtdItId) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=true&regime=ITSA&relationshipType=ZA01"
+      case Vrn(vrn) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=true&regime=VATC&relationshipType=ZA01"
+      case Utr(utr) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=true&regime=TRS"
+      case Urn(urn) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=true&regime=TRS"
+      case CgtRef(ref) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CGT&relationshipType=ZA01"
+      case PptRef(ref) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PPT&relationshipType=ZA01"
+      case CbcId(ref) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CBC"
+      case PlrId(ref) =>
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PLR"
+      case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    }
+
   private val otherInactiveRelationship: TaxIdentifier => Arn => String = {
     case MtdItId(clientId) => arn => s"""
                                         |{
@@ -779,6 +935,110 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |}
                          |]
                          |}""".stripMargin)
+        )
+    )
+
+  override def getAllActiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationship" :[
+                         |{
+                         |  "referenceNumber" : "${taxIdentifier.value}",
+                         |  "agentReferenceNumber" : "${arn.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
+  override def getItsaMainAndSupportingActiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arnMain: Arn,
+    arnSup: Arn
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationship" :[
+                         |{
+                         |  "referenceNumber" : "${taxIdentifier.value}",
+                         |  "agentReferenceNumber" : "${arnMain.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "01",
+                         |  "authProfile" : "ALL00001",
+                         |  "activity" : "09"
+                         |},
+                         |{
+                         |  "referenceNumber" : "${taxIdentifier.value}",
+                         |  "agentReferenceNumber" : "${arnSup.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "9999-12-31",
+                         |  "contractAccountCategory" : "01",
+                         |  "authProfile" : "ITSAS001",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
+  override def getAllActiveRelationshipFailsWith(
+    taxIdentifier: TaxIdentifier,
+    status: Int
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+        )
+    )
+
+  override def verifyAllActiveRelationshipsViaClientCalled(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    count: Int = 1
+  ): Unit =
+    eventually {
+      verify(
+        count,
+        getRequestedFor(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+      )
+    }
+
+  override def getAllActiveRelationshipFailsWithSuspended(
+    taxIdentifier: TaxIdentifier
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(403)
+            .withBody("AGENT_SUSPENDED")
         )
     )
 
@@ -1093,6 +1353,27 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
         s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01&auth-profile=$authProfile"
       case PptRef(ref) =>
         s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=true&regime=PPT&relationship=ZA01&auth-profile=$authProfile"
+      case CbcId(ref) =>
+        s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
+      case PlrId(ref) =>
+        s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
+      case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    }
+
+  private def urlNoAuthProfile(taxIdentifier: TaxIdentifier): String =
+    taxIdentifier match {
+      case MtdItId(mtdItId) =>
+        s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=true&regime=ITSA&relationship=ZA01"
+      case Vrn(vrn) =>
+        s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=true&regime=VATC&relationship=ZA01"
+      case Utr(utr) =>
+        s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=true&regime=TRS"
+      case Urn(urn) =>
+        s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=true&regime=TRS"
+      case CgtRef(ref) =>
+        s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01"
+      case PptRef(ref) =>
+        s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=true&regime=PPT&relationship=ZA01"
       case CbcId(ref) =>
         s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
       case PlrId(ref) =>

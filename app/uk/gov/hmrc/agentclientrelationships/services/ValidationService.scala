@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import cats.data.EitherT
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, RelationshipFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -84,6 +85,38 @@ class ValidationService @Inject() (
             )
           )
         )
+    }
+
+  def validateForTaxIdentifier(
+    clientIdTypeStr: String,
+    clientIdStr: String
+  ): Either[RelationshipFailureResponse, TaxIdentifier] = {
+    val clientIdType = ClientIdType.forId(clientIdTypeStr)
+    if (clientIdType.isValid(clientIdStr)) Right(clientIdType.createUnderlying(clientIdStr))
+    else Left(RelationshipFailureResponse.TaxIdentifierError)
+  }
+
+  def validateAuthProfileToService(taxIdentifier: TaxIdentifier, authProfile: Option[String])(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[RelationshipFailureResponse, Service]] =
+    (taxIdentifier, authProfile) match {
+      case (Nino(_), Some("ALL00001")) => Future.successful(Right(Service.MtdIt))
+      case (Nino(_), Some("ITSAS001")) => Future.successful(Right(Service.MtdItSupp))
+      case (Vrn(_), _)                 => Future.successful(Right(Service.Vat))
+      case (Utr(_), _)                 => Future.successful(Right(Service.Trust)) // TODO WG - check TrustNT
+      case (CgtRef(_), _)              => Future.successful(Right(Service.CapitalGains))
+      case (PptRef(_), _)              => Future.successful(Right(Service.Ppt))
+      case (Urn(_), _)                 => Future.successful(Right(Service.TrustNT))
+      case (CbcId(_), _) =>
+        EitherT(makeSanitisedCbcEnrolmentKey(CbcId(taxIdentifier.value)))
+          .map(x => Service(x.service))
+          .leftMap(_ => RelationshipFailureResponse.TaxIdentifierError)
+          .value
+      case (PlrId(_), _) => Future.successful(Right(Service.Pillar2))
+      case _ =>
+        logger.warn("[validateAuthProfileToService] - could not match authProfile to Service")
+        Future.successful(Left(RelationshipFailureResponse.TaxIdentifierError))
     }
 
   private def validateSupportedServiceForEnrolmentKey(

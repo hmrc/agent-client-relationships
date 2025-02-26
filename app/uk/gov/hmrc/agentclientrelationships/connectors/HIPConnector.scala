@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import cats.data.EitherT
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
+import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
@@ -53,6 +55,13 @@ trait RelationshipConnector {
     taxIdentifier: TaxIdentifier,
     service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]]
+
+  def getAllRelationships(
+    taxIdentifier: TaxIdentifier
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]]
 
   def getInactiveClientRelationships(
     taxIdentifier: TaxIdentifier,
@@ -151,6 +160,38 @@ class HIPConnector @Inject() (
               None
           }
       }
+  }
+
+  // HIP API #EPID1521 Create/Update Agent Relationship //url and error handling is different to getActiveClientRelationships
+  override def getAllRelationships(
+    taxIdentifier: TaxIdentifier
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
+    val url = getActiveClientRelationshipsHipUrl(taxIdentifier)
+
+    implicit val reads: Reads[ClientRelationship] = ClientRelationship.hipReads
+
+    EitherT(getRelationship(s"GetActiveClientRelationships", url))
+      .map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
+      .leftMap[RelationshipFailureResponse] { errorResponse =>
+        errorResponse.statusCode match {
+          case Status.NOT_FOUND => RelationshipFailureResponse.RelationshipNotFound
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
+            RelationshipFailureResponse.RelationshipSuspended
+          case Status.BAD_REQUEST =>
+            logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
+            RelationshipFailureResponse.RelationshipBadRequest
+          case s =>
+            logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
+            RelationshipFailureResponse.ErrorRetrievingRelationship(
+              s,
+              s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}"
+            )
+        }
+      }
+      .value
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
@@ -335,6 +376,49 @@ class HIPConnector @Inject() (
       case PptRef(_) =>
         new URL(
           s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01&authProfile=$authProfile"
+        )
+      case CbcId(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case PlrId(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
+
+    }
+  }
+
+  // TODO WG - refactor
+  private def getActiveClientRelationshipsHipUrl(
+    taxIdentifier: TaxIdentifier
+  ): URL = {
+    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
+    taxIdentifier match {
+      case MtdItId(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
+        )
+      case Vrn(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
+        )
+      case Utr(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case Urn(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case CgtRef(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
+        )
+      case PptRef(_) =>
+        new URL(
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
         )
       case CbcId(_) =>
         new URL(

@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -68,10 +69,40 @@ trait DesStubsGet {
         )
     )
 
+  // TODO WG - that should not be used as return different json
   def getVrnIsKnownInETMPFor(vrn: Vrn): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
         .willReturn(aResponse().withBody(s"""{ "vrn": "${vrn.value}"}""").withStatus(200))
+    )
+
+  def getVrnIsKnownInETMPFor2(vrn: Vrn): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
+        .willReturn(
+          aResponse()
+            .withBody(
+              Json
+                .obj(
+                  "approvedInformation" -> Json.obj(
+                    "customerDetails" -> Json.obj(
+                      "organisationName" -> "CFG",
+                      "tradingName"      -> "CFG Solutions",
+                      "individual" -> Json.obj(
+                        "title"      -> "0001",
+                        "firstName"  -> "Ilkay",
+                        "middleName" -> "Silky",
+                        "lastName"   -> "Gundo"
+                      ),
+                      "effectiveRegistrationDate" -> "2020-01-01",
+                      "isInsolvent"               -> false
+                    )
+                  )
+                )
+                .toString()
+            )
+            .withStatus(200)
+        )
     )
 
   def getVrnIsNotKnownInETMPFor(vrn: Vrn): StubMapping =

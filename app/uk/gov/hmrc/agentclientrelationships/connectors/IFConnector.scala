@@ -24,6 +24,7 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, ClientRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
@@ -161,6 +162,46 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
+  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {
+    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
+    taxIdentifier match {
+      case MtdItId(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+        )
+      case Vrn(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+        )
+      case Utr(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case Urn(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case CgtRef(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+        )
+      case PptRef(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+        )
+      case CbcId(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case PlrId(_) =>
+        new URL(
+          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+        )
+      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
+
+    }
+  }
+
   // IF API #1168
   def getActiveClientRelationships(
     taxIdentifier: TaxIdentifier,
@@ -179,6 +220,33 @@ class IFRelationshipConnector @Inject() (
         case other: Int =>
           logger.error(s"Error in IF GetActiveClientRelationships: $other, ${response.body}")
           None
+      }
+    }
+  }
+
+  // IF API #1168 //url and error handling is different to getActiveClientRelationships
+  override def getAllRelationships(
+    taxIdentifier: TaxIdentifier
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
+    val url = getActiveClientRelationshipsUrl(taxIdentifier)
+    getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
+      response.status match {
+        case Status.OK =>
+          Right(response.json.as[ClientRelationshipResponse].relationship)
+        case Status.NOT_FOUND                               => Left(RelationshipFailureResponse.RelationshipNotFound)
+        case _ if response.body.contains("AGENT_SUSPENDED") => Left(RelationshipFailureResponse.RelationshipSuspended)
+        case Status.BAD_REQUEST =>
+          logger.error(s"Error in IF 'GetActiveClientRelationships' with BadRequest response")
+          Left(RelationshipFailureResponse.RelationshipBadRequest)
+        case other: Int =>
+          logger.error(s"Error in IF GetActiveClientRelationships: $other, ${response.body}")
+          Left(
+            RelationshipFailureResponse
+              .ErrorRetrievingRelationship(other, s"Error in IF 'GetActiveClientRelationships' with status: $other")
+          )
       }
     }
   }
