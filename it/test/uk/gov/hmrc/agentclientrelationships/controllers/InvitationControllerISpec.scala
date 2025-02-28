@@ -454,7 +454,7 @@ class InvitationControllerISpec
       await(
         invitationRepo.create(
           arn.value,
-          Service.forId(HMRCTERSORG),
+          Service.forId(HMRCTERSNTORG),
           Urn(urn),
           Urn(urn),
           "Erling Haal",
