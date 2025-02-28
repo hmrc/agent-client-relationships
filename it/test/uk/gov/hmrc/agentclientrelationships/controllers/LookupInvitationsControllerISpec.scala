@@ -129,7 +129,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
       }
       "query matches nothing and user authorised with basic auth for insolvent trader deletion" in {
         givenAuditConnector()
-        givenUnauthorisedWith("MissingBearerToken") //Fail normal auth to trigger basic auth check
+        givenUnauthorisedWith("MissingBearerToken") // Fail normal auth to trigger basic auth check
 
         val result = await(
           ws

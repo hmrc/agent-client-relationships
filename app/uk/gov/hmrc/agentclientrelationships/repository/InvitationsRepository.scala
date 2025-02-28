@@ -277,19 +277,26 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .toFuture()
       .map(_.getModifiedCount == 1L)
 
-  def updateClientIdAndType(
+  def updateInvitation(
+    service: String,
     clientId: String,
     clientIdType: String,
+    newService: String,
     newClientId: String,
     newClientIdType: String
   ): Future[Boolean] =
     collection
       .updateOne(
-        and(equal("clientId", encryptedString(clientId)), equal("clientIdType", clientIdType)),
+        and(
+          equal(serviceKey, service),
+          equal(clientIdKey, encryptedString(clientId)),
+          equal("clientIdType", clientIdType)
+        ),
         combine(
-          set("clientId", encryptedString(newClientId)),
+          set(serviceKey, newService),
+          set(clientIdKey, encryptedString(newClientId)),
           set("clientIdType", newClientIdType),
-          set("suppliedClientId", encryptedString(newClientId)),
+          set(suppliedClientIdKey, encryptedString(newClientId)),
           set("suppliedClientIdType", newClientIdType),
           set("lastUpdated", Instant.now)
         )

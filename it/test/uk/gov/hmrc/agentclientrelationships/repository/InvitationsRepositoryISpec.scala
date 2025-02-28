@@ -221,7 +221,14 @@ class InvitationsRepositoryISpec
       await(repository.collection.insertOne(invitation).toFuture())
       await(
         repository
-          .updateClientIdAndType(invitation.clientId, invitation.clientIdType, "ABC", "ABCType")
+          .updateInvitation(
+            invitation.service,
+            invitation.clientId,
+            invitation.clientIdType,
+            invitation.service,
+            "ABC",
+            "ABCType"
+          )
       ) shouldBe true
       lazy val updatedInvitation = await(repository.findOneById(invitation.invitationId)).get
       updatedInvitation.clientId shouldBe "ABC"
@@ -232,7 +239,7 @@ class InvitationsRepositoryISpec
 
     "fail to update a client ID and client ID type when no matching invitation is found" in {
       await(repository.collection.insertOne(pendingInvitation).toFuture())
-      await(repository.updateClientIdAndType("XYZ", "XYZType", "ABC", "ABCType")) shouldBe false
+      await(repository.updateInvitation("MTD-IT-ID", "XYZ", "XYZType", "MTD-IT-ID", "ABC", "ABCType")) shouldBe false
     }
 
     "retrieve all pending invitations for client" in {
