@@ -17,14 +17,12 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
-import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
-import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.auth.core.{AuthConnector, AuthorisedFunctions}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -36,13 +34,10 @@ class LookupInvitationsController @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   val authConnector: AuthConnector,
-  appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
-    with AuthActions {
-
-  override val supportedServices: Seq[Service] = appConfig.supportedServices
+    with AuthorisedFunctions {
 
   def lookupInvitations(
     arn: Option[Arn],
@@ -50,7 +45,7 @@ class LookupInvitationsController @Inject() (
     clientIds: Seq[String],
     status: Option[InvitationStatus]
   ): Action[AnyContent] = Action.async { implicit request =>
-    attemptMultipleAuth(authorised().apply[Result], withBasicAuth(appConfig.deleteInsolventTradersAuth)) {
+    authorised() {
       if (arn.isEmpty && services.isEmpty && clientIds.isEmpty && status.isEmpty) {
         Future.successful(BadRequest)
       } else {
@@ -111,5 +106,4 @@ class LookupInvitationsController @Inject() (
     } else {
       Future.successful(Nil)
     }
-
 }

@@ -47,13 +47,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
     BasicAuthentication(username, password)
   }
 
-  lazy val deleteInsolventTradersAuth: BasicAuthentication = {
-    val username = servicesConfig.getString("delete-insolvent-traders.username")
-    val password = servicesConfig.getString("delete-insolvent-traders.password")
-
-    BasicAuthentication(username, password)
-  }
-
   val enrolmentStoreProxyUrl = servicesConfig.baseUrl("enrolment-store-proxy")
 
   val taxEnrolmentsUrl = servicesConfig.baseUrl("tax-enrolments")
