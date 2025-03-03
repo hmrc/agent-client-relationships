@@ -682,6 +682,69 @@ class StrideClientDetailsControllerISpec
       }
 
     }
+
+    "return only records when relationship exists and do not return when relationship 422 code 009" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(
+          ClientRelationshipRequest(NinoType.id, nino.value),
+          ClientRelationshipRequest(VrnType.id, vrn.value)
+        )
+      )
+
+      // set all required stub calls
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+
+        cr.clientIdType match {
+          case NinoType.id =>
+            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+            getAllActiveRelationshipFailsWithNotFound(mtdItId, status = 422)
+            givenItsaCitizenDetailsExists(nino.value)
+            givenItsaDesignatoryDetailsExists(nino.value)
+          case VrnType.id =>
+            getVrnIsKnownInETMPFor2(vrn)
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenAgentRecordFound(arn, testAgentRecord)
+
+        }
+
+      }
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      // validate result
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        cr.clientIdType match {
+          case NinoType.id =>
+            val mainRelationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+            val suppRelationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
+            )
+
+            mainRelationships.size shouldBe 0
+            suppRelationships.size shouldBe 0
+
+          case VrnType.id =>
+            val relationships =
+              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+            relationships.size shouldBe 1
+
+        }
+      }
+
+    }
+
     "return empty array and 200 when no relationships were found" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
         Seq(
@@ -904,6 +967,30 @@ class StrideClientDetailsControllerISpec
       )
       result.status shouldBe 404
 
+    }
+    "return 404 when get client data fail" in {
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest =
+        ClientsRelationshipsRequest(Seq(ClientRelationshipRequest(VrnType.id, vrn.value)))
+
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+
+      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
+        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+        cr.clientIdType match {
+          case VrnType.id =>
+            givenDESRespondsWithStatusForVrn(vrn, 404)
+            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+            givenAgentRecordFound(arn, testAgentRecord)
+        }
+      }
+
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(clientsRelationshipsRequest)
+          .toString()
+      )
+      result.status shouldBe 404
     }
 
   }
