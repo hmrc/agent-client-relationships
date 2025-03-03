@@ -71,7 +71,7 @@ class StrideClientDetailsController @Inject() (
               error match {
                 case RelationshipFailureResponse.RelationshipBadRequest => BadRequest
                 case RelationshipFailureResponse.TaxIdentifierError     => BadRequest
-                case RelationshipFailureResponse.ClientDetailsNotFound  => BadRequest
+                case RelationshipFailureResponse.ClientDetailsNotFound  => NotFound
                 case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) =>
                   InternalServerError(message)
                 case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) =>

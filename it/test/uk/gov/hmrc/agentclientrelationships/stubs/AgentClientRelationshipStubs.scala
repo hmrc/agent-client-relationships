@@ -80,6 +80,11 @@ trait AgentClientRelationshipStub {
     status: Int
   ): StubMapping
 
+  def getAllActiveRelationshipFailsWithNotFound(
+    taxIdentifier: TaxIdentifier,
+    status: Int = 404
+  ): StubMapping
+
   def getAllActiveRelationshipFailsWithSuspended(
     taxIdentifier: TaxIdentifier
   ): StubMapping
@@ -336,6 +341,26 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
         .willReturn(
           aResponse()
             .withStatus(status)
+        )
+    )
+
+  override def getAllActiveRelationshipFailsWithNotFound(
+    taxIdentifier: TaxIdentifier,
+    status: Int
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withBody(s"""
+                         {
+                         |"errors": {
+                         |"processingDate": "2024-07-15T09:45:17Z",
+                         |"code": "009",
+                         |"text": "No relationship found"
+                         |}
+                         |}""".stripMargin)
         )
     )
 
@@ -1007,6 +1032,18 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
         )
     )
   override def getAllActiveRelationshipFailsWith(
+    taxIdentifier: TaxIdentifier,
+    status: Int
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(urlNoAuthProfile(taxIdentifier)))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+        )
+    )
+
+  override def getAllActiveRelationshipFailsWithNotFound(
     taxIdentifier: TaxIdentifier,
     status: Int
   ): StubMapping =

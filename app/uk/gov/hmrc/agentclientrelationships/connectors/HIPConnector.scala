@@ -178,6 +178,8 @@ class HIPConnector @Inject() (
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
           case Status.NOT_FOUND => RelationshipFailureResponse.RelationshipNotFound
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
+            RelationshipFailureResponse.RelationshipNotFound
           case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
             RelationshipFailureResponse.RelationshipSuspended
           case Status.BAD_REQUEST =>
