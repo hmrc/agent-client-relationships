@@ -95,13 +95,14 @@ class InvitationsRepositoryISpec
       invitationIdIndex.getOptions.isUnique shouldBe true
     }
 
-    "create a new invitation record" in {
+    "create a new invitation record when one non-pending exists for the same agent and suppliedClientId" in {
+      await(repository.collection.insertOne(pendingInvitation().copy(status = DeAuthorised)).toFuture())
       await(
         repository.create(
           "XARN1234567",
           Vat,
           Vrn("123456789"),
-          Vrn("234567890"),
+          Vrn("123456789"),
           "Macrosoft",
           "testAgentName",
           "agent@email.com",
@@ -109,31 +110,18 @@ class InvitationsRepositoryISpec
           Some("personal")
         )
       )
-      await(repository.collection.countDocuments().toFuture()) shouldBe 1
+      await(repository.collection.countDocuments().toFuture()) shouldBe 2
     }
 
-    "fail to create a Pending invitation for the same agent and suppliedClientId" in {
-      await(
-        repository.create(
-          "XARN1234567",
-          Vat,
-          Vrn("123456789"),
-          Vrn("234567890"),
-          "Macrosoft",
-          "testAgentName",
-          "agent@email.com",
-          LocalDate.parse("2020-01-01"),
-          Some("personal")
-        )
-      )
-
+    "fail to create a Pending invitation when one exists for the same agent and suppliedClientId" in {
+      await(repository.collection.insertOne(pendingInvitation()).toFuture())
       intercept[MongoWriteException](
         await(
           repository.create(
             "XARN1234567",
             Vat,
             Vrn("123456789"),
-            Vrn("234567890"),
+            Vrn("123456789"),
             "Macrosoft",
             "testAgentName",
             "agent@email.com",
