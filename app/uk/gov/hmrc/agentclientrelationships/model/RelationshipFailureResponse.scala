@@ -23,6 +23,8 @@ object RelationshipFailureResponse {
   case object RelationshipBadRequest extends RelationshipFailureResponse
   case object TaxIdentifierError extends RelationshipFailureResponse
   case object ClientDetailsNotFound extends RelationshipFailureResponse
+  case object AgentSuspended extends RelationshipFailureResponse
+  case object RelationshipStartDateMissing extends RelationshipFailureResponse
   case class ErrorRetrievingClientDetails(status: Int, message: String) extends RelationshipFailureResponse
   case class ErrorRetrievingAgentDetails(message: String) extends RelationshipFailureResponse
   case class ErrorRetrievingRelationship(status: Int, message: String) extends RelationshipFailureResponse
