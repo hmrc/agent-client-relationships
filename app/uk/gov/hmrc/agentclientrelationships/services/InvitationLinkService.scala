@@ -69,10 +69,7 @@ class InvitationLinkService @Inject() (
       agentDetailsResponse <- getAgentDetails(arn)
       newNormaliseAgentName = normaliseAgentName(agentDetailsResponse.agencyDetails.agencyName)
 
-      agentReferenceRecord <- getAgentReferenceRecordByArn(arn).flatMap {
-                                case Some(value) => Future.successful(value)
-                                case None        => createAgentReferenceRecord(arn, newNormaliseAgentName)
-                              }
+      agentReferenceRecord <- getAgentReferenceRecordByArn(arn, newNormaliseAgentName)
 
       _ <- if (agentReferenceRecord.normalisedAgentNames.contains(newNormaliseAgentName)) Future.successful(())
            else updateAgentReferenceRecord(agentReferenceRecord.uid, newNormaliseAgentName)
@@ -99,11 +96,16 @@ class InvitationLinkService @Inject() (
       .findBy(uid)
       .map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
 
-  private def getAgentReferenceRecordByArn(
-    arn: Arn
-  ): Future[Option[AgentReferenceRecord]] =
-    agentReferenceRepository
-      .findByArn(arn)
+  def getAgentReferenceRecordByArn(
+    arn: Arn,
+    newNormaliseAgentName: String
+  ): Future[AgentReferenceRecord] =
+    agentReferenceRepository.findByArn(arn).flatMap {
+      case Some(value) =>
+        Future.successful(value)
+      case None =>
+        createAgentReferenceRecord(arn, newNormaliseAgentName)
+    }
 
   private def updateAgentReferenceRecord(uid: String, normalisedAgentNames: String): Future[Unit] =
     agentReferenceRepository
@@ -120,7 +122,7 @@ class InvitationLinkService @Inject() (
       .map(_ => agentReferenceRecord)
   }
 
-  private def normaliseAgentName(agentName: String) =
+  def normaliseAgentName(agentName: String) =
     agentName.toLowerCase().replaceAll("\\s+", "-").replaceAll("[^A-Za-z0-9-]", "")
 
   private def validateNormalizedAgentName(

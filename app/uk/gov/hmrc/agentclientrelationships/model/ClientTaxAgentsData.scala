@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.invitation
+package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.CreateLinkResponse
+import play.api.libs.json.{Json, OFormat}
 
-case class AuthorisationRequestInfo(
-  authorisationRequest: Invitation,
-  agentLink: CreateLinkResponse
+case class ClientTaxAgentsData(
+  agentsInvitations: AgentsInvitationsResponse,
+  agentsAuthorisations: AgentsAuthorisationsResponse,
+  authorisationEvents: AuthorisationEventsResponse
 )
 
-object AuthorisationRequestInfo {
-  implicit val format: Format[AuthorisationRequestInfo] = Json.format[AuthorisationRequestInfo]
+object ClientTaxAgentsData {
+  implicit val formats: OFormat[ClientTaxAgentsData] = Json.format[ClientTaxAgentsData]
 }

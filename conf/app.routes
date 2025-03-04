@@ -10,6 +10,7 @@ GET           /agent/:arn/client/:nino/legacy-mapped-relationship            @uk
 GET           /client/relationships/active                                   @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
 GET           /client/relationships/inactive                                 @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsForClient
 GET           /client/relationships/service/:service                         @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
+GET           /client/authorisations-relationships                           @uk.gov.hmrc.agentclientrelationships.controllers.ClientTaxAgentsDataController.findClientTaxAgentsData
 
 GET           /client/:service/details/:clientId                             @uk.gov.hmrc.agentclientrelationships.controllers.ClientDetailsController.findClientDetails(service: String, clientId: String)
 
