@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.bson.conversions
+import org.mongodb.scala.bson.{BsonDocument, conversions}
 import org.mongodb.scala.model.Accumulators.addToSet
 import org.mongodb.scala.model.Aggregates.facet
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
@@ -62,6 +62,13 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       indexes = Seq(
         IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
         IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
+        IndexModel(
+          Indexes.ascending(arnKey, serviceKey, suppliedClientIdKey),
+          IndexOptions()
+            .partialFilterExpression(equal(statusKey, Codecs.toBson[InvitationStatus](Pending)))
+            .name("uniquePendingIndex")
+            .unique(true)
+        ),
         IndexModel(
           Indexes.ascending("created"),
           IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
@@ -277,19 +284,26 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .toFuture()
       .map(_.getModifiedCount == 1L)
 
-  def updateClientIdAndType(
+  def updateInvitation(
+    service: String,
     clientId: String,
     clientIdType: String,
+    newService: String,
     newClientId: String,
     newClientIdType: String
   ): Future[Boolean] =
     collection
       .updateOne(
-        and(equal("clientId", encryptedString(clientId)), equal("clientIdType", clientIdType)),
+        and(
+          equal(serviceKey, service),
+          equal(clientIdKey, encryptedString(clientId)),
+          equal("clientIdType", clientIdType)
+        ),
         combine(
-          set("clientId", encryptedString(newClientId)),
+          set(serviceKey, newService),
+          set(clientIdKey, encryptedString(newClientId)),
           set("clientIdType", newClientIdType),
-          set("suppliedClientId", encryptedString(newClientId)),
+          set(suppliedClientIdKey, encryptedString(newClientId)),
           set("suppliedClientIdType", newClientIdType),
           set("lastUpdated", Instant.now)
         )

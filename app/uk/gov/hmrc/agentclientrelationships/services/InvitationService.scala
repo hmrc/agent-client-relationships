@@ -144,13 +144,22 @@ class InvitationService @Inject() (
   ): Future[Seq[Invitation]] =
     invitationsRepository.findAllForAgent(arn, services.toSeq, clientIds, isSuppliedClientId)
 
-  def updateClientIdAndType(
+  def updateInvitation(
+    service: String,
     clientId: String,
     clientIdType: String,
+    newService: String,
     newClientId: String,
     newClientIdType: String
   ): Future[Boolean] =
-    invitationsRepository.updateClientIdAndType(clientId, clientIdType, newClientId, newClientIdType)
+    invitationsRepository.updateInvitation(
+      service,
+      clientId,
+      clientIdType,
+      newService,
+      newClientId,
+      newClientIdType
+    )
 
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
     hc: HeaderCarrier
