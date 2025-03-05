@@ -119,6 +119,39 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           )
         }
 
+        "there is a pending supporting ITSA invitation" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenItsaBusinessDetailsExists("nino", "AA000001B")
+          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          await(
+            invitationsRepo
+              .create(
+                "XARN1234567",
+                MtdItSupp,
+                Nino("AA000001B"),
+                Nino("AA000001B"),
+                "Erling Haal",
+                "testAgentName",
+                "agent@email.com",
+                LocalDate.now(),
+                Some("personal")
+              )
+          )
+
+          val result = doGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name"                 -> "Erling Haal",
+            "isOverseas"           -> false,
+            "knownFacts"           -> Json.arr("AA11AA"),
+            "knownFactType"        -> "PostalCode",
+            "hasPendingInvitation" -> true
+          )
+        }
+
         "there is an existing relationship in a main role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)

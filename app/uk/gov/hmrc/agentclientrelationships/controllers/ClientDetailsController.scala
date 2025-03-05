@@ -77,6 +77,11 @@ class ClientDetailsController @Inject() (
             Seq(clientId),
             isSuppliedClientId = true
           )
+        pendingRelResponseSupp <-
+          if (multiAgentServices.contains(service))
+            invitationsRepository
+              .findAllForAgent(arn.value, Seq(multiAgentServices(service)), Seq(clientId), isSuppliedClientId = true)
+          else Future.successful(Nil)
         existingRelResponseMain <-
           relationshipsController.checkForRelationship(
             arn,
@@ -100,7 +105,8 @@ class ClientDetailsController @Inject() (
           else Future(None)
       } yield clientDetailsResponse match {
         case Right(details) if expectedResults(Seq(existingRelResponseMain, existingRelResponseSupp)) =>
-          val pendingRelationship = pendingRelResponse.exists(_.status == Pending)
+          val pendingRelationship =
+            pendingRelResponse.exists(_.status == Pending) || pendingRelResponseSupp.exists(_.status == Pending)
           val existingRelationship =
             (existingRelResponseMain.header.status, existingRelResponseSupp.header.status) match {
               case (OK, _) => Some(mapOverseasRefinement(clientDetailsResponse, service))
