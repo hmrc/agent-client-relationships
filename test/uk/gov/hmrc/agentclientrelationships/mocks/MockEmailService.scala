@@ -33,8 +33,8 @@ trait MockEmailService {
 
   def mockSendAcceptedEmail(
     invitation: Invitation
-  )(response: Future[Unit] = Future.unit): OngoingStubbing[Future[Unit]] =
+  )(response: Boolean = true): OngoingStubbing[Future[Boolean]] =
     when(mockEmailService.sendAcceptedEmail(eqs(invitation))(any[HeaderCarrier], any[ExecutionContext]))
-      .thenReturn(response)
+      .thenReturn(Future.successful(response))
 
 }

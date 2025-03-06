@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.bson.conversions
 import org.mongodb.scala.model.Accumulators.addToSet
 import org.mongodb.scala.model.Aggregates.facet
-import org.mongodb.scala.model.Filters.{and, equal, in, or}
+import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import org.mongodb.scala.result.InsertOneResult
@@ -49,6 +49,9 @@ object FieldKeys {
   val serviceKey: String = "service"
   val statusKey: String = "status"
   val clientNameKey: String = "clientName"
+  val expiryDateKey: String = "expiryDate"
+  val warningEmaiSentKey: String = "warningEmailSent"
+  val expiredEmailSentKey: String = "expiredEmailSent"
 }
 
 @Singleton
@@ -77,7 +80,9 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         IndexModel(Indexes.ascending(suppliedClientIdKey)),
         IndexModel(Indexes.ascending(statusKey)),
         IndexModel(Indexes.ascending(serviceKey)),
-        IndexModel(Indexes.ascending(clientNameKey))
+        IndexModel(Indexes.ascending(clientNameKey)),
+        IndexModel(Indexes.ascending(statusKey, warningEmaiSentKey)),
+        IndexModel(Indexes.ascending(statusKey, expiredEmailSentKey))
       ),
       replaceIndexes = true,
       extraCodecs = Seq(
@@ -437,6 +442,41 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       }
     )
   }
+
+  def findAllForWarningEmail: Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(
+          equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
+          equal(warningEmaiSentKey, false),
+          lte(expiryDateKey, LocalDate.now().plusDays(5L)),
+          gte(expiryDateKey, LocalDate.now())
+        )
+      )
+      .toFuture()
+
+  def findAllForExpiredEmail: Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(
+          equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
+          equal(expiredEmailSentKey, false),
+          lte(expiryDateKey, LocalDate.now())
+        )
+      )
+      .toFuture()
+
+  def updateWarningEmailSent(invitationId: String): Future[Boolean] =
+    collection
+      .updateOne(equal(invitationIdKey, invitationId), set(warningEmaiSentKey, true))
+      .toFuture()
+      .map(_.getModifiedCount == 1L)
+
+  def updateExpiredEmailSent(invitationId: String): Future[Boolean] =
+    collection
+      .updateOne(equal(invitationIdKey, invitationId), set(expiredEmailSentKey, true))
+      .toFuture()
+      .map(_.getModifiedCount == 1L)
 }
 
 object InvitationsRepository {
