@@ -41,17 +41,19 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
 
   val service = new EmailService(mockAgentAssuranceConnector, mockEmailConnector, messagesApi)
 
-  val invitation: Invitation = Invitation.createNew(
-    "XARN1234567",
-    Vat,
-    Vrn("123456789"),
-    Vrn("234567890"),
-    "Macrosoft",
-    "Will Gates",
-    "agent@email.com",
-    LocalDate.parse("2020-01-01"),
-    None
-  ).copy(created = Instant.parse("2020-06-06T00:00:00.000Z"))
+  val invitation: Invitation = Invitation
+    .createNew(
+      "XARN1234567",
+      Vat,
+      Vrn("123456789"),
+      Vrn("234567890"),
+      "Macrosoft",
+      "Will Gates",
+      "agent@email.com",
+      LocalDate.parse("2020-01-01"),
+      None
+    )
+    .copy(created = Instant.parse("2020-06-06T00:00:00.000Z"))
 
   ".sendWarningEmail" should {
 
@@ -90,7 +92,8 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
 
     "do nothing when there are no invitations" in {
       service.sendWarningEmail(Seq())
-      verify(mockEmailConnector, times(0)).sendEmail(any[EmailInformation]())(any[HeaderCarrier](), any[ExecutionContext]())
+      verify(mockEmailConnector, times(0))
+        .sendEmail(any[EmailInformation]())(any[HeaderCarrier](), any[ExecutionContext]())
     }
   }
 
@@ -113,7 +116,6 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
     "send the correct model to the connector" when {
 
       serviceKeys.foreach { serviceKey =>
-
         s"the service is $serviceKey" in {
           val expectedEmailInfoModel = EmailInformation(
             to = Seq("agent@email.com"),
@@ -122,12 +124,13 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
               "agencyName" -> "Will Gates",
               "clientName" -> "Macrosoft",
               "expiryDate" -> "1 January 2020",
-              "service" -> messagesApi(s"service.$serviceKey")
+              "service"    -> messagesApi(s"service.$serviceKey")
             )
           )
 
           service.sendExpiredEmail(invitation.copy(service = serviceKey))
-          verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[HeaderCarrier](), any[ExecutionContext]())
+          verify(mockEmailConnector)
+            .sendEmail(eqTo(expectedEmailInfoModel))(any[HeaderCarrier](), any[ExecutionContext]())
         }
       }
     }
