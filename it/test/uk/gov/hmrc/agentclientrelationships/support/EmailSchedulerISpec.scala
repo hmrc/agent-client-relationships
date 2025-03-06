@@ -39,21 +39,22 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
-class EmailSchedulerISpec extends TestKit(ActorSystem("testSystem"))
-  with UnitSpec
-  with MongoApp
-  with GuiceOneServerPerSuite
-  with WireMockSupport
-  with BeforeAndAfterEach
-  with EmailStubs {
+class EmailSchedulerISpec
+    extends TestKit(ActorSystem("testSystem"))
+    with UnitSpec
+    with MongoApp
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with BeforeAndAfterEach
+    with EmailStubs {
 
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .configure(
-        "emailScheduler.enabled" -> true,
-        "emailScheduler.warningEmailCronExpression" -> "*/5 * * ? * *", // every 5 seconds
-        "emailScheduler.expiredEmailCronExpression" -> "*/5 * * ? * *", // every 5 seconds
-        "microservice.services.email.port" -> wireMockPort
+        "emailScheduler.enabled"                    -> true,
+        "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+        "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+        "microservice.services.email.port"          -> wireMockPort
       )
       .configure(mongoConfiguration)
 
@@ -70,20 +71,22 @@ class EmailSchedulerISpec extends TestKit(ActorSystem("testSystem"))
     system,
     app.injector.instanceOf[AppConfig],
     emailService,
-    invitationsRepository,
+    invitationsRepository
   )
 
-  val baseInvitation: Invitation = Invitation.createNew(
-    "XARN1234567",
-    Vat,
-    Vrn("123456789"),
-    Vrn("234567890"),
-    "Macrosoft",
-    "Will Gates",
-    "agent@email.com",
-    LocalDate.now().plusDays(1L),
-    None
-  ).copy(created = Instant.parse("2020-06-06T00:00:00.000Z"))
+  val baseInvitation: Invitation = Invitation
+    .createNew(
+      "XARN1234567",
+      Vat,
+      Vrn("123456789"),
+      Vrn("234567890"),
+      "Macrosoft",
+      "Will Gates",
+      "agent@email.com",
+      LocalDate.now().plusDays(1L),
+      None
+    )
+    .copy(created = Instant.parse("2020-06-06T00:00:00.000Z"))
 
   override def beforeEach(): Unit = {
     super.beforeEach()

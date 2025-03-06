@@ -29,11 +29,13 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class EmailScheduler @Inject()(actorSystem: ActorSystem,
-                               appConfig: AppConfig,
-                               emailService: EmailService,
-                               invitationsRepository: InvitationsRepository)
-                              (implicit ec: ExecutionContext) extends Logging {
+class EmailScheduler @Inject() (
+  actorSystem: ActorSystem,
+  appConfig: AppConfig,
+  emailService: EmailService,
+  invitationsRepository: InvitationsRepository
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
   if (appConfig.emailSchedulerEnabled) {
 
@@ -48,7 +50,7 @@ class EmailScheduler @Inject()(actorSystem: ActorSystem,
     scheduler.createJobSchedule(
       name = "WarningEmailSchedule",
       description = Some("This job will send emails to warn of an invitation expiring soon"),
-      cronExpression = appConfig.emailSchedulerWarningCronExp,
+      cronExpression = appConfig.emailSchedulerWarningCronExp.replace('_', ' '),
       timezone = TimeZone.getTimeZone("Europe/London"),
       receiver = warningEmailActorRef,
       msg = "<start>"
@@ -61,7 +63,7 @@ class EmailScheduler @Inject()(actorSystem: ActorSystem,
     scheduler.createJobSchedule(
       name = "ExpiredEmailSchedule",
       description = Some("This job will set the status of invitations to Expired and send emails to notify of this"),
-      cronExpression = appConfig.emailSchedulerExpiredCronExp,
+      cronExpression = appConfig.emailSchedulerExpiredCronExp.replace('_', ' '),
       timezone = TimeZone.getTimeZone("Europe/London"),
       receiver = expiredEmailActorRef,
       msg = "<start>"
@@ -71,8 +73,10 @@ class EmailScheduler @Inject()(actorSystem: ActorSystem,
   }
 }
 
-class WarningEmailActor(invitationsRepository: InvitationsRepository,
-                        emailService: EmailService)(implicit ec: ExecutionContext) extends Actor with Logging {
+class WarningEmailActor(invitationsRepository: InvitationsRepository, emailService: EmailService)(implicit
+  ec: ExecutionContext
+) extends Actor
+    with Logging {
 
   def receive: Receive = { case _ =>
     logger.info("[EmailScheduler] Warning email scheduled job is running")
@@ -92,8 +96,10 @@ class WarningEmailActor(invitationsRepository: InvitationsRepository,
   }
 }
 
-class ExpiredEmailActor(invitationsRepository: InvitationsRepository,
-                        emailService: EmailService)(implicit ec: ExecutionContext) extends Actor with Logging {
+class ExpiredEmailActor(invitationsRepository: InvitationsRepository, emailService: EmailService)(implicit
+  ec: ExecutionContext
+) extends Actor
+    with Logging {
 
   def receive: Receive = { case _ =>
     logger.info("[EmailScheduler] Expired email scheduled job is running")
