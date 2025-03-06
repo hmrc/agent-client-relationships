@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -28,24 +27,19 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 
 import java.net.URL
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[EmailConnectorImpl])
-trait EmailConnector {
-  def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit]
-}
-
-class EmailConnectorImpl @Inject() (appConfig: AppConfig, httpV2: HttpClientV2, val metrics: Metrics)(implicit
+@Singleton
+class EmailConnector @Inject() (appConfig: AppConfig, httpV2: HttpClientV2, val metrics: Metrics)(implicit
   val ec: ExecutionContext
 ) extends HttpAPIMonitor
-    with EmailConnector
     with HttpErrorFunctions
     with Logging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 
-  def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =
+  def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] =
     monitor(s"Send-Email-${emailInformation.templateId}") {
       httpV2
         .post(new URL(s"$baseUrl/hmrc/email"))
@@ -53,10 +47,10 @@ class EmailConnectorImpl @Inject() (appConfig: AppConfig, httpV2: HttpClientV2, 
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case status if is2xx(status) => ()
+            case status if is2xx(status) => true
             case other =>
               logger.warn(s"unexpected status from email service, status: $other")
-              ()
+              false
           }
         }
     }
