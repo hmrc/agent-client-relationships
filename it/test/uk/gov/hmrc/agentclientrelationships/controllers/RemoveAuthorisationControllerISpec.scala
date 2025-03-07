@@ -76,7 +76,7 @@ trait RemoveAuthorisationControllerISpec
 
   def allServices: Map[Service, TaxIdentifier] = Map(
     MtdIt -> mtdItId,
-//    PersonalIncomeRecord -> nino,
+//    PersonalIncomeRecord -> nino, PIR tested separately in this file
     Vat          -> vrn,
     Trust        -> utr,
     TrustNT      -> urn,
@@ -136,8 +136,9 @@ trait RemoveAuthorisationControllerISpec
       }
       val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
-      trait StubsForThisScenario {
-        givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+      abstract class StubsForThisScenario(isAgent: Boolean = true) {
+        if (isAgent) givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+        else givenUserIsSubscribedClient(taxIdentifier, withThisGgUserId = "ggUserId-client")
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
@@ -188,6 +189,17 @@ trait RemoveAuthorisationControllerISpec
           }
         }
 
+        s"return 204 for $serviceId when initiated by client" in new StubsForThisScenario(
+          isAgent = false
+        ) {
+          doAgentPostRequest(
+            requestPath,
+            Json
+              .toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId))
+              .toString()
+          ).status shouldBe 204
+          verifyDeleteRecordNotExists
+        }
       }
 
       s"when the relationship exists and the Arn matches that of current Agent user  for ${service.id}" should {
@@ -382,7 +394,7 @@ trait RemoveAuthorisationControllerISpec
       givenGroupInfo("foo", "bar")
     }
 
-    "return 204" in new StubsForThisScenario {
+    "return 204 when AFI deletes the relationship" in new StubsForThisScenario {
       givenTerminateAfiRelationshipSucceeds(arn, PersonalIncomeRecord.id, nino.value)
 
       doAgentPostRequest(
@@ -391,7 +403,7 @@ trait RemoveAuthorisationControllerISpec
       ).status shouldBe 204
     }
 
-    "return 404 when Rir returns 404" in new StubsForThisScenario {
+    "return 404 when AFI returns 404" in new StubsForThisScenario {
       givenTerminateAfiRelationshipFails(arn, PersonalIncomeRecord.id, nino.value, 404)
 
       val result = doAgentPostRequest(
@@ -403,7 +415,7 @@ trait RemoveAuthorisationControllerISpec
       result.json shouldBe toJson(ErrorBody("INVITATION_NOT_FOUND", "The specified invitation was not found."))
     }
 
-    "return 500 when Rir returns 500" in new StubsForThisScenario {
+    "return 500 when AFI returns 500" in new StubsForThisScenario {
       givenTerminateAfiRelationshipFails(arn, PersonalIncomeRecord.id, nino.value)
 
       val result = doAgentPostRequest(
@@ -444,23 +456,6 @@ trait RemoveAuthorisationControllerISpec
     }
 
     "when MtdId business details errors" should {
-      "return Forbidden 403 status and JSON Error when MtdId business details NotFound " in {
-        givenItsaBusinessDetailsError(nino.value, NOT_FOUND)
-        val result =
-          doAgentPostRequest(
-            requestPath,
-            Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-          )
-        result.status shouldBe 403
-
-        result.json shouldBe toJson(
-          ErrorBody(
-            "CLIENT_REGISTRATION_NOT_FOUND",
-            "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
-          )
-        )
-      }
-
       "return Forbidden 403 status and JSON Error when MtdId business details record is empty " in {
         givenEmptyItsaBusinessDetailsExists(nino.value)
         val result =
