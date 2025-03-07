@@ -373,7 +373,7 @@ private[services] abstract class DeleteRelationshipsService(
     )
   }
 
-  private def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
+  def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
     maybeGroup match {
       case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => Some("Client")
       case Some(AffinityGroup.Agent)                                         => Some("Agent")
