@@ -90,7 +90,7 @@ class StrideClientDetailsService @Inject() (
     activeRelationships: Seq[ClientRelationship]
   )(implicit
     hc: HeaderCarrier
-  ): EitherT[Future, RelationshipFailureResponse, (ClientDetailsResponse, Seq[ActiveRelationshipForService])] =
+  ): EitherT[Future, RelationshipFailureResponse, (ClientDetailsResponse, Seq[ClientRelationshipWithAgentName])] =
     for {
       activeRelationshipsWithAgentName <-
         findAgentNameForActiveRelationships(activeRelationships, taxIdentifier: TaxIdentifier)
@@ -101,20 +101,25 @@ class StrideClientDetailsService @Inject() (
   private def findAllActiveRelationshipForTaxId(
     taxIdentifier: TaxIdentifier
   )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
-    taxIdentifier match {
-      case Nino(_) => findRelationshipsService.getAllActiveItsaRelationshipForClient(Nino(taxIdentifier.value))
-      case _       => findRelationshipsService.getAllActiveRelationshipsForClient(taxIdentifier)
-    }
+    (taxIdentifier match {
+      case Nino(_) =>
+        findRelationshipsService.getAllActiveItsaRelationshipForClient(
+          nino = Nino(taxIdentifier.value),
+          activeOnly = true
+        )
+      case _ => findRelationshipsService.getAllRelationshipsForClient(taxIdentifier = taxIdentifier, activeOnly = true)
+
+    }).map(_.map(_.filter(_.isActive))) // additional filtering for IF
 
   private def findAgentNameForActiveRelationships(
     activeRelationships: Seq[ClientRelationship],
     taxIdentifier: TaxIdentifier
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ActiveRelationshipForService]] =
+  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationshipWithAgentName]] =
     activeRelationships.map { ar =>
       for {
         agentDetails <- findAgentDetailsByArn(ar.arn)
         service      <- EitherT(validationService.validateAuthProfileToService(taxIdentifier, ar.authProfile))
-      } yield ActiveRelationshipForService(
+      } yield ClientRelationshipWithAgentName(
         ar.arn,
         agentDetails.agencyDetails.agencyName,
         service.id,
@@ -178,7 +183,7 @@ class StrideClientDetailsService @Inject() (
 
       case (_: Nino, PersonalIncomeRecord) =>
         for {
-          irv <- agentFiRelationshipConnector.findRelationshipForClient(taxIdentifier.value)
+          irv <- agentFiRelationshipConnector.findIrvRelationshipForClient(taxIdentifier.value)
           activeRel = irv.map(r => ActiveMainAgentRelationship(r.arn.value, service.id))
         } yield activeRel
 

@@ -54,7 +54,8 @@ class FindRelationshipsService @Inject() (
     } yield relationships
 
   def getAllActiveItsaRelationshipForClient(
-    nino: Nino
+    nino: Nino,
+    activeOnly: Boolean
   )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -62,7 +63,8 @@ class FindRelationshipsService @Inject() (
     (for {
       mtdItId <- EitherT.fromOptionF(ifConnector.getMtdIdFor(nino), RelationshipFailureResponse.TaxIdentifierError)
       relationships <-
-        EitherT(relationshipConnector.getAllRelationships(mtdItId)).leftFlatMap(recoverNotFoundRelationship)
+        EitherT(relationshipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
+          .leftFlatMap(recoverNotFoundRelationship)
     } yield relationships.filter(_.isActive)).value
 
   def getActiveRelationshipsForClient(
@@ -81,8 +83,9 @@ class FindRelationshipsService @Inject() (
       Future.successful(None)
     }
 
-  def getAllActiveRelationshipsForClient(
-    taxIdentifier: TaxIdentifier
+  def getAllRelationshipsForClient(
+    taxIdentifier: TaxIdentifier,
+    activeOnly: Boolean
   )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -93,9 +96,8 @@ class FindRelationshipsService @Inject() (
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     ) {
-      EitherT(relationshipConnector.getAllRelationships(taxIdentifier))
+      EitherT(relationshipConnector.getAllRelationships(taxIdentifier = taxIdentifier, activeOnly = activeOnly))
         .leftFlatMap(recoverNotFoundRelationship)
-        .map(_.filter(_.isActive))
         .value
 
     } else {

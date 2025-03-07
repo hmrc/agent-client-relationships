@@ -159,7 +159,7 @@ class CheckRelationshipsService @Inject() (
     invitation.service match {
       case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
       case HMRCPIR =>
-        agentFiRelationshipConnector.findRelationshipForClient(invitation.clientId).flatMap {
+        agentFiRelationshipConnector.findIrvRelationshipForClient(invitation.clientId).flatMap {
           case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
           case None    => Future.successful(None)
         }

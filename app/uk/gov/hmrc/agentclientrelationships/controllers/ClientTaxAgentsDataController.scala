@@ -48,14 +48,10 @@ class ClientTaxAgentsDataController @Inject() (
         case Left(error) =>
           error match {
             case RelationshipFailureResponse.RelationshipBadRequest => BadRequest
-            case RelationshipFailureResponse.TaxIdentifierError     => BadRequest
-            case RelationshipFailureResponse.ClientDetailsNotFound  => NotFound
-            case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) =>
-              InternalServerError(message)
             case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) =>
-              InternalServerError(message)
+              ServiceUnavailable(message)
             case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) =>
-              InternalServerError(message)
+              ServiceUnavailable(message)
             case e => InternalServerError(e.toString)
           }
 
