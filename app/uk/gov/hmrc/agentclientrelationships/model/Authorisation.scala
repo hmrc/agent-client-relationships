@@ -24,7 +24,7 @@ case class Authorisation(
   uid: String,
   service: String,
   clientId: String,
-  dateFrom: LocalDate,
+  date: LocalDate,
   arn: String,
   agentName: String
 )

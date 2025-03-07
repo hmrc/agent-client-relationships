@@ -27,6 +27,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -115,10 +116,7 @@ class ClientTaxAgentsDataService @Inject() (
         for {
           agentDetails <- EitherT(findAgentDetailsByArn(arn))
           normalizedName = invitationLinkService.normaliseAgentName(agentDetails.agencyDetails.agencyName)
-          agentReference <- EitherT.right[RelationshipFailureResponse](
-                              invitationLinkService.getAgentReferenceRecordByArn(arn, normalizedName)
-                            )
-          authorisations <- getAuthorisations(relationships, agentDetails.agencyDetails.agencyName, agentReference.uid)
+          authorisations <- getAuthorisations(relationships, agentDetails.agencyDetails.agencyName)
         } yield AgentAuthorisations(
           agentName = agentDetails.agencyDetails.agencyName,
           arn = arn.value,
@@ -135,7 +133,7 @@ class ClientTaxAgentsDataService @Inject() (
 
   }
 
-  private def getAuthorisations(relationships: Seq[ClientRelationshipForTaxId], agentName: String, uid: String)(implicit
+  private def getAuthorisations(relationships: Seq[ClientRelationshipForTaxId], agentName: String)(implicit
     ec: ExecutionContext
   ): EitherT[Future, RelationshipFailureResponse, Seq[Authorisation]] =
     relationships.map { ar =>
@@ -145,10 +143,10 @@ class ClientTaxAgentsDataService @Inject() (
                       RelationshipFailureResponse.RelationshipStartDateMissing: RelationshipFailureResponse
                     )
       } yield Authorisation(
-        uid = uid,
+        uid = UUID.randomUUID().toString,
         service = ar.service.id,
         clientId = ar.clientId,
-        dateFrom = dateFrom,
+        date = dateFrom,
         arn = ar.arn.value,
         agentName = agentName
       )

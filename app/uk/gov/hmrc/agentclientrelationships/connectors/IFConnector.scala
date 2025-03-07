@@ -122,86 +122,6 @@ class IFRelationshipConnector @Inject() (
       )
   }
 
-  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier, authProfile: String): URL = {
-    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
-    taxIdentifier match {
-      case MtdItId(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
-        )
-      case Vrn(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
-        )
-      case Utr(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case Urn(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case CgtRef(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
-        )
-      case PptRef(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01&auth-profile=$authProfile"
-        )
-      case CbcId(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case PlrId(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
-
-    }
-  }
-
-  private def getClientRelationshipsUrl(taxIdentifier: TaxIdentifier, activeOnly: Boolean): URL = {
-    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
-    taxIdentifier match {
-      case MtdItId(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
-        )
-      case Vrn(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
-        )
-      case Utr(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case Urn(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case CgtRef(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
-        )
-      case PptRef(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
-        )
-      case CbcId(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case PlrId(_) =>
-        new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
-        )
-      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
-
-    }
-  }
-
   // IF API #1168
   def getActiveClientRelationships(
     taxIdentifier: TaxIdentifier,
@@ -209,7 +129,7 @@ class IFRelationshipConnector @Inject() (
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
 
     val authProfile = getAuthProfile(service.id)
-    val url = getActiveClientRelationshipsUrl(taxIdentifier, authProfile)
+    val url = relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
     getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
         case Status.OK =>
@@ -232,7 +152,7 @@ class IFRelationshipConnector @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
-    val url = getClientRelationshipsUrl(taxIdentifier, activeOnly)
+    val url = relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = activeOnly)
     getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
         case Status.OK =>
@@ -257,10 +177,9 @@ class IFRelationshipConnector @Inject() (
     taxIdentifier: TaxIdentifier,
     service: Service
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
-    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
 
     val authProfile = getAuthProfile(service.id)
-    val url = inactiveClientRelationshipIFUrl(taxIdentifier, encodedClientId, authProfile)
+    val url = relationshipIFUrl(taxIdentifier, Some(authProfile), activeOnly = false)
 
     getWithIFHeaders("GetInactiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
@@ -348,54 +267,56 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
-  private def inactiveClientRelationshipIFUrl(
+  private def relationshipIFUrl(
     taxIdentifier: TaxIdentifier,
-    encodedClientId: String,
-    authProfile: String
+    authProfileOption: Option[String],
+    activeOnly: Boolean
   ) = {
-    val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
-    val from = LocalDate.parse(fromDateString).toString
-    val now = LocalDate.now().toString
+
+    val dateRangeParams =
+      if (activeOnly) ""
+      else {
+        val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
+        val from = LocalDate.parse(fromDateString).toString
+        val now = LocalDate.now().toString
+        s"&from=$from&to=$now"
+      }
+
+    val authProfileParam = authProfileOption.map(x => s"auth-profile=$x").getOrElse("")
+    val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
+
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier
-          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
         )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier
-          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
         )
       case Utr(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams"
         )
       case Urn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams"
         )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier
-          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
         )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(
-            taxIdentifier
-          )}&from=$from&to=$now&relationship=ZA01&auth-profile=$authProfile"
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
         )
       case CbcId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams"
         )
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=false&regime=${getRegimeFor(taxIdentifier)}&from=$from&to=$now"
+          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams"
         )
       case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 

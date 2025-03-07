@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
-import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -225,7 +224,11 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -237,7 +240,11 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(403)
@@ -248,10 +255,14 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
   override def getActiveRelationshipsViaClient(
     taxIdentifier: TaxIdentifier,
     arn: Arn,
-    authProfile: String = "ALL00001"
+    authProfile: String
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -281,7 +292,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -310,7 +321,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -354,7 +365,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -397,7 +408,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -410,7 +421,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -427,10 +438,10 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   override def getAllActiveRelationshipFailsWithSuspended(
     taxIdentifier: TaxIdentifier,
-    onlyActive: Boolean
+    activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, onlyActive)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
         .willReturn(
           aResponse()
             .withStatus(422)
@@ -441,13 +452,13 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
   override def verifyAllActiveRelationshipsViaClientCalled(
     taxIdentifier: TaxIdentifier,
     arn: Arn,
-    onlyActive: Boolean,
+    activeOnly: Boolean,
     count: Int = 1
   ): Unit =
     eventually {
       verify(
         count,
-        getRequestedFor(urlEqualTo(urlNoAuthProfile(taxIdentifier, onlyActive)))
+        getRequestedFor(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
       )
     }
 
@@ -457,7 +468,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = true)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -486,7 +497,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = true)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -531,7 +542,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   override def getInactiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
-    authProfile: String = "ALL00001"
+    authProfile: String
   ): StubMapping = {
 
     val individualOrOrganisationJson =
@@ -549,7 +560,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
            |""".stripMargin
 
     stubFor(
-      get(urlEqualTo(inactiveUrlClient(taxIdentifier, authProfile)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = false)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -583,7 +594,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(inactiveUrlClient(taxIdentifier, authProfile)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = false)))
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -611,7 +622,7 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(inactiveUrlClient(taxIdentifier, authProfile)))
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = false)))
         .willReturn(aResponse().withStatus(status).withBody(body.getOrElse("")))
     )
 
@@ -735,47 +746,43 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
         )
     )
 
-  private def url(taxIdentifier: TaxIdentifier, authProfile: String): String =
-    taxIdentifier match {
-      case MtdItId(mtdItId) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=true&regime=ITSA&relationshipType=ZA01&authProfile=$authProfile"
-      case Vrn(vrn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=true&regime=VATC&relationshipType=ZA01&authProfile=$authProfile"
-      case Utr(utr) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=true&regime=TRS"
-      case Urn(urn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=true&regime=TRS"
-      case CgtRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CGT&relationshipType=ZA01&authProfile=$authProfile"
-      case PptRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PPT&relationshipType=ZA01&authProfile=$authProfile"
-      case CbcId(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=CBC"
-      case PlrId(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=true&regime=PLR"
-      case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
-    }
+  private def relationshipHipUrl(
+    taxIdentifier: TaxIdentifier,
+    authProfileOption: Option[String],
+    activeOnly: Boolean,
+    fromDateString: String = "2015-01-01"
+  ) = {
 
-  private def urlNoAuthProfile(taxIdentifier: TaxIdentifier, activeOnly: Boolean): String =
+    val dateRangeParams =
+      if (activeOnly) ""
+      else {
+        val from = LocalDate.parse(fromDateString).toString
+        val now = LocalDate.now().toString
+        s"&dateFrom=$from&dateTo=$now"
+      }
+
+    val authProfileParam = authProfileOption.map(x => s"&authProfile=$x").getOrElse("")
+
     taxIdentifier match {
       case MtdItId(mtdItId) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=$activeOnly&regime=ITSA&relationshipType=ZA01"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=$activeOnly&regime=ITSA$dateRangeParams&relationshipType=ZA01$authProfileParam"
       case Vrn(vrn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=$activeOnly&regime=VATC&relationshipType=ZA01"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=$activeOnly&regime=VATC$dateRangeParams&relationshipType=ZA01$authProfileParam"
       case Utr(utr) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=$activeOnly&regime=TRS"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
       case Urn(urn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=$activeOnly&regime=TRS"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
       case CgtRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CGT&relationshipType=ZA01"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CGT$dateRangeParams&relationshipType=ZA01$authProfileParam"
       case PptRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=PPT&relationshipType=ZA01"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=PPT$dateRangeParams&relationshipType=ZA01$authProfileParam"
       case CbcId(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CBC"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CBC$dateRangeParams"
       case PlrId(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=PLR"
-      case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=PLR$dateRangeParams"
+      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
     }
+  }
 
   private val otherInactiveRelationship: TaxIdentifier => Arn => String = {
     case MtdItId(clientId) => arn => s"""
@@ -875,24 +882,6 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
   private def inactiveUrl(arn: Arn) = s"/etmp/RESTAdapter/rosm/agent-relationship?arn=${arn.value}" +
     s"&isAnAgent=true&activeOnly=false&regime=AGSV&dateFrom=${LocalDate.now().minusDays(30).toString}&dateTo=${LocalDate.now().toString}"
 
-  private def inactiveUrlClient(taxIdentifier: TaxIdentifier, authProfile: String): String =
-    taxIdentifier match {
-      case MtdItId(mtdItId) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=false&regime=ITSA&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
-      case Vrn(vrn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=false&regime=VATC&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
-      case Utr(utr) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=false&regime=TRS&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
-      case Urn(urn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=false&regime=TRS&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
-      case CgtRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=CGT&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
-      case PptRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=PPT&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}&relationshipType=ZA01&authProfile=$authProfile"
-      case PlrId(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$ref&isAnAgent=false&activeOnly=false&regime=PLR&dateFrom=2015-01-01&dateTo=${LocalDate.now().toString}"
-      case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
-    }
 
 }
 
@@ -977,7 +966,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -989,7 +982,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(403)
@@ -1000,10 +997,14 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
   override def getActiveRelationshipsViaClient(
     taxIdentifier: TaxIdentifier,
     arn: Arn,
-    authProfile: String = "ALL00001"
+    authProfile: String
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1032,7 +1033,9 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(
+        urlEqualTo(relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = activeOnly))
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1061,7 +1064,9 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(
+        urlEqualTo(relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = activeOnly))
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1104,7 +1109,9 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     activeOnly: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, activeOnly)))
+      get(
+        urlEqualTo(relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = activeOnly))
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1146,7 +1153,9 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     onlyActive: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, onlyActive)))
+      get(
+        urlEqualTo(relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = onlyActive))
+      )
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -1159,7 +1168,9 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     onlyActive: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, onlyActive)))
+      get(
+        urlEqualTo(relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = onlyActive))
+      )
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -1175,7 +1186,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     eventually {
       verify(
         count,
-        getRequestedFor(urlEqualTo(urlNoAuthProfile(taxIdentifier, onlyActive)))
+        getRequestedFor(
+          urlEqualTo(
+            relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = onlyActive)
+          )
+        )
       )
     }
 
@@ -1184,7 +1199,9 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     onlyActive: Boolean
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(urlNoAuthProfile(taxIdentifier, onlyActive)))
+      get(
+        urlEqualTo(relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = onlyActive))
+      )
         .willReturn(
           aResponse()
             .withStatus(403)
@@ -1198,7 +1215,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1229,7 +1250,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(url(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1277,7 +1302,7 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
   // VIA Agent
   override def getInactiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
-    authProfile: String = "ALL00001"
+    authProfile: String
   ): StubMapping = {
 
     val individualOrOrganisationJson =
@@ -1295,7 +1320,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
            |""".stripMargin
 
     stubFor(
-      get(urlEqualTo(inactiveUrlClient(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1331,7 +1360,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(inactiveUrlClient(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -1361,7 +1394,11 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
     authProfile: String = "ALL00001"
   ): StubMapping =
     stubFor(
-      get(urlEqualTo(inactiveUrlClient(taxIdentifier, authProfile)))
+      get(
+        urlEqualTo(
+          relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
+        )
+      )
         .willReturn(aResponse().withStatus(status).withBody(body.getOrElse("")))
     )
 
@@ -1489,47 +1526,44 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
         )
     )
 
-  private def url(taxIdentifier: TaxIdentifier, authProfile: String): String =
+  private def relationshipIFUrl(
+    taxIdentifier: TaxIdentifier,
+    authProfileOption: Option[String],
+    activeOnly: Boolean,
+    fromDateString: String = "2015-01-01"
+  ) = {
+
+    val dateRangeParams =
+      if (activeOnly) ""
+      else {
+        val from = LocalDate.parse(fromDateString).toString
+        val now = LocalDate.now().toString
+        s"&from=$from&to=$now"
+      }
+
+    val authProfileParam = authProfileOption.map(x => s"auth-profile=$x").getOrElse("")
+
     taxIdentifier match {
       case MtdItId(mtdItId) =>
-        s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=true&regime=ITSA&relationship=ZA01&auth-profile=$authProfile"
+        s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=$activeOnly&regime=ITSA$dateRangeParams&relationship=ZA01$authProfileParam"
       case Vrn(vrn) =>
-        s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=true&regime=VATC&relationship=ZA01&auth-profile=$authProfile"
+        s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=$activeOnly&regime=VATC$dateRangeParams&relationship=ZA01$authProfileParam"
       case Utr(utr) =>
-        s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=true&regime=TRS"
+        s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=$activeOnly&regime=TRS$dateRangeParams"
       case Urn(urn) =>
-        s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=true&regime=TRS"
+        s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=$activeOnly&regime=TRS$dateRangeParams"
       case CgtRef(ref) =>
-        s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=true&regime=CGT&relationship=ZA01&auth-profile=$authProfile"
+        s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=CGT$dateRangeParams&relationship=ZA01$authProfileParam"
       case PptRef(ref) =>
-        s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=true&regime=PPT&relationship=ZA01&auth-profile=$authProfile"
+        s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=PPT$dateRangeParams&relationship=ZA01$authProfileParam"
       case CbcId(ref) =>
-        s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=true&regime=CBC"
+        s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=CBC$dateRangeParams"
       case PlrId(ref) =>
-        s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=true&regime=PLR"
+        s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=PLR$dateRangeParams"
       case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
     }
 
-  private def urlNoAuthProfile(taxIdentifier: TaxIdentifier, onlyActive: Boolean): String =
-    taxIdentifier match {
-      case MtdItId(mtdItId) =>
-        s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=$onlyActive&regime=ITSA&relationship=ZA01"
-      case Vrn(vrn) =>
-        s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=$onlyActive&regime=VATC&relationship=ZA01"
-      case Utr(utr) =>
-        s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=$onlyActive&regime=TRS"
-      case Urn(urn) =>
-        s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=$onlyActive&regime=TRS"
-      case CgtRef(ref) =>
-        s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=$onlyActive&regime=CGT&relationship=ZA01"
-      case PptRef(ref) =>
-        s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=$onlyActive&regime=PPT&relationship=ZA01"
-      case CbcId(ref) =>
-        s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=$onlyActive&regime=CBC"
-      case PlrId(ref) =>
-        s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=$onlyActive&regime=PLR"
-      case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
-    }
+  }
 
   private val otherInactiveRelationship: TaxIdentifier => Arn => String = {
     case MtdItId(clientId) => arn => s"""
@@ -1629,23 +1663,5 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
   private def inactiveUrl(arn: Arn) = s"/registration/relationship?arn=${arn.value}" +
     s"&agent=true&active-only=false&regime=AGSV&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"
 
-  private def inactiveUrlClient(taxIdentifier: TaxIdentifier, authProfile: String): String =
-    taxIdentifier match {
-      case MtdItId(mtdItId) =>
-        s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=false&regime=ITSA&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=$authProfile"
-      case Vrn(vrn) =>
-        s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=false&regime=VATC&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=$authProfile"
-      case Utr(utr) =>
-        s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
-      case Urn(urn) =>
-        s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=false&regime=TRS&from=2015-01-01&to=${LocalDate.now().toString}"
-      case CgtRef(ref) =>
-        s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=false&regime=CGT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=$authProfile"
-      case PptRef(ref) =>
-        s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=false&regime=PPT&from=2015-01-01&to=${LocalDate.now().toString}&relationship=ZA01&auth-profile=$authProfile"
-      case PlrId(ref) =>
-        s"/registration/relationship?idType=ZPLR&referenceNumber=$ref&agent=false&active-only=false&regime=PLR&from=2015-01-01&to=${LocalDate.now().toString}"
-      case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
-    }
 
 }

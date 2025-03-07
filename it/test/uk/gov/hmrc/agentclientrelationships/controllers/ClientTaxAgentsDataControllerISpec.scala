@@ -482,7 +482,7 @@ class ClientTaxAgentsDataControllerISpec
 
       // no relationships
       getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWithSuspended(taxIdentifier = vrn, onlyActive = false)
+      getAllActiveRelationshipFailsWithSuspended(taxIdentifier = vrn, activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
