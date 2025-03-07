@@ -57,7 +57,8 @@ trait RelationshipConnector {
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]]
 
   def getAllRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    activeOnly: Boolean
   )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
@@ -164,16 +165,17 @@ class HIPConnector @Inject() (
 
   // HIP API #EPID1521 Create/Update Agent Relationship //url and error handling is different to getActiveClientRelationships
   override def getAllRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    activeOnly: Boolean
   )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
-    val url = getActiveClientRelationshipsHipUrl(taxIdentifier)
+    val url = getClientRelationshipsHipUrl(taxIdentifier = taxIdentifier, activeOnly = activeOnly)
 
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.hipReads
 
-    EitherT(getRelationship(s"GetActiveClientRelationships", url))
+    EitherT(getRelationship(s"GetAllActiveClientRelationships", url))
       .map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
@@ -392,43 +394,43 @@ class HIPConnector @Inject() (
     }
   }
 
-  // TODO WG - refactor
-  private def getActiveClientRelationshipsHipUrl(
-    taxIdentifier: TaxIdentifier
+  private def getClientRelationshipsHipUrl(
+    taxIdentifier: TaxIdentifier,
+    activeOnly: Boolean
   ): URL = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
         )
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
         )
       case Utr(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case Urn(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
         )
       case PptRef(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationshipType=ZA01"
         )
       case CbcId(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case PlrId(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 

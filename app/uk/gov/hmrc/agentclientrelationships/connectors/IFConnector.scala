@@ -162,40 +162,40 @@ class IFRelationshipConnector @Inject() (
     }
   }
 
-  private def getActiveClientRelationshipsUrl(taxIdentifier: TaxIdentifier): URL = {
+  private def getClientRelationshipsUrl(taxIdentifier: TaxIdentifier, activeOnly: Boolean): URL = {
     val encodedClientId = UriEncoding.encodePathSegment(taxIdentifier.value, "UTF-8")
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
         )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
         )
       case Utr(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$ifBaseUrl/registration/relationship?idType=UTR&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case Urn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$ifBaseUrl/registration/relationship?idType=URN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
         )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}&relationship=ZA01"
         )
       case CbcId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$ifBaseUrl/registration/relationship?idType=CBC&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case PlrId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=true&regime=${getRegimeFor(taxIdentifier)}"
+          s"$ifBaseUrl/registration/relationship?idType=ZPLR&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}"
         )
       case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
 
@@ -226,12 +226,13 @@ class IFRelationshipConnector @Inject() (
 
   // IF API #1168 //url and error handling is different to getActiveClientRelationships
   override def getAllRelationships(
-    taxIdentifier: TaxIdentifier
+    taxIdentifier: TaxIdentifier,
+    activeOnly: Boolean
   )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
-    val url = getActiveClientRelationshipsUrl(taxIdentifier)
+    val url = getClientRelationshipsUrl(taxIdentifier, activeOnly)
     getWithIFHeaders("GetActiveClientRelationships", url, ifAuthToken, ifEnv).map { response =>
       response.status match {
         case Status.OK =>

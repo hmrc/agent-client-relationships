@@ -17,19 +17,19 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 
-case class AgentAuthorisations(
-  agentName: String,
-  arn: String,
-  authorisations: Seq[Authorisation]
+import java.time.LocalDate
+
+case class ClientRelationshipForTaxId(
+  arn: Arn,
+  service: Service,
+  clientId: String,
+  dateTo: Option[LocalDate],
+  dateFrom: Option[LocalDate],
+  isActive: Boolean
 )
 
-object AgentAuthorisations {
-  implicit val format: OFormat[AgentAuthorisations] = Json.format[AgentAuthorisations]
-}
-
-case class AgentsAuthorisationsResponse(agentsAuthorisations: Seq[AgentAuthorisations])
-
-object AgentsAuthorisationsResponse {
-  implicit val format: OFormat[AgentsAuthorisationsResponse] = Json.format[AgentsAuthorisationsResponse]
+object ClientRelationshipForTaxId {
+  implicit val format: OFormat[ClientRelationshipForTaxId] = Json.format[ClientRelationshipForTaxId]
 }

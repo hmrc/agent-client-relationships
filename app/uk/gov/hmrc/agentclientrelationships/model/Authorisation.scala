@@ -21,12 +21,14 @@ import play.api.libs.json._
 import java.time.LocalDate
 
 case class Authorisation(
+  uid: String,
   service: String,
   clientId: String,
-  dateFrom: LocalDate
+  dateFrom: LocalDate,
+  arn: String,
+  agentName: String
 )
 
-//TODO WG - custom parsing
 object Authorisation {
   implicit val format: OFormat[Authorisation] = Json.format[Authorisation]
 }
