@@ -148,7 +148,7 @@ class RemoveAuthorisationController @Inject() (
             validRequest.suppliedClientId.enrolmentId,
             validRequest.suppliedClientId.value
           )
-        ).leftMap(_ => EnrolmentKeyNotFound)
+        ).leftMap(_ => InvalidClientId)
       enrolmentKey <-
         EitherT(
           deauthorisationService

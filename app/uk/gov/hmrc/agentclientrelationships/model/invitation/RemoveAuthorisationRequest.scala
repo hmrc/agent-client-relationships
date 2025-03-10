@@ -17,34 +17,12 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}
-
-import scala.util.Try
 
 case class RemoveAuthorisationRequest(
   clientId: String,
   service: String
-) {
-  def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(service))
-    .fold(_ => Left(UnsupportedService), Right(_))
-
-  def getSuppliedClientId: Either[InvitationFailureResponse, ClientId] = for {
-    service <- getService
-    _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.isValid(clientId),
-           clientId,
-           InvalidClientId
-         )
-    clientId <-
-      Try(ClientIdentifier(clientId, service.supportedSuppliedClientIdType.id))
-        .fold(_ => Left(InvalidClientId), Right(_))
-  } yield clientId
-
-}
+)
 
 object RemoveAuthorisationRequest {
   implicit val format: OFormat[RemoveAuthorisationRequest] = Json.format[RemoveAuthorisationRequest]
-
 }
