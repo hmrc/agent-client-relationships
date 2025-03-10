@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 
 import java.time.LocalDate
 
-case class ClientRelationshipForTaxId(
+case class ClientAuthorisationForTaxId(
   arn: Arn,
   service: Service,
   clientId: String,
@@ -30,6 +30,6 @@ case class ClientRelationshipForTaxId(
   isActive: Boolean
 )
 
-object ClientRelationshipForTaxId {
-  implicit val format: OFormat[ClientRelationshipForTaxId] = Json.format[ClientRelationshipForTaxId]
+object ClientAuthorisationForTaxId {
+  implicit val format: OFormat[ClientAuthorisationForTaxId] = Json.format[ClientAuthorisationForTaxId]
 }

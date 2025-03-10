@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.bson.{BsonDocument, conversions}
+import org.mongodb.scala.bson.conversions
 import org.mongodb.scala.model.Accumulators.addToSet
 import org.mongodb.scala.model.Aggregates.facet
 import org.mongodb.scala.model.Filters.{and, equal, in, or}
@@ -345,12 +345,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFuture()
 
-  def findAllPendingForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
+  def findAllForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
     collection
       .find(
         and(
           equal(clientIdKey, encryptedString(clientId)),
-          equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
           in(serviceKey, services: _*)
         )
       )
