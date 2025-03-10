@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.mockito.ArgumentMatchers.{any, eq => eqTo}
-import org.mockito.Mockito.{times, verify}
+import org.mockito.Mockito.verify
 import play.api.i18n.{Lang, Langs, MessagesApi}
 import play.api.test.Helpers.stubControllerComponents
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, EmailConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.EmailConnector
 import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation}
 import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
@@ -33,13 +33,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
 
-  val mockAgentAssuranceConnector: AgentAssuranceConnector = mock[AgentAssuranceConnector]
   val mockEmailConnector: EmailConnector = resettingMock[EmailConnector]
   lazy val messagesApi: MessagesApi = stubControllerComponents().messagesApi
   implicit val langs: Langs = stubControllerComponents().langs
   implicit val lang: Lang = langs.availables.head
 
-  val service = new EmailService(mockAgentAssuranceConnector, mockEmailConnector, messagesApi)
+  val service = new EmailService(mockEmailConnector, messagesApi)
 
   val invitation: Invitation = Invitation
     .createNew(
@@ -88,12 +87,6 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
 
       service.sendWarningEmail(Seq(invitation))
       verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[HeaderCarrier](), any[ExecutionContext]())
-    }
-
-    "do nothing when there are no invitations" in {
-      service.sendWarningEmail(Seq())
-      verify(mockEmailConnector, times(0))
-        .sendEmail(any[EmailInformation]())(any[HeaderCarrier](), any[ExecutionContext]())
     }
   }
 

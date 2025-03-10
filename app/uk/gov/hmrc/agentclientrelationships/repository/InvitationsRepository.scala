@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.bson.conversions
-import org.mongodb.scala.model.Accumulators.addToSet
+import org.mongodb.scala.{Document, Observable}
+import org.mongodb.scala.bson.{BsonValue, conversions}
+import org.mongodb.scala.model.Accumulators.{addToSet, push}
 import org.mongodb.scala.model.Aggregates.facet
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Updates.{combine, set}
@@ -443,19 +444,26 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     )
   }
 
-  def findAllForWarningEmail: Future[Seq[Invitation]] =
-    collection
-      .find(
+  def findAllForWarningEmail: Observable[WarningEmailAggregationResult] = {
+
+    val aggregatePipeline = Seq(
+      Aggregates.filter(
         and(
           equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
           equal(warningEmaiSentKey, false),
           lte(expiryDateKey, LocalDate.now().plusDays(5L)),
           gte(expiryDateKey, LocalDate.now())
         )
-      )
-      .toFuture()
+      ),
+      Aggregates.group("$arn", addToSet("invitations", "$$ROOT"))
+    )
 
-  def findAllForExpiredEmail: Future[Seq[Invitation]] =
+    collection
+      .aggregate[BsonValue](aggregatePipeline)
+      .map(Codecs.fromBson[WarningEmailAggregationResult])
+  }
+
+  def findAllForExpiredEmail: Observable[Invitation] =
     collection
       .find(
         and(
@@ -464,7 +472,6 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           lte(expiryDateKey, LocalDate.now())
         )
       )
-      .toFuture()
 
   def updateWarningEmailSent(invitationId: String): Future[Boolean] =
     collection

@@ -18,23 +18,26 @@ package uk.gov.hmrc.agentclientrelationships.support
 
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.extension.quartz.QuartzSchedulerExtension
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Expired
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.EmailService
+import uk.gov.hmrc.agentclientrelationships.services.{EmailService, MongoLockService}
 
 import java.util.TimeZone
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 @Singleton
 class EmailScheduler @Inject() (
   actorSystem: ActorSystem,
-  appConfig: AppConfig,
   emailService: EmailService,
-  invitationsRepository: InvitationsRepository
-)(implicit ec: ExecutionContext)
+  invitationsRepository: InvitationsRepository,
+  mongoLockService: MongoLockService
+)(implicit ec: ExecutionContext, mat: Materializer, appConfig: AppConfig)
     extends Logging {
 
   if (appConfig.emailSchedulerEnabled) {
@@ -44,7 +47,7 @@ class EmailScheduler @Inject() (
     logger.info("[EmailScheduler] Scheduler is enabled")
 
     val warningEmailActorRef: ActorRef = actorSystem.actorOf(Props {
-      new WarningEmailActor(invitationsRepository, emailService)
+      new WarningEmailActor(invitationsRepository, emailService, mongoLockService)
     })
 
     scheduler.createJobSchedule(
@@ -57,7 +60,7 @@ class EmailScheduler @Inject() (
     )
 
     val expiredEmailActorRef: ActorRef = actorSystem.actorOf(Props {
-      new ExpiredEmailActor(invitationsRepository, emailService)
+      new ExpiredEmailActor(invitationsRepository, emailService, mongoLockService)
     })
 
     scheduler.createJobSchedule(
@@ -73,47 +76,66 @@ class EmailScheduler @Inject() (
   }
 }
 
-class WarningEmailActor(invitationsRepository: InvitationsRepository, emailService: EmailService)(implicit
-  ec: ExecutionContext
+class WarningEmailActor(
+  invitationsRepository: InvitationsRepository,
+  emailService: EmailService,
+  mongoLockService: MongoLockService
+)(implicit
+  ec: ExecutionContext,
+  mat: Materializer,
+  appConfig: AppConfig
 ) extends Actor
     with Logging {
 
   def receive: Receive = { case _ =>
-    logger.info("[EmailScheduler] Warning email scheduled job is running")
-    invitationsRepository.findAllForWarningEmail.map { invitations =>
-      invitations.groupBy(_.arn).foreach { case (_, list) =>
-        emailService.sendWarningEmail(list).map {
-          case true =>
-            invitations.foreach { invitation =>
-              invitationsRepository.updateWarningEmailSent(invitation.invitationId)
-            }
-          case false =>
-            logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${list.headOption.map(_.arn)}")
+    mongoLockService.schedulerLock("WarningEmailSchedule") {
+      logger.info("[EmailScheduler] Warning email scheduled job is running")
+      Source
+        .fromPublisher(invitationsRepository.findAllForWarningEmail)
+        .throttle(10, 1.second)
+        .runForeach { aggregationResult =>
+          emailService.sendWarningEmail(aggregationResult.invitations).map {
+            case true =>
+              aggregationResult.invitations.foreach { invitation =>
+                invitationsRepository.updateWarningEmailSent(invitation.invitationId)
+              }
+            case false =>
+              logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${aggregationResult.arn}")
+          }
+          ()
         }
-      }
     }
     ()
   }
 }
 
-class ExpiredEmailActor(invitationsRepository: InvitationsRepository, emailService: EmailService)(implicit
-  ec: ExecutionContext
+class ExpiredEmailActor(
+  invitationsRepository: InvitationsRepository,
+  emailService: EmailService,
+  mongoLockService: MongoLockService
+)(implicit
+  ec: ExecutionContext,
+  mat: Materializer,
+  appConfig: AppConfig
 ) extends Actor
     with Logging {
 
   def receive: Receive = { case _ =>
-    logger.info("[EmailScheduler] Expired email scheduled job is running")
-    invitationsRepository.findAllForExpiredEmail.map { invitations =>
-      invitations.foreach { invitation =>
-        invitationsRepository.updateStatus(invitation.invitationId, Expired)
-        emailService.sendExpiredEmail(invitation).map {
-          case true =>
-            invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
-            ()
-          case false =>
-            logger.warn(s"[EmailScheduler] Expiry email failed to send for invitation: ${invitation.invitationId}")
+    mongoLockService.schedulerLock("ExpiredEmailSchedule") {
+      logger.info("[EmailScheduler] Expired email scheduled job is running")
+      Source
+        .fromPublisher(invitationsRepository.findAllForExpiredEmail)
+        .throttle(10, 1.second)
+        .runForeach { invitation =>
+          invitationsRepository.updateStatus(invitation.invitationId, Expired)
+          emailService.sendExpiredEmail(invitation).map {
+            case true =>
+              invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
+            case false =>
+              logger.warn(s"[EmailScheduler] Expiry email failed to send for invitation: ${invitation.invitationId}")
+          }
+          ()
         }
-      }
     }
     ()
   }
