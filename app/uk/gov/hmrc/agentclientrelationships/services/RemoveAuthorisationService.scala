@@ -48,6 +48,8 @@ class RemoveAuthorisationService @Inject() (
     service <- Try(Service.forId(serviceStr))
                  .fold(_ => Left(UnsupportedService), Right(_))
     clientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id))
+                  // Client requests can come with an MTDITID instead of nino so we need to check that too
+                  .orElse(Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)))
                   .fold(_ => Left(InvalidClientId), Right(_))
   } yield ValidRequest(clientId, service)
 

@@ -192,6 +192,9 @@ trait RemoveAuthorisationControllerISpec
         s"return 204 for $serviceId when initiated by client" in new StubsForThisScenario(
           isAgent = false
         ) {
+          val suppliedClientId: ClientIdentifier[TaxIdentifier] =
+            ClientIdentifier(taxIdentifier) // undoing the itsa -> nino replacement
+
           doAgentPostRequest(
             requestPath,
             Json
@@ -431,13 +434,13 @@ trait RemoveAuthorisationControllerISpec
       "return BadRequest 400 status when clientId is not valid for service" in {
         val result = doAgentPostRequest(
           requestPath,
-          Json.toJson(RemoveAuthorisationRequest("IncorrectNino", MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest("IncorrectNinoOrMtdItId", MtdIt.id)).toString()
         )
         result.status shouldBe 400
         result.json shouldBe toJson(
           ErrorBody(
             "INVALID_CLIENT_ID",
-            "Invalid clientId \"IncorrectNino\", for service type \"HMRC-MTD-IT\""
+            "Invalid clientId \"IncorrectNinoOrMtdItId\", for service type \"HMRC-MTD-IT\""
           )
         )
       }
