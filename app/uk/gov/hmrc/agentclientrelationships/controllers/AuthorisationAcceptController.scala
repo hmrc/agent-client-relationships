@@ -82,9 +82,8 @@ class AuthorisationAcceptController @Inject() (
                   case err                      => throw err
                 }
             }
-          // friendly name update (non blocking)
           _ <- if (result == NoContent) friendlyNameService.updateFriendlyName(invitation, enrolment) else Future.unit
-          // audit
+          // TODO audit
         } yield result
       case Some(_) =>
         Future.successful(

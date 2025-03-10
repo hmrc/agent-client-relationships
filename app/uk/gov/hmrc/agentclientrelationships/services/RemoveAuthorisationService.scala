@@ -25,6 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, P
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
+import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -36,6 +37,7 @@ import scala.util.control.NonFatal
 
 @Singleton
 class RemoveAuthorisationService @Inject() (
+  deleteService: DeleteRelationshipsServiceWithAcr,
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository,
   ifConnector: IFConnector
@@ -69,11 +71,21 @@ class RemoveAuthorisationService @Inject() (
       case _ => Future.successful(false)
     }
 
-  def deauthAltItsaInvitation(arn: Arn, clientId: ClientId, service: Service): Future[Boolean] =
+  def deauthAltItsaInvitation(
+    arn: Arn,
+    clientId: ClientId,
+    service: Service,
+    affinityGroup: Option[AffinityGroup]
+  ): Future[Boolean] =
     clientId.typeId match {
       case NinoType.id =>
         invitationsRepository
-          .updatePartialAuthToDeAuthorisedStatus(arn, service.id, Nino(clientId.value), "HMRC")
+          .updatePartialAuthToDeAuthorisedStatus(
+            arn,
+            service.id,
+            Nino(clientId.value),
+            deleteService.determineUserTypeFromAG(affinityGroup).getOrElse("HMRC")
+          )
           .map(_.fold(false)(_ => true))
       case _ => Future.successful(false)
     }
@@ -89,10 +101,12 @@ class RemoveAuthorisationService @Inject() (
       case (MtdIt | MtdItSupp, NinoType.id) =>
         ifConnector
           .getMtdIdFor(Nino(suppliedClientId.value))
-          .map(_.map(EnrolmentKey(service, _)))
-          .map(_.toRight(ClientRegistrationNotFound))
+          .map {
+            case Some(mtdItId) => Right(EnrolmentKey(service, mtdItId))
+            case None          => Right(suppliedEnrolmentKey)
+          }
           .recover { case NonFatal(_) =>
-            Left[InvitationFailureResponse, EnrolmentKey](ClientRegistrationNotFound)
+            Left(ClientRegistrationNotFound)
           }
       case _ => Future successful Right(suppliedEnrolmentKey)
     }

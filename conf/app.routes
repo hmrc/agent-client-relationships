@@ -21,13 +21,13 @@ GET           /client/authorisation-request-info/:invitationId               @uk
 GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 PUT           /client/authorisation-response/reject/:invitationId            @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.rejectInvitation(invitationId: String)
+PUT           /authorisation-response/accept/:invitationId                   @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationAcceptController.accept(invitationId: String)
 
 POST          /agent/:arn/authorisation-request                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
 GET           /agent/:arn/authorisation-requests                             @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.trackRequests(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, statusFilter: Option[String], clientName: Option[String], pageNumber: Int, pageSize: Int)
 POST          /agent/:arn/remove-authorisation                               @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 PUT           /agent/cancel-invitation/:invitationId                         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.cancelInvitation(invitationId: String)
-PUT           /authorisation-response/accept/:invitationId                   @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationAcceptController.accept(invitationId: String)
 
 POST          /itsa-post-signup/create-relationship/:nino                    @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: uk.gov.hmrc.domain.Nino)
 

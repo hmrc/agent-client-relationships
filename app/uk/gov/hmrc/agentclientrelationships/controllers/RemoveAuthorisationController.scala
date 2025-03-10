@@ -18,17 +18,17 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.data.EitherT
 import play.api.Logger
-import play.api.libs.json.JsValue
 import play.api.mvc.{Action, ControllerComponents, Request, Result}
 import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, EnrolmentKeyNotFound, InvalidClientId, RelationshipDeleteFailed, RelationshipNotFound, UnsupportedService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -51,125 +51,104 @@ class RemoveAuthorisationController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def removeAuthorisation(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    request.body
-      .validate[RemoveAuthorisationRequest]
-      .fold(
-        errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-        delInvReq => {
-          val responseT = for {
+  private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
-            validRequest <-
-              EitherT.fromEither[Future](deauthorisationService.validateRequest(delInvReq.service, delInvReq.clientId))
-            // TODO WG - do auth check here
-            result <- EitherT(removeAuthorisationForValidRequest(arn, validRequest))
-          } yield result
-
-          responseT.value
-            .map(
-              _.fold(
-                err => invitationErrorHandler(err, delInvReq.service, delInvReq.clientId),
-                result => result
-              )
-            )
-        }
-      )
-  }
-
-  private def removeAuthorisationForValidRequest(
-    arn: Arn,
-    validRequest: ValidRequest
-  )(implicit
-    hc: HeaderCarrier,
-    request: Request[Any]
-  ): Future[Either[InvitationFailureResponse, Result]] =
-    validRequest.service match {
-
-      // TODO WG - do audit for PersonalIncome - check agent-fi-relationship
-      // TODO update invitation status if one still exists
-      case Service.PersonalIncomeRecord =>
-        agentFiRelationshipConnector
-          .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
-          .map {
-            case true  => Right(NoContent)
-            case false => Left(RelationshipNotFound)
-          }
-          .recover { case error: UpstreamErrorResponse =>
-            Left[InvitationFailureResponse, Result](RelationshipDeleteFailed(error.getMessage))
-          }
-
-      case Service.MtdIt | Service.MtdItSupp =>
-        deauthorisationService
-          .findPartialAuthInvitation(arn, validRequest.suppliedClientId, validRequest.service)
-          .flatMap {
-            // AltItsa
-            case Some(_) =>
-              (for {
-                invitationStoreResults <-
-                  EitherT.right[InvitationFailureResponse](
-                    deauthorisationService
-                      .deauthAltItsaInvitation(arn, validRequest.suppliedClientId, validRequest.service)
-                      .map(_ => NoContent)
-                  )
-                _ <- EitherT.right[InvitationFailureResponse](
-                       deauthorisationService
-                         .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
-                         .map { result =>
-                           if (result) Right[InvitationFailureResponse, Result](NoContent)
-                           else
-                             Left[InvitationFailureResponse, Result](
-                               RelationshipDeleteFailed("Remove PartialAuth invitation failed.")
-                             )
-                         }
-                     )
-              } yield invitationStoreResults).value
-
-            case None =>
-              getEnrolmentAndDeleteRelationship(arn, validRequest)
-
-          }
-
-      case _ => getEnrolmentAndDeleteRelationship(arn, validRequest)
-
-    }
-
-  private def getEnrolmentAndDeleteRelationship(arn: Arn, validRequest: ValidRequest)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any]
-  ): Future[Either[InvitationFailureResponse, Result]] =
-    (for {
-      enrolmentKey <- EitherT(getEnrolmentKey(validRequest))
-      result <- EitherT.right[InvitationFailureResponse] {
-
-                  authorisedUser(
-                    arn = Some(arn),
-                    clientId = enrolmentKey.oneTaxIdentifier(),
-                    strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
-                  ) { implicit currentUser =>
-                    deleteRelationship(arn, enrolmentKey)
-                      .map(
+  def removeAuthorisation(arn: Arn): Action[RemoveAuthorisationRequest] =
+    Action.async(parse.json[RemoveAuthorisationRequest]) { implicit request =>
+      val responseT = for {
+        validRequest <-
+          EitherT.fromEither[Future](
+            deauthorisationService.validateRequest(request.body.service, request.body.clientId)
+          )
+        enrolmentKey <- EitherT(getEnrolmentKey(validRequest))
+        result <- EitherT.right[InvitationFailureResponse](
+                    authorisedUser(
+                      arn = Some(arn),
+                      clientId = enrolmentKey.oneTaxIdentifier(),
+                      strideRoles = strideRoles
+                    ) { implicit currentUser =>
+                      removeAuthorisationForValidRequest(arn, validRequest, enrolmentKey).map(
                         _.fold(
-                          err =>
-                            invitationErrorHandler(err, validRequest.service.id, validRequest.suppliedClientId.value),
+                          err => invitationErrorHandler(err, request.body.service, request.body.clientId),
                           _ => NoContent
                         )
                       )
-                  }
+                    }
+                  )
+      } yield result
+
+      responseT.value
+        .map(
+          _.fold(
+            err => invitationErrorHandler(err, request.body.service, request.body.clientId),
+            result => result
+          )
+        )
+    }
+
+  private def removeAuthorisationForValidRequest(
+    arn: Arn,
+    validRequest: ValidRequest,
+    enrolmentKey: EnrolmentKey
+  )(implicit
+    hc: HeaderCarrier,
+    request: Request[Any],
+    currentUser: CurrentUser
+  ): Future[Either[InvitationFailureResponse, Boolean]] =
+    (validRequest.service, enrolmentKey.oneTaxIdentifier()) match {
+      case (
+            Service.PersonalIncomeRecord,
+            _
+          ) => // TODO after enabling ACRF must update AFI to use a different callback for invitation deauth
+        agentFiRelationshipConnector
+          .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
+          .map { result =>
+            if (result) Right(true)
+            else Left(RelationshipNotFound)
+          }
+          .recover { case error: UpstreamErrorResponse =>
+            Left(RelationshipDeleteFailed(error.getMessage))
+          }
+      case (Service.MtdIt | Service.MtdItSupp, Nino(_)) => // Alt ITSA
+        (for {
+          deauthResult <-
+            EitherT(
+              deauthorisationService
+                .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
+                .map { result =>
+                  if (result) Right(result)
+                  else Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
                 }
-    } yield result).value
+            )
+          _ <-
+            EitherT.right[InvitationFailureResponse](
+              deauthorisationService
+                .deauthAltItsaInvitation(
+                  arn,
+                  validRequest.suppliedClientId,
+                  validRequest.service,
+                  currentUser.affinityGroup
+                )
+                .map(_ => true)
+            )
+        } yield deauthResult).value
+      case _ =>
+        deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
+    }
 
   private def getEnrolmentKey(validRequest: ValidRequest)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[InvitationFailureResponse, EnrolmentKey]] = {
     val resultT = for {
-      suppliedEnrolmentKey <- EitherT(
-                                validationService.validateForEnrolmentKey(
-                                  validRequest.service.id,
-                                  validRequest.suppliedClientId.enrolmentId,
-                                  validRequest.suppliedClientId.value
-                                )
-                              ).leftMap(_ => EnrolmentKeyNotFound)
+      suppliedEnrolmentKey <-
+        EitherT(
+          validationService.validateForEnrolmentKey(
+            validRequest.service.id,
+            validRequest.suppliedClientId.enrolmentId,
+            validRequest.suppliedClientId.value
+          )
+        ).leftMap(_ => EnrolmentKeyNotFound)
       enrolmentKey <-
         EitherT(
           deauthorisationService
@@ -184,15 +163,15 @@ class RemoveAuthorisationController @Inject() (
     hc: HeaderCarrier,
     request: Request[Any],
     currentUser: CurrentUser
-  ): Future[Either[InvitationFailureResponse, Unit]] =
+  ): Future[Either[InvitationFailureResponse, Boolean]] =
     deleteService
       .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
-      .map(Right[InvitationFailureResponse, Unit](_))
+      .map(_ => Right(true))
       .recover {
         case upS: UpstreamErrorResponse =>
-          Left[InvitationFailureResponse, Unit](RelationshipDeleteFailed(upS.getMessage))
+          Left(RelationshipDeleteFailed(upS.getMessage))
         case NonFatal(ex) =>
-          Left[InvitationFailureResponse, Unit](RelationshipDeleteFailed(ex.getMessage))
+          Left(RelationshipDeleteFailed(ex.getMessage))
       }
 
   private def invitationErrorHandler(
