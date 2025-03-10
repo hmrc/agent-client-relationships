@@ -37,7 +37,7 @@ class CreateRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   relationshipConnector: RelationshipConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
-  lockService: RecoveryLockService,
+  lockService: MongoLockService,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
@@ -54,7 +54,7 @@ class CreateRelationshipsService @Inject() (
     failIfAllocateAgentInESFails: Boolean
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, enrolmentKey) {
+      .recoveryLock(arn, enrolmentKey) {
         auditData.set("AgentDBRecord", false)
         auditData.set("enrolmentDelegated", false)
         auditData.set("etmpRelationshipCreated", false)
@@ -247,7 +247,7 @@ class CreateRelationshipsService @Inject() (
     enrolmentKey: EnrolmentKey
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
-      .tryLock(arn, enrolmentKey) {
+      .recoveryLock(arn, enrolmentKey) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
           case (true, true) =>
             logger.warn(

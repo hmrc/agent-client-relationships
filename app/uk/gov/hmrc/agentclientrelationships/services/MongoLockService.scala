@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.google.inject.ImplementedBy
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
@@ -25,22 +26,34 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[MongoRecoveryLockService])
-trait RecoveryLockService {
+@ImplementedBy(classOf[MongoLockServiceImpl])
+trait MongoLockService {
 
-  def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(implicit
+  def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(body: => Future[T])(implicit
     ec: ExecutionContext
   ): Future[Option[T]]
+
+  def schedulerLock[T](jobName: String)(
+    body: => Future[T]
+  )(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]]
 }
 
 @Singleton
-class MongoRecoveryLockService @Inject() (lockRepository: MongoLockRepository) extends RecoveryLockService {
+class MongoLockServiceImpl @Inject() (lockRepository: MongoLockRepository) extends MongoLockService {
 
-  override def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
+  def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
     body: => Future[T]
   )(implicit ec: ExecutionContext): Future[Option[T]] = {
     val recoveryLock =
       LockService(lockRepository, lockId = s"recovery-${arn.value}-${enrolmentKey.tag}", ttl = 5.minutes)
     recoveryLock.withLock(body)
+  }
+
+  def schedulerLock[T](
+    jobName: String
+  )(body: => Future[T])(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]] = {
+    val lockService =
+      LockService(lockRepository, lockId = s"scheduler-lock-$jobName", ttl = appConfig.emailSchedulerLockTTL.seconds)
+    lockService.withLock(body)
   }
 }

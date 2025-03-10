@@ -309,5 +309,133 @@ class InvitationsRepositoryISpec
       result.clientNames shouldBe listOfInvitations.map(_.clientName).distinct.sorted
       result.availableFilters shouldBe listOfInvitations.map(i => i.status.toString).distinct.sorted
     }
+
+    "retrieve a WarningEmailAggregatingResult that" should {
+
+      "meets the criteria for a warning email to be sent" in {
+        val newInvitation = pendingInvitation().copy(expiryDate = LocalDate.now().plusDays(22L))
+        val acceptedInvitation = newInvitation.copy(
+          invitationId = "1",
+          suppliedClientId = "1",
+          status = Accepted,
+          expiryDate = LocalDate.now().plusDays(5L)
+        )
+        val warningEmailSentInvitation = newInvitation.copy(
+          invitationId = "2",
+          suppliedClientId = "2",
+          warningEmailSent = true,
+          expiryDate = LocalDate.now().plusDays(5L)
+        )
+        val tooEarlyForWarningInvitation =
+          newInvitation.copy(invitationId = "3", suppliedClientId = "3", expiryDate = LocalDate.now().plusDays(6L))
+        val tooLateForWarningInvitation =
+          newInvitation.copy(invitationId = "4", suppliedClientId = "4", expiryDate = LocalDate.now().minusDays(1L))
+        val expectedInvitation =
+          newInvitation.copy(invitationId = "5", suppliedClientId = "5", expiryDate = LocalDate.now().plusDays(5L))
+
+        val listOfInvitations = Seq(
+          newInvitation,
+          acceptedInvitation,
+          warningEmailSentInvitation,
+          tooEarlyForWarningInvitation,
+          tooLateForWarningInvitation,
+          expectedInvitation
+        )
+
+        await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+        val result = await(repository.findAllForWarningEmail.toFuture())
+        val expectedResult = Seq(WarningEmailAggregationResult(expectedInvitation.arn, Seq(expectedInvitation)))
+
+        result.size shouldBe 1
+        result shouldBe expectedResult
+      }
+
+      "groups the results by ARN and their associated invitations" in {
+        val firstArnInv1 = pendingInvitation().copy(expiryDate = LocalDate.now().plusDays(5L), invitationId = "1")
+        val firstArnInv2 = firstArnInv1.copy(invitationId = "2", suppliedClientId = "2")
+        val firstArnInv3 = firstArnInv1.copy(invitationId = "3", suppliedClientId = "3")
+        val secondArnInv1 = firstArnInv1.copy(arn = "2", invitationId = "4", suppliedClientId = "4")
+        val secondArnInv2 = secondArnInv1.copy(invitationId = "5", suppliedClientId = "5")
+        val thirdArnInv1 = firstArnInv1.copy(arn = "3", invitationId = "6", suppliedClientId = "6")
+
+        val listOfInvitations = Seq(
+          firstArnInv1,
+          firstArnInv2,
+          firstArnInv3,
+          secondArnInv1,
+          secondArnInv2,
+          thirdArnInv1
+        )
+
+        await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+        val result = await(repository.findAllForWarningEmail.toFuture())
+        val sortedResults = result.sortBy(_.invitations.size)
+
+        result.size shouldBe 3
+        sortedResults.head.arn shouldBe thirdArnInv1.arn
+        sortedResults(1).arn shouldBe secondArnInv2.arn
+        sortedResults(2).arn shouldBe firstArnInv1.arn
+        sortedResults.head.invitations.size shouldBe 1
+        sortedResults(1).invitations.size shouldBe 2
+        sortedResults(2).invitations.size shouldBe 3
+      }
+    }
+
+    "retrieve invitations meeting the criteria for an expired email to be sent" in {
+      val newInvitation = pendingInvitation().copy(expiryDate = LocalDate.now().plusDays(22L))
+      val acceptedInvitation = newInvitation.copy(
+        invitationId = "1",
+        suppliedClientId = "1",
+        status = Accepted,
+        expiryDate = LocalDate.now().minusDays(1L)
+      )
+      val expiredEmailSentInvitation = newInvitation.copy(
+        invitationId = "2",
+        suppliedClientId = "2",
+        expiredEmailSent = true,
+        expiryDate = LocalDate.now().minusDays(1L)
+      )
+      val tooEarlyForExpiredInvitation =
+        newInvitation.copy(invitationId = "3", suppliedClientId = "3", expiryDate = LocalDate.now().plusDays(1L))
+      val expectedInvitation =
+        newInvitation.copy(invitationId = "4", suppliedClientId = "4", expiryDate = LocalDate.now().minusDays(1L))
+
+      val listOfInvitations = Seq(
+        newInvitation,
+        acceptedInvitation,
+        expiredEmailSentInvitation,
+        tooEarlyForExpiredInvitation,
+        expectedInvitation
+      )
+
+      await(repository.collection.insertMany(listOfInvitations).toFuture())
+
+      val result = await(repository.findAllForExpiredEmail.toFuture())
+
+      result.length shouldBe 1
+      result.head shouldBe expectedInvitation
+    }
+
+    "update an invitation to set the warningEmailSent flag to true" in {
+      val invitation = pendingInvitation()
+      await(repository.collection.insertOne(invitation).toFuture())
+      val result = await(repository.updateWarningEmailSent(invitation.invitationId))
+      val updatedInvitation = await(repository.findOneById(invitation.invitationId))
+
+      result shouldBe true
+      updatedInvitation.get.warningEmailSent shouldBe true
+    }
+
+    "update an invitation to set the expiredEmailSent flag to true" in {
+      val invitation = pendingInvitation()
+      await(repository.collection.insertOne(invitation).toFuture())
+      val result = await(repository.updateExpiredEmailSent(invitation.invitationId))
+      val updatedInvitation = await(repository.findOneById(invitation.invitationId))
+
+      result shouldBe true
+      updatedInvitation.get.expiredEmailSent shouldBe true
+    }
   }
 }

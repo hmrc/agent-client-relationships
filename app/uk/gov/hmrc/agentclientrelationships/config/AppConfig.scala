@@ -124,4 +124,9 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val invitationsTtl: Long = config.get[Long]("mongodb.invitations.expireAfterDays")
 
   val invitationExpiringDuration: Duration = servicesConfig.getDuration("invitation.expiryDuration")
+
+  val emailSchedulerEnabled: Boolean = servicesConfig.getBoolean("emailScheduler.enabled")
+  val emailSchedulerWarningCronExp: String = servicesConfig.getString("emailScheduler.warningEmailCronExpression")
+  val emailSchedulerExpiredCronExp: String = servicesConfig.getString("emailScheduler.expiredEmailCronExpression")
+  val emailSchedulerLockTTL: Int = servicesConfig.getInt("emailScheduler.lockDurationInSeconds")
 }
