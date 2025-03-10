@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.support
 
 import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually.eventually
@@ -28,9 +29,9 @@ import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, EmailInformation, Expired, Invitation}
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.EmailService
+import uk.gov.hmrc.agentclientrelationships.services.{EmailService, MongoLockService}
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
@@ -54,6 +55,7 @@ class EmailSchedulerISpec
         "emailScheduler.enabled"                    -> true,
         "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
         "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+        "emailScheduler.lockDurationInSeconds"      -> "1",
         "microservice.services.email.port"          -> wireMockPort
       )
       .configure(mongoConfiguration)
@@ -62,16 +64,19 @@ class EmailSchedulerISpec
 
   val invitationsRepository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val emailService: EmailService = app.injector.instanceOf[EmailService]
+  val mongoLockService: MongoLockService = app.injector.instanceOf[MongoLockService]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  implicit val mat: Materializer = app.injector.instanceOf[Materializer]
+  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  val timeout: Span = scaled(Span(20, Seconds))
+  val timeout: Span = scaled(Span(30, Seconds))
   val interval: Span = scaled(Span(2, Seconds))
 
   val scheduler = new EmailScheduler(
     system,
-    app.injector.instanceOf[AppConfig],
     emailService,
-    invitationsRepository
+    invitationsRepository,
+    mongoLockService
   )
 
   val baseInvitation: Invitation = Invitation
@@ -86,7 +91,7 @@ class EmailSchedulerISpec
       LocalDate.now().plusDays(1L),
       None
     )
-    .copy(created = Instant.parse("2020-06-06T00:00:00.000Z"))
+    .copy(created = Instant.parse("2020-06-06T00:00:00.000Z"), invitationId = "1")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -109,7 +114,7 @@ class EmailSchedulerISpec
         differentAgentInvitation
       )
       await(invitationsRepository.collection.insertMany(invitations).toFuture())
-      await(invitationsRepository.findAllForWarningEmail).size shouldBe 3
+      await(invitationsRepository.findAllForWarningEmail.toFuture()).size shouldBe 2
 
       val expectedEmailInfo1 = EmailInformation(
         to = Seq("agent@email.com"),
@@ -137,7 +142,10 @@ class EmailSchedulerISpec
       givenEmailSent(expectedEmailInfo2)
 
       eventually(Timeout(timeout), Interval(interval)) {
-        await(invitationsRepository.findAllForWarningEmail).size shouldBe 0
+        await(invitationsRepository.findAllForWarningEmail.toFuture()).size shouldBe 0
+        await(invitationsRepository.findOneById("1")).get.warningEmailSent shouldBe true
+        await(invitationsRepository.findOneById("2")).get.warningEmailSent shouldBe true
+        await(invitationsRepository.findOneById("3")).get.warningEmailSent shouldBe true
       }
     }
 
@@ -146,16 +154,16 @@ class EmailSchedulerISpec
       "there are no invitations with the warningEmailSent flag set to false" in {
         val invitation = baseInvitation.copy(warningEmailSent = true)
         await(invitationsRepository.collection.insertOne(invitation).toFuture())
-        await(invitationsRepository.findAllForWarningEmail).size shouldBe 0
+        await(invitationsRepository.findAllForWarningEmail.toFuture()).size shouldBe 0
 
         eventually(Timeout(timeout), Interval(interval)) {
-          await(invitationsRepository.findAllForWarningEmail).size shouldBe 0
+          await(invitationsRepository.findAllForWarningEmail.toFuture()).size shouldBe 0
         }
       }
 
       "an email failed to send" in {
         await(invitationsRepository.collection.insertOne(baseInvitation).toFuture())
-        await(invitationsRepository.findAllForWarningEmail).size shouldBe 1
+        await(invitationsRepository.findAllForWarningEmail.toFuture()).size shouldBe 1
 
         val expectedEmailInfo = EmailInformation(
           to = Seq("agent@email.com"),
@@ -171,7 +179,8 @@ class EmailSchedulerISpec
         givenEmailSent(expectedEmailInfo, SERVICE_UNAVAILABLE)
 
         eventually(Timeout(timeout), Interval(interval)) {
-          await(invitationsRepository.findAllForWarningEmail).size shouldBe 1
+          await(invitationsRepository.findAllForWarningEmail.toFuture()).size shouldBe 1
+          await(invitationsRepository.findOneById("1")).get.warningEmailSent shouldBe false
         }
       }
     }
@@ -180,20 +189,21 @@ class EmailSchedulerISpec
   "ExpiredEmailActor" should {
 
     "send expired emails for each invitation, update the status to Expired and the expiredEmailSent flag to true" in {
-      val differentAgentInvitation = baseInvitation.copy(
+      val nonExpiredInvitation = baseInvitation.copy(warningEmailSent = true)
+      val expiredInvitation = baseInvitation.copy(invitationId = "2", expiryDate = LocalDate.now().minusDays(1L))
+      val expiredInvitationDiffAgent = expiredInvitation.copy(
         arn = "TARN7654321",
         agencyName = "Will Fence",
         agencyEmail = "agent2@email.com",
-        invitationId = "2",
-        suppliedClientId = "2",
-        expiryDate = LocalDate.now().minusDays(1L)
+        invitationId = "3"
       )
       val invitations = Seq(
-        baseInvitation.copy(expiryDate = LocalDate.now().minusDays(1L)),
-        differentAgentInvitation
+        nonExpiredInvitation,
+        expiredInvitation,
+        expiredInvitationDiffAgent
       )
       await(invitationsRepository.collection.insertMany(invitations).toFuture())
-      await(invitationsRepository.findAllForExpiredEmail).size shouldBe 2
+      await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 2
 
       val expectedEmailInfo1 = EmailInformation(
         to = Seq("agent@email.com"),
@@ -221,16 +231,17 @@ class EmailSchedulerISpec
       givenEmailSent(expectedEmailInfo2)
 
       eventually(Timeout(timeout), Interval(interval)) {
-        await(invitationsRepository.findAllForExpiredEmail).size shouldBe 0
-        await(invitationsRepository.findOneById(baseInvitation.invitationId)).get.status shouldBe Expired
-        await(invitationsRepository.findOneById(differentAgentInvitation.invitationId)).get.status shouldBe Expired
+        await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 0
+        await(invitationsRepository.findOneById(nonExpiredInvitation.invitationId)).get.status shouldBe Pending
+        await(invitationsRepository.findOneById(expiredInvitation.invitationId)).get.status shouldBe Expired
+        await(invitationsRepository.findOneById(expiredInvitationDiffAgent.invitationId)).get.status shouldBe Expired
       }
     }
 
     "set the status to Expired even when an email fails to send" in {
       val invitation = baseInvitation.copy(expiryDate = LocalDate.now().minusDays(1L))
       await(invitationsRepository.collection.insertOne(invitation).toFuture())
-      await(invitationsRepository.findAllForExpiredEmail).size shouldBe 1
+      await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 1
 
       val expectedEmailInfo = EmailInformation(
         to = Seq("agent@email.com"),
@@ -246,7 +257,7 @@ class EmailSchedulerISpec
       givenEmailSent(expectedEmailInfo, SERVICE_UNAVAILABLE)
 
       eventually(Timeout(timeout), Interval(interval)) {
-        await(invitationsRepository.findAllForExpiredEmail).size shouldBe 0
+        await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 0
         await(invitationsRepository.findOneById(baseInvitation.invitationId)).get.status shouldBe Expired
       }
     }
@@ -256,20 +267,20 @@ class EmailSchedulerISpec
       "there are no invitations with the expiredEmailSent flag set to false" in {
         val invitation = baseInvitation.copy(expiredEmailSent = true, expiryDate = LocalDate.now().minusDays(1L))
         await(invitationsRepository.collection.insertOne(invitation).toFuture())
-        await(invitationsRepository.findAllForExpiredEmail).size shouldBe 0
+        await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 0
 
         eventually(Timeout(timeout), Interval(interval)) {
-          await(invitationsRepository.findAllForExpiredEmail).size shouldBe 0
+          await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 0
         }
       }
 
       "there are no invitations with a Pending status" in {
         val invitation = baseInvitation.copy(status = Accepted, expiryDate = LocalDate.now().minusDays(1L))
         await(invitationsRepository.collection.insertOne(invitation).toFuture())
-        await(invitationsRepository.findAllForExpiredEmail).size shouldBe 0
+        await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 0
 
         eventually(Timeout(timeout), Interval(interval)) {
-          await(invitationsRepository.findAllForExpiredEmail).size shouldBe 0
+          await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 0
         }
       }
     }

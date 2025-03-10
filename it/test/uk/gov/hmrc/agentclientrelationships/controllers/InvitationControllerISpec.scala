@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import play.api.i18n.{Lang, Langs, MessagesApi}
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
@@ -56,6 +57,9 @@ class InvitationControllerISpec
     app.injector.instanceOf[DeleteRelationshipsServiceWithAcr]
   val agentFiRelationshipConnector: AgentFiRelationshipConnector =
     app.injector.instanceOf[AgentFiRelationshipConnector]
+  lazy val messagesApi: MessagesApi = app.injector.instanceOf[MessagesApi]
+  implicit val langs: Langs = app.injector.instanceOf[Langs]
+  implicit val lang: Lang = langs.availables.head
 
   val controller =
     new InvitationController(
@@ -369,13 +373,13 @@ class InvitationControllerISpec
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
         val inputData: CreateInvitationRequest = allServices(taxService)
         val emailInfo = EmailInformation(
-          to = Seq("abc@abc.com"),
+          to = Seq("agent@email.com"),
           templateId = "client_rejected_authorisation_request",
           parameters = Map(
-            "agencyName" -> "My Agency",
+            "agencyName" -> "testAgentName",
             "clientName" -> "Erling Haal",
             "expiryDate" -> LocalDate.now().format(dateFormatter),
-            "service"    -> taxService
+            "service"    -> messagesApi(s"service.$taxService")
           )
         )
 
@@ -387,7 +391,7 @@ class InvitationControllerISpec
 
         val clientIdentifier = ClientIdentifier(clientId, clientIdType)
 
-        givenAgentRecordFound(arn, agentRecordResponse)
+        givenEmailSent(emailInfo)
 
         await(
           invitationRepo.create(
@@ -421,7 +425,6 @@ class InvitationControllerISpec
         invitationSeq.size shouldBe 1
         invitationSeq.head.status shouldBe Rejected
 
-        verifyAgentRecordFoundSent(arn)
         verifyRejectInvitationSent(emailInfo)
       }
     )

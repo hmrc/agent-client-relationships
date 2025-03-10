@@ -208,7 +208,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
 
-          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
+          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
             relationshipsService
               .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
           })
@@ -377,7 +377,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
 
-          val maybeCheck = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
+          val maybeCheck = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
             relationshipsService
               .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
           })
@@ -770,7 +770,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipExists()
         metricsStub()
 
-        val check = await(lockService.tryLock(arn, mtdItEnrolmentKey) {
+        val check = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
           relationshipsService
             .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
         })
@@ -820,7 +820,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
         auditStub()
 
-        val check = await(lockService.tryLock(arn, vatEnrolmentKey) {
+        val check = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
           relationshipsService
             .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
         })
@@ -1070,7 +1070,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           metricsStub()
           auditStub()
 
-          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.tryLock(arn, vatEnrolmentKey) {
+          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
             relationshipsService
               .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
           })
@@ -1274,7 +1274,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           metricsStub()
           auditStub()
 
-          val maybeCheck = await(lockService.tryLock(arn, vatEnrolmentKey) {
+          val maybeCheck = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
             relationshipsService
               .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
           })
@@ -1677,7 +1677,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       s"not attempt to copy relationship for ${enrolmentKey.service} " +
         s"and return CopyRelationshipNotEnabled if feature flag is disabled (set to false)" in {
           val relationshipCopyRepository = mock[RelationshipCopyRecordRepository]
-          val lockService = mock[RecoveryLockService]
+          val lockService = mock[MongoLockService]
           val relationshipsService =
             new CheckAndCopyRelationshipsService(
               es,

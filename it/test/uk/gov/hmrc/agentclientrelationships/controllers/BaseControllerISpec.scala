@@ -28,7 +28,7 @@ import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
-import uk.gov.hmrc.agentclientrelationships.services.MongoRecoveryLockService
+import uk.gov.hmrc.agentclientrelationships.services.{MongoLockService, MongoLockServiceImpl}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -66,13 +66,13 @@ trait BaseControllerISpec
 
   def additionalConfig: Map[String, Any] = Map.empty
 
-  val mongoRecoveryLockService = new MongoRecoveryLockService(mongoLockRepository)
+  lazy val mongoRecoveryLockService: MongoLockService = new MongoLockServiceImpl(mongoLockRepository)
   def mongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport)
 
-  val moduleWithOverrides = new AbstractModule {
+  lazy val moduleWithOverrides = new AbstractModule {
     override def configure(): Unit = {
       bind(classOf[MongoComponent]).toInstance(mongoComponent)
-      bind(classOf[MongoRecoveryLockService]).toInstance(mongoRecoveryLockService)
+      bind(classOf[MongoLockService]).toInstance(mongoRecoveryLockService)
     }
   }
 
