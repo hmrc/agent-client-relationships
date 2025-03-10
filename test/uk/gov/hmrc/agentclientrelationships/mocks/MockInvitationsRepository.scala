@@ -70,6 +70,6 @@ trait MockInvitationsRepository {
     response: Seq[Invitation]
   ): OngoingStubbing[Future[Seq[Invitation]]] =
     when(
-      mockInvitationsRepository.findAllPendingForClient(clientId, services)
+      mockInvitationsRepository.findAllPendingForSuppliedClient(clientId, services)
     ).thenReturn(Future.successful(response))
 }

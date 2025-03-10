@@ -155,7 +155,7 @@ class StrideClientDetailsService @Inject() (
     hc: HeaderCarrier
   ): Future[Seq[InvitationWithAgentName]] =
     for {
-      invitations <- invitationsRepository.findAllPendingForClient(clientId, services)
+      invitations <- invitationsRepository.findAllPendingForSuppliedClient(clientId, services)
       nonSuspended <- Future.sequence(
                         invitations.map(i =>
                           agentAssuranceConnector
