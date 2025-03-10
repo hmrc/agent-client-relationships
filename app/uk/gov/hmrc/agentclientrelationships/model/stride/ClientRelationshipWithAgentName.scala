@@ -19,17 +19,21 @@ package uk.gov.hmrc.agentclientrelationships.model.stride
 import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate, ZoneOffset}
 
-case class ActiveRelationshipForService(
+case class ClientRelationshipWithAgentName(
   arn: Arn,
   agentName: String,
   service: String,
   dateTo: Option[LocalDate],
   dateFrom: Option[LocalDate]
-)
+) {
+  def isActive: Boolean = dateTo match {
+    case None    => true
+    case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
+  }
+}
 
-object ActiveRelationshipForService {
-
-  implicit val format: OFormat[ActiveRelationshipForService] = Json.format[ActiveRelationshipForService]
+object ClientRelationshipWithAgentName {
+  implicit val format: OFormat[ClientRelationshipWithAgentName] = Json.format[ClientRelationshipWithAgentName]
 }

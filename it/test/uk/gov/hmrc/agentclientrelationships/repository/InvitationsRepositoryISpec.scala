@@ -284,7 +284,10 @@ class InvitationsRepositoryISpec
 
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
-      await(repository.findAllPendingForClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe Seq(itsaInv, itsaSuppInv)
+      await(repository.findAllPendingForSuppliedClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe Seq(
+        itsaInv,
+        itsaSuppInv
+      )
     }
 
     "produce a TrackRequestsResult with the correct pagination" in {

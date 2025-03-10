@@ -59,7 +59,7 @@ class CustomerStatusController @Inject() (
                              }
         irvRelationshipExists <- authResponse.getNino match {
                                    case Some(nino) =>
-                                     agentFiRelationshipConnector.findRelationshipForClient(nino).map(_.nonEmpty)
+                                     agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
                                    case None => Future.successful(false)
                                  }
         existingRelationships <- if (partialAuthRecord.exists(_.active) || irvRelationshipExists) {

@@ -334,11 +334,22 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFutureOption()
 
-  def findAllPendingForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
+  def findAllPendingForSuppliedClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
     collection
       .find(
         and(
           equal(suppliedClientIdKey, encryptedString(clientId)),
+          equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
+          in(serviceKey, services: _*)
+        )
+      )
+      .toFuture()
+
+  def findAllPendingForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
+    collection
+      .find(
+        and(
+          equal(clientIdKey, encryptedString(clientId)),
           equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
           in(serviceKey, services: _*)
         )
