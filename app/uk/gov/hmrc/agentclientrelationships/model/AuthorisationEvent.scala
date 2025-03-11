@@ -23,7 +23,7 @@ import java.time.LocalDate
 case class AuthorisationEvent(
   agentName: String,
   service: String,
-  eventDate: LocalDate,
+  date: LocalDate,
   eventType: InvitationStatus
 )
 
