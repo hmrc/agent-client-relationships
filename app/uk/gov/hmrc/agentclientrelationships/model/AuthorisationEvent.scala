@@ -18,10 +18,12 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.{Json, OFormat}
 
+import java.time.LocalDate
+
 case class AuthorisationEvent(
   agentName: String,
   service: String,
-  eventDate: String,
+  date: LocalDate,
   eventType: InvitationStatus
 )
 

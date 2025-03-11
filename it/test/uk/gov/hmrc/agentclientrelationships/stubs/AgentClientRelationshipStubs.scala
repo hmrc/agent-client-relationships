@@ -63,6 +63,12 @@ trait AgentClientRelationshipStub {
     activeOnly: Boolean = true
   ): StubMapping
 
+  def getAllInactiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    activeOnly: Boolean = true
+  ): StubMapping
+
   def getItsaMainAndSupportingActiveRelationshipsViaClient(
     taxIdentifier: TaxIdentifier,
     arnMain: Arn,
@@ -314,6 +320,36 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |}""".stripMargin)
         )
     )
+
+  override def getAllInactiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    activeOnly: Boolean
+  ): StubMapping =
+    stubFor(
+      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationshipDisplayResponse":[
+                         |{
+                         |  "refNumber" : "${taxIdentifier.value}",
+                         |  "arn" : "${arn.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "2016-09-10",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
+
   override def getItsaMainAndSupportingActiveRelationshipsViaClient(
     taxIdentifier: TaxIdentifier,
     arnMain: Arn,
@@ -882,7 +918,6 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
   private def inactiveUrl(arn: Arn) = s"/etmp/RESTAdapter/rosm/agent-relationship?arn=${arn.value}" +
     s"&isAnAgent=true&activeOnly=false&regime=AGSV&dateFrom=${LocalDate.now().minusDays(30).toString}&dateTo=${LocalDate.now().toString}"
 
-
 }
 
 trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
@@ -1057,6 +1092,38 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
                          |}""".stripMargin)
         )
     )
+
+  override def getAllInactiveRelationshipsViaClient(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    activeOnly: Boolean
+  ): StubMapping =
+    stubFor(
+      get(
+        urlEqualTo(relationshipIFUrl(taxIdentifier = taxIdentifier, authProfileOption = None, activeOnly = activeOnly))
+      )
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"relationship" :[
+                         |{
+                         |  "referenceNumber" : "${taxIdentifier.value}",
+                         |  "agentReferenceNumber" : "${arn.value}",
+                         |  "organisation" : {
+                         |    "organisationName": "someOrganisationName"
+                         |  },
+                         |  "dateFrom" : "2015-09-10",
+                         |  "dateTo" : "2016-09-10",
+                         |  "contractAccountCategory" : "01",
+                         |  "activity" : "09"
+                         |}
+                         |]
+                         |}""".stripMargin)
+        )
+    )
+
   override def getItsaMainAndSupportingActiveRelationshipsViaClient(
     taxIdentifier: TaxIdentifier,
     arnMain: Arn,
@@ -1662,6 +1729,5 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
   private def inactiveUrl(arn: Arn) = s"/registration/relationship?arn=${arn.value}" +
     s"&agent=true&active-only=false&regime=AGSV&from=${LocalDate.now().minusDays(30).toString}&to=${LocalDate.now().toString}"
-
 
 }
