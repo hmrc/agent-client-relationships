@@ -29,16 +29,16 @@ trait RecoveryLockServiceSpec extends UnitSpec {
   val arn = Arn("TARN0000001")
   val mtdItId = MtdItId("ABCDEF1234567890")
 
-  "tryLock" should {
+  "recoveryLock" should {
     "call the body if a lock is not held for the (Arn, MtdItId) pair" in {
-      await(lockService.tryLock(arn, mtdItId) {
+      await(lockService.recoveryLock(arn, mtdItId) {
         Future successful "hello world"
       }) shouldBe Some("hello world")
     }
 
     "not call the body if a lock is held for the (Arn, MtdItId) pair" in {
-      await(lockService.tryLock(arn, mtdItId) {
-        lockService.tryLock(arn, mtdItId) {
+      await(lockService.recoveryLock(arn, mtdItId) {
+        lockService.recoveryLock(arn, mtdItId) {
           fail("body should not be called")
         }
       }) shouldBe Some(None)

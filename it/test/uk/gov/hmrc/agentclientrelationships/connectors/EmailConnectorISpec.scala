@@ -16,20 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalToJson, post, stubFor, urlEqualTo}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.Json
-import play.api.test.Helpers.await
-import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import play.api.test.Helpers._
+import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
+import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport {
+class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with EmailStubs {
 
   override lazy val app: Application = appBuilder.build()
 
@@ -42,50 +40,27 @@ class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with Wire
         "internal-auth.token"              -> "internalAuthToken"
       )
 
-  val connector = app.injector.instanceOf[EmailConnector]
-
-  val arn = "TARN0000001"
-  val nino = "AB123456A"
-  val mtdItId = "LC762757D"
-  val vrn = "101747641"
-
-  def givenEmailSent(emailInformation: EmailInformation) = {
-    val emailInformationJson = Json.toJson(emailInformation).toString()
-
-    stubFor(
-      post(urlEqualTo("/hmrc/email"))
-        .withRequestBody(similarToJson(emailInformationJson))
-        .willReturn(aResponse().withStatus(202))
-    )
-  }
-
-  def givenEmailReturns500 =
-    stubFor(
-      post(urlEqualTo("/hmrc/email"))
-        .willReturn(aResponse().withStatus(500))
-    )
-
-  private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
+  val connector: EmailConnector = app.injector.instanceOf[EmailConnector]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   "sendEmail" should {
     val emailInfo = EmailInformation(Seq("abc@xyz.com"), "template-id", Map("param1" -> "foo", "param2" -> "bar"))
 
-    "return Unit when the email service responds" in {
-
+    "return true when the email service responds with a 202" in {
       givenEmailSent(emailInfo)
 
       val result = await(connector.sendEmail(emailInfo))
 
-      result shouldBe ()
+      result shouldBe true
     }
-    "not throw an Exception when the email service throws an Exception" in {
-      givenEmailReturns500
+
+    "return false when the email service responds with an unexpected status" in {
+      givenEmailSent(emailInfo, SERVICE_UNAVAILABLE)
 
       val result = await(connector.sendEmail(emailInfo))
 
-      result shouldBe ()
+      result shouldBe false
     }
   }
 }

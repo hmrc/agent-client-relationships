@@ -16,16 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeLockService extends RecoveryLockService {
+class FakeLockService extends MongoLockService {
   val locked: mutable.Set[(Arn, EnrolmentKey)] = mutable.Set.empty[(Arn, EnrolmentKey)]
 
-  override def tryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
+  override def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
     body: => Future[T]
   )(implicit ec: ExecutionContext): Future[Option[T]] =
     if (locked.contains((arn, enrolmentKey))) Future.successful(None)
@@ -37,4 +38,10 @@ class FakeLockService extends RecoveryLockService {
       }
     }
 
+  override def schedulerLock[T](
+    jobName: String
+  )(body: => Future[T])(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]] =
+    body.map(Some.apply).map { result =>
+      result
+    }
 }

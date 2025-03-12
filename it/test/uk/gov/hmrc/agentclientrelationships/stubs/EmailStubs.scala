@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
@@ -34,4 +35,15 @@ trait EmailStubs extends TestData {
     }
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
+
+  def givenEmailSent(emailInformation: EmailInformation, status: Int = 202): StubMapping =
+    stubFor(
+      post("/hmrc/email")
+        .withRequestBody(similarToJson(Json.toJson(emailInformation).toString()))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+        )
+    )
+
 }

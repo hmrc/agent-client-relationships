@@ -43,7 +43,7 @@ private[services] abstract class DeleteRelationshipsService(
   relationshipConnector: RelationshipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  lockService: RecoveryLockService,
+  lockService: MongoLockService,
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   val auditService: AuditService,
@@ -294,7 +294,7 @@ private[services] abstract class DeleteRelationshipsService(
     val arn = Arn(deleteRecord.arn)
     val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey.getOrElse(enrolmentKeyFallback(deleteRecord))
     lockService
-      .tryLock(arn, enrolmentKey) {
+      .recoveryLock(arn, enrolmentKey) {
         logger.info(
           s"Resuming unfinished removal of the relationship between ${arn.value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}"
         )
@@ -401,7 +401,7 @@ class DeleteRelationshipsServiceWithAca @Inject() (
   relationshipConnector: RelationshipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  lockService: RecoveryLockService,
+  lockService: MongoLockService,
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   override val auditService: AuditService,
@@ -427,7 +427,7 @@ class DeleteRelationshipsServiceWithAcr @Inject() (
   relationshipConnector: RelationshipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  lockService: RecoveryLockService,
+  lockService: MongoLockService,
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
   override val auditService: AuditService,
