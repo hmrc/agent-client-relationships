@@ -20,6 +20,8 @@ import cats.data.EitherT
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource
+import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.{AfrRelationshipRepo, HipOrIfApi}
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, RelationshipFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -96,27 +98,38 @@ class ValidationService @Inject() (
     else Left(RelationshipFailureResponse.TaxIdentifierError)
   }
 
-  def validateAuthProfileToService(taxIdentifier: TaxIdentifier, authProfile: Option[String])(implicit
+  def validateAuthProfileToService(
+    taxIdentifier: TaxIdentifier,
+    authProfile: Option[String],
+    relationshipSource: RelationshipSource,
+    service: Option[Service]
+  )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[RelationshipFailureResponse, Service]] =
-    (taxIdentifier, authProfile) match {
-      case (Nino(_), Some("ALL00001")) => Future.successful(Right(Service.MtdIt))
-      case (Nino(_), Some("ITSAS001")) => Future.successful(Right(Service.MtdItSupp))
-      case (Vrn(_), _)                 => Future.successful(Right(Service.Vat))
-      case (Utr(_), _)                 => Future.successful(Right(Service.Trust)) // TODO WG - check TrustNT
-      case (CgtRef(_), _)              => Future.successful(Right(Service.CapitalGains))
-      case (PptRef(_), _)              => Future.successful(Right(Service.Ppt))
-      case (Urn(_), _)                 => Future.successful(Right(Service.TrustNT))
-      case (CbcId(_), _) =>
-        EitherT(makeSanitisedCbcEnrolmentKey(CbcId(taxIdentifier.value)))
-          .map(x => Service(x.service))
-          .leftMap(_ => RelationshipFailureResponse.TaxIdentifierError)
-          .value
-      case (PlrId(_), _) => Future.successful(Right(Service.Pillar2))
-      case _ =>
-        logger.warn("[validateAuthProfileToService] - could not match authProfile to Service")
-        Future.successful(Left(RelationshipFailureResponse.TaxIdentifierError))
+    service.fold {
+      (taxIdentifier, authProfile, relationshipSource) match {
+        case (Nino(_), Some("ALL00001"), HipOrIfApi) => Future.successful(Right(Service.MtdIt))
+        case (Nino(_), Some("ITSAS001"), HipOrIfApi) => Future.successful(Right(Service.MtdItSupp))
+        case (Nino(_), None, HipOrIfApi)             => Future.successful(Right(Service.MtdIt))
+        case (Nino(_), _, AfrRelationshipRepo)       => Future.successful(Right(Service.PersonalIncomeRecord))
+        case (Vrn(_), _, _)                          => Future.successful(Right(Service.Vat))
+        case (Utr(_), _, _)                          => Future.successful(Right(Service.Trust))
+        case (CgtRef(_), _, _)                       => Future.successful(Right(Service.CapitalGains))
+        case (PptRef(_), _, _)                       => Future.successful(Right(Service.Ppt))
+        case (Urn(_), _, _)                          => Future.successful(Right(Service.TrustNT))
+        case (CbcId(_), _, _) =>
+          EitherT(makeSanitisedCbcEnrolmentKey(CbcId(taxIdentifier.value)))
+            .map(x => Service(x.service))
+            .leftMap(_ => RelationshipFailureResponse.TaxIdentifierError)
+            .value
+        case (PlrId(_), _, _) => Future.successful(Right(Service.Pillar2))
+        case _ =>
+          logger.warn("[validateAuthProfileToService] - could not match authProfile to Service")
+          Future.successful(Left(RelationshipFailureResponse.TaxIdentifierError))
+      }
+    } { s =>
+      Future.successful(Right(s))
     }
 
   private def validateSupportedServiceForEnrolmentKey(

@@ -21,6 +21,7 @@ import cats.implicits._
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, IFConnector}
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, RelationshipSource}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
@@ -47,8 +48,8 @@ class ClientTaxAgentsDataService @Inject() (
     identifiers: Map[Service, TaxIdentifier]
   )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, ClientTaxAgentsData]] =
     (for {
-      allAuthorisations <- getAllAuthorisationsForAllServices(identifiers)
       allInvitations    <- getAllInvitationsForAllServices(identifiers)
+      allAuthorisations <- getAllAuthorisationsForAllServices(identifiers, allInvitations)
 
       agentsAuthorisations <- getAgentDateForRelationships(allAuthorisations)
       agentsInvitations    <- getAgentDataForInvitation(allInvitations)
@@ -76,7 +77,7 @@ class ClientTaxAgentsDataService @Inject() (
     )
 
     val invitationEvents = invitations
-      .filter(invitation => Seq(Expired, Rejected, Cancelled, PartialAuth).contains(invitation.status))
+      .filter(invitation => Seq(Expired, Rejected, Cancelled).contains(invitation.status))
       .map(invitation =>
         AuthorisationEventWithoutAgentName(
           invitation.arn,
@@ -86,6 +87,7 @@ class ClientTaxAgentsDataService @Inject() (
         )
       )
 
+    // PartialAuth are reported as Accepted on event history tab
     val authorisationsAcceptedEvents = clientAuthorisations.flatMap { authorisation =>
       authorisation.dateFrom.map { dateFrom =>
         AuthorisationEventWithoutAgentName(
@@ -133,9 +135,10 @@ class ClientTaxAgentsDataService @Inject() (
   }
 
   private def getAllAuthorisationsForAllServices(
-    identifiers: Map[Service, TaxIdentifier]
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
-    identifiers
+    identifiers: Map[Service, TaxIdentifier],
+    allInvitations: Seq[Invitation]
+  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] = {
+    val authorisations = identifiers
       .map { case (service, taxIdentifier) =>
         for {
           relationshipsWithAuthProfile <- findAllRelationshipForTaxId(taxIdentifier, service)
@@ -144,6 +147,22 @@ class ClientTaxAgentsDataService @Inject() (
       .toSeq
       .sequence
       .map(_.flatten)
+
+    val activePartialAuth = allInvitations
+      .filter(_.status == PartialAuth)
+      .map(pa =>
+        ClientAuthorisationForTaxId(
+          arn = Arn(pa.arn),
+          dateTo = None,
+          dateFrom = Some(pa.lastUpdated.atZone(ZoneId.of("UTC")).toLocalDate),
+          isActive = true,
+          service = Service.forId(pa.service),
+          clientId = pa.clientId
+        )
+      )
+
+    authorisations.map(_ ++ activePartialAuth)
+  }
 
   private def findAllRelationshipForTaxId(
     taxIdentifier: TaxIdentifier,
@@ -154,9 +173,11 @@ class ClientTaxAgentsDataService @Inject() (
         for {
           irvActiveRelationship <-
             EitherT(agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value))
+              .map(Seq(_))
+              .leftFlatMap(recoverNotFoundRelationship)
           irvInactiveRelationship <-
             EitherT(agentFiRelationshipConnector.findIrvInactiveRelationshipForClient)
-          irvAllRelationship = irvActiveRelationship +: irvInactiveRelationship
+          irvAllRelationship = irvActiveRelationship ++ irvInactiveRelationship
         } yield irvAllRelationship.map(r =>
           ClientAuthorisationForTaxId(r.arn, service, taxIdentifier.value, r.dateTo, r.dateFrom, r.isActive)
         )
@@ -177,7 +198,20 @@ class ClientTaxAgentsDataService @Inject() (
         }
     }
 
-  private def getAgentDateForRelationships(relationshipsWithAuthProfile: Seq[ClientAuthorisationForTaxId])(implicit
+  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
+    ec: ExecutionContext
+  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+    relationshipFailureResponse match {
+      case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
+        EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
+      case otherError =>
+        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+
+    }
+
+  private def getAgentDateForRelationships(
+    relationshipsWithAuthProfile: Seq[ClientAuthorisationForTaxId]
+  )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): EitherT[Future, RelationshipFailureResponse, Seq[AgentAuthorisations]] = {
@@ -186,8 +220,7 @@ class ClientTaxAgentsDataService @Inject() (
       .groupBy(_.arn)
       .map { case (arn, relationships) =>
         for {
-          agentDetails <- EitherT(findAgentDetailsByArn(arn))
-          normalizedName = invitationLinkService.normaliseAgentName(agentDetails.agencyDetails.agencyName)
+          agentDetails   <- EitherT(findAgentDetailsByArn(arn))
           authorisations <- getAuthorisations(relationships, agentDetails.agencyDetails.agencyName)
         } yield AgentAuthorisations(
           agentName = agentDetails.agencyDetails.agencyName,

@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.{Document, Observable}
+import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.{BsonValue, conversions}
-import org.mongodb.scala.model.Accumulators.{addToSet, push}
+import org.mongodb.scala.model.Accumulators.addToSet
 import org.mongodb.scala.model.Aggregates.facet
 import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Updates.{combine, set}

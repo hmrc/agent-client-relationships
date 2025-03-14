@@ -391,6 +391,11 @@ class ClientTaxAgentsDataControllerISpec
       getAllActiveRelationshipsViaClient(taxIdentifier = pptRef, arn = arn3, activeOnly = false)
       getAllActiveRelationshipsViaClient(taxIdentifier = cgtRef, arn = arn3, activeOnly = false)
 
+      partialAuthRepo
+        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn3, Service.MtdItSupp.id, nino)
+        .futureValue
+      givenNinoIsKnownFor(mtdItId, nino)
+
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
       givenAgentRecordFound(arn3, testAgentRecord3)
@@ -425,9 +430,10 @@ class ClientTaxAgentsDataControllerISpec
           .find(x => x.arn == arn3.value)
           .get
           .authorisations
-      agent3Authorisations.size shouldBe 2
+      agent3Authorisations.size shouldBe 3
       agent3Authorisations.exists(_.service == Service.Ppt.id) shouldBe true
       agent3Authorisations.exists(_.service == Service.CapitalGains.id) shouldBe true
+      agent3Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true
 
     }
 
@@ -815,7 +821,8 @@ class ClientTaxAgentsDataControllerISpec
 
       agent2Authorisations.size shouldBe 2
       agent2Authorisations.exists(x => x.service == Service.Vat.id && x.eventType == Cancelled) shouldBe true
-      agent2Authorisations.exists(x => x.service == Service.MtdItSupp.id && x.eventType == PartialAuth) shouldBe true
+      // PartialAuth are reported as Accepted in history event tab
+      agent2Authorisations.exists(x => x.service == Service.MtdItSupp.id && x.eventType == Accepted) shouldBe true
       agent2Authorisations.exists(x => x.service == Service.Cbc.id && x.eventType == Rejected) shouldBe false
       agent2Authorisations.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe false
     }

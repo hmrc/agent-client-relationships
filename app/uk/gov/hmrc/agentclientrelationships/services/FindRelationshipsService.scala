@@ -83,6 +83,7 @@ class FindRelationshipsService @Inject() (
       Future.successful(None)
     }
 
+  // TODO WG - that have recovery
   def getAllRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean

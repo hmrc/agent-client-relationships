@@ -18,16 +18,31 @@ package uk.gov.hmrc.agentclientrelationships.model.stride
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 
 import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
+
+sealed trait RelationshipSource
+object RelationshipSource {
+  case object HipOrIfApi extends RelationshipSource
+  case object AfrRelationshipRepo extends RelationshipSource
+  case object AcrPartialAuthRepo extends RelationshipSource
+
+  implicit val writes: Writes[RelationshipSource] = Writes {
+    case HipOrIfApi          => JsString("HipOrIfApi")
+    case AfrRelationshipRepo => JsString("AfrRelationshipRepo")
+    case AcrPartialAuthRepo  => JsString("AcrPartialAuthRepo")
+  }
+}
 
 case class ClientRelationship(
   arn: Arn,
   dateTo: Option[LocalDate],
   dateFrom: Option[LocalDate],
   authProfile: Option[String],
-  isActive: Boolean
+  isActive: Boolean,
+  relationshipSource: RelationshipSource,
+  service: Option[Service]
 )
 
 object ClientRelationship {
@@ -39,21 +54,45 @@ object ClientRelationship {
     (JsPath \ "dateTo").readNullable[LocalDate] and
     (JsPath \ "dateFrom").readNullable[LocalDate] and
     (JsPath \ "authProfile").readNullable[String])((arn, dateTo, dateFrom, authProfile) =>
-    ClientRelationship(arn, dateTo, dateFrom, authProfile, isActive = isActive(dateTo))
+    ClientRelationship(
+      arn,
+      dateTo,
+      dateFrom,
+      authProfile,
+      isActive = isActive(dateTo),
+      RelationshipSource.HipOrIfApi,
+      None
+    )
   )
 
   val hipReads: Reads[ClientRelationship] = ((__ \ "arn").read[Arn] and
     (__ \ "dateTo").readNullable[LocalDate] and
     (__ \ "dateFrom").readNullable[LocalDate] and
     (__ \ "authProfile").readNullable[String])((arn, dateTo, dateFrom, authProfile) =>
-    ClientRelationship(arn, dateTo, dateFrom, authProfile, isActive = isActive(dateTo))
+    ClientRelationship(
+      arn,
+      dateTo,
+      dateFrom,
+      authProfile,
+      isActive = isActive(dateTo),
+      RelationshipSource.HipOrIfApi,
+      None
+    )
   )
 
   def irvReads(IsActive: Boolean): Reads[ClientRelationship] = ((__ \ "arn").read[Arn] and
     (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
     (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
     Reads.pure(None))((arn, dateTo, dateFrom, authProfile) =>
-    ClientRelationship(arn, dateTo, dateFrom, authProfile, isActive = IsActive)
+    ClientRelationship(
+      arn,
+      dateTo,
+      dateFrom,
+      authProfile,
+      isActive = IsActive,
+      RelationshipSource.AfrRelationshipRepo,
+      None
+    )
   )
 
   def isActive(dateTo: Option[LocalDate]): Boolean = dateTo match {

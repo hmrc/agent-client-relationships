@@ -21,6 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.mocks._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.AfrRelationshipRepo
 import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, InvitationWithAgentName}
 import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PlrId, PptRef, Vrn}
@@ -146,7 +147,19 @@ class StrideClientDetailsServiceSpec
           InvitationWithAgentName.fromInvitationAndAgentRecord(irvPendingInvitation, testAgentDetailsDesResponse)
         mockFindAllPendingForClient(testNino.value, Seq(PersonalIncomeRecord.id))(Seq(irvPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
-        mockFindRelationshipForClient(testNino.value)(Some(ClientRelationship(testArn2, None, None, None, true)))
+        mockFindRelationshipForClient(testNino.value)(
+          Some(
+            ClientRelationship(
+              arn = testArn2,
+              dateTo = None,
+              dateFrom = None,
+              authProfile = None,
+              isActive = true,
+              relationshipSource = AfrRelationshipRepo,
+              service = None
+            )
+          )
+        )
         mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"PERSONAL-INCOME-RECORD~NINO~${testNino.value}")

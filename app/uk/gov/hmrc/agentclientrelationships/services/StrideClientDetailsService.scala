@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.time.ZoneId
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -103,13 +104,58 @@ class StrideClientDetailsService @Inject() (
   )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     (taxIdentifier match {
       case Nino(_) =>
-        findRelationshipsService.getAllActiveItsaRelationshipForClient(
-          nino = Nino(taxIdentifier.value),
-          activeOnly = true
-        )
+        (for {
+          itsaActiveRelationships <-
+            EitherT(
+              findRelationshipsService
+                .getAllActiveItsaRelationshipForClient(nino = Nino(taxIdentifier.value), activeOnly = true)
+            )
+
+          irvActiveRelationship <-
+            EitherT(agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value))
+              .map(Seq(_))
+              .leftFlatMap(recoverNotFoundRelationship)
+
+          partialAuthAuthorisations <-
+            EitherT.right[RelationshipFailureResponse](getPartialAuthAuthorisations(taxIdentifier))
+
+        } yield itsaActiveRelationships ++ irvActiveRelationship ++ partialAuthAuthorisations).value
+
       case _ => findRelationshipsService.getAllRelationshipsForClient(taxIdentifier = taxIdentifier, activeOnly = true)
 
     }).map(_.map(_.filter(_.isActive))) // additional filtering for IF
+
+  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
+    ec: ExecutionContext
+  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+    relationshipFailureResponse match {
+      case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
+        EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
+      case otherError =>
+        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+
+    }
+
+  private def getPartialAuthAuthorisations(taxIdentifier: TaxIdentifier): Future[Seq[ClientRelationship]] =
+    taxIdentifier match {
+      case nino @ Nino(_) =>
+        partialAuthRepository
+          .findActiveByNino(nino)
+          .map(
+            _.map(pa =>
+              ClientRelationship(
+                arn = Arn(pa.arn),
+                dateTo = None,
+                dateFrom = Some(pa.lastUpdated.atZone(ZoneId.of("UTC")).toLocalDate),
+                authProfile = None,
+                isActive = true,
+                relationshipSource = RelationshipSource.AcrPartialAuthRepo,
+                service = Service.findById(pa.service)
+              )
+            )
+          )
+      case _ => Future.successful(Seq.empty[ClientRelationship])
+    }
 
   private def findAgentNameForActiveRelationships(
     activeRelationships: Seq[ClientRelationship],
@@ -118,7 +164,11 @@ class StrideClientDetailsService @Inject() (
     activeRelationships.map { ar =>
       for {
         agentDetails <- findAgentDetailsByArn(ar.arn)
-        service      <- EitherT(validationService.validateAuthProfileToService(taxIdentifier, ar.authProfile))
+        service <-
+          EitherT(
+            validationService
+              .validateAuthProfileToService(taxIdentifier, ar.authProfile, ar.relationshipSource, ar.service)
+          )
       } yield ClientRelationshipWithAgentName(
         ar.arn,
         agentDetails.agencyDetails.agencyName,
