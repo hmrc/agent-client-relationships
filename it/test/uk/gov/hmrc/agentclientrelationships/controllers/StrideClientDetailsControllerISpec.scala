@@ -513,10 +513,12 @@ class StrideClientDetailsControllerISpec
           case NinoType.id =>
             givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
             getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+            givenAfiRelationshipForClientIsActive(arn, "PERSONAL-INCOME-RECORD", nino.value, true)
             givenItsaCitizenDetailsExists(nino.value)
             givenItsaDesignatoryDetailsExists(nino.value)
             givenAgentRecordFound(arn, testAgentRecord)
             givenAgentRecordFound(arn2, testAgentRecord2)
+            partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
           case VrnType.id =>
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipsViaClient(taxIdentifier, arn)
@@ -551,6 +553,7 @@ class StrideClientDetailsControllerISpec
             getAllActiveRelationshipsViaClient(taxIdentifier, arn)
             givenPillar2DetailsExist(taxIdentifier.value)
             givenAgentRecordFound(arn, testAgentRecord)
+          case _ =>
         }
 
       }
@@ -565,18 +568,33 @@ class StrideClientDetailsControllerISpec
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
+      response.activeClientRelationships.size shouldBe 11
       // validate result
       clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
         cr.clientIdType match {
           case NinoType.id =>
             val mainRelationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+              response.activeClientRelationships.filter(x =>
+                x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value
+              )
+
+            val partialAuthRelationships =
+              response.activeClientRelationships.filter(x =>
+                x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value
+              )
+
             val suppRelationships = response.activeClientRelationships.filter(x =>
               x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
             )
 
+            val irvRelationships = response.activeClientRelationships.filter(x =>
+              x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id
+            )
+
             mainRelationships.size shouldBe 1
+            partialAuthRelationships.size shouldBe 1
             suppRelationships.size shouldBe 1
+            irvRelationships.size shouldBe 1
 
           case VrnType.id =>
             val relationships =
@@ -615,6 +633,7 @@ class StrideClientDetailsControllerISpec
               x.clientId == cr.clientId && x.service == Service.Pillar2.id
             )
             relationships.size shouldBe 1
+          case _ =>
 
         }
       }
@@ -639,13 +658,14 @@ class StrideClientDetailsControllerISpec
           case NinoType.id =>
             givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
             getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+            givenAfiRelationshipForClientNotFound(cr.clientId)
             givenItsaCitizenDetailsExists(nino.value)
             givenItsaDesignatoryDetailsExists(nino.value)
           case VrnType.id =>
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipsViaClient(taxIdentifier, arn)
             givenAgentRecordFound(arn, testAgentRecord)
-
+          case _ =>
         }
 
       }
@@ -677,6 +697,7 @@ class StrideClientDetailsControllerISpec
             val relationships =
               response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
             relationships.size shouldBe 1
+          case _ =>
 
         }
       }
@@ -701,12 +722,14 @@ class StrideClientDetailsControllerISpec
           case NinoType.id =>
             givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
             getAllActiveRelationshipFailsWithNotFound(mtdItId, status = 422)
+            givenAfiRelationshipForClientNotFound(cr.clientId)
             givenItsaCitizenDetailsExists(nino.value)
             givenItsaDesignatoryDetailsExists(nino.value)
           case VrnType.id =>
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipsViaClient(taxIdentifier, arn)
             givenAgentRecordFound(arn, testAgentRecord)
+          case _ =>
 
         }
 
@@ -739,6 +762,7 @@ class StrideClientDetailsControllerISpec
             val relationships =
               response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
             relationships.size shouldBe 1
+          case _ =>
 
         }
       }
@@ -761,11 +785,13 @@ class StrideClientDetailsControllerISpec
           case NinoType.id =>
             givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
             getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+            givenAfiRelationshipForClientNotFound(cr.clientId)
             givenItsaCitizenDetailsExists(nino.value)
             givenItsaDesignatoryDetailsExists(nino.value)
           case VrnType.id =>
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipFailsWith(vrn, status = 404)
+          case _ =>
         }
 
       }
@@ -797,6 +823,7 @@ class StrideClientDetailsControllerISpec
             val relationships =
               response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
             relationships.size shouldBe 0
+          case _ =>
 
         }
       }
@@ -821,11 +848,13 @@ class StrideClientDetailsControllerISpec
           case NinoType.id =>
             givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
             getAllActiveRelationshipFailsWithSuspended(mtdItId)
+            givenAfiRelationshipForClientNotFound(cr.clientId)
             givenItsaCitizenDetailsExists(nino.value)
             givenItsaDesignatoryDetailsExists(nino.value)
           case VrnType.id =>
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipFailsWithSuspended(vrn)
+          case _ =>
         }
 
       }
@@ -856,6 +885,7 @@ class StrideClientDetailsControllerISpec
             val relationships =
               response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
             relationships.size shouldBe 0
+          case _ =>
 
         }
       }
@@ -877,6 +907,7 @@ class StrideClientDetailsControllerISpec
           case VrnType.id =>
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipFailsWithSuspended(vrn)
+          case _ =>
         }
 
       }
@@ -907,6 +938,7 @@ class StrideClientDetailsControllerISpec
           case NinoType.id =>
             givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
             getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+            givenAfiRelationshipForClientNotFound(cr.clientId)
             givenItsaCitizenDetailsError(nino.value, 403)
             givenItsaDesignatoryDetailsExists(nino.value)
             givenAgentRecordFound(arn, testAgentRecord)
@@ -915,6 +947,7 @@ class StrideClientDetailsControllerISpec
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipsViaClient(vrn, arn)
             givenAgentRecordFound(arn, testAgentRecord)
+          case _ =>
         }
 
       }
@@ -946,6 +979,7 @@ class StrideClientDetailsControllerISpec
           case NinoType.id =>
             givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
             getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+            givenAfiRelationshipForClientNotFound(cr.clientId)
             givenItsaCitizenDetailsExists(nino.value)
             givenItsaDesignatoryDetailsExists(nino.value)
             givenAgentRecordFound(arn, testAgentRecord)
@@ -954,6 +988,7 @@ class StrideClientDetailsControllerISpec
             getVrnIsKnownInETMPFor2(vrn)
             getAllActiveRelationshipsViaClient(vrn, arn)
             givenAgentRecordFound(arn, testAgentRecord)
+          case _ =>
         }
 
       }
@@ -981,6 +1016,7 @@ class StrideClientDetailsControllerISpec
             givenDESRespondsWithStatusForVrn(vrn, 404)
             getAllActiveRelationshipsViaClient(taxIdentifier, arn)
             givenAgentRecordFound(arn, testAgentRecord)
+          case _ =>
         }
       }
 

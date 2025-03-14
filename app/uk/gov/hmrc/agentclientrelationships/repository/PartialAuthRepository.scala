@@ -93,6 +93,16 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
       )
       .toFuture()
 
+  def findActiveByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
+    collection
+      .find(
+        and(
+          equal("nino", encryptedString(nino.value)),
+          equal("active", true)
+        )
+      )
+      .toFuture()
+
   def findActive(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
     collection
       .find(
