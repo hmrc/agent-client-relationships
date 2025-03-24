@@ -96,10 +96,8 @@ class RemoveAuthorisationController @Inject() (
     currentUser: CurrentUser
   ): Future[Either[InvitationFailureResponse, Boolean]] =
     (validRequest.service, enrolmentKey.oneTaxIdentifier()) match {
-      case (
-            Service.PersonalIncomeRecord,
-            _
-          ) => // TODO after enabling ACRF must update AFI to use a different callback for invitation deauth
+      // TODO after enabling ACRF must update AFI to use a different callback for invitation deauth
+      case (Service.PersonalIncomeRecord, _) =>
         agentFiRelationshipConnector
           .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
           .map { result =>

@@ -26,9 +26,9 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Service, Vrn}
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR, MtdIt, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service, Vrn}
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.temporal.ChronoUnit
@@ -51,23 +51,28 @@ class InvitationsRepositoryISpec
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
-  def pendingInvitation(service: Service = Vat, clientId: TaxIdentifier = Vrn("123456789")): Invitation = Invitation
-    .createNew(
-      "XARN1234567",
-      service,
-      clientId,
-      clientId,
-      "Macrosoft",
-      "testAgentName",
-      "agent@email.com",
-      LocalDate.of(2020, 1, 1),
-      Some("personal")
-    )
-    .copy(
-      invitationId = Random.between(100000, 999999).toString, // making sure duplicates aren't generated
-      created = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-      lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-    )
+  def pendingInvitation(
+    service: Service = Vat,
+    clientId: TaxIdentifier = Vrn("123456789"),
+    suppliedClientId: Option[TaxIdentifier] = None
+  ): Invitation =
+    Invitation
+      .createNew(
+        "XARN1234567",
+        service,
+        clientId,
+        suppliedClientId.getOrElse(clientId),
+        "Macrosoft",
+        "testAgentName",
+        "agent@email.com",
+        LocalDate.of(2020, 1, 1),
+        Some("personal")
+      )
+      .copy(
+        invitationId = Random.between(100000, 999999).toString, // making sure duplicates aren't generated
+        created = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+        lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+      )
 
   "InvitationsRepository" should {
 
@@ -222,15 +227,16 @@ class InvitationsRepositoryISpec
       await(repository.updateStatusFromTo("ABC", Pending, Rejected)) shouldBe None
     }
 
-    "de-authorise Accepted invitation when a matching arn, service, suppliedClientId is found" in {
-      await(repository.collection.insertOne(pendingInvitation().copy(status = Accepted)).toFuture())
+    "de-authorise and return the invitation when a matching Authorised invitation is found" in {
+      val invitation = pendingInvitation(MtdIt, MtdItId("1234567890"), Some(Nino("AB213308A")))
+      await(repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture())
 
       lazy val updatedInvitation = await(
         repository
           .deauthorise(
-            pendingInvitation().arn,
-            pendingInvitation().suppliedClientId,
-            pendingInvitation().service,
+            invitation.arn,
+            invitation.clientId,
+            invitation.service,
             "This guy"
           )
       ).get
@@ -239,12 +245,13 @@ class InvitationsRepositoryISpec
       updatedInvitation.lastUpdated.isAfter(pendingInvitation().lastUpdated)
     }
 
-    "de-authorise DeAuthorised invitation when a matching arn, service, suppliedClientId is not found" in {
-      await(repository.collection.insertOne(pendingInvitation().copy(status = DeAuthorised)).toFuture())
+    "return None when a matching Authorised invitation is not found" in {
+      val invitation = pendingInvitation(MtdIt, MtdItId("1234567890"), Some(Nino("AB213308A")))
+      await(repository.collection.insertOne(invitation.copy(status = DeAuthorised)).toFuture())
 
       await(
         repository
-          .deauthorise(pendingInvitation().arn, pendingInvitation().clientId, pendingInvitation().service, "This guy")
+          .deauthorise(invitation.arn, invitation.clientId, invitation.service, "This guy")
       ) shouldBe None
     }
 

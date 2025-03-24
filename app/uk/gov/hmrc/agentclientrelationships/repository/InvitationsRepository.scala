@@ -317,9 +317,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .toFuture()
       .map(_.getModifiedCount == 1L)
 
+  // Does not support deauthorising partial auth
+  // Must be called with mtditid for ITSA (e.g. remove authorisation controller converts nino to mtditid at the very beginning)
   def deauthorise(
     arn: String,
-    suppliedClientId: String,
+    clientId: String,
     service: String,
     relationshipEndedBy: String
   ): Future[Option[Invitation]] =
@@ -328,8 +330,8 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         and(
           equal(arnKey, arn),
           equal("service", service),
-          equal("suppliedClientId", encryptedString(suppliedClientId)),
-          equal("status", Codecs.toBson[InvitationStatus](Accepted)) // TODO This will not work for partial auth
+          equal("clientId", encryptedString(clientId)),
+          equal("status", Codecs.toBson[InvitationStatus](Accepted))
         ),
         combine(
           set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
