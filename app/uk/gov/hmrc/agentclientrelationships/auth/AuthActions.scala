@@ -177,7 +177,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         }
       }
 
-  def withAuthorisedAsClientForStatus(
+  def withAuthorisedAsClientWithNino(
     body: EnrolmentsWithNino => Future[Result]
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))

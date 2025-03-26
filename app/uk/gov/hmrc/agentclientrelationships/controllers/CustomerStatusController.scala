@@ -48,7 +48,7 @@ class CustomerStatusController @Inject() (
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
   def customerStatus: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClientForStatus { authResponse: EnrolmentsWithNino =>
+    withAuthorisedAsClientWithNino { authResponse: EnrolmentsWithNino =>
       val services = authResponse.getIdentifierMap(supportedServices).keys.toSeq.map(_.id)
       val identifiers = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
       for {
