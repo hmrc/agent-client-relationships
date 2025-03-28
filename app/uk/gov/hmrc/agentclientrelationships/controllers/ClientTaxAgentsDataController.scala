@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentsWithNino, RelationshipFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.services.ClientTaxAgentsDataService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -42,8 +42,8 @@ class ClientTaxAgentsDataController @Inject() (
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def findClientTaxAgentsData: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
-      carService.getClientTaxAgentsData(identifiers).map {
+    withAuthorisedAsClientWithNino { authResponse: EnrolmentsWithNino =>
+      carService.getClientTaxAgentsData(authResponse).map {
         case Right(clientTaxAgentsData) => Ok(Json.toJson(clientTaxAgentsData))
         case Left(error) =>
           error match {
@@ -52,7 +52,9 @@ class ClientTaxAgentsDataController @Inject() (
               ServiceUnavailable(message)
             case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) =>
               ServiceUnavailable(message)
-            case e => InternalServerError(e.toString)
+            case e =>
+              logger.error(s"Error retrieving client tax agents data: $e")
+              InternalServerError(e.toString)
           }
 
       }

@@ -305,7 +305,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
 
     "return 200 status and correct JSON when a matching agent, invitation and existing main agent with partial auth is found" in {
       givenAuditConnector()
-      givenAuthorisedAsAltItsaClient(fakeRequest, nino)
+      givenAuthorisedAsClientWithNino(fakeRequest, nino)
       await(partialAuthRepo.create(created = Instant.now(), existingAgentArn, "HMRC-MTD-IT", nino))
       givenMtdItIdIsUnKnownFor(nino)
       givenAgentRecordFound(arn, agentRecordResponse)
@@ -345,7 +345,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
 
     "return 200 status and correct JSON when a matching agent, invitation and existing same main agent with partial auth is found" in {
       givenAuditConnector()
-      givenAuthorisedAsAltItsaClient(fakeRequest, nino)
+      givenAuthorisedAsClientWithNino(fakeRequest, nino)
       await(partialAuthRepo.create(created = Instant.now(), existingAgentArn, "HMRC-MTD-IT", nino))
       givenMtdItIdIsUnKnownFor(nino)
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)

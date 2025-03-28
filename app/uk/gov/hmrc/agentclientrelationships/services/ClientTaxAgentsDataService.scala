@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.{EitherT, OptionT}
 import cats.implicits._
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, IFConnector}
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
@@ -42,24 +43,31 @@ class ClientTaxAgentsDataService @Inject() (
   findRelationshipsService: FindRelationshipsService,
   partialAuthRepository: PartialAuthRepository,
   ifConnector: IFConnector
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext, appConfig: AppConfig) {
+
+  val supportedServices = appConfig.supportedServices
 
   def getClientTaxAgentsData(
-    identifiers: Map[Service, TaxIdentifier]
-  )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, ClientTaxAgentsData]] =
+    authResponse: EnrolmentsWithNino
+  )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, ClientTaxAgentsData]] = {
+    val clientIds: Seq[String] = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
+    val identifiers: Map[String, TaxIdentifier] = authResponse.getIdentifierKeyMap(supportedServices)
+    val nino: Option[String] = authResponse.getNino
+    val allClientIds: Seq[String] = nino.fold(clientIds)(n => clientIds ++ Seq(n))
     (for {
-      allInvitations    <- getAllInvitationsForAllServices(identifiers)
-      allAuthorisations <- getAllAuthorisationsForAllServices(identifiers, allInvitations)
-
-      agentsAuthorisations <- getAgentDateForRelationships(allAuthorisations)
+      allInvitations    <- getAllInvitationsForAllServices(allClientIds)
+      allAuthorisations <- getAllAuthorisationsForAllServices(identifiers)
+      activePartialAuth <- getActivePartialAuth(nino)
+      allAuth = allAuthorisations ++ activePartialAuth
+      agentsAuthorisations <- getAgentDateForRelationships(allAuth)
       agentsInvitations    <- getAgentDataForInvitation(allInvitations)
-      authorisationEvents  <- getAuthorisationEvent(allInvitations, allAuthorisations)
-
+      authorisationEvents  <- getAuthorisationEvent(allInvitations, allAuth)
     } yield ClientTaxAgentsData(
       agentsInvitations = AgentsInvitationsResponse(agentsInvitations),
       agentsAuthorisations = AgentsAuthorisationsResponse(agentsAuthorisations),
       authorisationEvents = AuthorisationEventsResponse(authorisationEvents)
     )).value
+  }
 
   private def getAuthorisationEvent(
     invitations: Seq[Invitation],
@@ -134,35 +142,41 @@ class ClientTaxAgentsDataService @Inject() (
     EitherT(result)
   }
 
+  private def getActivePartialAuth(
+    nino: Option[String]
+  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] = nino match {
+    case Some(n) =>
+      EitherT.right[RelationshipFailureResponse](
+        partialAuthRepository
+          .findByNino(Nino(n))
+          .map(
+            _.map(pa =>
+              ClientAuthorisationForTaxId(
+                arn = Arn(pa.arn),
+                dateTo = if (pa.active) None else Some(pa.lastUpdated.atZone(ZoneId.of("UTC")).toLocalDate),
+                dateFrom = Some(pa.created.atZone(ZoneId.of("UTC")).toLocalDate),
+                isActive = pa.active,
+                service = Service.forId(pa.service),
+                clientId = pa.nino
+              )
+            )
+          )
+      )
+    case _ => EitherT.right[RelationshipFailureResponse](Future.successful(Seq.empty[ClientAuthorisationForTaxId]))
+  }
+
   private def getAllAuthorisationsForAllServices(
-    identifiers: Map[Service, TaxIdentifier],
-    allInvitations: Seq[Invitation]
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] = {
-    val authorisations = identifiers
+    identifiers: Map[String, TaxIdentifier]
+  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
+    identifiers
       .map { case (service, taxIdentifier) =>
         for {
-          relationshipsWithAuthProfile <- findAllRelationshipForTaxId(taxIdentifier, service)
+          relationshipsWithAuthProfile <- findAllRelationshipForTaxId(taxIdentifier, Service.forId(service))
         } yield relationshipsWithAuthProfile
       }
       .toSeq
       .sequence
       .map(_.flatten)
-
-    val activePartialAuth = allInvitations
-      .filter(_.status == PartialAuth)
-      .map(pa =>
-        ClientAuthorisationForTaxId(
-          arn = Arn(pa.arn),
-          dateTo = None,
-          dateFrom = Some(pa.lastUpdated.atZone(ZoneId.of("UTC")).toLocalDate),
-          isActive = true,
-          service = Service.forId(pa.service),
-          clientId = pa.clientId
-        )
-      )
-
-    authorisations.map(_ ++ activePartialAuth)
-  }
 
   private def findAllRelationshipForTaxId(
     taxIdentifier: TaxIdentifier,
@@ -177,6 +191,7 @@ class ClientTaxAgentsDataService @Inject() (
               .leftFlatMap(recoverNotFoundRelationship)
           irvInactiveRelationship <-
             EitherT(agentFiRelationshipConnector.findIrvInactiveRelationshipForClient)
+              .leftFlatMap(recoverNotFoundRelationship)
           irvAllRelationship = irvActiveRelationship ++ irvInactiveRelationship
         } yield irvAllRelationship.map(r =>
           ClientAuthorisationForTaxId(r.arn, service, taxIdentifier.value, r.dateTo, r.dateFrom, r.isActive)
@@ -258,33 +273,11 @@ class ClientTaxAgentsDataService @Inject() (
     }.sequence
 
   private def getAllInvitationsForAllServices(
-    identifiers: Map[Service, TaxIdentifier]
+    clientIds: Seq[String]
   )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[Invitation]] =
-    identifiers
-      .map { case (service, taxIdentifier) =>
-        val services = if (service.id == HMRCMTDIT) Seq(service.id, HMRCMTDITSUPP) else Seq(service.id)
-        for {
-          invitations <- EitherT.right[RelationshipFailureResponse](
-                           invitationsRepository.findAllForClient(taxIdentifier.value, services)
-                         )
-          partialAuthInvitations <- EitherT.right[RelationshipFailureResponse](getPartialAuthInvitations(taxIdentifier))
-        } yield invitations ++ partialAuthInvitations.map(_.asInvitation)
-      }
-      .toSeq
-      .sequence
-      .map(_.flatten)
-
-  private def getPartialAuthInvitations(
-    taxIdentifier: TaxIdentifier
-  )(implicit hc: HeaderCarrier): Future[Seq[PartialAuthRelationship]] =
-    taxIdentifier match {
-      case mtdItId @ MtdItId(_) =>
-        (for {
-          nino <- OptionT(ifConnector.getNinoFor(mtdItId))
-          c    <- OptionT.liftF(partialAuthRepository.findAllByNino(nino))
-        } yield c).value.map(_.getOrElse(Seq.empty[PartialAuthRelationship]))
-      case _ => Future.successful(Seq.empty[PartialAuthRelationship])
-    }
+    for {
+      invitations <- EitherT.right[RelationshipFailureResponse](invitationsRepository.findAllBy(clientIds = clientIds))
+    } yield invitations
 
   private def getAgentDataForInvitation(invitations: Seq[Invitation])(implicit
     hc: HeaderCarrier,

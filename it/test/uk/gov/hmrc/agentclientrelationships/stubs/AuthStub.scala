@@ -29,6 +29,7 @@ trait AuthStub {
   me: WireMockSupport =>
 
   val oid: String = "556737e15500005500eaf68f"
+  val defaultNino: String = "AA123456A"
 
   def requestIsNotAuthenticated(): AuthStub = {
     stubFor(post(urlEqualTo("/auth/authorise")).willReturn(aResponse().withStatus(401)))
@@ -430,7 +431,8 @@ trait AuthStub {
           s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
         )
         .mkString(", ")}
-         |  ]
+         |  ],
+         |  "nino": "$defaultNino"
          |}
           """.stripMargin
     )
@@ -474,7 +476,7 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenAuthorisedAsAltItsaClient[A](
+  def givenAuthorisedAsClientWithNino[A](
     request: FakeRequest[A],
     nino: Nino
   ): FakeRequest[A] = {
@@ -487,7 +489,9 @@ trait AuthStub {
               "key"         -> "HMRC-PT",
               "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino.value))
             )
-          )
+          ),
+          "nino" -> s"${nino.value}",
+          "utr"  -> "1234567890"
         )
         .toString
     )
