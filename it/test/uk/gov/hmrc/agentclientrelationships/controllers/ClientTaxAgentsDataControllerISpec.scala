@@ -910,7 +910,21 @@ class ClientTaxAgentsDataControllerISpec
         .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn2, Service.MtdIt.id, nino)
         .futureValue
 
+      partialAuthRepo
+        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn, Service.MtdIt.id, nino)
+        .futureValue
+
+      partialAuthRepo
+        .deauthorise(
+          Service.MtdIt.id,
+          nino,
+          arn,
+          updated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        )
+        .futureValue
+
       givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecordFound(arn, testAgentRecord1)
 
       givenMtdItIdIsUnKnownFor(nino)
 
@@ -918,7 +932,15 @@ class ClientTaxAgentsDataControllerISpec
       result.status shouldBe 200
 
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
-      clientTaxAgentsData.authorisationEvents.authorisationEvents.size shouldBe 1
+      clientTaxAgentsData.authorisationEvents.authorisationEvents.size shouldBe 3
+
+      val agent1AuthorisationEvents =
+        clientTaxAgentsData.authorisationEvents.authorisationEvents
+          .filter(x => x.agentName == agentName1)
+
+      agent1AuthorisationEvents.size shouldBe 2
+      agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == DeAuthorised) shouldBe true
+      agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe true
 
       val agent2AuthorisationEvents =
         clientTaxAgentsData.authorisationEvents.authorisationEvents

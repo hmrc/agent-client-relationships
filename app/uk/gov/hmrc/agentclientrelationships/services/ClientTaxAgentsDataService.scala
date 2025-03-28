@@ -148,13 +148,13 @@ class ClientTaxAgentsDataService @Inject() (
     case Some(n) =>
       EitherT.right[RelationshipFailureResponse](
         partialAuthRepository
-          .findActiveByNino(Nino(n))
+          .findByNino(Nino(n))
           .map(
             _.map(pa =>
               ClientAuthorisationForTaxId(
                 arn = Arn(pa.arn),
-                dateTo = None,
-                dateFrom = Some(pa.lastUpdated.atZone(ZoneId.of("UTC")).toLocalDate),
+                dateTo = if (pa.active) None else Some(pa.lastUpdated.atZone(ZoneId.of("UTC")).toLocalDate),
+                dateFrom = Some(pa.created.atZone(ZoneId.of("UTC")).toLocalDate),
                 isActive = pa.active,
                 service = Service.forId(pa.service),
                 clientId = pa.nino

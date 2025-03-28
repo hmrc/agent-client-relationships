@@ -53,16 +53,16 @@ class CustomerStatusController @Inject() (
       val identifiers = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
       for {
         invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
-        partialAuthRecord <- authResponse.getNino match {
-                               case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
-                               case None     => Future.successful(None)
-                             }
+        partialAuthRecords <- authResponse.getNino match {
+                                case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
+                                case None     => Future.successful(None)
+                              }
         irvRelationshipExists <- authResponse.getNino match {
                                    case Some(nino) =>
                                      agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
                                    case None => Future.successful(false)
                                  }
-        existingRelationships <- if (partialAuthRecord.exists(_.active) || irvRelationshipExists) {
+        existingRelationships <- if (partialAuthRecords.exists(_.active) || irvRelationshipExists) {
                                    Future.successful(true)
                                  } else {
                                    findRelationshipsService
@@ -73,7 +73,7 @@ class CustomerStatusController @Inject() (
         Json.toJson(
           CustomerStatus(
             hasPendingInvitations = invitations.exists(_.status == Pending),
-            hasInvitationsHistory = invitations.nonEmpty || partialAuthRecord.nonEmpty,
+            hasInvitationsHistory = invitations.nonEmpty || partialAuthRecords.nonEmpty,
             hasExistingRelationships = existingRelationships
           )
         )

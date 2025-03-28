@@ -115,8 +115,8 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
       )
       .headOption()
 
-  def findByNino(nino: Nino): Future[Option[PartialAuthRelationship]] =
-    collection.find(equal("nino", encryptedString(nino.value))).headOption()
+  def findByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
+    collection.find(equal("nino", encryptedString(nino.value))).toFuture()
 
   /* this will only find partially authorised ITSA main agents for a given nino string */
   def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] =
