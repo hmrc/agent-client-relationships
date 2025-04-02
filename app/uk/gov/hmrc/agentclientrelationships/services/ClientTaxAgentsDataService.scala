@@ -21,7 +21,7 @@ import cats.implicits._
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, IFConnector}
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, RelationshipSource}
+import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
