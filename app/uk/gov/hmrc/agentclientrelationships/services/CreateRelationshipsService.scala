@@ -17,7 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import play.api.mvc.Request
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{enrolmentDelegatedKey, etmpRelationshipCreatedKey}
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
@@ -38,6 +40,7 @@ class CreateRelationshipsService @Inject() (
   relationshipConnector: RelationshipConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: MongoLockService,
+  auditService: AuditService,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
@@ -52,12 +55,16 @@ class CreateRelationshipsService @Inject() (
     oldReferences: Set[RelationshipReference],
     failIfCreateRecordFails: Boolean,
     failIfAllocateAgentInESFails: Boolean
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Option[DbUpdateStatus]] =
+  )(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData
+  ): Future[Option[DbUpdateStatus]] =
     lockService
       .recoveryLock(arn, enrolmentKey) {
-        auditData.set("AgentDBRecord", false)
-        auditData.set("enrolmentDelegated", false)
-        auditData.set("etmpRelationshipCreated", false)
+        auditData.set(enrolmentDelegatedKey, false)
+        auditData.set(etmpRelationshipCreatedKey, false)
 
         def createRelationshipRecord: Future[DbUpdateStatus] = {
           val record = RelationshipCopyRecord(
@@ -68,7 +75,6 @@ class CreateRelationshipsService @Inject() (
           relationshipCopyRepository
             .create(record)
             .map { count =>
-              auditData.set("AgentDBRecord", true)
               convertDbUpdateStatus(count)
             }
             .recoverWith { case NonFatal(ex) =>
@@ -110,7 +116,7 @@ class CreateRelationshipsService @Inject() (
         relationshipConnector
           .createAgentRelationship(enrolmentKey, arn)
       if maybeResponse.nonEmpty
-      _ = auditData.set("etmpRelationshipCreated", true)
+      _ = auditData.set(etmpRelationshipCreatedKey, true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)
       .recoverWith {
@@ -131,7 +137,12 @@ class CreateRelationshipsService @Inject() (
     enrolmentKey: EnrolmentKey,
     agentUser: AgentUser,
     failIfAllocateAgentInESFails: Boolean
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[DbUpdateStatus] = {
+  )(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData
+  ): Future[DbUpdateStatus] = {
 
     def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
       relationshipCopyRepository
@@ -167,10 +178,10 @@ class CreateRelationshipsService @Inject() (
     (for {
       esSyncStatusInProgress <- updateEsSyncStatus(InProgress)
       if esSyncStatusInProgress == DbUpdateSucceeded
-      _ <- if (enrolmentKey.service == Service.HMRCMTDITSUPP) Future.successful(())
+      _ <- if (enrolmentKey.service == Service.HMRCMTDITSUPP) Future.unit
            else deallocatePreviousRelationship(arn, enrolmentKey)
       _ <- es.allocateEnrolmentToAgent(agentUser.groupId, agentUser.userId, enrolmentKey, agentUser.agentCode)
-      _ = auditData.set("enrolmentDelegated", true)
+      _ = auditData.set(enrolmentDelegatedKey, true)
       _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)
       esSyncStatusSuccess <- updateEsSyncStatus(Success)
     } yield esSyncStatusSuccess)
@@ -184,6 +195,7 @@ class CreateRelationshipsService @Inject() (
   // noinspection ScalaStyle
   def deallocatePreviousRelationship(newArn: Arn, enrolmentKey: EnrolmentKey)(implicit
     hc: HeaderCarrier,
+    request: Request[Any],
     ec: ExecutionContext
   ): Future[Unit] =
     for {
@@ -219,7 +231,12 @@ class CreateRelationshipsService @Inject() (
                       case Some(removedArn) =>
                         deleteRecordRepository
                           .remove(removedArn, enrolmentKey)
-                          .map(_ > 0) // TODO send audit event for terminating relationship
+                          .map { updated =>
+                            if (updated > 0) {
+                              auditService.auditForAgentReplacement(removedArn, enrolmentKey)
+                              true
+                            } else false
+                          }
                           .recoverWith { case NonFatal(ex) =>
                             logger.warn(
                               s"Removing delete record from mongo failed for ${removedArn.value}, ${enrolmentKey.tag}",
@@ -237,7 +254,7 @@ class CreateRelationshipsService @Inject() (
   private def retrieveAgentUser(
     arn: Arn
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
-    agentUserService.getAgentAdminUserFor(arn).map {
+    agentUserService.getAgentAdminAndSetAuditData(arn).map {
       _.toOption.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
     }
 
@@ -245,7 +262,12 @@ class CreateRelationshipsService @Inject() (
     relationshipCopyRecord: RelationshipCopyRecord,
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Option[DbUpdateStatus]] =
+  )(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData
+  ): Future[Option[DbUpdateStatus]] =
     lockService
       .recoveryLock(arn, enrolmentKey) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {

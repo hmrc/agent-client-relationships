@@ -20,11 +20,62 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.json.Json
+import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
 
 trait DataStreamStub extends Eventually {
 
-  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(25, Seconds)), scaled(Span(500, Millis)))
+  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(50, Millis)))
+
+  def verifyTerminateRelationshipAuditSent(
+    requestPath: String,
+    arn: String,
+    clientId: String,
+    clientIdType: String,
+    service: String,
+    howRelationshipTerminated: String,
+    enrolmentDeallocated: Boolean = true,
+    etmpRelationshipRemoved: Boolean = true,
+    credId: Option[String] = Some("any"),
+    agentCode: Option[String] = Some("bar")
+  ): Unit =
+    verifyAuditRequestSent(
+      1,
+      event = AgentClientRelationshipEvent.TerminateRelationship,
+      detail = Map(
+        "agentReferenceNumber"      -> arn,
+        "clientId"                  -> clientId,
+        "clientIdType"              -> clientIdType,
+        "service"                   -> service,
+        "enrolmentDeallocated"      -> enrolmentDeallocated.toString,
+        "etmpRelationshipRemoved"   -> etmpRelationshipRemoved.toString,
+        "howRelationshipTerminated" -> howRelationshipTerminated
+      ) ++ Seq(
+        credId.map(id => "credId" -> id),
+        agentCode.map(code => "agentCode" -> code)
+      ).flatten,
+      tags = Map("transactionName" -> "terminate-relationship", "path" -> requestPath)
+    )
+
+  def verifyTerminatePartialAuthAuditSent(
+    requestPath: String,
+    arn: String,
+    clientId: String,
+    service: String,
+    howRelationshipTerminated: String
+  ): Unit =
+    verifyAuditRequestSent(
+      1,
+      event = AgentClientRelationshipEvent.TerminatePartialAuthorisation,
+      detail = Map(
+        "agentReferenceNumber"              -> arn,
+        "clientId"                          -> clientId,
+        "clientIdType"                      -> "nino",
+        "service"                           -> service,
+        "howPartialAuthorisationTerminated" -> howRelationshipTerminated
+      ),
+      tags = Map("transactionName" -> "terminate-partial-auth", "path" -> requestPath)
+    )
 
   def verifyAuditRequestSent(
     count: Int,

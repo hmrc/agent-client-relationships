@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{agentReplacement, howPartialAuthTerminatedKey}
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -41,7 +42,8 @@ class AuthorisationAcceptService @Inject() (
   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
-  agentFiRelationshipConnector: AgentFiRelationshipConnector
+  agentFiRelationshipConnector: AgentFiRelationshipConnector,
+  auditService: AuditService
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -111,6 +113,7 @@ class AuthorisationAcceptService @Inject() (
     timestamp: Instant
   )(implicit
     hc: HeaderCarrier,
+    request: Request[Any],
     auditData: AuditData
   ) =
     invitation.service match {
@@ -161,10 +164,22 @@ class AuthorisationAcceptService @Inject() (
           .map(_.getOrElse(throw CreateRelationshipLocked))
     }
 
-  private def deauthPartialAuth(nino: String, timestamp: Instant) =
+  private def deauthPartialAuth(nino: String, timestamp: Instant)(implicit hc: HeaderCarrier, request: Request[Any]) =
     partialAuthRepository.findMainAgent(nino).flatMap {
       case Some(mainAuth) =>
-        partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp)
+        partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp).map {
+          result =>
+            if (result) {
+              implicit val auditData: AuditData = new AuditData()
+              auditData.set(howPartialAuthTerminatedKey, agentReplacement)
+              auditService.sendTerminatePartialAuthAuditEvent(
+                mainAuth.arn,
+                mainAuth.service,
+                mainAuth.nino
+              )
+            }
+            result
+        }
       case None => Future.successful(false)
     }
 

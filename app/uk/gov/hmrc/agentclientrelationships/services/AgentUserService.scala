@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{agentCodeKey, credIdKey}
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.AgentCode
@@ -39,17 +40,17 @@ class AgentUserService @Inject() (
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache
   val groupInfoCache = agentCacheProvider.ugsGroupInfoCache
 
-  def getAgentAdminUserFor(
+  def getAgentAdminAndSetAuditData(
     arn: Arn
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, AgentUser]] =
     for {
       agentGroupId   <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
       firstAdminUser <- firstGroupAdminCache(agentGroupId)(ugs.getFirstGroupAdminUser(agentGroupId))
       adminUserId = firstAdminUser.flatMap(_.userId)
-      _ = adminUserId.foreach(auditData.set("credId", _))
+      _ = adminUserId.foreach(auditData.set(credIdKey, _))
       groupInfo <- groupInfoCache(agentGroupId)(ugs.getGroupInfo(agentGroupId))
       agentCode = groupInfo.flatMap(_.agentCode)
-      _ = agentCode.foreach(auditData.set("agentCode", _))
+      _ = agentCode.foreach(auditData.set(agentCodeKey, _))
     } yield (adminUserId, groupInfo, agentCode) match {
       case (Some(userId), Some(_), Some(code)) => Right(AgentUser(userId, agentGroupId, code, arn))
       case (None, _, _) =>

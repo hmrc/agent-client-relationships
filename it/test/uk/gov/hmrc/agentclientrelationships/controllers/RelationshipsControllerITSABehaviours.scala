@@ -143,7 +143,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "arn"                     -> arn.value,
+            "agentReferenceNumber"    -> arn.value,
             "credId"                  -> "any",
             "agentCode"               -> "bar",
             "nino"                    -> nino.value,
@@ -151,11 +151,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "service"                 -> "HMRC-MTD-IT",
             "clientId"                -> mtdItId.value,
             "clientIdType"            -> "mtditid",
-            "CESARelationship"        -> "true",
+            "cesaRelationship"        -> "true",
             "etmpRelationshipCreated" -> "true",
             "enrolmentDelegated"      -> "true",
-            "AgentDBRecord"           -> "true",
-            "Journey"                 -> "CopyExistingCESARelationship"
+            "howRelationshipCreated"  -> "CopyExistingCESARelationship"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -164,12 +163,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"              -> arn.value,
-            "credId"           -> "any",
-            "agentCode"        -> "bar",
-            "nino"             -> nino.value,
-            "saAgentRef"       -> "foo",
-            "CESARelationship" -> "true"
+            "agentReferenceNumber" -> arn.value,
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "nino"                 -> nino.value,
+            "saAgentRef"           -> "foo",
+            "cesaRelationship"     -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -378,7 +377,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "arn"                     -> arn.value,
+            "agentReferenceNumber"    -> arn.value,
             "credId"                  -> "any",
             "agentCode"               -> "bar",
             "nino"                    -> nino.value,
@@ -386,11 +385,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
             "service"                 -> "HMRC-MTD-IT",
             "clientId"                -> mtdItId.value,
             "clientIdType"            -> "mtditid",
-            "CESARelationship"        -> "true",
+            "cesaRelationship"        -> "true",
             "etmpRelationshipCreated" -> "true",
             "enrolmentDelegated"      -> "false",
-            "AgentDBRecord"           -> "true",
-            "Journey"                 -> "CopyExistingCESARelationship"
+            "howRelationshipCreated"  -> "CopyExistingCESARelationship"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -399,12 +397,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"              -> arn.value,
-            "credId"           -> "any",
-            "agentCode"        -> "bar",
-            "nino"             -> nino.value,
-            "saAgentRef"       -> "foo",
-            "CESARelationship" -> "true"
+            "agentReferenceNumber" -> arn.value,
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "nino"                 -> nino.value,
+            "saAgentRef"           -> "foo",
+            "cesaRelationship"     -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -586,12 +584,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"              -> arn.value,
-            "credId"           -> "",
-            "agentCode"        -> "",
-            "nino"             -> nino.value,
-            "saAgentRef"       -> "foo",
-            "CESARelationship" -> "true"
+            "agentReferenceNumber" -> arn.value,
+            "nino"                 -> nino.value,
+            "saAgentRef"           -> "foo",
+            "cesaRelationship"     -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -615,12 +611,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           1,
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
-            "arn"              -> arn.value,
-            "credId"           -> "",
-            "agentCode"        -> "",
-            "nino"             -> nino.value,
-            "saAgentRef"       -> "foo",
-            "CESARelationship" -> "true"
+            "agentReferenceNumber" -> arn.value,
+            "nino"                 -> nino.value,
+            "saAgentRef"           -> "foo",
+            "cesaRelationship"     -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -703,9 +697,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "not send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
 
         "try to resume unfinished de-auth and keep delete-record around" in new StubsForThisScenario {
@@ -729,50 +723,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       val requestPath: String =
         s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
-      def verifyClientRemovedAgentServiceAuthorisationAuditSent(
-        arn: String,
-        clientId: String,
-        clientIdType: String,
-        service: String,
-        currentUserAffinityGroup: String,
-        authProviderId: String,
-        authProviderIdType: String
-      ) =
-        verifyAuditRequestSent(
-          1,
-          event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
-          detail = Map(
-            "agentReferenceNumber"     -> arn,
-            "clientId"                 -> clientId,
-            "clientIdType"             -> clientIdType,
-            "service"                  -> service,
-            "currentUserAffinityGroup" -> currentUserAffinityGroup,
-            "authProviderId"           -> authProviderId,
-            "authProviderIdType"       -> authProviderIdType
-          ),
-          tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
-        )
-
-      def verifyHmrcRemovedAgentServiceAuthorisation(
-        arn: String,
-        clientId: String,
-        service: String,
-        authProviderId: String,
-        authProviderIdType: String
-      ) =
-        verifyAuditRequestSent(
-          1,
-          event = AgentClientRelationshipEvent.HmrcRemovedAgentServiceAuthorisation,
-          detail = Map(
-            "authProviderId"       -> authProviderId,
-            "authProviderIdType"   -> authProviderIdType,
-            "agentReferenceNumber" -> arn,
-            "clientId"             -> clientId,
-            "service"              -> service
-          ),
-          tags = Map("transactionName" -> "hmrc remove agent:service authorisation", "path" -> requestPath)
-        )
-
       "the relationship exists and the Arn matches that of current Agent user" should {
 
         trait StubsForThisScenario {
@@ -793,16 +743,15 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordNotExists
         }
 
-        "send an audit event called ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "send an audit event called TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath)
-          verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
             arn.value,
             mtdItId.value,
             "MTDITID",
             "HMRC-MTD-IT",
-            "Agent",
-            "ggUserId-agent",
-            "GovernmentGateway"
+            "AgentLedTermination"
           )
         }
       }
@@ -821,16 +770,15 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenCacheRefresh(arn)
         }
 
-        "return 204 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "return 204 and send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-          verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
             arn.value,
             mtdItId.value,
             "MTDITID",
             "HMRC-MTD-IT",
-            "Individual",
-            "ggUserId-client",
-            "GovernmentGateway"
+            "ClientLedTermination"
           )
         }
       }
@@ -849,15 +797,16 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenCacheRefresh(arn)
         }
 
-        "return 204 and send the audit event HmrcRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "return 204 and send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
-          verifyHmrcRemovedAgentServiceAuthorisation(
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
             arn.value,
             mtdItId.value,
+            "MTDITID",
             "HMRC-MTD-IT",
-            "strideId-1234456",
-            "PrivilegedApplication"
+            "HMRCLedTermination"
           )
         }
       }
@@ -875,17 +824,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAdminUser("foo", "any")
         }
 
-        "return 500 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "return 500 and not send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyClientRemovedAgentServiceAuthorisationAuditSent(
-            arn.value,
-            mtdItId.value,
-            "MTDITID",
-            "HMRC-MTD-IT",
-            "Individual",
-            "ggUserId-client",
-            "GovernmentGateway"
-          )
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -902,17 +843,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAdminUser("foo", "any")
         }
 
-        "return 500 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "return 500 and not send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyClientRemovedAgentServiceAuthorisationAuditSent(
-            arn.value,
-            mtdItId.value,
-            "MTDITID",
-            "HMRC-MTD-IT",
-            "Individual",
-            "ggUserId-client",
-            "GovernmentGateway"
-          )
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -930,16 +863,15 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenCacheRefresh(arn)
         }
 
-        "return 204 and send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "return 204 and send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 204
-          verifyClientRemovedAgentServiceAuthorisationAuditSent(
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
             arn.value,
             mtdItId.value,
             "MTDITID",
             "HMRC-MTD-IT",
-            "Individual",
-            "ggUserId-client",
-            "GovernmentGateway"
+            "ClientLedTermination"
           )
         }
       }
@@ -953,10 +885,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordNotExists
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        "not send the audit event TerminateRelationship" in {
           givenUserIsSubscribedAgent(Arn("unmatched"))
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -967,10 +899,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordNotExists
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        "not send the audit event TerminateRelationship" in {
           givenUserHasNoAgentEnrolments(arn)
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -986,9 +918,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "not send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -1009,9 +941,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordNotExists
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "not send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -1034,9 +966,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordHasStatuses(Some(SyncStatus.Failed), Some(SyncStatus.Success))
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForThisScenario {
+        "not send the audit event TerminateRelationship" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestSent(1, AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -1051,11 +983,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordNotExists
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        "not send the audit event TerminateRelationship" in {
           givenUserIsSubscribedClient(mtdItId)
           givenMtdItIdIsKnownFor(nino, MtdItId("unmatched"))
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -1066,10 +998,10 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordNotExists
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in {
+        "not send the audit event TerminateRelationship" in {
           givenUserHasNoClientEnrolments
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
 
@@ -1089,9 +1021,9 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           verifyDeleteRecordNotExists
         }
 
-        "not send the audit event ClientRemovedAgentServiceAuthorisation" in new StubsForScenario {
+        "not send the audit event TerminateRelationship" in new StubsForScenario {
           doAgentDeleteRequest(requestPath)
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation)
+          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
         }
       }
     }

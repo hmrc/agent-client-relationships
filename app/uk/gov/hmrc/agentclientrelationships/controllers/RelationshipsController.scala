@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{arnKey, cesaRelationshipKey, clientIdKey, clientIdTypeKey, howRelationshipCreatedKey, serviceKey}
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -85,7 +86,7 @@ class RelationshipsController @Inject() (
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
             implicit val auditData: AuditData = new AuditData()
-            auditData.set("arn", arn)
+            auditData.set(arnKey, arn)
 
             createService
               .createRelationship(
@@ -231,11 +232,11 @@ class RelationshipsController @Inject() (
    * */
   def getLegacySaRelationshipStatus(arn: Arn, nino: Nino): Action[AnyContent] = Action async { implicit request =>
     implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
-    auditData.set("Journey", "hasLegacyMapping")
-    auditData.set("service", "mtd-it")
-    auditData.set("clientId", nino)
-    auditData.set("clientIdType", "nino")
+    auditData.set(arnKey, arn)
+    auditData.set(howRelationshipCreatedKey, "hasLegacyMapping")
+    auditData.set(serviceKey, "mtd-it")
+    auditData.set(clientIdKey, nino)
+    auditData.set(clientIdTypeKey, "nino")
 
     withAuthorisedAsAgent { arn =>
       des.getClientSaAgentSaReferences(nino).flatMap { references =>
@@ -245,7 +246,7 @@ class RelationshipsController @Inject() (
             .map { matching =>
               if (matching.nonEmpty) {
                 auditData.set("saAgentRef", matching.mkString(","))
-                auditData.set("CESARelationship", matching.nonEmpty)
+                auditData.set(cesaRelationshipKey, matching.nonEmpty)
                 auditService.sendCheckCESAAndPartialAuthAuditEvent
                 NoContent // a legacy SA relationship was found and it is mapped to the Arn
               } else Ok // A legacy SA relationship was found but it is not mapped to the Arn

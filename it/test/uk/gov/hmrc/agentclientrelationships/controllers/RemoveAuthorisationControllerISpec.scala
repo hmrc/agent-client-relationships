@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
@@ -59,6 +59,7 @@ trait RemoveAuthorisationControllerISpec
   val validationService = app.injector.instanceOf[ValidationService]
   val agentFiRelationshipConnector: AgentFiRelationshipConnector =
     app.injector.instanceOf[AgentFiRelationshipConnector]
+  val auditSerice = app.injector.instanceOf[AuditService]
 
   val controller =
     new RemoveAuthorisationController(
@@ -68,6 +69,7 @@ trait RemoveAuthorisationControllerISpec
       authConnector,
       appConfig,
       validationService,
+      auditSerice,
       stubControllerComponents()
     )
 
@@ -89,30 +91,6 @@ trait RemoveAuthorisationControllerISpec
   )
 
   val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/remove-authorisation"
-
-  def verifyClientRemovedAgentServiceAuthorisationAuditSent(
-    arn: String,
-    clientId: String,
-    clientIdType: String,
-    service: String,
-    currentUserAffinityGroup: String,
-    authProviderId: String,
-    authProviderIdType: String
-  ) =
-    verifyAuditRequestSent(
-      1,
-      event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
-      detail = Map(
-        "agentReferenceNumber"     -> arn,
-        "clientId"                 -> clientId,
-        "clientIdType"             -> clientIdType,
-        "service"                  -> service,
-        "currentUserAffinityGroup" -> currentUserAffinityGroup,
-        "authProviderId"           -> authProviderId,
-        "authProviderIdType"       -> authProviderIdType
-      ),
-      tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> requestPath)
-    )
 
   allServices.keySet.foreach(service =>
     s"s/agent/:arn/remove-authorisation" should {
@@ -176,17 +154,14 @@ trait RemoveAuthorisationControllerISpec
           ).status shouldBe 204
           verifyDeleteRecordNotExists
 
-          if (service != PersonalIncomeRecord) {
-            verifyClientRemovedAgentServiceAuthorisationAuditSent(
-              arn = arn.value,
-              clientId = clientId.value,
-              clientIdType = clientId.enrolmentId,
-              service = serviceId,
-              currentUserAffinityGroup = "Agent",
-              authProviderId = "ggUserId-agent",
-              authProviderIdType = "GovernmentGateway"
-            )
-          }
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            arn.value,
+            clientId.value,
+            clientId.enrolmentId,
+            serviceId,
+            "AgentLedTermination"
+          )
         }
 
         s"return 204 for $serviceId when initiated by client" in new StubsForThisScenario(
@@ -243,14 +218,13 @@ trait RemoveAuthorisationControllerISpec
           await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
 
           verifyDeleteRecordNotExists
-          verifyClientRemovedAgentServiceAuthorisationAuditSent(
-            arn = arn.value,
-            clientId = clientId.value,
-            clientIdType = clientId.enrolmentId,
-            service = serviceId,
-            currentUserAffinityGroup = "Agent",
-            authProviderId = "ggUserId-agent",
-            authProviderIdType = "GovernmentGateway"
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            arn.value,
+            clientId.value,
+            clientId.enrolmentId,
+            serviceId,
+            "AgentLedTermination"
           )
         }
 
@@ -354,6 +328,13 @@ trait RemoveAuthorisationControllerISpec
       verifyDeleteRecordNotExists
       await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
 
+      verifyTerminatePartialAuthAuditSent(
+        requestPath,
+        arn.value,
+        nino.value,
+        service.id,
+        "AgentLedTermination"
+      )
     }
 
     "return 204 when PartialAuth exists in PartialAuth Repo and not not exists in InvitationRepo" in new StubsForThisScenario {
@@ -371,6 +352,13 @@ trait RemoveAuthorisationControllerISpec
       partialAuthInvitations.isDefined shouldBe false
       await(invitationRepo.findAllForAgent(arn.value)) shouldBe Seq.empty
 
+      verifyTerminatePartialAuthAuditSent(
+        requestPath,
+        arn.value,
+        nino.value,
+        service.id,
+        "AgentLedTermination"
+      )
     }
 
     "return None when PartialAuth do not exists in PartialAuth Repo" in new StubsForThisScenario {
@@ -404,6 +392,19 @@ trait RemoveAuthorisationControllerISpec
         requestPath,
         Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
       ).status shouldBe 204
+
+      verifyTerminateRelationshipAuditSent(
+        requestPath,
+        arn.value,
+        nino.value,
+        "NINO",
+        PersonalIncomeRecord.id,
+        "AgentLedTermination",
+        enrolmentDeallocated = false,
+        etmpRelationshipRemoved = false,
+        credId = None,
+        agentCode = None
+      )
     }
 
     "return 404 when AFI returns 404" in new StubsForThisScenario {

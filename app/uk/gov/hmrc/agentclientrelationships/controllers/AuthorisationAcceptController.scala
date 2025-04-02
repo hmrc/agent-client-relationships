@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.arnKey
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -56,7 +57,7 @@ class AuthorisationAcceptController @Inject() (
     invitationService.findInvitation(invitationId).flatMap {
       case Some(invitation) if invitation.status == Pending =>
         implicit val auditData: AuditData = new AuditData()
-        auditData.set("arn", invitation.arn)
+        auditData.set(arnKey, invitation.arn)
         for {
           enrolment <-
             validationService
