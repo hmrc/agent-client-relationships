@@ -20,19 +20,34 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.Enrolments
 import uk.gov.hmrc.domain.TaxIdentifier
 
-class EnrolmentsWithNino(enrolments: Enrolments, nino: Option[String]) {
+case class EnrolmentsWithNino(enrolments: Enrolments, nino: Option[String]) {
 
   private val ptNino: Option[String] =
     enrolments.enrolments.find(_.key == "HMRC-PT").flatMap(_.identifiers.headOption.map(_.value))
 
-  def getNino: Option[String] = ptNino.orElse(nino)
+  def getNino: Option[String] = ptNino.orElse(nino).map(_.replaceAll("\\s", ""))
 
   def getIdentifierMap(supportedServices: Seq[Service]): Map[Service, TaxIdentifier] = {
     val identifiers = for {
       supportedService <- supportedServices
       enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
       clientId         <- enrolment.identifiers.headOption
-    } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
+    } yield (
+      supportedService,
+      supportedService.supportedClientIdType.createUnderlying(clientId.value)
+    )
+
+    identifiers.toMap
+  }
+  def getIdentifierKeyMap(supportedServices: Seq[Service]): Map[String, TaxIdentifier] = {
+    val identifiers = for {
+      supportedService <- supportedServices
+      enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
+      clientId         <- enrolment.identifiers.headOption
+    } yield (
+      supportedService.id,
+      supportedService.supportedClientIdType.createUnderlying(clientId.value)
+    )
 
     identifiers.toMap
   }

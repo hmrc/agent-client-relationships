@@ -141,13 +141,13 @@ class PartialAuthRepositoryISpec
 
   ".findByNino" should {
 
-    "retrieve a record for a given nino" in {
+    "retrieves records for a given nino" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
-      await(repository.findByNino(Nino("SX579189D"))) shouldBe Some(partialAuth)
+      await(repository.findByNino(Nino("SX579189D"))) shouldBe Seq(partialAuth)
     }
 
     "fail to retrieve records when none are found for the given nino" in {
-      await(repository.findByNino(Nino("AA111111A"))) shouldBe None
+      await(repository.findByNino(Nino("AA111111A"))) shouldBe Seq.empty
     }
   }
 
