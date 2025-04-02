@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentsWithNino, Relations
 import uk.gov.hmrc.agentclientrelationships.services.ClientTaxAgentsDataService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
