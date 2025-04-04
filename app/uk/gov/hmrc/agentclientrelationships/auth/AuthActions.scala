@@ -34,7 +34,9 @@ import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
-case class CurrentUser(credentials: Option[Credentials], affinityGroup: Option[AffinityGroup])
+case class CurrentUser(credentials: Option[Credentials], affinityGroup: Option[AffinityGroup]) {
+  def isStride: Boolean = credentials.map(_.providerType).contains("PrivilegedApplication")
+}
 
 trait AuthActions extends AuthorisedFunctions with Logging {
   me: Results =>

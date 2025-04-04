@@ -42,14 +42,16 @@ class ItsaDeauthAndCleanupServiceSpec
     with MockCheckRelationshipsService
     with MockDeleteRelationshipsServiceWithAcr
     with MockPartialAuthRepository
-    with MockInvitationsRepository {
+    with MockInvitationsRepository
+    with MockAuditService {
 
   object TestService
       extends ItsaDeauthAndCleanupService(
         partialAuthRepository = mockPartialAuthRepository,
         checkRelationshipsService = mockCheckRelationshipsService,
         deleteRelationshipsServiceWithAcr = mockDeleteRelationshipsService,
-        invitationsRepository = mockInvitationsRepository
+        invitationsRepository = mockInvitationsRepository,
+        auditService = mockAuditService
       )
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -129,7 +131,8 @@ class ItsaDeauthAndCleanupServiceSpec
           .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
             any[HeaderCarrier],
             any[Request[_]],
-            any[CurrentUser]
+            any[CurrentUser],
+            any[AuditData]
           )
         verify(mockInvitationsRepository, times(1))
           .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
@@ -161,7 +164,8 @@ class ItsaDeauthAndCleanupServiceSpec
           .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
             any[HeaderCarrier],
             any[Request[_]],
-            any[CurrentUser]
+            any[CurrentUser],
+            any[AuditData]
           )
         verify(mockInvitationsRepository, times(1))
           .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
@@ -185,7 +189,8 @@ class ItsaDeauthAndCleanupServiceSpec
           .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
             any[HeaderCarrier],
             any[Request[_]],
-            any[CurrentUser]
+            any[CurrentUser],
+            any[AuditData]
           )
         verify(mockInvitationsRepository, times(0))
           .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])

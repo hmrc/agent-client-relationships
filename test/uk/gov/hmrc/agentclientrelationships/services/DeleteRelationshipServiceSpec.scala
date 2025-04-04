@@ -552,7 +552,8 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     def givenAgentExists: OngoingStubbing[Future[Either[String, AgentUser]]] =
       when(
-        agentUserService.getAgentAdminUserFor(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+        agentUserService
+          .getAgentAdminAndSetAuditData(eqs[Arn](arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
       )
         .thenReturn(Future.successful(Right(agentUser)))
 

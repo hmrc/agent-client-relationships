@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -41,7 +42,8 @@ class AuthorisationAcceptService @Inject() (
   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
-  agentFiRelationshipConnector: AgentFiRelationshipConnector
+  agentFiRelationshipConnector: AgentFiRelationshipConnector,
+  auditService: AuditService
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -62,11 +64,11 @@ class AuthorisationAcceptService @Inject() (
       // Remove existing main/supp relationship for arn when changing between main/supp
       _ <- if (isItsa)
              itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-               invitation.service,
-               invitation.arn,
-               if (isAltItsa) None else Some(invitation.clientId),
-               invitation.suppliedClientId,
-               timestamp
+               service = invitation.service,
+               arn = invitation.arn,
+               optMtdItId = if (isAltItsa) None else Some(invitation.clientId),
+               nino = invitation.suppliedClientId,
+               timestamp = timestamp
              )
            else Future.unit
       // Create relationship
@@ -77,12 +79,12 @@ class AuthorisationAcceptService @Inject() (
       _ <- Future.successful(
              if (invitation.service != HMRCMTDITSUPP)
                deauthAcceptedInvitations(
-                 invitation.service,
-                 None,
-                 invitation.clientId,
-                 Some(invitation.invitationId),
-                 isAltItsa,
-                 timestamp
+                 service = invitation.service,
+                 optArn = None,
+                 clientId = invitation.clientId,
+                 optInvitationId = Some(invitation.invitationId),
+                 isAltItsa = isAltItsa,
+                 timestamp = timestamp
                )
              else Future.unit
            )
@@ -90,12 +92,12 @@ class AuthorisationAcceptService @Inject() (
       _ <- Future.successful(
              if (invitation.service == HMRCMTDIT && !isAltItsa)
                deauthAcceptedInvitations(
-                 invitation.service,
-                 None,
-                 invitation.suppliedClientId,
-                 Some(invitation.invitationId),
+                 service = invitation.service,
+                 optArn = None,
+                 clientId = invitation.suppliedClientId,
+                 optInvitationId = Some(invitation.invitationId),
                  isAltItsa = true,
-                 timestamp
+                 timestamp = timestamp
                )
              else Future.unit
            )
@@ -111,60 +113,86 @@ class AuthorisationAcceptService @Inject() (
     timestamp: Instant
   )(implicit
     hc: HeaderCarrier,
+    request: Request[Any],
+    currentUser: CurrentUser,
     auditData: AuditData
-  ) =
+  ) = {
+    auditData.set(
+      key = if (isAltItsa) howPartialAuthCreatedKey else howRelationshipCreatedKey,
+      value = if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
+    )
+
     invitation.service match {
       case `HMRCMTDITSUPP` if isAltItsa => // Does not need to deauthorise current agent
-        partialAuthRepository.create(
-          timestamp,
-          Arn(invitation.arn),
-          invitation.service,
-          Nino(invitation.clientId)
-        )
+        partialAuthRepository
+          .create(
+            created = timestamp,
+            arn = Arn(invitation.arn),
+            service = invitation.service,
+            nino = Nino(invitation.clientId)
+          )
+          .andThen(_ => auditService.sendCreatePartialAuthAuditEvent())
       case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
         deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
-          partialAuthRepository.create(
-            timestamp,
-            Arn(invitation.arn),
-            invitation.service,
-            Nino(invitation.clientId)
-          )
+          partialAuthRepository
+            .create(
+              created = timestamp,
+              arn = Arn(invitation.arn),
+              service = invitation.service,
+              nino = Nino(invitation.clientId)
+            )
+            .andThen(_ => auditService.sendCreatePartialAuthAuditEvent())
         }
       case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
         deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
           createRelationshipsService
             .createRelationship(
-              Arn(invitation.arn),
-              enrolment,
-              Set(),
+              arn = Arn(invitation.arn),
+              enrolmentKey = enrolment,
+              oldReferences = Set(),
               failIfCreateRecordFails = false,
               failIfAllocateAgentInESFails = true
             )
             .map(_.getOrElse(throw CreateRelationshipLocked))
         }
       case `HMRCPIR` => // AFI handles its own deauthorisations
-        agentFiRelationshipConnector.createRelationship(
-          Arn(invitation.arn),
-          invitation.service,
-          invitation.clientId,
-          LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
-        )
+        agentFiRelationshipConnector
+          .createRelationship(
+            arn = Arn(invitation.arn),
+            service = invitation.service,
+            clientId = invitation.clientId,
+            acceptedDate = LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
+          )
+          .andThen(_ => auditService.sendCreateRelationshipAuditEvent())
       case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
         createRelationshipsService
           .createRelationship(
-            Arn(invitation.arn),
-            enrolment,
-            Set(),
+            arn = Arn(invitation.arn),
+            enrolmentKey = enrolment,
+            oldReferences = Set(),
             failIfCreateRecordFails = false,
             failIfAllocateAgentInESFails = true
           )
           .map(_.getOrElse(throw CreateRelationshipLocked))
     }
+  }
 
-  private def deauthPartialAuth(nino: String, timestamp: Instant) =
+  private def deauthPartialAuth(nino: String, timestamp: Instant)(implicit hc: HeaderCarrier, request: Request[Any]) =
     partialAuthRepository.findMainAgent(nino).flatMap {
       case Some(mainAuth) =>
-        partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp)
+        partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp).map {
+          result =>
+            if (result) {
+              implicit val auditData: AuditData = new AuditData()
+              auditData.set(howPartialAuthTerminatedKey, agentReplacement)
+              auditService.sendTerminatePartialAuthAuditEvent(
+                arn = mainAuth.arn,
+                service = mainAuth.service,
+                nino = mainAuth.nino
+              )
+            }
+            result
+        }
       case None => Future.successful(false)
     }
 

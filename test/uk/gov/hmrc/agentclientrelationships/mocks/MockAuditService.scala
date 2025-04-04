@@ -19,34 +19,23 @@ package uk.gov.hmrc.agentclientrelationships.mocks
 import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
-import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus
-import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait MockCreateRelationshipsService {
+trait MockAuditService {
   this: ResettingMockitoSugar =>
 
-  val mockCreateRelationshipsService: CreateRelationshipsService = resettingMock[CreateRelationshipsService]
+  val mockAuditService: AuditService = resettingMock[AuditService]
 
-  def mockCreateRelationship(arn: Arn, enrolment: EnrolmentKey)(
-    response: Future[Option[DbUpdateStatus]]
-  ): OngoingStubbing[Future[Option[DbUpdateStatus]]] =
-    when(
-      mockCreateRelationshipsService
-        .createRelationship(eqs(arn), eqs(enrolment), eqs(Set()), any[Boolean], any[Boolean])(
-          any[ExecutionContext],
-          any[HeaderCarrier],
-          any[Request[_]],
-          any[AuditData]
-        )
-    )
-      .thenReturn(response)
+//  def mockSendAcceptedEmail(
+//    invitation: Invitation
+//  )(response: Boolean = true): OngoingStubbing[Future[Boolean]] =
+//    when(mockAuditService..(eqs(invitation))(any[HeaderCarrier], any[ExecutionContext]))
+//      .thenReturn(Future.successful(response))
 
 }

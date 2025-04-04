@@ -44,7 +44,8 @@ class AuthorisationAcceptServiceSpec
     with MockEmailService
     with MockInvitationsRepository
     with MockPartialAuthRepository
-    with MockAgentFiRelationshipConnector {
+    with MockAgentFiRelationshipConnector
+    with MockAuditService {
   def also: AfterWord = afterWord("also")
 
   object TestService
@@ -54,7 +55,8 @@ class AuthorisationAcceptServiceSpec
         itsaDeauthAndCleanupService = mockItsaDeauthAndCleanupService,
         invitationsRepository = mockInvitationsRepository,
         partialAuthRepository = mockPartialAuthRepository,
-        agentFiRelationshipConnector = mockAgentFiRelationshipConnector
+        agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
+        auditService = mockAuditService
       )
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global

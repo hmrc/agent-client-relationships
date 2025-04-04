@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{arnKey, credIdKey}
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
 import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, Monitoring, RelationshipDeletePending, RelationshipNotFound}
@@ -101,11 +102,11 @@ class CheckRelationshipsOrchestratorService @Inject() (
     hc: HeaderCarrier
   ): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
-    maybeUserId.foreach(auditData.set("credId", _))
+    auditData.set(arnKey, arn)
+    maybeUserId.foreach(auditData.set(credIdKey, _))
 
     val result = for {
-      _ <- agentUserService.getAgentAdminUserFor(arn)
+      _ <- agentUserService.getAgentAdminAndSetAuditData(arn)
       /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
          the relevant auditData fields are populated, which our tests expect.
          TODO: Must refactor to remove these hidden side-effects and put them somewhere more explicit.
@@ -182,7 +183,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
     request: Request[Any]
   ): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
+    auditData.set(arnKey, arn)
 
     checkOldAndCopyService
       .hasPartialAuthOrLegacyRelationshipInCesa(arn, nino)
@@ -205,7 +206,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
     hc: HeaderCarrier
   ): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
+    auditData.set(arnKey, arn)
 
     checkOldAndCopyService
       .lookupESForOldRelationship(arn, vrn)

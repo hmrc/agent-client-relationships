@@ -17,6 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.mvc.Request
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{agentRoleChange, howPartialAuthTerminatedKey, howRelationshipTerminatedKey}
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.{Accepted, EnrolmentKey, Invitation, PartialAuth}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
@@ -36,7 +38,8 @@ class ItsaDeauthAndCleanupService @Inject() (
   partialAuthRepository: PartialAuthRepository,
   checkRelationshipsService: CheckRelationshipsService,
   deleteRelationshipsServiceWithAcr: DeleteRelationshipsServiceWithAcr,
-  invitationsRepository: InvitationsRepository
+  invitationsRepository: InvitationsRepository,
+  auditService: AuditService
 )(implicit ec: ExecutionContext) {
 
   def deleteSameAgentRelationship(
@@ -56,6 +59,15 @@ class ItsaDeauthAndCleanupService @Inject() (
         for {
           // Attempt to remove existing alt itsa partial auth
           altItsa <- partialAuthRepository.deauthorise(serviceToCheck.id, Nino(nino), Arn(arn), timestamp)
+          _ = if (altItsa) {
+                implicit val auditData: AuditData = new AuditData()
+                auditData.set(howPartialAuthTerminatedKey, agentRoleChange)
+                auditService.sendTerminatePartialAuthAuditEvent(
+                  arn,
+                  serviceToCheck.id,
+                  nino
+                )
+              }
           // Attempt to remove existing itsa relationship
           itsa <- optMtdItId.fold(Future.successful(false)) { mtdItId =>
                     checkRelationshipsService
@@ -68,6 +80,8 @@ class ItsaDeauthAndCleanupService @Inject() (
                       )
                       .flatMap {
                         case (true, _) =>
+                          implicit val auditData: AuditData = new AuditData()
+                          auditData.set(howRelationshipTerminatedKey, agentRoleChange)
                           deleteRelationshipsServiceWithAcr
                             .deleteRelationship(
                               Arn(arn),

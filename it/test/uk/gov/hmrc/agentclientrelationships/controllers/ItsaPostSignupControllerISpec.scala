@@ -68,19 +68,17 @@ class ItsaPostSignupControllerISpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn"                     -> arn.value,
-          "Journey"                 -> "PartialAuth",
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "PartialAuth",
           "clientId"                -> mtdItId.value,
           "service"                 -> HMRCMTDIT,
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "true",
           "nino"                    -> nino.value,
-          "clientIdType"            -> "mtditid",
-          "CESARelationship"        -> ""
+          "clientIdType"            -> "mtditid"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
       )
-
     }
 
     s"return 201 Created when partial-auth exists for service $HMRCMTDITSUPP and client is signed up to ITSA" in {
@@ -116,19 +114,17 @@ class ItsaPostSignupControllerISpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn"                     -> arn.value,
-          "Journey"                 -> "PartialAuth",
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "PartialAuth",
           "clientId"                -> mtdItId.value,
           "service"                 -> HMRCMTDITSUPP,
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "true",
           "nino"                    -> nino.value,
-          "clientIdType"            -> "mtditid",
-          "CESARelationship"        -> ""
+          "clientIdType"            -> "mtditid"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
       )
-
     }
 
     "return 201 Created when no partial-auth exists but there is a legacy SA relationship and the client is signed up to ITSA" in {
@@ -162,11 +158,10 @@ class ItsaPostSignupControllerISpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn"              -> arn.value,
-          "partialAuth"      -> "",
-          "saAgentRef"       -> "1234",
-          "nino"             -> nino.value,
-          "CESARelationship" -> "true"
+          "agentReferenceNumber" -> arn.value,
+          "saAgentRef"           -> "1234",
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "true"
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> testUrl)
       )
@@ -175,15 +170,15 @@ class ItsaPostSignupControllerISpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn"                     -> arn.value,
-          "Journey"                 -> "CopyExistingCESARelationship",
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "CopyExistingCESARelationship",
           "clientId"                -> mtdItId.value,
           "service"                 -> HMRCMTDIT,
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "true",
           "nino"                    -> nino.value,
           "clientIdType"            -> "mtditid",
-          "CESARelationship"        -> "true"
+          "cesaRelationship"        -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
       )
@@ -238,11 +233,10 @@ class ItsaPostSignupControllerISpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn"              -> arn.value,
-          "partialAuth"      -> "",
-          "saAgentRef"       -> "1234",
-          "nino"             -> nino.value,
-          "CESARelationship" -> "true"
+          "agentReferenceNumber" -> arn.value,
+          "saAgentRef"           -> "1234",
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "true"
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> testUrl)
       )
@@ -251,29 +245,34 @@ class ItsaPostSignupControllerISpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn"                     -> arn.value,
-          "Journey"                 -> "CopyExistingCESARelationship",
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "CopyExistingCESARelationship",
           "clientId"                -> mtdItId.value,
           "service"                 -> HMRCMTDIT,
           "etmpRelationshipCreated" -> "true",
           "enrolmentDelegated"      -> "true",
           "nino"                    -> nino.value,
           "clientIdType"            -> "mtditid",
-          "CESARelationship"        -> "true"
+          "cesaRelationship"        -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
       )
 
       verifyAuditRequestSent(
         1,
-        event = AgentClientRelationshipEvent.ClientTerminatedAgentServiceAuthorisation,
+        event = AgentClientRelationshipEvent.TerminateRelationship,
         detail = Map(
-          "agentReferenceNumber" -> arn.value,
-          "clientId"             -> mtdItId.value,
-          "service"              -> HMRCMTDITSUPP,
-          "deleteStatus"         -> "success"
+          "agentCode"                 -> "NQJUEJCWT14",
+          "credId"                    -> "any",
+          "agentReferenceNumber"      -> arn.value,
+          "clientId"                  -> mtdItId.value,
+          "service"                   -> HMRCMTDITSUPP,
+          "clientIdType"              -> "MTDITID",
+          "enrolmentDeallocated"      -> "true",
+          "etmpRelationshipRemoved"   -> "true",
+          "howRelationshipTerminated" -> "AgentRoleChanged"
         ),
-        tags = Map("transactionName" -> "client terminated agent:service authorisation", "path" -> testUrl)
+        tags = Map("transactionName" -> "terminate-relationship", "path" -> testUrl)
       )
 
     }

@@ -19,11 +19,12 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
+import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -55,8 +56,8 @@ class AuthorisationAcceptController @Inject() (
   def accept(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     invitationService.findInvitation(invitationId).flatMap {
       case Some(invitation) if invitation.status == Pending =>
-        implicit val auditData: AuditData = new AuditData()
-        auditData.set("arn", invitation.arn)
+        implicit val auditData: AuditData = prepareAuditData(invitation)
+
         for {
           enrolment <-
             validationService
@@ -98,6 +99,19 @@ class AuthorisationAcceptController @Inject() (
           NotFound(Json.toJson(ErrorBody("INVITATION_NOT_FOUND", "The specified invitation was not found.")))
         )
     }
+  }
+
+  private def prepareAuditData(invitation: Invitation): AuditData = {
+    val auditData: AuditData = new AuditData()
+    auditData.set(arnKey, invitation.arn)
+    auditData.set(serviceKey, invitation.service)
+    auditData.set(clientIdKey, invitation.clientId)
+    auditData.set(suppliedClientIdKey, invitation.suppliedClientId)
+    auditData.set(clientIdTypeKey, invitation.clientIdType)
+    auditData.set(invitationIdKey, invitation.invitationId)
+    auditData.set(enrolmentDelegatedKey, false)
+    auditData.set(etmpRelationshipCreatedKey, false)
+    auditData
   }
 
 }

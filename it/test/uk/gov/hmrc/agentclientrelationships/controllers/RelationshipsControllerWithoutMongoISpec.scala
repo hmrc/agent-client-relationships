@@ -135,29 +135,17 @@ class RelationshipsControllerWithoutMongoISpec
 
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
-      verifyAuditRequestSent(
-        1,
-        event = AgentClientRelationshipEvent.CreateRelationship,
-        detail = Map(
-          "arn"                     -> arn.value,
-          "nino"                    -> nino.value,
-          "saAgentRef"              -> "foo",
-          "service"                 -> "HMRC-MTD-IT",
-          "clientId"                -> mtditid.value,
-          "clientIdType"            -> "mtditid",
-          "CESARelationship"        -> "true",
-          "etmpRelationshipCreated" -> "false",
-          "enrolmentDelegated"      -> "false",
-          "AgentDBRecord"           -> "false",
-          "Journey"                 -> "CopyExistingCESARelationship"
-        ),
-        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
-      )
+      verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map("arn" -> arn.value, "nino" -> nino.value, "saAgentRef" -> "foo", "CESARelationship" -> "true"),
+        detail = Map(
+          "agentReferenceNumber" -> arn.value,
+          "nino"                 -> nino.value,
+          "saAgentRef"           -> "foo",
+          "cesaRelationship"     -> "true"
+        ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }
@@ -190,15 +178,14 @@ class RelationshipsControllerWithoutMongoISpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "arn"                     -> arn.value,
+          "agentReferenceNumber"    -> arn.value,
           "service"                 -> "mtd-vat",
           "vrn"                     -> vrn.value,
           "oldAgentCodes"           -> oldAgentCode,
           "ESRelationship"          -> "true",
           "etmpRelationshipCreated" -> "false",
           "enrolmentDelegated"      -> "false",
-          "AgentDBRecord"           -> "false",
-          "Journey"                 -> "CopyExistingESRelationship",
+          "howRelationshipCreated"  -> "CopyExistingESRelationship",
           "vrnExistsInEtmp"         -> "true"
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
@@ -207,8 +194,12 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
-        detail =
-          Map("arn" -> arn.value, "ESRelationship" -> "true", "vrn" -> vrn.value, "oldAgentCodes" -> oldAgentCode),
+        detail = Map(
+          "agentReferenceNumber" -> arn.value,
+          "ESRelationship"       -> "true",
+          "vrn"                  -> vrn.value,
+          "oldAgentCodes"        -> oldAgentCode
+        ),
         tags = Map("transactionName" -> "check-es", "path" -> requestPath)
       )
     }
@@ -238,7 +229,12 @@ class RelationshipsControllerWithoutMongoISpec
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map("arn" -> arn.value, "nino" -> nino.value, "saAgentRef" -> "foo", "CESARelationship" -> "true"),
+        detail = Map(
+          "agentReferenceNumber" -> arn.value,
+          "nino"                 -> nino.value,
+          "saAgentRef"           -> "foo",
+          "cesaRelationship"     -> "true"
+        ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
     }
@@ -262,11 +258,10 @@ class RelationshipsControllerWithoutMongoISpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn"              -> arn.value,
-          "nino"             -> nino.value,
-          "saAgentRef"       -> "",
-          "CESARelationship" -> "false",
-          "partialAuth"      -> "true"
+          "agentReferenceNumber" -> arn.value,
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "false",
+          "partialAuth"          -> "true"
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
@@ -291,11 +286,10 @@ class RelationshipsControllerWithoutMongoISpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn"              -> arn.value,
-          "nino"             -> nino.value,
-          "saAgentRef"       -> "",
-          "CESARelationship" -> "false",
-          "partialAuth"      -> "true"
+          "agentReferenceNumber" -> arn.value,
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "false",
+          "partialAuth"          -> "true"
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
@@ -320,11 +314,10 @@ class RelationshipsControllerWithoutMongoISpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn"              -> arn.value,
-          "nino"             -> nino.value,
-          "saAgentRef"       -> "",
-          "CESARelationship" -> "false",
-          "partialAuth"      -> "false"
+          "agentReferenceNumber" -> arn.value,
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "false",
+          "partialAuth"          -> "false"
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
@@ -349,11 +342,10 @@ class RelationshipsControllerWithoutMongoISpec
         1,
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
-          "arn"              -> arn.value,
-          "nino"             -> nino.value,
-          "saAgentRef"       -> "",
-          "CESARelationship" -> "false",
-          "partialAuth"      -> "false"
+          "agentReferenceNumber" -> arn.value,
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "false",
+          "partialAuth"          -> "false"
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
