@@ -105,14 +105,14 @@ private[services] abstract class DeleteRelationshipsService(
                for {
                  isDone <- resumeRelationshipRemoval(record)
                  _ <- if (isDone) {
-                        auditService.sendTerminateRelationshipAuditEvent
+                        auditService.sendTerminateRelationshipAuditEvent()
                         removeDeleteRecord(arn, enrolmentKey)
                       } else Future.unit
                } yield isDone
              case None =>
                for {
                  result <- delete
-                 _ = auditService.sendTerminateRelationshipAuditEvent
+                 _ = auditService.sendTerminateRelationshipAuditEvent()
                } yield result
            }
     } yield ()
@@ -258,7 +258,7 @@ private[services] abstract class DeleteRelationshipsService(
                             s"Terminating recovery of failed de-authorisation $record because timeout has passed."
                           )
                           auditData.set("abandonmentReason", "timeout")
-                          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
+                          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
                           removeDeleteRecord(arn, enrolmentKey).map(_ => true)
                         }
                       case None => Future.successful(true)
@@ -270,7 +270,7 @@ private[services] abstract class DeleteRelationshipsService(
             s"Terminating recovery of failed de-authorisation ($arn, $enrolmentKey) because auth token is invalid"
           )
           auditData.set("abandonmentReason", "unauthorised")
-          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent
+          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
           removeDeleteRecord(arn, enrolmentKey).map(_ => true)
         case NonFatal(_) =>
           Future.successful(false)

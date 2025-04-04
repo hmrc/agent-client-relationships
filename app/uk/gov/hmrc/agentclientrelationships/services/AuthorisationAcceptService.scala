@@ -64,11 +64,11 @@ class AuthorisationAcceptService @Inject() (
       // Remove existing main/supp relationship for arn when changing between main/supp
       _ <- if (isItsa)
              itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-               invitation.service,
-               invitation.arn,
-               if (isAltItsa) None else Some(invitation.clientId),
-               invitation.suppliedClientId,
-               timestamp
+               service = invitation.service,
+               arn = invitation.arn,
+               optMtdItId = if (isAltItsa) None else Some(invitation.clientId),
+               nino = invitation.suppliedClientId,
+               timestamp = timestamp
              )
            else Future.unit
       // Create relationship
@@ -79,12 +79,12 @@ class AuthorisationAcceptService @Inject() (
       _ <- Future.successful(
              if (invitation.service != HMRCMTDITSUPP)
                deauthAcceptedInvitations(
-                 invitation.service,
-                 None,
-                 invitation.clientId,
-                 Some(invitation.invitationId),
-                 isAltItsa,
-                 timestamp
+                 service = invitation.service,
+                 optArn = None,
+                 clientId = invitation.clientId,
+                 optInvitationId = Some(invitation.invitationId),
+                 isAltItsa = isAltItsa,
+                 timestamp = timestamp
                )
              else Future.unit
            )
@@ -92,12 +92,12 @@ class AuthorisationAcceptService @Inject() (
       _ <- Future.successful(
              if (invitation.service == HMRCMTDIT && !isAltItsa)
                deauthAcceptedInvitations(
-                 invitation.service,
-                 None,
-                 invitation.suppliedClientId,
-                 Some(invitation.invitationId),
+                 service = invitation.service,
+                 optArn = None,
+                 clientId = invitation.suppliedClientId,
+                 optInvitationId = Some(invitation.invitationId),
                  isAltItsa = true,
-                 timestamp
+                 timestamp = timestamp
                )
              else Future.unit
            )
@@ -118,38 +118,38 @@ class AuthorisationAcceptService @Inject() (
     auditData: AuditData
   ) = {
     auditData.set(
-      if (isAltItsa) howPartialAuthCreatedKey else howRelationshipCreatedKey,
-      if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
+      key = if (isAltItsa) howPartialAuthCreatedKey else howRelationshipCreatedKey,
+      value = if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
     )
 
     invitation.service match {
       case `HMRCMTDITSUPP` if isAltItsa => // Does not need to deauthorise current agent
         partialAuthRepository
           .create(
-            timestamp,
-            Arn(invitation.arn),
-            invitation.service,
-            Nino(invitation.clientId)
+            created = timestamp,
+            arn = Arn(invitation.arn),
+            service = invitation.service,
+            nino = Nino(invitation.clientId)
           )
-          .andThen(_ => auditService.sendCreatePartialAuthAuditEvent)
+          .andThen(_ => auditService.sendCreatePartialAuthAuditEvent())
       case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
         deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
           partialAuthRepository
             .create(
-              timestamp,
-              Arn(invitation.arn),
-              invitation.service,
-              Nino(invitation.clientId)
+              created = timestamp,
+              arn = Arn(invitation.arn),
+              service = invitation.service,
+              nino = Nino(invitation.clientId)
             )
-            .andThen(_ => auditService.sendCreatePartialAuthAuditEvent)
+            .andThen(_ => auditService.sendCreatePartialAuthAuditEvent())
         }
       case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
         deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
           createRelationshipsService
             .createRelationship(
-              Arn(invitation.arn),
-              enrolment,
-              Set(),
+              arn = Arn(invitation.arn),
+              enrolmentKey = enrolment,
+              oldReferences = Set(),
               failIfCreateRecordFails = false,
               failIfAllocateAgentInESFails = true
             )
@@ -158,18 +158,18 @@ class AuthorisationAcceptService @Inject() (
       case `HMRCPIR` => // AFI handles its own deauthorisations
         agentFiRelationshipConnector
           .createRelationship(
-            Arn(invitation.arn),
-            invitation.service,
-            invitation.clientId,
-            LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
+            arn = Arn(invitation.arn),
+            service = invitation.service,
+            clientId = invitation.clientId,
+            acceptedDate = LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
           )
-          .andThen(_ => auditService.sendCreateRelationshipAuditEvent)
+          .andThen(_ => auditService.sendCreateRelationshipAuditEvent())
       case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
         createRelationshipsService
           .createRelationship(
-            Arn(invitation.arn),
-            enrolment,
-            Set(),
+            arn = Arn(invitation.arn),
+            enrolmentKey = enrolment,
+            oldReferences = Set(),
             failIfCreateRecordFails = false,
             failIfAllocateAgentInESFails = true
           )
@@ -186,9 +186,9 @@ class AuthorisationAcceptService @Inject() (
               implicit val auditData: AuditData = new AuditData()
               auditData.set(howPartialAuthTerminatedKey, agentReplacement)
               auditService.sendTerminatePartialAuthAuditEvent(
-                mainAuth.arn,
-                mainAuth.service,
-                mainAuth.nino
+                arn = mainAuth.arn,
+                service = mainAuth.service,
+                nino = mainAuth.nino
               )
             }
             result

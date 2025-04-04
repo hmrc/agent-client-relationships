@@ -59,14 +59,15 @@ class AuditData {
 }
 
 @Singleton
-class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Logging {
+class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Logging {
 
   private def collectDetails(data: Map[String, Any], fields: Seq[String]): Seq[(String, Any)] =
-    fields.flatMap { field =>
-      data.get(field).map(value => (field, value))
-    }
+    for {
+      field <- fields
+      value <- data.get(field)
+    } yield (field, value)
 
-  val createRelationshipDetailsFields: Seq[String] = Seq(
+  private val createRelationshipDetailsFields: Seq[String] = Seq(
     agentCodeKey,
     credIdKey,
     arnKey,
@@ -82,7 +83,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     invitationIdKey
   )
 
-  val createPartialAuthDetailsFields: Seq[String] = Seq(
+  private val createPartialAuthDetailsFields: Seq[String] = Seq(
     arnKey,
     serviceKey,
     clientIdKey,
@@ -91,8 +92,8 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     invitationIdKey
   )
 
-  // Needs removing when VAT code is dropped
-  val createRelationshipDetailsFieldsForMtdVat: Seq[String] = Seq(
+  // TODO Needs removing when we get the green light to remove legacy VAT code
+  private val createRelationshipDetailsFieldsForMtdVat: Seq[String] = Seq(
     agentCodeKey,
     credIdKey,
     arnKey,
@@ -106,10 +107,24 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     "vrnExistsInEtmp"
   )
 
-  val CheckCESADetailsAndPartialAuthFields: Seq[String] =
-    Seq(agentCodeKey, credIdKey, arnKey, saAgentRefKey, cesaRelationshipKey, ninoKey, "partialAuth")
+  private val checkCesaDetailsAndPartialAuthFields: Seq[String] = Seq(
+    agentCodeKey,
+    credIdKey,
+    arnKey,
+    saAgentRefKey,
+    cesaRelationshipKey,
+    ninoKey,
+    "partialAuth"
+  )
 
-  val CheckESDetailsFields: Seq[String] = Seq(agentCodeKey, credIdKey, "oldAgentCodes", "vrn", arnKey, "ESRelationship")
+  private val checkEsDetailsFields: Seq[String] = Seq(
+    agentCodeKey,
+    credIdKey,
+    "oldAgentCodes",
+    "vrn",
+    arnKey,
+    "ESRelationship"
+  )
 
   private val terminateRelationshipFields: Seq[String] = Seq(
     agentCodeKey,
@@ -131,7 +146,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     howPartialAuthTerminatedKey
   )
 
-  val recoveryOfDeleteRelationshipDetailsFields: Seq[String] = Seq(
+  private val recoveryOfDeleteRelationshipDetailsFields: Seq[String] = Seq(
     "agentReferenceNumber",
     clientIdKey,
     clientIdTypeKey,
@@ -144,7 +159,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     "abandonmentReason"
   )
 
-  def sendCreateRelationshipAuditEvent(implicit
+  def sendCreateRelationshipAuditEvent()(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -156,7 +171,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
       collectDetails(auditData.getDetails, createRelationshipDetailsFields)
     )
 
-  def sendCreatePartialAuthAuditEvent(implicit
+  def sendCreatePartialAuthAuditEvent()(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -168,8 +183,8 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
       collectDetails(auditData.getDetails, createPartialAuthDetailsFields)
     )
 
-  // Needs removing when VAT code is dropped
-  def sendCreateRelationshipAuditEventForMtdVat(implicit
+  // TODO Needs removing when we get the green light to remove legacy VAT code
+  def sendCreateRelationshipAuditEventForMtdVat()(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -181,7 +196,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
       collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat)
     )
 
-  def sendCheckCESAAndPartialAuthAuditEvent(implicit
+  def sendCheckCesaAndPartialAuthAuditEvent()(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -190,10 +205,10 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     auditEvent(
       AgentClientRelationshipEvent.CheckCESA,
       "check-cesa",
-      collectDetails(auditData.getDetails, CheckCESADetailsAndPartialAuthFields)
+      collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
     )
 
-  def sendCheckESAuditEvent(implicit
+  def sendCheckEsAuditEvent()(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -202,10 +217,10 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     auditEvent(
       AgentClientRelationshipEvent.CheckES,
       "check-es",
-      collectDetails(auditData.getDetails, CheckESDetailsFields)
+      collectDetails(auditData.getDetails, checkEsDetailsFields)
     )
 
-  def sendTerminateRelationshipAuditEvent(implicit
+  def sendTerminateRelationshipAuditEvent()(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -254,7 +269,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
 
     setAuditDataForTermination(arn, enrolmentKey)
 
-    sendTerminateRelationshipAuditEvent
+    sendTerminateRelationshipAuditEvent()
   }
 
   def auditForAgentReplacement(
@@ -269,7 +284,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     auditData.set(enrolmentDeallocatedKey, true)
     auditData.set(etmpRelationshipRemovedKey, true)
 
-    sendTerminateRelationshipAuditEvent
+    sendTerminateRelationshipAuditEvent()
   }
 
   def sendTerminatePartialAuthAuditEvent(
@@ -308,7 +323,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     )
   }
 
-  def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent(implicit
+  def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()(implicit
     hc: HeaderCarrier,
     request: Request[Any],
     auditData: AuditData,
@@ -354,37 +369,37 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
 
 object AuditKeys {
   // Keys
-  val agentCodeKey = "agentCode"
-  val credIdKey = "credId"
-  val arnKey = "agentReferenceNumber"
-  val saAgentRefKey = "saAgentRef"
-  val serviceKey = "service"
-  val clientIdKey = "clientId"
-  val suppliedClientIdKey = "suppliedClientId"
-  val clientIdTypeKey = "clientIdType"
-  val cesaRelationshipKey = "cesaRelationship"
-  val etmpRelationshipCreatedKey = "etmpRelationshipCreated"
-  val etmpRelationshipRemovedKey = "etmpRelationshipRemoved"
-  val enrolmentDelegatedKey = "enrolmentDelegated"
-  val enrolmentDeallocatedKey = "enrolmentDeallocated"
-  val ninoKey = "nino"
-  val howRelationshipCreatedKey = "howRelationshipCreated"
-  val howRelationshipTerminatedKey = "howRelationshipTerminated"
-  val howPartialAuthTerminatedKey = "howPartialAuthorisationTerminated"
-  val howPartialAuthCreatedKey = "howPartialAuthorisationCreated"
+  val agentCodeKey: String = "agentCode"
+  val credIdKey: String = "credId"
+  val arnKey: String = "agentReferenceNumber"
+  val saAgentRefKey: String = "saAgentRef"
+  val serviceKey: String = "service"
+  val clientIdKey: String = "clientId"
+  val suppliedClientIdKey: String = "suppliedClientId"
+  val clientIdTypeKey: String = "clientIdType"
+  val cesaRelationshipKey: String = "cesaRelationship"
+  val etmpRelationshipCreatedKey: String = "etmpRelationshipCreated"
+  val etmpRelationshipRemovedKey: String = "etmpRelationshipRemoved"
+  val enrolmentDelegatedKey: String = "enrolmentDelegated"
+  val enrolmentDeallocatedKey: String = "enrolmentDeallocated"
+  val ninoKey: String = "nino"
+  val howRelationshipCreatedKey: String = "howRelationshipCreated"
+  val howRelationshipTerminatedKey: String = "howRelationshipTerminated"
+  val howPartialAuthTerminatedKey: String = "howPartialAuthorisationTerminated"
+  val howPartialAuthCreatedKey: String = "howPartialAuthorisationCreated"
 
-  val invitationIdKey = "invitationId"
+  val invitationIdKey: String = "invitationId"
 
   // Create Relationship
-  val copyExistingCesa = "CopyExistingCESARelationship"
-  val clientAcceptedInvitation = "ClientAcceptedInvitation"
-  val hmrcAcceptedInvitation = "HMRCAcceptedInvitation"
-  val partialAuth = "PartialAuth"
+  val copyExistingCesa: String = "CopyExistingCESARelationship"
+  val clientAcceptedInvitation: String = "ClientAcceptedInvitation"
+  val hmrcAcceptedInvitation: String = "HMRCAcceptedInvitation"
+  val partialAuth: String = "PartialAuth"
 
   // Terminate Relationship
-  val clientLedTermination = "ClientLedTermination"
-  val hmrcLedTermination = "HMRCLedTermination"
-  val agentLedTermination = "AgentLedTermination"
-  val agentReplacement = "AgentReplacement"
-  val agentRoleChange = "AgentRoleChanged"
+  val clientLedTermination: String = "ClientLedTermination"
+  val hmrcLedTermination: String = "HMRCLedTermination"
+  val agentLedTermination: String = "AgentLedTermination"
+  val agentReplacement: String = "AgentReplacement"
+  val agentRoleChange: String = "AgentRoleChanged"
 }

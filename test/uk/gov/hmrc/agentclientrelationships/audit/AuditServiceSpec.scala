@@ -66,7 +66,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
       await(
         service
-          .sendCreateRelationshipAuditEvent(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext])
+          .sendCreateRelationshipAuditEvent()(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext])
       )
 
       eventually {
@@ -118,7 +118,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("cesaRelationship", true)
 
       await(
-        service.sendCheckCESAAndPartialAuthAuditEvent(
+        service.sendCheckCesaAndPartialAuthAuditEvent()(
           hc,
           FakeRequest("GET", "/path"),
           auditData,

@@ -344,11 +344,11 @@ class CheckAndCopyRelationshipsService @Inject() (
                         )
                           .map {
                             case Some(_) =>
-                              auditService.sendCreateRelationshipAuditEventForMtdVat
+                              auditService.sendCreateRelationshipAuditEventForMtdVat()
                               mark("Count-CopyRelationship-VAT-FoundAndCopied")
                               FoundAndCopied
                             case None =>
-                              auditService.sendCreateRelationshipAuditEventForMtdVat
+                              auditService.sendCreateRelationshipAuditEventForMtdVat()
                               mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
                               logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
                               FoundButLockedCouldNotCopy
@@ -358,12 +358,12 @@ class CheckAndCopyRelationshipsService @Inject() (
                               s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
                               ex
                             )
-                            auditService.sendCreateRelationshipAuditEventForMtdVat
+                            auditService.sendCreateRelationshipAuditEventForMtdVat()
                             mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
                             FoundAndFailedToCopy
                           }
                       case false =>
-                        auditService.sendCreateRelationshipAuditEventForMtdVat
+                        auditService.sendCreateRelationshipAuditEventForMtdVat()
                         Future.successful(VrnNotFoundInEtmp)
                     }
                     else Future.successful(NotFound)
@@ -394,7 +394,7 @@ class CheckAndCopyRelationshipsService @Inject() (
       _ = auditData.set(saAgentRefKey, matching.mkString(","))
       _ = auditData.set(cesaRelationshipKey, matching.nonEmpty)
     } yield {
-      if (matching.nonEmpty) auditService.sendCheckCESAAndPartialAuthAuditEvent
+      if (matching.nonEmpty) auditService.sendCheckCesaAndPartialAuthAuditEvent()
       matching
     }
   }
@@ -407,7 +407,7 @@ class CheckAndCopyRelationshipsService @Inject() (
       if (matching.isEmpty) {
         aca.getPartialAuth(nino, arn).map { hasPartialAuth =>
           auditData.set("partialAuth", hasPartialAuth.nonEmpty)
-          auditService.sendCheckCESAAndPartialAuthAuditEvent
+          auditService.sendCheckCesaAndPartialAuthAuditEvent()
           hasPartialAuth.nonEmpty
         }
       } else Future successful true
@@ -438,7 +438,7 @@ class CheckAndCopyRelationshipsService @Inject() (
                   }
       _ = auditData.set("oldAgentCodes", matching.map(_.value).mkString(","))
       _ = auditData.set("ESRelationship", matching.nonEmpty)
-      _ <- auditService.sendCheckESAuditEvent
+      _ <- auditService.sendCheckEsAuditEvent()
     } yield matching
   }
 

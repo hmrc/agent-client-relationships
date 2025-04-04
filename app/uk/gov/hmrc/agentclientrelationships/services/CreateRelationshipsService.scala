@@ -92,7 +92,7 @@ class CreateRelationshipsService @Inject() (
           etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey)
           if etmpRecordCreationStatus == DbUpdateSucceeded
           esRecordCreationStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails)
-          _ = auditService.sendCreateRelationshipAuditEvent
+          _ = auditService.sendCreateRelationshipAuditEvent()
         } yield esRecordCreationStatus
       }
 
@@ -282,7 +282,7 @@ class CreateRelationshipsService @Inject() (
               etmpStatus <- createEtmpRecord(arn, enrolmentKey)
               if etmpStatus == DbUpdateSucceeded
               esStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
-              _ = auditService.sendCreateRelationshipAuditEvent
+              _ = auditService.sendCreateRelationshipAuditEvent()
             } yield esStatus
           case (false, true) =>
             logger.warn(
@@ -291,7 +291,7 @@ class CreateRelationshipsService @Inject() (
             for {
               agentUser <- retrieveAgentUser(arn)
               esStatus  <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
-              _ = auditService.sendCreateRelationshipAuditEvent
+              _ = auditService.sendCreateRelationshipAuditEvent()
             } yield esStatus
           case (true, false) =>
             logger.warn(
@@ -299,7 +299,7 @@ class CreateRelationshipsService @Inject() (
                 s"This should not happen because we always create the ETMP relationship first. Record dateTime: ${relationshipCopyRecord.dateTime}"
             )
             createEtmpRecord(arn, enrolmentKey).map { result =>
-              auditService.sendCreateRelationshipAuditEvent
+              auditService.sendCreateRelationshipAuditEvent()
               result
             }
           case (false, false) =>
