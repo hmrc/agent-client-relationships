@@ -38,8 +38,8 @@ import scala.jdk.CollectionConverters.MapHasAsScala
 import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
-  val CreateRelationship, CheckCESA, CheckES, TerminateRelationship, TerminatePartialAuthorisation,
-    RecoveryOfDeleteRelationshipHasBeenAbandoned =
+  val CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES, TerminateRelationship,
+    TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned =
     Value
   type AgentClientRelationshipEvent = Value
 }
@@ -66,22 +66,6 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
       data.get(field).map(value => (field, value))
     }
 
-  val createRelationshipFields: Seq[String] = Seq(
-    "agentCode",
-    "credId",
-    "agentReferenceNumber",
-    "saAgentRef", // only get a value with CopyCESARelationship
-    "service", // this can hold a number of different values for different services
-    "clientId",
-    "clientIdType",
-    "cesaRelationship", // can be true or false
-    "etmpRelationshipCreated", // can be true or false
-    "enrolmentDelegated", // can be true or false
-    "nino",
-    "howRelationshipCreated",
-    "invitationId"
-  )
-
   val createRelationshipDetailsFields: Seq[String] = Seq(
     agentCodeKey,
     credIdKey,
@@ -94,7 +78,17 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     etmpRelationshipCreatedKey,
     enrolmentDelegatedKey,
     ninoKey,
-    howRelationshipCreatedKey
+    howRelationshipCreatedKey,
+    invitationIdKey
+  )
+
+  val createPartialAuthDetailsFields: Seq[String] = Seq(
+    arnKey,
+    serviceKey,
+    clientIdKey,
+    clientIdTypeKey,
+    howPartialAuthCreatedKey,
+    invitationIdKey
   )
 
   // Needs removing when VAT code is dropped
@@ -160,6 +154,18 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
       AgentClientRelationshipEvent.CreateRelationship,
       "create-relationship",
       collectDetails(auditData.getDetails, createRelationshipDetailsFields)
+    )
+
+  def sendCreatePartialAuthAuditEvent(implicit
+    hc: HeaderCarrier,
+    request: Request[Any],
+    auditData: AuditData,
+    ec: ExecutionContext
+  ): Future[Unit] =
+    auditEvent(
+      AgentClientRelationshipEvent.CreatePartialAuthorisation,
+      "create-partial-auth",
+      collectDetails(auditData.getDetails, createPartialAuthDetailsFields)
     )
 
   // Needs removing when VAT code is dropped
@@ -354,6 +360,7 @@ object AuditKeys {
   val saAgentRefKey = "saAgentRef"
   val serviceKey = "service"
   val clientIdKey = "clientId"
+  val suppliedClientIdKey = "suppliedClientId"
   val clientIdTypeKey = "clientIdType"
   val cesaRelationshipKey = "cesaRelationship"
   val etmpRelationshipCreatedKey = "etmpRelationshipCreated"
@@ -364,6 +371,7 @@ object AuditKeys {
   val howRelationshipCreatedKey = "howRelationshipCreated"
   val howRelationshipTerminatedKey = "howRelationshipTerminated"
   val howPartialAuthTerminatedKey = "howPartialAuthorisationTerminated"
+  val howPartialAuthCreatedKey = "howPartialAuthorisationCreated"
 
   val invitationIdKey = "invitationId"
 

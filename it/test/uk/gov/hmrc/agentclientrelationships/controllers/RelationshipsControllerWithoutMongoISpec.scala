@@ -135,23 +135,7 @@ class RelationshipsControllerWithoutMongoISpec
 
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
-      verifyAuditRequestSent(
-        1,
-        event = AgentClientRelationshipEvent.CreateRelationship,
-        detail = Map(
-          "agentReferenceNumber"    -> arn.value,
-          "nino"                    -> nino.value,
-          "saAgentRef"              -> "foo",
-          "service"                 -> "HMRC-MTD-IT",
-          "clientId"                -> mtditid.value,
-          "clientIdType"            -> "mtditid",
-          "cesaRelationship"        -> "true",
-          "etmpRelationshipCreated" -> "false",
-          "enrolmentDelegated"      -> "false",
-          "howRelationshipCreated"  -> "CopyExistingCESARelationship"
-        ),
-        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
-      )
+      verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
 
       verifyAuditRequestSent(
         1,

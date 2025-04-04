@@ -139,7 +139,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     currentUser: CurrentUser
   ): Future[CheckAndCopyResult] = {
 
-    auditData.set(howRelationshipCreatedKey, "CopyExistingCESARelationship")
+    auditData.set(howRelationshipCreatedKey, copyExistingCesa)
     auditData.set(serviceKey, HMRCMTDIT)
 
     relationshipCopyRepository.findBy(arn, EnrolmentKey(Service.MtdIt, mtdItId)).flatMap {
@@ -160,7 +160,6 @@ class CheckAndCopyRelationshipsService @Inject() (
                         .flatMap {
                           case Some(_) =>
                             for {
-                              _ <- auditService.sendCreateRelationshipAuditEvent
                               _ <-
                                 nino.fold[Future[Boolean]](Future.failed(new RuntimeException("nino not found")))(ni =>
                                   itsaDeauthAndCleanupService.deleteSameAgentRelationship(
@@ -173,7 +172,6 @@ class CheckAndCopyRelationshipsService @Inject() (
                               _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
                             } yield FoundAndCopied
                           case None =>
-                            auditService.sendCreateRelationshipAuditEvent
                             mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
                             logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
                             Future.successful(FoundButLockedCouldNotCopy)
@@ -183,7 +181,6 @@ class CheckAndCopyRelationshipsService @Inject() (
                             s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})",
                             ex
                           )
-                          auditService.sendCreateRelationshipAuditEvent
                           mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                           FoundAndFailedToCopy
                         }
@@ -236,7 +233,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     auditData: AuditData
   ): Future[Option[DbUpdateStatus]] = {
     auditData.set(serviceKey, s"$service")
-    auditData.set(howRelationshipCreatedKey, "PartialAuth")
+    auditData.set(howRelationshipCreatedKey, partialAuth)
     createRelationshipsService
       .createRelationship(
         arn,
@@ -274,7 +271,6 @@ class CheckAndCopyRelationshipsService @Inject() (
             tryCreateRelationshipFromPartialAuth(partialAuth, arn, mtdItId).flatMap {
               case Some(DbUpdateSucceeded) =>
                 for {
-                  _ <- auditService.sendCreateRelationshipAuditEvent
                   _ <- endPartialAuth(arn, partialAuth, mNino, mtdItId)
                   _ <- itsaDeauthAndCleanupService.deleteSameAgentRelationship(
                          partialAuth,
@@ -395,7 +391,7 @@ class CheckAndCopyRelationshipsService @Inject() (
       matching <- intersection(references) {
                     mapping.getSaAgentReferencesFor(arn)
                   }
-      _ = auditData.set("saAgentRef", matching.mkString(","))
+      _ = auditData.set(saAgentRefKey, matching.mkString(","))
       _ = auditData.set(cesaRelationshipKey, matching.nonEmpty)
     } yield {
       if (matching.nonEmpty) auditService.sendCheckCESAAndPartialAuthAuditEvent

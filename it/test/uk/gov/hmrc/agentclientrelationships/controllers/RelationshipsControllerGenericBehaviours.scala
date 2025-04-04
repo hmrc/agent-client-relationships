@@ -202,6 +202,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         result.status shouldBe 201
         if (enrolmentKey.service == Service.HMRCMTDITSUPP) verifyNoEnrolmentHasBeenDeallocated()
         else verifyEnrolmentDeallocationAttempt(groupId = "zoo", enrolmentKey = enrolmentKey)
+
+        verifyCreateRelationshipAuditSent(
+          requestPath,
+          arn.value,
+          clientId.value,
+          clientIdType,
+          serviceId,
+          "ClientAcceptedInvitation"
+        )
       }
 
       "return 201 when the relationship exists and the clientId matches that of current Client user" in new StubsForThisScenario {
@@ -209,6 +218,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
+
+        verifyCreateRelationshipAuditSent(
+          requestPath,
+          arn.value,
+          clientId.value,
+          clientIdType,
+          serviceId,
+          "ClientAcceptedInvitation"
+        )
 
         if (enrolmentKey.service == Service.HMRCMTDITSUPP) {
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
@@ -241,6 +259,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
+
+        verifyCreateRelationshipAuditSent(
+          requestPath,
+          arn.value,
+          clientId.value,
+          clientIdType,
+          serviceId,
+          "HMRCAcceptedInvitation"
+        )
       }
 
       "return 201 when an agent tries to create a relationship" in {
@@ -256,6 +283,16 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
+
+        verifyCreateRelationshipAuditSent(
+          requestPath,
+          arn.value,
+          clientId.value,
+          clientIdType,
+          serviceId,
+          "ClientAcceptedInvitation",
+          agentCode = Some("NQJUEJCWT14")
+        )
       }
 
       "return 423 Locked if there is a record in the lock repository" in {
@@ -278,6 +315,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe LOCKED
 
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
 
       "return 201 when the relationship exists and previous relationships too but ARNs not found" in new StubsForThisScenario {
@@ -288,6 +326,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
+
+        verifyCreateRelationshipAuditSent(
+          requestPath,
+          arn.value,
+          clientId.value,
+          clientIdType,
+          serviceId,
+          "ClientAcceptedInvitation"
+        )
       }
 
       "return 201 when there are no previous relationships to deallocate" in {
@@ -303,6 +350,15 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
+
+        verifyCreateRelationshipAuditSent(
+          requestPath,
+          arn.value,
+          clientId.value,
+          clientIdType,
+          serviceId,
+          "ClientAcceptedInvitation"
+        )
       }
 
       "return 500 when ES1 is unavailable" in new StubsForThisScenario {
@@ -314,6 +370,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
+
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
 
       "return 500 when ES8 is unavailable" in {
@@ -329,6 +387,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
         (result.json \ "message").asOpt[String] shouldBe None
+
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
 
       "return 500 when DES/IF is unavailable" in {
@@ -344,6 +404,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
         (result.json \ "message").asOpt[String] shouldBe None
+
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
 
       "return 500 if DES/IF returns 404" in {
@@ -358,6 +420,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
         (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
+
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
 
       "return 403 for a client with a mismatched clientId" in {
@@ -367,6 +431,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 403
+
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
 
       "return 403 for a client with no client enrolments" in {
@@ -375,6 +441,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 403
+
+        verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
     }
   }

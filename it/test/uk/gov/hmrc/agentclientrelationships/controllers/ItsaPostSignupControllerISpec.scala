@@ -125,14 +125,6 @@ class ItsaPostSignupControllerISpec
         ),
         tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
       )
-
-      verifyTerminatePartialAuthAuditSent(
-        testUrl,
-        arn.value,
-        nino.value,
-        HMRCMTDIT,
-        "AgentRoleChanged"
-      )
     }
 
     "return 201 Created when no partial-auth exists but there is a legacy SA relationship and the client is signed up to ITSA" in {

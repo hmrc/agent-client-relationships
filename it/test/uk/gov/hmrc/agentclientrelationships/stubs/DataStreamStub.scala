@@ -25,7 +25,37 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.A
 
 trait DataStreamStub extends Eventually {
 
-  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(50, Millis)))
+  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(1, Seconds)), scaled(Span(50, Millis)))
+
+  def verifyCreateRelationshipAuditSent(
+    requestPath: String,
+    arn: String,
+    clientId: String,
+    clientIdType: String,
+    service: String,
+    howRelationshipCreated: String,
+    enrolmentDelegated: Boolean = true,
+    etmpRelationshipCreated: Boolean = true,
+    credId: Option[String] = Some("any"),
+    agentCode: Option[String] = Some("bar")
+  ): Unit =
+    verifyAuditRequestSent(
+      1,
+      event = AgentClientRelationshipEvent.CreateRelationship,
+      detail = Map(
+        "agentReferenceNumber"    -> arn,
+        "service"                 -> service,
+        "clientId"                -> clientId,
+        "clientIdType"            -> clientIdType,
+        "etmpRelationshipCreated" -> etmpRelationshipCreated.toString,
+        "enrolmentDelegated"      -> enrolmentDelegated.toString,
+        "howRelationshipCreated"  -> howRelationshipCreated
+      ) ++ Seq(
+        credId.map(id => "credId" -> id),
+        agentCode.map(code => "agentCode" -> code)
+      ).flatten,
+      tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+    )
 
   def verifyTerminateRelationshipAuditSent(
     requestPath: String,

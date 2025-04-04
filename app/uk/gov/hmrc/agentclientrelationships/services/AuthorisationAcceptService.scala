@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{agentReplacement, howPartialAuthTerminatedKey}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
@@ -114,24 +114,34 @@ class AuthorisationAcceptService @Inject() (
   )(implicit
     hc: HeaderCarrier,
     request: Request[Any],
+    currentUser: CurrentUser,
     auditData: AuditData
-  ) =
+  ) = {
+    auditData.set(
+      if (isAltItsa) howPartialAuthCreatedKey else howRelationshipCreatedKey,
+      if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
+    )
+
     invitation.service match {
       case `HMRCMTDITSUPP` if isAltItsa => // Does not need to deauthorise current agent
-        partialAuthRepository.create(
-          timestamp,
-          Arn(invitation.arn),
-          invitation.service,
-          Nino(invitation.clientId)
-        )
-      case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
-        deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
-          partialAuthRepository.create(
+        partialAuthRepository
+          .create(
             timestamp,
             Arn(invitation.arn),
             invitation.service,
             Nino(invitation.clientId)
           )
+          .andThen(_ => auditService.sendCreatePartialAuthAuditEvent)
+      case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
+        deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
+          partialAuthRepository
+            .create(
+              timestamp,
+              Arn(invitation.arn),
+              invitation.service,
+              Nino(invitation.clientId)
+            )
+            .andThen(_ => auditService.sendCreatePartialAuthAuditEvent)
         }
       case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
         deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
@@ -146,12 +156,14 @@ class AuthorisationAcceptService @Inject() (
             .map(_.getOrElse(throw CreateRelationshipLocked))
         }
       case `HMRCPIR` => // AFI handles its own deauthorisations
-        agentFiRelationshipConnector.createRelationship(
-          Arn(invitation.arn),
-          invitation.service,
-          invitation.clientId,
-          LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
-        )
+        agentFiRelationshipConnector
+          .createRelationship(
+            Arn(invitation.arn),
+            invitation.service,
+            invitation.clientId,
+            LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
+          )
+          .andThen(_ => auditService.sendCreateRelationshipAuditEvent)
       case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
         createRelationshipsService
           .createRelationship(
@@ -163,6 +175,7 @@ class AuthorisationAcceptService @Inject() (
           )
           .map(_.getOrElse(throw CreateRelationshipLocked))
     }
+  }
 
   private def deauthPartialAuth(nino: String, timestamp: Instant)(implicit hc: HeaderCarrier, request: Request[Any]) =
     partialAuthRepository.findMainAgent(nino).flatMap {

@@ -92,6 +92,7 @@ class CreateRelationshipsService @Inject() (
           etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey)
           if etmpRecordCreationStatus == DbUpdateSucceeded
           esRecordCreationStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails)
+          _ = auditService.sendCreateRelationshipAuditEvent
         } yield esRecordCreationStatus
       }
 
@@ -258,6 +259,7 @@ class CreateRelationshipsService @Inject() (
       _.toOption.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
     }
 
+  // This seems to only get triggered by the relationship check endpoint, as a result it doesn't seem to happen at all
   def resumeRelationshipCreation(
     relationshipCopyRecord: RelationshipCopyRecord,
     arn: Arn,
@@ -280,6 +282,7 @@ class CreateRelationshipsService @Inject() (
               etmpStatus <- createEtmpRecord(arn, enrolmentKey)
               if etmpStatus == DbUpdateSucceeded
               esStatus <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
+              _ = auditService.sendCreateRelationshipAuditEvent
             } yield esStatus
           case (false, true) =>
             logger.warn(
@@ -288,13 +291,17 @@ class CreateRelationshipsService @Inject() (
             for {
               agentUser <- retrieveAgentUser(arn)
               esStatus  <- createEsRecord(arn, enrolmentKey, agentUser, failIfAllocateAgentInESFails = false)
+              _ = auditService.sendCreateRelationshipAuditEvent
             } yield esStatus
           case (true, false) =>
             logger.warn(
               s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
                 s"This should not happen because we always create the ETMP relationship first. Record dateTime: ${relationshipCopyRecord.dateTime}"
             )
-            createEtmpRecord(arn, enrolmentKey)
+            createEtmpRecord(arn, enrolmentKey).map { result =>
+              auditService.sendCreateRelationshipAuditEvent
+              result
+            }
           case (false, false) =>
             logger.warn(
               s"recoverRelationshipCreation called for ${arn.value}, ${enrolmentKey.tag} when no recovery needed"
