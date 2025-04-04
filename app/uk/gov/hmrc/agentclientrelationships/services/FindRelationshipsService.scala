@@ -64,8 +64,9 @@ class FindRelationshipsService @Inject() (
       mtdItId <- EitherT.fromOptionF(ifConnector.getMtdIdFor(nino), RelationshipFailureResponse.TaxIdentifierError)
       relationships <-
         EitherT(relationshipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
-          .leftFlatMap(recoverNotFoundRelationship)
-    } yield relationships.filter(_.isActive)).value
+    } yield relationships.filter(_.isActive))
+      .leftFlatMap(recoverGetRelationships)
+      .value
 
   def getActiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
@@ -98,7 +99,7 @@ class FindRelationshipsService @Inject() (
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     ) {
       EitherT(relationshipConnector.getAllRelationships(taxIdentifier = taxIdentifier, activeOnly = activeOnly))
-        .leftFlatMap(recoverNotFoundRelationship)
+        .leftFlatMap(recoverGetRelationships)
         .value
 
     } else {
@@ -106,15 +107,15 @@ class FindRelationshipsService @Inject() (
       Future.successful(Left(RelationshipFailureResponse.TaxIdentifierError))
     }
 
-  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
-    ec: ExecutionContext
-  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+  private def recoverGetRelationships(
+    relationshipFailureResponse: RelationshipFailureResponse
+  )(implicit ec: ExecutionContext): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
     relationshipFailureResponse match {
-      case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
+      case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended |
+          RelationshipFailureResponse.TaxIdentifierError =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
       case otherError =>
         EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
-
     }
 
   def getInactiveRelationshipsForAgent(
