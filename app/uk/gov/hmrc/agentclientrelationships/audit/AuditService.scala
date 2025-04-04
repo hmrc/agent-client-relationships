@@ -31,10 +31,9 @@ import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters.MapHasAsScala
 import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
@@ -46,7 +45,7 @@ object AgentClientRelationshipEvent extends Enumeration {
 
 class AuditData {
 
-  private val details = new ConcurrentHashMap[String, Any]
+  private val details = mutable.Map[String, Any]()
 
   def set(key: String, value: Any): Unit = {
     details.put(key, value)
@@ -54,7 +53,7 @@ class AuditData {
   }
 
   def getDetails: Map[String, Any] =
-    details.asScala.toMap
+    details.toMap
 
 }
 
