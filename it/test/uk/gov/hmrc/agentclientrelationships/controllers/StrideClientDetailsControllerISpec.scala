@@ -640,6 +640,100 @@ class StrideClientDetailsControllerISpec
 
     }
 
+    "find relationships for partialAuth only when MtdItId do not exists" in {
+      val cr = ClientRelationshipRequest(NinoType.id, nino.value)
+
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+      givenMtdItIdIsUnKnownFor(nino)
+      getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+      givenAfiRelationshipForClientNotFound(nino.value)
+      givenItsaCitizenDetailsExists(nino.value)
+      givenItsaDesignatoryDetailsExists(nino.value)
+      givenAgentRecordFound(arn2, testAgentRecord2)
+      partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(ClientsRelationshipsRequest(Seq(cr)))
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      response.activeClientRelationships.size shouldBe 1
+      val mainRelationships =
+        response.activeClientRelationships.filter(x =>
+          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value
+        )
+
+      val partialAuthRelationships =
+        response.activeClientRelationships.filter(x =>
+          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value
+        )
+
+      val suppRelationships =
+        response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
+
+      val irvRelationships = response.activeClientRelationships.filter(x =>
+        x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id
+      )
+
+      mainRelationships.size shouldBe 0
+      partialAuthRelationships.size shouldBe 1
+      suppRelationships.size shouldBe 0
+      irvRelationships.size shouldBe 0
+
+    }
+
+    "find relationships for partialAuth only when mtdItId exists" in {
+      val cr = ClientRelationshipRequest(NinoType.id, nino.value)
+
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+      givenAfiRelationshipForClientNotFound(nino.value)
+      givenItsaCitizenDetailsExists(nino.value)
+      givenItsaDesignatoryDetailsExists(nino.value)
+      givenAgentRecordFound(arn2, testAgentRecord2)
+      partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(ClientsRelationshipsRequest(Seq(cr)))
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      response.activeClientRelationships.size shouldBe 1
+      val mainRelationships =
+        response.activeClientRelationships.filter(x =>
+          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value
+        )
+
+      val partialAuthRelationships =
+        response.activeClientRelationships.filter(x =>
+          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value
+        )
+
+      val suppRelationships =
+        response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
+
+      val irvRelationships = response.activeClientRelationships.filter(x =>
+        x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id
+      )
+
+      mainRelationships.size shouldBe 0
+      partialAuthRelationships.size shouldBe 1
+      suppRelationships.size shouldBe 0
+      irvRelationships.size shouldBe 0
+
+    }
+
     "return only records when relationship exists and do not return when relationship not found" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
         Seq(
