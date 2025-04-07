@@ -66,17 +66,6 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
       value <- data.get(field)
     } yield (field, value)
 
-  private val respondToInvitationFields: Seq[String] = Seq(
-    arnKey,
-    serviceKey,
-    clientIdKey,
-    clientIdTypeKey,
-    respondedByKey,
-    responseKey,
-    invitationIdKey,
-    suppliedClientIdKey
-  )
-
   private val createRelationshipDetailsFields: Seq[String] = Seq(
     agentCodeKey,
     credIdKey,
@@ -169,6 +158,24 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     "abandonmentReason"
   )
 
+  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit
+    hc: HeaderCarrier,
+    request: Request[Any],
+    ec: ExecutionContext
+  ): Future[Unit] =
+    auditEvent(
+      AgentClientRelationshipEvent.CreateInvitation,
+      "create-invitation",
+      Seq(
+        arnKey              -> invitation.arn,
+        serviceKey          -> invitation.service,
+        clientIdKey         -> invitation.clientId,
+        clientIdTypeKey     -> invitation.clientIdType,
+        invitationIdKey     -> invitation.invitationId,
+        suppliedClientIdKey -> invitation.suppliedClientId
+      )
+    )
+
   def sendRespondToInvitationAuditEvent(invitation: Invitation, accepted: Boolean, isStride: Boolean)(implicit
     hc: HeaderCarrier,
     request: Request[Any],
@@ -177,18 +184,15 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     auditEvent(
       AgentClientRelationshipEvent.RespondToInvitation,
       "respond-to-invitation",
-      collectDetails(
-        data = Map(
-          arnKey              -> invitation.arn,
-          serviceKey          -> invitation.service,
-          clientIdKey         -> invitation.clientId,
-          clientIdTypeKey     -> invitation.clientIdType,
-          invitationIdKey     -> invitation.invitationId,
-          suppliedClientIdKey -> invitation.suppliedClientId,
-          responseKey         -> (if (accepted) acceptedInvitation else rejectedInvitation),
-          respondedByKey      -> (if (isStride) respondedByHmrc else respondedByClient)
-        ),
-        fields = createRelationshipDetailsFields
+      Seq(
+        arnKey              -> invitation.arn,
+        serviceKey          -> invitation.service,
+        clientIdKey         -> invitation.clientId,
+        clientIdTypeKey     -> invitation.clientIdType,
+        invitationIdKey     -> invitation.invitationId,
+        suppliedClientIdKey -> invitation.suppliedClientId,
+        responseKey         -> (if (accepted) acceptedInvitation else rejectedInvitation),
+        respondedByKey      -> (if (isStride) respondedByHmrc else respondedByClient)
       )
     )
 
@@ -423,6 +427,7 @@ object AuditKeys {
   val respondedByKey: String = "respondedBy"
   val responseKey: String = "response"
   val invitationIdKey: String = "invitationId"
+  val agentUid: String = "agentReferenceRecordUid"
 
   // Respond to Invitation
   val respondedByHmrc: String = "HMRC"

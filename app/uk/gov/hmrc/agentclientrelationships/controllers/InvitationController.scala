@@ -99,7 +99,10 @@ class InvitationController @Inject() (
 
                 case _ => BadRequest
               },
-              invitation => Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
+              invitation => {
+                auditService.sendCreateInvitationAuditEvent(invitation)
+                Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
+              }
             )
           }
       )

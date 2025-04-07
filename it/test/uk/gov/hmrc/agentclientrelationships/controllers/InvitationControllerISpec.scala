@@ -122,7 +122,7 @@ class InvitationControllerISpec
 
   val dateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
-  "create invitation link" should {
+  "create invitation" should {
 
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
@@ -142,11 +142,8 @@ class InvitationControllerISpec
 
         givenAgentRecordFound(arn, testAgentRecord)
 
-        val result =
-          doAgentPostRequest(
-            s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-            Json.toJson(inputData).toString()
-          )
+        val requestPath = s"/agent-client-relationships/agent/${arn.value}/authorisation-request"
+        val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
         result.status shouldBe 201
 
         val invitationSeq = invitationRepo
@@ -169,6 +166,7 @@ class InvitationControllerISpec
         invitation.service shouldBe inputData.service
         invitation.clientName shouldBe clientName
 
+        verifyCreateInvitationAuditSent(requestPath, invitation)
       }
     )
 
@@ -410,11 +408,9 @@ class InvitationControllerISpec
             Some("personal")
           )
         )
-
-        val result =
-          doAgentPutRequest(
-            s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
-          )
+        val requestPath =
+          s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
+        val result = doAgentPutRequest(requestPath)
         result.status shouldBe 204
 
         val invitationSeq = invitationRepo
@@ -425,6 +421,7 @@ class InvitationControllerISpec
         invitationSeq.head.status shouldBe Rejected
 
         verifyRejectInvitationSent(emailInfo)
+        verifyRespondToInvitationAuditSent(requestPath, pendingInvitation, accepted = false, isStride = false)
       }
     )
 
