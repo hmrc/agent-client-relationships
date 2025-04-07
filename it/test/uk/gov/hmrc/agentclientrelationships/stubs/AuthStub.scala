@@ -335,7 +335,6 @@ trait AuthStub {
   }
 
   // noinspection ScalaStyle
-  // TODO To be replaced with givenLoginClientIndAll OR givenLoginClientBusinessAll TBC
   def givenUserIsSubscribedClient(identifier: TaxIdentifier, withThisGgUserId: String = "12345-credId"): AuthStub = {
     val (service, key, value) = identifier match {
       case Nino(v)    => ("HMRC-NI", "NINO", v)
