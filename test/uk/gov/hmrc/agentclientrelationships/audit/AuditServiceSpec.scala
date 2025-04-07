@@ -51,7 +51,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       )
 
       val auditData = new AuditData()
-      auditData.set("arn", Arn("1234").value)
+      auditData.set("agentReferenceNumber", Arn("1234").value)
       auditData.set("credId", "0000001234567890")
       auditData.set("agentCode", AgentCode("ES1234567890").value)
       auditData.set("saAgentRef", "12313")
@@ -59,15 +59,14 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("clientId", "XX1234")
       auditData.set("clientIdType", "ni")
       auditData.set("nino", Nino("KS969148D").value)
-      auditData.set("CESARelationship", true)
+      auditData.set("cesaRelationship", true)
       auditData.set("etmpRelationshipCreated", true)
       auditData.set("enrolmentDelegated", true)
-      auditData.set("Journey", "CopyExistingCESARelationship")
-      auditData.set("AgentDBRecord", true)
+      auditData.set("howRelationshipCreated", "CopyExistingCESARelationship")
 
       await(
         service
-          .sendCreateRelationshipAuditEvent(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext])
+          .sendCreateRelationshipAuditEvent()(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext])
       )
 
       eventually {
@@ -78,7 +77,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
         sentEvent.auditType shouldBe "CreateRelationship"
         sentEvent.auditSource shouldBe "agent-client-relationships"
-        sentEvent.detail("arn") shouldBe "1234"
+        sentEvent.detail("agentReferenceNumber") shouldBe "1234"
         sentEvent.detail("agentCode") shouldBe "ES1234567890"
         sentEvent.detail("saAgentRef") shouldBe "12313"
         sentEvent.detail("credId") shouldBe "0000001234567890"
@@ -86,11 +85,10 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sentEvent.detail("clientId") shouldBe "XX1234"
         sentEvent.detail("clientIdType") shouldBe "ni"
         sentEvent.detail("nino") shouldBe "KS969148D"
-        sentEvent.detail("CESARelationship") shouldBe "true"
+        sentEvent.detail("cesaRelationship") shouldBe "true"
         sentEvent.detail("etmpRelationshipCreated") shouldBe "true"
         sentEvent.detail("enrolmentDelegated") shouldBe "true"
-        sentEvent.detail("Journey") shouldBe "CopyExistingCESARelationship"
-        sentEvent.detail("AgentDBRecord") shouldBe "true"
+        sentEvent.detail("howRelationshipCreated") shouldBe "CopyExistingCESARelationship"
 
         sentEvent.tags.contains("Authorization") shouldBe false
 
@@ -112,15 +110,15 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       )
 
       val auditData = new AuditData()
-      auditData.set("arn", Arn("1234").value)
+      auditData.set("agentReferenceNumber", Arn("1234").value)
       auditData.set("credId", "0000001234567890")
       auditData.set("agentCode", AgentCode("ES1234567890").value)
       auditData.set("saAgentRef", "12313")
       auditData.set("nino", Nino("KS969148D").value)
-      auditData.set("CESARelationship", true)
+      auditData.set("cesaRelationship", true)
 
       await(
-        service.sendCheckCESAAndPartialAuthAuditEvent(
+        service.sendCheckCesaAndPartialAuthAuditEvent()(
           hc,
           FakeRequest("GET", "/path"),
           auditData,
@@ -136,12 +134,12 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
         sentEvent.auditType shouldBe "CheckCESA"
         sentEvent.auditSource shouldBe "agent-client-relationships"
-        sentEvent.detail("arn") shouldBe "1234"
+        sentEvent.detail("agentReferenceNumber") shouldBe "1234"
         sentEvent.detail("agentCode") shouldBe "ES1234567890"
         sentEvent.detail("saAgentRef") shouldBe "12313"
         sentEvent.detail("credId") shouldBe "0000001234567890"
         sentEvent.detail("nino") shouldBe "KS969148D"
-        sentEvent.detail("CESARelationship") shouldBe "true"
+        sentEvent.detail("cesaRelationship") shouldBe "true"
 
         sentEvent.tags.contains("Authorization") shouldBe false
 

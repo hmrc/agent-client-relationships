@@ -20,6 +20,7 @@ import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import play.api.mvc.Request
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsServiceWithAcr
@@ -46,7 +47,8 @@ trait MockDeleteRelationshipsServiceWithAcr {
         .deleteRelationship(eqs(arn), eqs(enrolment), eqs(affinityGroup))(
           any[HeaderCarrier],
           any[Request[_]],
-          any[CurrentUser]
+          any[CurrentUser],
+          any[AuditData]
         )
     )
       .thenReturn(response)

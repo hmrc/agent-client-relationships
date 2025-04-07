@@ -74,7 +74,7 @@ trait RelationshipsControllerITSASUPP {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "arn"                     -> arn.value,
+            "agentReferenceNumber"    -> arn.value,
             "credId"                  -> "any",
             "agentCode"               -> "bar",
             "nino"                    -> nino.value,
@@ -84,8 +84,7 @@ trait RelationshipsControllerITSASUPP {
             "clientIdType"            -> "mtditid",
             "etmpRelationshipCreated" -> "true",
             "enrolmentDelegated"      -> "true",
-            "AgentDBRecord"           -> "true",
-            "Journey"                 -> "Alt ITSA"
+            "howRelationshipCreated"  -> "Alt ITSA"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )

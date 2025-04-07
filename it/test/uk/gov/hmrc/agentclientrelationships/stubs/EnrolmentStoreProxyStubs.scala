@@ -29,7 +29,7 @@ import uk.gov.hmrc.domain.TaxIdentifier
 
 trait EnrolmentStoreProxyStubs extends Eventually {
 
-  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
+  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(50, Millis)))
 
   private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store"
   private val teBaseUrl = s"/tax-enrolments"

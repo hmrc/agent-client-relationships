@@ -75,7 +75,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "arn"                     -> arn.value,
+            "agentReferenceNumber"    -> arn.value,
             "credId"                  -> "any",
             "agentCode"               -> "bar",
             "oldAgentCodes"           -> oldAgentCode,
@@ -84,8 +84,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
             "ESRelationship"          -> "true",
             "etmpRelationshipCreated" -> "true",
             "enrolmentDelegated"      -> "true",
-            "AgentDBRecord"           -> "true",
-            "Journey"                 -> "CopyExistingESRelationship",
+            "howRelationshipCreated"  -> "CopyExistingESRelationship",
             "vrnExistsInEtmp"         -> "true"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
@@ -95,12 +94,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
-            "arn"            -> arn.value,
-            "credId"         -> "any",
-            "agentCode"      -> "bar",
-            "oldAgentCodes"  -> oldAgentCode,
-            "vrn"            -> vrn.value,
-            "ESRelationship" -> "true"
+            "agentReferenceNumber" -> arn.value,
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "oldAgentCodes"        -> oldAgentCode,
+            "vrn"                  -> vrn.value,
+            "ESRelationship"       -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -126,8 +125,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.CheckES,
-          detail =
-            Map("arn" -> arn.value, "vrn" -> vrn.value, "oldAgentCodes" -> oldAgentCode, "ESRelationship" -> "true"),
+          detail = Map(
+            "agentReferenceNumber" -> arn.value,
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode,
+            "ESRelationship"       -> "true"
+          ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
       }
@@ -189,7 +192,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "arn"                     -> arn.value,
+            "agentReferenceNumber"    -> arn.value,
             "credId"                  -> "any",
             "agentCode"               -> "bar",
             "service"                 -> "mtd-vat",
@@ -198,8 +201,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
             "ESRelationship"          -> "true",
             "etmpRelationshipCreated" -> "true",
             "enrolmentDelegated"      -> "false",
-            "AgentDBRecord"           -> "true",
-            "Journey"                 -> "CopyExistingESRelationship",
+            "howRelationshipCreated"  -> "CopyExistingESRelationship",
             "vrnExistsInEtmp"         -> "true"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
@@ -209,12 +211,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
-            "arn"            -> arn.value,
-            "credId"         -> "any",
-            "agentCode"      -> "bar",
-            "ESRelationship" -> "true",
-            "vrn"            -> vrn.value,
-            "oldAgentCodes"  -> oldAgentCode
+            "agentReferenceNumber" -> arn.value,
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "ESRelationship"       -> "true",
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -240,16 +242,13 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "arn"                     -> arn.value,
-            "service"                 -> "mtd-vat",
-            "vrn"                     -> vrn.value,
-            "oldAgentCodes"           -> oldAgentCode,
-            "ESRelationship"          -> "true",
-            "etmpRelationshipCreated" -> "",
-            "enrolmentDelegated"      -> "",
-            "AgentDBRecord"           -> "",
-            "Journey"                 -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"         -> "false"
+            "agentReferenceNumber"   -> arn.value,
+            "service"                -> "mtd-vat",
+            "vrn"                    -> vrn.value,
+            "oldAgentCodes"          -> oldAgentCode,
+            "ESRelationship"         -> "true",
+            "howRelationshipCreated" -> "CopyExistingESRelationship",
+            "vrnExistsInEtmp"        -> "false"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -258,12 +257,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
-            "arn"            -> arn.value,
-            "credId"         -> "any",
-            "agentCode"      -> "bar",
-            "ESRelationship" -> "true",
-            "vrn"            -> vrn.value,
-            "oldAgentCodes"  -> oldAgentCode
+            "agentReferenceNumber" -> arn.value,
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "ESRelationship"       -> "true",
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -368,12 +367,10 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
-            "arn"            -> arn.value,
-            "vrn"            -> vrn.value,
-            "oldAgentCodes"  -> oldAgentCode,
-            "credId"         -> "",
-            "agentCode"      -> "",
-            "ESRelationship" -> "true"
+            "agentReferenceNumber" -> arn.value,
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode,
+            "ESRelationship"       -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )

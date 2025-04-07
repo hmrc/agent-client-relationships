@@ -142,7 +142,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
         combine(set("active", false), set("lastUpdated", updated))
       )
       .toFuture()
-      .map(_.wasAcknowledged())
+      .map(_.getModifiedCount > 0)
 
   // for example when a partialAuth becomes a MTD relationship we want to delete the partialAuth
   def deleteActivePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] =

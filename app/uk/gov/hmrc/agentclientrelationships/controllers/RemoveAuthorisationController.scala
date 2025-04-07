@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import cats.data.EitherT
 import play.api.Logger
 import play.api.mvc.{Action, ControllerComponents, Request, Result}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
@@ -44,6 +45,7 @@ class RemoveAuthorisationController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   validationService: ValidationService,
+  auditService: AuditService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc)
@@ -101,8 +103,10 @@ class RemoveAuthorisationController @Inject() (
         agentFiRelationshipConnector
           .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
           .map { result =>
-            if (result) Right(true)
-            else Left(RelationshipNotFound)
+            if (result) {
+              auditService.auditForPirTermination(arn, enrolmentKey)
+              Right(true)
+            } else Left(RelationshipNotFound)
           }
           .recover { case error: UpstreamErrorResponse =>
             Left(RelationshipDeleteFailed(error.getMessage))
@@ -114,8 +118,14 @@ class RemoveAuthorisationController @Inject() (
               deauthorisationService
                 .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
                 .map { result =>
-                  if (result) Right(result)
-                  else Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
+                  if (result) {
+                    auditService.sendTerminatePartialAuthAuditEvent(
+                      arn.value,
+                      enrolmentKey.service,
+                      enrolmentKey.oneIdentifier().value
+                    )
+                    Right(result)
+                  } else Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
                 }
             )
           _ <-

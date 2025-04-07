@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{arnKey, cesaRelationshipKey, clientAcceptedInvitation, clientIdKey, clientIdTypeKey, copyExistingCesa, hmrcAcceptedInvitation, howRelationshipCreatedKey, invitationIdKey, saAgentRefKey, serviceKey, suppliedClientIdKey}
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -27,6 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -85,7 +87,14 @@ class RelationshipsController @Inject() (
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
             implicit val auditData: AuditData = new AuditData()
-            auditData.set("arn", arn)
+            auditData.set(arnKey, arn)
+            auditData.set(serviceKey, serviceId)
+            auditData.set(clientIdKey, clientId)
+            auditData.set(clientIdTypeKey, clientIdType)
+            auditData.set(
+              howRelationshipCreatedKey,
+              if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
+            )
 
             createService
               .createRelationship(
@@ -231,11 +240,11 @@ class RelationshipsController @Inject() (
    * */
   def getLegacySaRelationshipStatus(arn: Arn, nino: Nino): Action[AnyContent] = Action async { implicit request =>
     implicit val auditData: AuditData = new AuditData()
-    auditData.set("arn", arn)
-    auditData.set("Journey", "hasLegacyMapping")
-    auditData.set("service", "mtd-it")
-    auditData.set("clientId", nino)
-    auditData.set("clientIdType", "nino")
+    auditData.set(arnKey, arn)
+    auditData.set(howRelationshipCreatedKey, "hasLegacyMapping")
+    auditData.set(serviceKey, "mtd-it")
+    auditData.set(clientIdKey, nino)
+    auditData.set(clientIdTypeKey, "nino")
 
     withAuthorisedAsAgent { arn =>
       des.getClientSaAgentSaReferences(nino).flatMap { references =>
@@ -244,9 +253,9 @@ class RelationshipsController @Inject() (
             .intersection(references)(mappingConnector.getSaAgentReferencesFor(arn))
             .map { matching =>
               if (matching.nonEmpty) {
-                auditData.set("saAgentRef", matching.mkString(","))
-                auditData.set("CESARelationship", matching.nonEmpty)
-                auditService.sendCheckCESAAndPartialAuthAuditEvent
+                auditData.set(saAgentRefKey, matching.mkString(","))
+                auditData.set(cesaRelationshipKey, matching.nonEmpty)
+                auditService.sendCheckCesaAndPartialAuthAuditEvent()
                 NoContent // a legacy SA relationship was found and it is mapped to the Arn
               } else Ok // A legacy SA relationship was found but it is not mapped to the Arn
             }
