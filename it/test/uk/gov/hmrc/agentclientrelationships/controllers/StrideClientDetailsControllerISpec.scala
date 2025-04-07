@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
-import uk.gov.hmrc.agentclientrelationships.model.stride.{ActiveClientsRelationshipResponse, ClientRelationshipRequest, ClientsRelationshipsRequest, InvitationWithAgentName}
+import uk.gov.hmrc.agentclientrelationships.model.stride.{ActiveClientRelationship, ActiveClientsRelationshipResponse, ClientRelationshipRequest, ClientsRelationshipsRequest, InvitationWithAgentName}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuthRelationship, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HIPAgentClientRelationshipStub}
@@ -637,6 +637,78 @@ class StrideClientDetailsControllerISpec
 
         }
       }
+
+    }
+
+    "find relationships for partialAuth only when MtdItId do not exists" in {
+      val cr = ClientRelationshipRequest(NinoType.id, nino.value)
+
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+      givenMtdItIdIsUnKnownFor(nino)
+      getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+      givenAfiRelationshipForClientNotFound(nino.value)
+      givenItsaCitizenDetailsExists(nino.value)
+      givenItsaDesignatoryDetailsExists(nino.value)
+      givenAgentRecordFound(arn2, testAgentRecord2)
+      partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
+
+      val expectedPartialAuthRelationship = ActiveClientRelationship(
+        clientId = cr.clientId,
+        clientName = "Matthew Kovacic",
+        arn = arn2.value,
+        agentName = "DEF Ltd",
+        service = Service.MtdIt.id
+      )
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(ClientsRelationshipsRequest(Seq(cr)))
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
+        Seq(expectedPartialAuthRelationship)
+      )
+
+    }
+
+    "find relationships for partialAuth only when mtdItId exists" in {
+      val cr = ClientRelationshipRequest(NinoType.id, nino.value)
+
+      givenAuthorisedAsStrideUser(req, "someStrideId")
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+      givenAfiRelationshipForClientNotFound(nino.value)
+      givenItsaCitizenDetailsExists(nino.value)
+      givenItsaDesignatoryDetailsExists(nino.value)
+      givenAgentRecordFound(arn2, testAgentRecord2)
+      partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
+
+      val expectedPartialAuthRelationship = ActiveClientRelationship(
+        clientId = cr.clientId,
+        clientName = "Matthew Kovacic",
+        arn = arn2.value,
+        agentName = "DEF Ltd",
+        service = Service.MtdIt.id
+      )
+
+      // Test
+      val result = doAgentPostRequest(
+        requestPath,
+        Json
+          .toJson(ClientsRelationshipsRequest(Seq(cr)))
+          .toString()
+      )
+      result.status shouldBe 200
+      val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
+
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
+        Seq(expectedPartialAuthRelationship)
+      )
 
     }
 
