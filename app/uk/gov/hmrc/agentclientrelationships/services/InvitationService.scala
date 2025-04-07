@@ -20,7 +20,7 @@ import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IFConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, GetBusinessDetailsConnector}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
@@ -39,12 +39,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class InvitationService @Inject() (
-  invitationsRepository: InvitationsRepository,
-  partialAuthRepository: PartialAuthRepository,
-  ifConnector: IFConnector,
-  agentAssuranceConnector: AgentAssuranceConnector,
-  emailService: EmailService,
-  appConfig: AppConfig
+                                    invitationsRepository: InvitationsRepository,
+                                    partialAuthRepository: PartialAuthRepository,
+                                    ifConnector: GetBusinessDetailsConnector,
+                                    agentAssuranceConnector: AgentAssuranceConnector,
+                                    emailService: EmailService,
+                                    appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends Logging {
 

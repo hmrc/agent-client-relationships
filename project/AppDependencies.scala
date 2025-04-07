@@ -2,7 +2,7 @@ import sbt.*
 
 object AppDependencies {
   private val mongoVer = "1.9.0"
-  private val bootstrapVer = "8.6.0"
+  private val bootstrapVer = "9.11.0"
   private val pekkoVersion = "1.0.2"
   val compile: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"            %% "agent-mtd-identifiers"     % "2.2.0",

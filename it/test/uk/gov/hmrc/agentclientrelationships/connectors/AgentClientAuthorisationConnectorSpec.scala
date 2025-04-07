@@ -62,7 +62,7 @@ class AgentClientAuthorisationConnectorSpec
 
     "return a list of services where a record exists with status PartialAuth for client" in {
       givenPartialAuthExistsFor(agentARN, nino, HMRCMTDIT)
-      val result = await(acaConnector.getPartialAuth(nino, agentARN))
+      val result = acaConnector.getPartialAuth(nino, agentARN))
       result shouldBe List(HMRCMTDIT)
     }
 

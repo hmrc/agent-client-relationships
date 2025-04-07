@@ -19,12 +19,15 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -49,40 +52,30 @@ object AgentCodeMappings {
 }
 
 @Singleton
-class MappingConnector @Inject() (httpClient: HttpClient)(implicit
+class MappingConnector @Inject() (httpClient: HttpClientV2)(implicit
   val metrics: Metrics,
   val appConfig: AppConfig,
   val ec: ExecutionContext
-) extends HttpAPIMonitor
+) extends HttpApiMonitor
     with Logging {
 
   def getSaAgentReferencesFor(
     arn: Arn
-  )(implicit hc: HeaderCarrier): Future[Seq[SaAgentReference]] = {
-    val url = new URL(s"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
+  )(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] = {
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {
-      httpClient.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case Status.OK => response.json.as[SaMappings].mappings.map(_.saAgentReference)
-          case other =>
-            logger.error(s"Error in Digital-Mappings getSaAgentReferences: $other, ${response.body}")
-            Seq.empty
-        }
-      }
+      httpClient
+        .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
+        .execute[SaMappings]
+        .map(_.mappings.map(_.saAgentReference)) //TODO: this transformation should happen in service layer, connector should return plain SaMappings
     }
   }
 
-  def getAgentCodesFor(arn: Arn)(implicit hc: HeaderCarrier): Future[Seq[AgentCode]] = {
-    val url = new URL(s"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
+  def getAgentCodesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[AgentCode]] = {
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {
-      httpClient.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case Status.OK => response.json.as[AgentCodeMappings].mappings.map(_.agentCode)
-          case other =>
-            logger.error(s"Error in Digital-Mappings getAgentCodes: $other, ${response.body}")
-            Seq.empty
-        }
-      }
+      httpClient
+        .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
+        .execute[AgentCodeMappings]
+        .map(_.mappings.map(_.agentCode)) //TODO: this transformation should happen in service layer, connector should return plain SaMappings
     }
   }
 }

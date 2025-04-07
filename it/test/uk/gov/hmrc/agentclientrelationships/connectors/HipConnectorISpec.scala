@@ -23,7 +23,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HIPAgentClientRelationshipStub}
@@ -51,7 +51,7 @@ class HipConnectorISpec
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
   val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
-  val hipHeaders: HIPHeaders = app.injector.instanceOf[HIPHeaders]
+  val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -82,7 +82,7 @@ class HipConnectorISpec
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val hipConnector =
-    new HIPConnector(httpClient, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
+    new RelationshipConnectorHip(httpClient, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
@@ -385,7 +385,7 @@ class HipConnectorISpec
       getActiveRelationshipsViaClient(mtdItId, agentARN)
       givenAuditConnector()
 
-      val result = await(hipConnector.getActiveClientRelationships(mtdItId, Service.MtdIt))
+      val result = await(hipConnector.getActiveClientRelationship(mtdItId, Service.MtdIt))
       result.get.arn shouldBe agentARN
     }
 
@@ -393,28 +393,28 @@ class HipConnectorISpec
       getActiveRelationshipsViaClient(mtdItId, agentARN, "ITSAS001")
       givenAuditConnector()
 
-      val result = await(hipConnector.getActiveClientRelationships(mtdItId, Service.MtdItSupp))
+      val result = await(hipConnector.getActiveClientRelationship(mtdItId, Service.MtdItSupp))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Vat service" in {
       getActiveRelationshipsViaClient(vrn, agentARN)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(vrn, Service.Vat))
+      val result = await(hipConnector.getActiveClientRelationship(vrn, Service.Vat))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for CGT service" in {
       getActiveRelationshipsViaClient(cgt, agentARN)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(cgt, Service.CapitalGains))
+      val result = await(hipConnector.getActiveClientRelationship(cgt, Service.CapitalGains))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for TRS (UTR) service" in {
       getActiveRelationshipsViaClient(utr, agentARN)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(utr, Service.Trust))
+      val result = await(hipConnector.getActiveClientRelationship(utr, Service.Trust))
       result.get.arn shouldBe agentARN
 
     }
@@ -422,7 +422,7 @@ class HipConnectorISpec
     "return existing active relationships for specified clientId for TRS (URN) service" in {
       getActiveRelationshipsViaClient(urn, agentARN)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(urn, Service.TrustNT))
+      val result = await(hipConnector.getActiveClientRelationship(urn, Service.TrustNT))
       result.get.arn shouldBe agentARN
 
     }
@@ -430,84 +430,84 @@ class HipConnectorISpec
     "return existing active relationships for specified clientId for PPT service" in {
       getActiveRelationshipsViaClient(pptRef, agentARN)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(pptRef, Ppt))
+      val result = await(hipConnector.getActiveClientRelationship(pptRef, Ppt))
       result.get.arn shouldBe agentARN
     }
 
     "return existing active relationships for specified clientId for Pillar2 service" in {
       getActiveRelationshipsViaClient(plrId, agentARN)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(plrId, Pillar2))
+      val result = await(hipConnector.getActiveClientRelationship(plrId, Pillar2))
       result.get.arn shouldBe agentARN
     }
 
     "return None if IF returns 404 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 404)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(mtdItId, MtdIt))
+      val result = await(hipConnector.getActiveClientRelationship(mtdItId, MtdIt))
       result shouldBe None
     }
 
     "return None if IF returns 404 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 404)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(vrn, Service.Vat))
+      val result = await(hipConnector.getActiveClientRelationship(vrn, Service.Vat))
       result shouldBe None
     }
 
     "return None if IF returns 404 for CGT service" in {
       getActiveRelationshipFailsWith(cgt, status = 404)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(cgt, Service.CapitalGains))
+      val result = await(hipConnector.getActiveClientRelationship(cgt, Service.CapitalGains))
       result shouldBe None
     }
 
     "return None if IF returns 404 for TRS (UTR) service" in {
       getActiveRelationshipFailsWith(utr, status = 404)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(utr, Service.Trust))
+      val result = await(hipConnector.getActiveClientRelationship(utr, Service.Trust))
       result shouldBe None
     }
 
     "return None if IF returns 404 for TRS (URN) service" in {
       getActiveRelationshipFailsWith(urn, status = 404)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(urn, Service.TrustNT))
+      val result = await(hipConnector.getActiveClientRelationship(urn, Service.TrustNT))
       result shouldBe None
     }
 
     "return None if IF returns 404 for PPT service" in {
       getActiveRelationshipFailsWith(pptRef, status = 404)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(pptRef, Service.Ppt))
+      val result = await(hipConnector.getActiveClientRelationship(pptRef, Service.Ppt))
       result shouldBe None
     }
 
     "return None if IF returns 404 for Pillar2 service" in {
       getActiveRelationshipFailsWith(plrId, status = 404)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(plrId, Service.Pillar2))
+      val result = await(hipConnector.getActiveClientRelationship(plrId, Service.Pillar2))
       result shouldBe None
     }
 
     "return None if IF returns 400 for ItSa service" in {
       getActiveRelationshipFailsWith(mtdItId, status = 400)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(mtdItId, Service.MtdIt))
+      val result = await(hipConnector.getActiveClientRelationship(mtdItId, Service.MtdIt))
       result shouldBe None
     }
 
     "return None if IF returns 400 for Vat service" in {
       getActiveRelationshipFailsWith(vrn, status = 400)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(vrn, Service.Vat))
+      val result = await(hipConnector.getActiveClientRelationship(vrn, Service.Vat))
       result shouldBe None
     }
 
     "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(vrn, Cbc))
+      val result = await(hipConnector.getActiveClientRelationship(vrn, Cbc))
       result shouldBe None
     }
   }
@@ -575,7 +575,7 @@ class HipConnectorISpec
     "return None if IF returns 403 AGENT_SUSPENDED" in {
       getActiveRelationshipFailsWithSuspended(vrn)
       givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(vrn, Service.Vat))
+      val result = await(hipConnector.getActiveClientRelationship(vrn, Service.Vat))
       result shouldBe None
     }
   }

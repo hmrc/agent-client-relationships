@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
+//TODO: These exceptions aren't handled anywhere, raising questions about their purpose.
+// Consider using a simpler RuntimeException instead for clarity and consistency.
+
 case class RelationshipNotFound(errorCode: String) extends Exception(errorCode)
 
 case class AdminNotFound(errorCode: String) extends Exception(errorCode)

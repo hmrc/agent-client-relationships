@@ -23,7 +23,12 @@ import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 import java.time.{Clock, Instant}
 import javax.inject.Inject
 
-class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig: AppConfig, clock: Clock) {
+class HipHeaders @Inject()(
+                            randomUuidGenerator: RandomUuidGenerator,
+                            appConfig: AppConfig,
+                            clock: Clock
+                          ) {
+
   private val correlationIdHeader: String = "correlationId"
   private val xOriginatingSystemHeader: String = "X-Originating-System"
   private val xReceiptDateHeader: String = "X-Receipt-Date"
@@ -32,10 +37,10 @@ class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig:
   private val mdtp = "MDTP"
   private val hip = "HIP"
 
-  def subscriptionHeaders(): Seq[(String, String)] =
+  def makeHeaders(): Seq[(String, String)] =
     Seq(
       (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-      (correlationIdHeader, randomUUIDGenerator.uuid),
+      (correlationIdHeader, randomUuidGenerator.uuid()),
       (xOriginatingSystemHeader, mdtp),
       (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
       (xTransmittingSystemHeader, hip)

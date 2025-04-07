@@ -20,19 +20,21 @@ import cats.data.EitherT
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.{HttpApiMonitor, HttpReadsImplicits}
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import HttpReadsImplicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpExceptions, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -40,118 +42,100 @@ import java.time.{Instant, LocalDate, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-trait RelationshipConnector {
-  def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Option[RegistrationRelationshipResponse]]
-
-  def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Option[RegistrationRelationshipResponse]]
-
-  def getActiveClientRelationships(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]]
-
-  def getAllRelationships(
-    taxIdentifier: TaxIdentifier,
-    activeOnly: Boolean
-  )(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]]
-
-  def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]]
-
-  def getInactiveRelationships(
-    arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]]
-}
 
 @Singleton
-class HIPConnector @Inject() (
-  httpClient: HttpClientV2,
-  agentCacheProvider: AgentCacheProvider,
-  headers: HIPHeaders,
+class RelationshipConnectorHip @Inject()(
+                                          httpClient: HttpClientV2,
+                                          agentCacheProvider: AgentCacheProvider,
+                                          hipHeaders: HipHeaders,
+                                          val metrics: Metrics,
+                                          appConfig: AppConfig)(implicit
   val ec: ExecutionContext
-)(implicit
-  val metrics: Metrics,
-  val appConfig: AppConfig
 ) extends RelationshipConnector
-    with HttpAPIMonitor
+    with HttpApiMonitor
     with Logging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
-  // HIP API #EPID1521 Create/Update Agent Relationship
+  // HIP API #EPID1521
   def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Option[RegistrationRelationshipResponse]] = {
-
-    val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
-    val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
-    val requestBody = createAgentRelationshipHipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
-
-    postRelationship("CreateAgentRelationship", url, requestBody)
-      .map {
-        case Right(response) =>
-          Option(response.json.as[RegistrationRelationshipResponse])
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case _ =>
-              logger.error(s"Error in HIP 'CreateAgentRelationship' with error: ${errorResponse.getMessage}")
-              None
-          }
-      }
+    rh: RequestHeader
+  ): Future[Unit] = monitor(s"ConsumedAPI-HIP-CreateAgentRelationship-POST"){
+    val requestBody: JsObject = createAgentRelationshipHipInputJson(
+      enrolmentKey = enrolmentKey,
+      arn = arn.value,
+      isExclusiveAgent = isExclusiveAgent(enrolmentKey.service)
+    )
+    httpClient
+      .post(url"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
+      .withBody(requestBody)
+      .setHeader(hipHeaders.makeHeaders(): _*)
+      .execute[Unit]
   }
 
-  // HIP API #EPID1521 Create/Update Agent Relationship
+  // HIP API #EPID1521
   def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Option[RegistrationRelationshipResponse]] = {
+    rh: RequestHeader
+  ): Future[Unit] = monitor(s"ConsumedAPI-HIP-DeleteAgentRelationship-POST"){
 
-    val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
-    val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
-    val requestBody = deleteAgentRelationshipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
+    val requestBody: JsObject = deleteAgentRelationshipInputJson(
+      enrolmentKey = enrolmentKey,
+      arn = arn.value,
+      isExclusiveAgent = isExclusiveAgent(enrolmentKey.service)
+    )
 
-    postRelationship("DeleteAgentRelationship", url, requestBody)
-      .map {
-        case Right(response) =>
-          Option(response.json.as[RegistrationRelationshipResponse])
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case _ =>
-              logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
-              None
-          }
-      }
+    httpClient
+      .post(url"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
+      .withBody(requestBody)
+      .setHeader(hipHeaders.makeHeaders(): _*)
+      .execute[Unit]
   }
 
-  // HIP API #EPID1521 Create/Update Agent Relationship
-  def getActiveClientRelationships(
+  // HIP API #EPID1521
+  def getActiveClientRelationship(
     taxIdentifier: TaxIdentifier,
     service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+  )(implicit rh: RequestHeader): Future[Option[ActiveRelationship]] = monitor(s"ConsumedAPI-HIP-GetActiveClientRelationships-GET"){
+
     val authProfile = getAuthProfile(service.id)
-    val url =
+    val url: URL =
       relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
 
     implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
 
-    getRelationship(s"GetActiveClientRelationships", url)
+    PAV HERE ...
+
+    HttpReads.ask.flatMap { t =>
+      import HttpErrorFunctions._
+      val (method: String, url: String, response: HttpResponse) = t
+
+      response.status match {
+        case status if is2xx(status) => HttpReads[ActiveRelationship].read(method, url, response)
+        case Status.NOT_FOUND => HttpReads.pure(None)
+        case other =>
+          throw UpstreamErrorResponse(
+            message    = upstreamResponseMessage(method, url, other, response.body),
+            statusCode = other,
+            reportAs   = if (is4xx(other)) Status.INTERNAL_SERVER_ERROR else Status.BAD_GATEWAY,
+            headers    = response.headers
+          )
+      }
+
+    }
+
+
+    val readsNone = HttpReads[HttpResponse].map(r => r.status match {case Status.NOT_FOUND => })
+    httpClient
+      .get(url)
+      .setHeader(hipHeaders.makeHeaders(): _*)
+      .execute[Option[JsValue]]
+      .map(json => (json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive))
+      .recoverWith()
       .map {
         case Right(response) =>
           (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
-        case Left(errorResponse) =>
+        case Left(errorResponse: UpstreamErrorResponse) =>
           errorResponse.statusCode match {
             case Status.BAD_REQUEST | Status.NOT_FOUND => None
             case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
@@ -169,14 +153,14 @@ class HIPConnector @Inject() (
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean
   )(implicit
-    hc: HeaderCarrier,
+    rh: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
     val url = relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)
 
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.hipReads
 
-    EitherT(getRelationship(s"GetAllActiveClientRelationships", url))
+    EitherT(getRelationshipDeleteMe(s"GetAllActiveClientRelationships", url))
       .map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
@@ -203,14 +187,14 @@ class HIPConnector @Inject() (
   def getInactiveClientRelationships(
     taxIdentifier: TaxIdentifier,
     service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+  )(implicit rh: RequestHeader, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
 
     val authProfile = getAuthProfile(service.id)
     val url =
       relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
-    getRelationship(s"GetInactiveClientRelationships", url)
+    getRelationshipDeleteMe(s"GetInactiveClientRelationships", url)
       .map {
         case Right(response) =>
           (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
@@ -230,7 +214,7 @@ class HIPConnector @Inject() (
   // HIP API #EPID1521 Create/Update Agent Relationship (agent)
   def getInactiveRelationships(
     arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+  )(implicit rh: RequestHeader, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDays).toString
@@ -243,7 +227,7 @@ class HIPConnector @Inject() (
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
-      getRelationship(s"GetInactiveRelationships", url)
+      getRelationshipDeleteMe(s"GetInactiveRelationships", url)
         .map {
           case Right(response) =>
             (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
@@ -261,25 +245,25 @@ class HIPConnector @Inject() (
     }
   }
 
-  private def getRelationship(apiName: String, url: URL)(implicit
-    hc: HeaderCarrier,
+  private def getRelationshipDeleteMe(apiName: String, url: URL)(implicit
+    rh: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-GET") {
       httpClient
         .get(url)
-        .setHeader(headers.subscriptionHeaders(): _*)
+        .setHeader(hipHeaders.makeHeaders(): _*)
         .execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
 
-  private def postRelationship(apiName: String, url: URL, body: JsValue)(implicit
-    hc: HeaderCarrier,
+  private def postRelationshipDeleteMe(apiName: String, url: URL, body: JsValue)(implicit
+    rh: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-POST") {
       httpClient
         .post(url)
-        .setHeader(headers.subscriptionHeaders(): _*)
+        .setHeader(hipHeaders.makeHeaders(): _*)
         .withBody(body)
         .execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
@@ -397,12 +381,12 @@ class HIPConnector @Inject() (
     case _             => "ALL00001"
   }
 
-  private def getIsExclusiveAgent(service: String): Boolean = service match {
+  private def isExclusiveAgent(service: String): Boolean = service match {
     case HMRCMTDITSUPP => false
     case _             => true
   }
 
-  private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject = (enrolmentKey: EnrolmentKey) => { request =>
+  private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject = (enrolmentKey: EnrolmentKey) => { request: JsObject =>
     val idType = "idType"
     val authProfile = "authProfile"
     val relationshipType = "relationshipType"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.connectors.helpers
+package uk.gov.hmrc.agentclientrelationships.util
 
-import java.util.UUID
-import javax.inject.Singleton
+import uk.gov.hmrc.http.{HttpReads, HttpReadsInstances, UpstreamErrorResponse, }
 
-@Singleton
-class RandomUUIDGenerator() {
-  def uuid: String = UUID.randomUUID().toString
+object HttpReadsImplicits extends HttpReadsInstances { self: HttpReadsInstances =>
+
+  private val r: HttpReads[Either[UpstreamErrorResponse, Unit]] = readEitherOf[Unit](self.readUnit)
+
+  //Shadows readUnit with instance which throws exception when the http response code is non 2xx
+  override implicit val readUnit: HttpReads[Unit] = throwOnFailure(r)
 }

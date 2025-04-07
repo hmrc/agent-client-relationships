@@ -16,46 +16,51 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.http.Status.OK
-import play.api.libs.json.Json
+import play.api.mvc.RequestHeader
+import play.api.mvc.Results.Status
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.HcProvider.hc
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentAssuranceConnector @Inject() (httpV2: HttpClientV2)(implicit
-  val metrics: Metrics,
-  appConfig: AppConfig,
-  val ec: ExecutionContext
-) extends HttpAPIMonitor {
+class AgentAssuranceConnector @Inject() (httpClient: HttpClientV2,
+                                         val metrics: Metrics
+                                        )(implicit
 
-  private lazy val baseUrl = appConfig.agentAssuranceBaseUrl
+                                          appConfig: AppConfig,
+                                          val ec: ExecutionContext
+                                        ) extends HttpApiMonitor {
 
-  import uk.gov.hmrc.http.HttpReads.Implicits._
-
+  //TODO: why agent-assurance uses internal-auth.token?
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
 
-  def getAgentRecordWithChecks(arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[AgentDetailsDesResponse] =
-    httpV2
-      .get(new URL(s"$baseUrl/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
+  def getAgentRecordWithChecks(
+                                arn: Arn)(implicit
+                                          rh: RequestHeader
+                              ): Future[AgentDetailsDesResponse] =
+    httpClient
+      .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
       .setHeader(aaHeaders)
-      .execute[HttpResponse]
-      .map(response =>
-        response.status match {
-          case OK    => Json.parse(response.body).as[AgentDetailsDesResponse]
-          case other => throw UpstreamErrorResponse(s"Agent record unavailable: des response code: $other", other)
-        }
-      )
+      .execute[AgentDetailsDesResponse]
+
+
+  def f()(implicit
+          rh: RequestHeader
+  ): Future[Option[AgentDetailsDesResponse]] =
+
+  httpClient
+    .get(url"${appConfig.agentAssuranceBaseUrl}/whaver")
+    .execute[Option[AgentDetailsDesResponse]]  ///status = 2xx body.asJson.as[AgentDetailsDesResponse]
+
 
 }

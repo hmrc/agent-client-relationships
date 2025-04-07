@@ -33,15 +33,15 @@ import scala.util.control.NonFatal
 
 @Singleton
 class CheckRelationshipsOrchestratorService @Inject() (
-  val metrics: Metrics,
-  checkService: CheckRelationshipsService,
-  checkOldAndCopyService: CheckAndCopyRelationshipsService,
-  validationService: ValidationService,
-  agentUserService: AgentUserService,
-  deleteService: DeleteRelationshipsServiceWithAca,
-  ifConnector: IFConnector,
-  desConnector: DesConnector,
-  agentFiRelationshipConnector: AgentFiRelationshipConnector
+                                                        val metrics: Metrics,
+                                                        checkService: CheckRelationshipsService,
+                                                        checkOldAndCopyService: CheckAndCopyRelationshipsService,
+                                                        validationService: ValidationService,
+                                                        agentUserService: AgentUserService,
+                                                        deleteService: DeleteRelationshipsServiceWithAca,
+                                                        ifConnector: GetBusinessDetailsConnector,
+                                                        desConnector: DesConnector,
+                                                        agentFiRelationshipConnector: AgentFiRelationshipConnector
 )(implicit executionContext: ExecutionContext)
     extends Monitoring
     with Logging {

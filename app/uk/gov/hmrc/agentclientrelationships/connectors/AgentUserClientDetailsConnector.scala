@@ -16,38 +16,46 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.{NOT_FOUND, NO_CONTENT}
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HttpResponse, StringContextOps}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentUserClientDetailsConnector @Inject() (http: HttpClient, val ec: ExecutionContext)(implicit
-  val metrics: Metrics,
-  val appConfig: AppConfig
-) extends HttpAPIMonitor
+class AgentUserClientDetailsConnector @Inject()(
+                                                 httpClient: HttpClientV2,
+                                                 val metrics: Metrics,
+                                                 appConfig: AppConfig
+                                                 )(implicit
+                                                   val ec: ExecutionContext,
+
+) extends HttpApiMonitor
     with Logging {
 
-  val baseUrl = new URL(appConfig.agentUserClientDetailsUrl)
+  val baseUrl = appConfig.agentUserClientDetailsUrl
 
   // update the cache in Granular Permissions (returns 404 if no cache currently in use)
-  def cacheRefresh(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] = {
-    val url = s"$baseUrl/agent-user-client-details/arn/${arn.value}/cache-refresh"
+  def cacheRefresh(arn: Arn)(implicit requestHeader: RequestHeader): Future[Unit] = {
+    val url = url"$baseUrl/agent-user-client-details/arn/${arn.value}/cache-refresh"
     monitor("ConsumedAPI-GranPermsCacheRefresh-GET") {
-      http
-        .GET[HttpResponse](url)
+      httpClient
+        .get(url)
+        .execute[HttpResponse]
         .map(response =>
           response.status match {
-            case NOT_FOUND | NO_CONTENT => ()
-            case other                  => logger.warn(s"cache refresh returned status $other")
+            case NOT_FOUND | NO_CONTENT => () //TODO endpoint should not return NotFound because it's not obvious what is not found
+            case other                  =>
+              throw new RuntimeException(s"cache refresh returned status $other")
           }
         )
     }

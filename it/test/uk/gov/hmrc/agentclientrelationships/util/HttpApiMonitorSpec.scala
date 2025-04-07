@@ -26,7 +26,7 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpAPIMonitor {
+class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpApiMonitor {
 
   override implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))

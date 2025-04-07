@@ -106,10 +106,7 @@ class CreateRelationshipsService @Inject() (
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <-
-        relationshipConnector
-          .createAgentRelationship(enrolmentKey, arn)
-      if maybeResponse.nonEmpty
+      _ <- relationshipConnector.createAgentRelationship(enrolmentKey, arn)
       _ = auditData.set("etmpRelationshipCreated", true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)

@@ -18,20 +18,23 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.Logging
 import play.api.http.Status.{NOT_FOUND, OK}
+import play.api.libs.json.Json
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderNames, HttpResponse, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -39,34 +42,43 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
+
+//TODO SRP violation, this connector aggregates too many endpoints from DES, IF, and EIS. Split it into separate connectors.
 @Singleton
-class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, val metrics: Metrics)(implicit
-  val ec: ExecutionContext
-) extends HttpAPIMonitor
+class ClientDetailsConnector @Inject()(
+                                        appConfig: AppConfig,
+                                        httpClient: HttpClientV2,
+                                        val metrics: Metrics)(implicit
+                                                                                                             val ec: ExecutionContext
+) extends HttpApiMonitor
     with Logging {
 
-  private def desOrIFHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
-    hc: HeaderCarrier
-  ): Seq[(String, String)] = {
-    val additionalHeaders =
-      if (isInternalHost) Seq.empty
-      else
-        Seq(
-          HeaderNames.authorisation -> s"Bearer $authToken",
-          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
-        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
-    val commonHeaders = Seq("Environment" -> env, "CorrelationId" -> UUID.randomUUID().toString)
-    commonHeaders ++ additionalHeaders
-  }
+  private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
+    "Environment" -> appConfig.desEnv,
+    //TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
+    "CorrelationId" -> UUID.randomUUID().toString,
+    HeaderNames.authorisation -> s"Bearer $authToken"
+  )
+
+  private def ifHeaders(authToken: String): Seq[(String, String)] = Seq(
+    "Environment" -> appConfig.ifEnvironment,
+    //TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
+    "CorrelationId" -> UUID.randomUUID().toString,
+    HeaderNames.authorisation -> s"Bearer $authToken"
+  )
 
   def getItsaDesignatoryDetails(
     nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] =
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] =
     monitor(s"ConsumedAPI-DesignatoryDetails-GET") {
-      val url = s"${appConfig.citizenDetailsBaseUrl}/citizen-details/$nino/designatory-details"
-      http.GET[HttpResponse](url).map { response =>
+      val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/$nino/designatory-details"
+      httpClient
+        .get(url)
+        .execute[HttpResponse]
+        .map { response =>
         response.status match {
           case OK        => Right(response.json.as[ItsaDesignatoryDetails])
+          //TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
           case NOT_FOUND => Left(ClientDetailsNotFound)
           case status =>
             logger.warn(s"Unexpected error during 'getItsaDesignatoryDetails', statusCode=$status")
@@ -77,11 +89,14 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
 
   def getItsaCitizenDetails(
     nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ItsaCitizenDetails]] =
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaCitizenDetails]] =
     monitor(s"ConsumedAPI-CitizenDetails-GET") {
-      val url = s"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino"
-      http.GET[HttpResponse](url).map { response =>
+      httpClient
+        .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
+        .execute[HttpResponse]
+        .map { response =>
         response.status match {
+          //TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
           case OK        => Right(response.json.as[ItsaCitizenDetails])
           case NOT_FOUND => Left(ClientDetailsNotFound)
           case status =>
@@ -94,19 +109,15 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
   // API#1171 Get Business Details
   def getItsaBusinessDetails(
     nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
 
-    val url = new URL(s"${appConfig.ifPlatformBaseUrl}/registration/business-details/nino/$nino")
-
-    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+    val url = url"${appConfig.ifPlatformBaseUrl}/registration/business-details/nino/$nino"
 
     monitor(s"ConsumedAPI-IF-GetBusinessDetails-GET") {
-      http
-        .GET(url.toString, headers = desOrIFHeaders(appConfig.ifAPI1171Token, appConfig.ifEnvironment, isInternal))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.ifAPI1171Token}"))) else hc,
-          ec
-        )
+      httpClient
+        .get(url)
+        .setHeader(ifHeaders(appConfig.ifAPI1171Token): _*)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case OK =>
@@ -128,19 +139,17 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
 
   def getVatCustomerInfo(
     vrn: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, VatCustomerDetails]] = {
-
-    val url = new URL(s"${appConfig.desUrl}/vat/customer/vrn/$vrn/information")
-
-    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, VatCustomerDetails]] = {
+    val url = url"${appConfig.desUrl}/vat/customer/vrn/$vrn/information"
     monitor("ConsumedAPI-DES-GetVatCustomerInformation-GET") {
-      http
-        .GET(url, headers = desOrIFHeaders(appConfig.desToken, appConfig.desEnv, isInternal))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.desToken}"))) else hc,
-          ec
-        )
+      httpClient
+        .get(url)
+        .setHeader(desHeaders(appConfig.desToken): _*)
+        .execute[HttpResponse]
+        //TODO: easier is to do
+        // .execute[Option[VatCustomerDetails]]
+        // .map(_.toRight(ClientDetailsNotFound))
+        // but not suer if the Left(ErrorRetrievingClientDetail) is used anywhere. Analyse and simplify
         .map { response =>
           response.status match {
             case OK        => Right(response.json.as[VatCustomerDetails])
@@ -156,23 +165,15 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
   // API#1495 Agent Trust Known Facts
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, String]] = {
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, String]] = {
 
     val utrPattern = "^\\d{10}$"
     val identifierType = if (trustTaxIdentifier.matches(utrPattern)) "UTR" else "URN"
-    val url = new URL(
-      s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier"
-    )
-
-    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
     monitor("ConsumedAPI-IF-GetTrustName-GET") {
-      http
-        .GET(url, headers = desOrIFHeaders(appConfig.ifAPI1495Token, appConfig.ifEnvironment, isInternal))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.ifAPI1495Token}"))) else hc,
-          ec
-        )
+      httpClient
+        .get(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")
+        .setHeader(ifHeaders(appConfig.ifAPI1495Token): _*)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case OK        => Right((response.json \ "trustDetails" \ "trustName").as[String])
@@ -187,19 +188,12 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
 
   def getCgtSubscriptionDetails(
     cgtRef: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] = {
-
-    val url = new URL(s"${appConfig.desUrl}/subscriptions/CGT/ZCGT/$cgtRef")
-
-    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] = {
     monitor("ConsumedAPI-DES-GetCgtSubscriptionDetails-GET") {
-      http
-        .GET(url, headers = desOrIFHeaders(appConfig.desToken, appConfig.desEnv, isInternal))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.desToken}"))) else hc,
-          ec
-        )
+      httpClient
+        .get(url"${appConfig.desUrl}/subscriptions/CGT/ZCGT/$cgtRef")
+        .setHeader(desHeaders(appConfig.desToken): _*)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case OK        => Right(response.json.as[CgtSubscriptionDetails])
@@ -215,19 +209,13 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
   // API#1712 Get PPT Subscription Display
   def getPptSubscriptionDetails(
     pptRef: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = {
-
-    val url = new URL(s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
-
-    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = {
 
     monitor("ConsumedAPI-IF-GetPptSubscriptionDetails-GET") {
-      http
-        .GET(url, headers = desOrIFHeaders(appConfig.ifAPI1712Token, appConfig.ifEnvironment, isInternal))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.ifAPI1712Token}"))) else hc,
-          ec
-        )
+      httpClient
+        .get(url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
+        .setHeader(ifHeaders(appConfig.ifAPI1712Token): _*)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case OK        => Right(response.json.as[PptSubscriptionDetails])
@@ -243,8 +231,9 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
   // DCT 50d
   def getCbcSubscriptionDetails(
     cbcId: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {
     val conversationId = hc.sessionId.map(_.value.drop(8)).getOrElse(UUID.randomUUID().toString)
+
     val request = DisplaySubscriptionForCBCRequest(
       displaySubscriptionForCBCRequest = DisplaySubscriptionDetails(
         requestCommon = RequestCommonForSubscription().copy(conversationID = Some(conversationId)),
@@ -264,12 +253,11 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
     )
 
     monitor(s"ConsumedAPI-EIS-GetCbcSubscriptionDetails-POST") {
-      http
-        .POST[DisplaySubscriptionForCBCRequest, HttpResponse](
-          appConfig.eisBaseUrl + "/dac6/dct50d/v1",
-          request,
-          headers = httpHeaders
-        )
+      httpClient
+        .post(url"${appConfig.eisBaseUrl}/dac6/dct50d/v1")
+        .withBody(Json.toJson(request))
+        .setHeader(httpHeaders: _*)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case OK        => Right(response.json.as[SimpleCbcSubscription])
@@ -284,19 +272,13 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
 
   def getPillar2SubscriptionDetails(
     plrId: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {
-
-    val url = new URL(s"${appConfig.ifPlatformBaseUrl}/pillar2/subscription/$plrId")
-
-    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {
+    val url = url"${appConfig.ifPlatformBaseUrl}/pillar2/subscription/$plrId"
     monitor("ConsumedAPI-IF-GetPillar2SubscriptionDetails-GET") {
-      http
-        .GET(url, headers = desOrIFHeaders(appConfig.ifAPI2143Token, appConfig.ifEnvironment, isInternal))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.ifAPI2143Token}"))) else hc,
-          ec
-        )
+      httpClient
+        .get(url)
+        .setHeader(ifHeaders(appConfig.ifAPI2143Token): _*)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case OK        => Right(response.json.as[Pillar2Record])

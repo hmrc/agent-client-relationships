@@ -22,7 +22,7 @@ import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, IFConnector, MappingConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, GetBusinessDetailsConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services._
@@ -39,21 +39,21 @@ import scala.util.control.NonFatal
 
 @Singleton
 class RelationshipsController @Inject() (
-  override val authConnector: AuthConnector,
-  val appConfig: AppConfig,
-  checkOrchestratorService: CheckRelationshipsOrchestratorService,
-  checkOldAndCopyService: CheckAndCopyRelationshipsService,
-  createService: CreateRelationshipsService,
-  deleteService: DeleteRelationshipsServiceWithAca,
-  findService: FindRelationshipsService,
-  agentTerminationService: AgentTerminationService,
-  des: DesConnector,
-  ifConnector: IFConnector,
-  val esConnector: EnrolmentStoreProxyConnector,
-  mappingConnector: MappingConnector,
-  auditService: AuditService,
-  validationService: ValidationService,
-  override val controllerComponents: ControllerComponents
+                                          override val authConnector: AuthConnector,
+                                          val appConfig: AppConfig,
+                                          checkOrchestratorService: CheckRelationshipsOrchestratorService,
+                                          checkOldAndCopyService: CheckAndCopyRelationshipsService,
+                                          createService: CreateRelationshipsService,
+                                          deleteService: DeleteRelationshipsServiceWithAca,
+                                          findService: FindRelationshipsService,
+                                          agentTerminationService: AgentTerminationService,
+                                          des: DesConnector,
+                                          ifConnector: GetBusinessDetailsConnector,
+                                          val esConnector: EnrolmentStoreProxyConnector,
+                                          mappingConnector: MappingConnector,
+                                          auditService: AuditService,
+                                          validationService: ValidationService,
+                                          override val controllerComponents: ControllerComponents
 )(implicit executionContext: ExecutionContext)
     extends BackendController(controllerComponents)
     with AuthActions {

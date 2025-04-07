@@ -84,19 +84,19 @@ case object VrnNotFoundInEtmp extends CheckAndCopyResult {
 
 @Singleton
 class CheckAndCopyRelationshipsService @Inject() (
-  es: EnrolmentStoreProxyConnector,
-  ifConnector: IFConnector,
-  des: DesConnector,
-  mapping: MappingConnector,
-  ugs: UsersGroupsSearchConnector,
-  aca: AgentClientAuthorisationConnector,
-  relationshipCopyRepository: RelationshipCopyRecordRepository,
-  createRelationshipsService: CreateRelationshipsService,
-  partialAuthRepo: PartialAuthRepository,
-  invitationsRepository: InvitationsRepository,
-  itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
-  val auditService: AuditService,
-  val metrics: Metrics
+                                                   es: EnrolmentStoreProxyConnector,
+                                                   ifConnector: GetBusinessDetailsConnector,
+                                                   des: DesConnector,
+                                                   mapping: MappingConnector,
+                                                   ugs: UsersGroupsSearchConnector,
+                                                   aca: AgentClientAuthorisationConnector,
+                                                   relationshipCopyRepository: RelationshipCopyRecordRepository,
+                                                   createRelationshipsService: CreateRelationshipsService,
+                                                   partialAuthRepo: PartialAuthRepository,
+                                                   invitationsRepository: InvitationsRepository,
+                                                   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
+                                                   val auditService: AuditService,
+                                                   val metrics: Metrics
 )(implicit val appConfig: AppConfig)
     extends Monitoring
     with Logging {
@@ -257,7 +257,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     auditData.set("clientIdType", "mtditid")
     auditData.set("arn", s"${arn.value}")
 
-    implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
+    val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
 
     for {
       mNino        <- mNino.fold(ifConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))

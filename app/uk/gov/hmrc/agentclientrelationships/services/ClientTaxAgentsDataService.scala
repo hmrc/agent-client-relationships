@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.{EitherT, OptionT}
 import cats.implicits._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, IFConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, GetBusinessDetailsConnector}
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, RelationshipSource}
@@ -42,7 +42,7 @@ class ClientTaxAgentsDataService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   findRelationshipsService: FindRelationshipsService,
   partialAuthRepository: PartialAuthRepository,
-  ifConnector: IFConnector
+  ifConnector: GetBusinessDetailsConnector
 )(implicit ec: ExecutionContext, appConfig: AppConfig) {
 
   val supportedServices = appConfig.supportedServices
@@ -77,7 +77,7 @@ class ClientTaxAgentsDataService @Inject() (
     ec: ExecutionContext
   ): EitherT[Future, RelationshipFailureResponse, Seq[AuthorisationEvent]] = {
 
-    case class AuthorisationEventWithoutAgentName(
+    final case class AuthorisationEventWithoutAgentName(
       arn: String,
       service: String,
       eventDate: LocalDate,

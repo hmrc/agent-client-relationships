@@ -34,14 +34,14 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class CheckRelationshipsService @Inject() (
-  es: EnrolmentStoreProxyConnector,
-  ap: AgentPermissionsConnector,
-  agentAssuranceConnector: AgentAssuranceConnector,
-  ifConnector: IFConnector,
-  groupSearch: UsersGroupsSearchConnector,
-  partialAuthRepository: PartialAuthRepository,
-  agentFiRelationshipConnector: AgentFiRelationshipConnector,
-  val metrics: Metrics
+                                            es: EnrolmentStoreProxyConnector,
+                                            ap: AgentPermissionsConnector,
+                                            agentAssuranceConnector: AgentAssuranceConnector,
+                                            ifConnector: GetBusinessDetailsConnector,
+                                            groupSearch: UsersGroupsSearchConnector,
+                                            partialAuthRepository: PartialAuthRepository,
+                                            agentFiRelationshipConnector: AgentFiRelationshipConnector,
+                                            val metrics: Metrics
 ) extends Monitoring
     with Logging {
 
@@ -84,7 +84,7 @@ class CheckRelationshipsService @Inject() (
             val serviceId = enrolmentKey.service
             for {
               // if the client is unassigned (not yet put into any access groups), behave as if granular permissions were disabled for that client
-              isClientUnassigned <- ap.clientIsUnassigned(arn, enrolmentKey)
+              isClientUnassigned <- ap.isClientIsUnassigned(arn, enrolmentKey)
               isEnrolmentAssignedToUser <-
                 es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId)).map { usersAssignedEnrolments =>
                   usersAssignedEnrolments.exists(enrolment =>

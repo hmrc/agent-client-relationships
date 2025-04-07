@@ -54,7 +54,7 @@ class CheckRelationshipServiceSpec
   val metrics = mock[Metrics]
   private val mockPartialAuthRepo = mock[PartialAuthRepository]
   private val mockAgentAssuranceConnector = mock[AgentAssuranceConnector]
-  private val mockIfConnector = mock[IFConnector]
+  private val mockIfConnector = mock[GetBusinessDetailsConnector]
   private val mockAgentFiConnector = mock[AgentFiRelationshipConnector]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -72,7 +72,7 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+        when(ap.isClientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
@@ -101,7 +101,7 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+        when(ap.isClientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(false))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
@@ -130,7 +130,7 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+        when(ap.isClientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(false))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))
@@ -186,7 +186,7 @@ class CheckRelationshipServiceSpec
         when(es.getPrincipalGroupIdFor(equ(arn))(any[HeaderCarrier]))
           .thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.clientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
+        when(ap.isClientIsUnassigned(equ(arn), equ(enrolmentKey))(any[HeaderCarrier], any[ExecutionContext]))
           .thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[HeaderCarrier]))

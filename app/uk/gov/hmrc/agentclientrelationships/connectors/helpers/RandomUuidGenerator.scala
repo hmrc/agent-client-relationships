@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.mocks
+package uk.gov.hmrc.agentclientrelationships.connectors.helpers
 
-import uk.gov.hmrc.agentclientrelationships.connectors.GetBusinessDetailsConnector
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import java.util.UUID
+import javax.inject.Singleton
 
-trait MockIFConnector {
-  this: ResettingMockitoSugar =>
-
-  val mockIFConnector: GetBusinessDetailsConnector = resettingMock[GetBusinessDetailsConnector]
-
+@Singleton
+class RandomUuidGenerator {
+  def uuid(): String = UUID.randomUUID().toString
 }

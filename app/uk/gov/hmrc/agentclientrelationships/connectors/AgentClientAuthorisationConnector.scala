@@ -18,94 +18,98 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json.JsArray
-import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
+import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, SetRelationshipEndedPayload}
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(implicit
-  val metrics: Metrics,
-  val appConfig: AppConfig,
-  val ec: ExecutionContext
-) extends HttpAPIMonitor
-    with Logging {
+class AgentClientAuthorisationConnector @Inject()(httpClient: HttpClientV2)(implicit
+                                                                            val metrics: Metrics,
+                                                                            val appConfig: AppConfig,
+                                                                            val ec: ExecutionContext
+) extends HttpApiMonitor
+  with Logging {
 
-  private val acaBaseUrl: URL = new URL(appConfig.agentClientAuthorisationUrl)
+   private val acaBaseUrl: String = appConfig.agentClientAuthorisationUrl
 
-  def getPartialAuth(clientId: TaxIdentifier, arn: Arn)(implicit
-    hc: HeaderCarrier
-  ): Future[List[String]] = {
-    val url: URL = new URL(
-      acaBaseUrl,
-      s"/agent-client-authorisation/agencies/${encodePathSegment(arn.value)}/invitations/sent"
-    )
+  /**
+   * Retrieves a list of services for which a partial authorisation exists for a given client.
+   *
+   * @param clientId The Tax Identifier of the client for which partial authorisations are being retrieved.
+   * @param arn      The Agent Reference Number (Arn) of the agency requesting
+   */
+  def getPartialAuth(
+                      clientId: TaxIdentifier,
+                      arn: Arn)(implicit
+                                hc: HeaderCarrier
+                    ): Future[List[String]] = {
 
     monitor(s"ConsumedAPI-ACA-getPartialAuthExistsFor-GET") {
       httpClient
-        .GET[HttpResponse](
-          url = url.toString,
-          queryParams = List("status" -> "PartialAuth", "clientId" -> clientId.value)
+        .get(
+          url"${appConfig.agentClientAuthorisationUrl}/agent-client-authorisation/agencies/${arn.value}/invitations/sent?status=PartialAuth&clientId=${clientId.value}"
         )
-        .map { response =>
-          response.status match {
-            case Status.OK =>
-              ((response.json \ "_embedded" \ "invitations")
+        //TODO: Use proper Reads[T] instance from the play-json library to parse the response body and handle errors
+        .execute[Option[JsObject]]
+        .map { json: JsObject =>
+
+          json.map(json =>
+              ((json \ "_embedded" \ "invitations")
                 .as[JsArray]
                 .value
                 .map(x => (x \ "service").as[String])
                 .toList)
-            case _ =>
-              logger.warn(s"no partialAuth found in ACA")
-              List.empty
-          }
+          ).getOrElse(List.empty)
+
         }
     }
   }
 
-  def updateAltItsaFor(nino: Nino, service: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Boolean] = {
 
-    val url: URL = new URL(
-      acaBaseUrl,
-      s"/agent-client-authorisation/alt-itsa/$service/update/${encodePathSegment(nino.value)}"
-    )
+  //TODO: this method is not used in production code, can it be removed?
+  //TODO: use proper return type describing what the call does. If nothing, then return Unit
+  def updateAltItsaFor(nino: Nino, service: String)(implicit
+    request: RequestHeader
+  ): Future[Boolean] = {
 
     monitor(s"ConsumedAPI-ACA-updateAltItsaFor$service-PUT") {
       httpClient
-        .PUTString[HttpResponse](url = url.toString, "")
+        .put(url"$acaBaseUrl/agent-client-authorisation/alt-itsa/$service/update/${nino.value}")
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case Status.CREATED => true
-            case _              => false
+            // TODO: This code suppresses errors,
+            //  potentially masking critical issues like 5xx, 4xx, auth problems,
+            //  and client-side errors.
+            //  Instead of returning an empty list on error,
+            //  use a proper `Reads[T]` to handle non-201  responses and invalid JSON.
+            //  This will allow the global error handler to process the exceptions appropriately.
+            case _ => false
           }
         }
     }
   }
 
-  /*
-  Updates the invitation record to Deauthorised.
+  /**
+   * Updates the invitation record to Deauthorised.
    */
+  //TODO: use proper return type describing what the call does. If nothing, then return Unit
   def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+                                                                                  requestHeader: RequestHeader
   ): Future[Boolean] = {
-    val url: URL = new URL(
-      acaBaseUrl,
-      "/agent-client-authorisation/invitations/set-relationship-ended"
-    )
     val payload = SetRelationshipEndedPayload(
       arn = arn,
       clientId = enrolmentKey.oneIdentifier().value,
@@ -114,36 +118,47 @@ class AgentClientAuthorisationConnector @Inject() (httpClient: HttpClient)(impli
     )
     monitor(s"ConsumedAPI-ACA-setRelationshipEnded-PUT") {
       httpClient
-        .PUT[SetRelationshipEndedPayload, HttpResponse](url = url.toString, payload)
+        .put(url = url"$acaBaseUrl/agent-client-authorisation/invitations/set-relationship-ended")
+        .withBody(Json.toJson(payload))
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case Status.NO_CONTENT => true
-            case _                 => false
+            // TODO: This code suppresses errors,
+            //  potentially masking critical issues like 5xx, 4xx, auth problems,
+            //  and client-side errors.
+            //  Instead of returning an empty list on error,
+            //  use a proper `Reads[T]` to handle non-201  responses and invalid JSON.
+            //  This will allow the global error handler to process the exceptions appropriately.
+            case _ => false
           }
         }
     }
-
   }
 
+  //TODO: wrap service in a strong type
+  //TODO: use proper return type describing what the call does. If nothing, then return Unit
   def updateStatusToAccepted(nino: Nino, service: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+                                                          requestHeader: RequestHeader
   ): Future[Boolean] = {
-    val url: URL = new URL(
-      acaBaseUrl,
-      s"/agent-client-authorisation/agent/alt-itsa/$service/update-status/accepted/${nino.value}"
-    )
+
     monitor(s"ConsumedAPI-ACA-updateStatusToAccepted-PUT") {
       httpClient
-        .PUT[String, HttpResponse](url = url.toString, "")
+        .put(url"$acaBaseUrl/agent-client-authorisation/agent/alt-itsa/$service/update-status/accepted/${nino.value}")
+        .withBody("")
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case Status.NO_CONTENT => true
-            case _                 => false
+            // TODO: This code suppresses errors,
+            //  potentially masking critical issues like 5xx, 4xx, auth problems,
+            //  and client-side errors.
+            //  Instead of returning an empty list on error,
+            //  use a proper `Reads[T]` to handle non-201  responses and invalid JSON.
+            //  This will allow the global error handler to process the exceptions appropriately.
+            case _ => false
           }
         }
     }
-
   }
-
 }

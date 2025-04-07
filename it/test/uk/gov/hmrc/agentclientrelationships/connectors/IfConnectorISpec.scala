@@ -36,7 +36,7 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-class IFConnectorISpec
+class IfConnectorISpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
@@ -78,10 +78,10 @@ class IFConnectorISpec
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val ifConnector =
-    new IFConnector(httpClient, ec)(metrics, appConfig)
+    new GetBusinessDetailsConnector(httpClient, ec)(metrics, appConfig)
 
   val relationshipConnector =
-    new IFRelationshipConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
+    new RelationshipConnectorIf(httpClient, agentCacheProvider, ec)(metrics, appConfig)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

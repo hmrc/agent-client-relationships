@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
 import play.api.Logging
-import play.api.mvc.Request
+import play.api.mvc.{Request, RequestHeader}
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -131,7 +131,7 @@ private[services] abstract class DeleteRelationshipsService(
   }
 
   private def deleteEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    hc: HeaderCarrier,
+    rh: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
     val updateEtmpSyncStatus = deleteRecordRepository
@@ -146,11 +146,10 @@ private[services] abstract class DeleteRelationshipsService(
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- relationshipConnector.deleteAgentRelationship(
+      _ <- relationshipConnector.deleteAgentRelationship(
                          enrolmentKey,
                          arn
                        ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
-      if maybeResponse.nonEmpty
       _ = auditData.set("etmpRelationshipDeAuthorised", true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)

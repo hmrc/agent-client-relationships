@@ -17,11 +17,14 @@
 package uk.gov.hmrc.agentclientrelationships.audit
 
 import java.util.concurrent.ConcurrentHashMap
-
 import com.google.inject.Singleton
+
 import javax.inject.Inject
-import play.api.mvc.Request
+import play.api.mvc.{Request, RequestHeader}
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
@@ -130,9 +133,10 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     "abandonmentReason"
   )
 
+
   def sendCreateRelationshipAuditEvent(implicit
     hc: HeaderCarrier,
-    request: Request[Any],
+//    request: Request[Any],
     auditData: AuditData,
     ec: ExecutionContext
   ): Future[Unit] =
@@ -218,19 +222,22 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: Seq[(String, Any)] = Seq.empty
-  )(implicit hc: HeaderCarrier, request: Request[Any], ec: ExecutionContext): Future[Unit] =
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =
     send(createEvent(event, transactionName, details: _*))
 
   private def createEvent(
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: (String, Any)*
-  )(implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
+  )(implicit hc: HeaderCarrier, request: RequestHeader): DataEvent = {
 
     def toString(x: Any): String = x match {
       case t: TaxIdentifier => t.value
       case _                => x.toString
     }
+
+    import scala.util.chaining._
+
 
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
     val tags = hc.toAuditTags(transactionName, request.path)

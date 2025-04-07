@@ -132,6 +132,11 @@ class ExpiredEmailActor(
             case true =>
               invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
             case false =>
+              //TODO: Improve error handling to provide clearer insights into why the email was not sent.
+              // Throw an exception in EmailConnector so it can fail properly.
+              // This will allow the error to be logged correctly by the error handler.
+              // Then it can be monitored in kibana and actioned when failures happen on production.
+              // The current approach suppresses such details  hindering debugging and monitoring efforts.
               logger.warn(s"[EmailScheduler] Expiry email failed to send for invitation: ${invitation.invitationId}")
           }
           ()

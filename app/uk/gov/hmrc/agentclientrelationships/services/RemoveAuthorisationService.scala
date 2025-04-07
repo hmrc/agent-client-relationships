@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.GetBusinessDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, InvalidClientId, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, ValidRequest}
@@ -40,7 +40,7 @@ class RemoveAuthorisationService @Inject() (
   deleteService: DeleteRelationshipsServiceWithAcr,
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository,
-  ifConnector: IFConnector
+  ifConnector: GetBusinessDetailsConnector
 )(implicit ec: ExecutionContext)
     extends Logging {
 

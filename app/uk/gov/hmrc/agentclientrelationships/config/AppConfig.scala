@@ -26,6 +26,8 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 
+//TODO: don't use custom exception if it's not handled anywher, RuntimeException is enough
+//Especially when the underlying ServicesConfig throws exceptions for such case, so why to do it again?
 case class ConfigNotFoundException(message: String) extends RuntimeException(message)
 
 @Singleton
@@ -53,7 +55,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val userGroupsSearchUrl = servicesConfig.baseUrl("users-groups-search")
 
-  val agentPermissionsUrl = servicesConfig.baseUrl("agent-permissions")
+  val agentPermissionsUrl: String = servicesConfig.baseUrl("agent-permissions")
 
   val agentFiRelationshipBaseUrl: String = servicesConfig.baseUrl("agent-fi-relationship")
 
@@ -62,8 +64,17 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val desToken = getConfigString("des.authorization-token")
 
   val ifPlatformBaseUrl = servicesConfig.baseUrl("if")
-  val ifEnvironment = getConfigString("if.environment")
-  val ifAuthToken = getConfigString("if.authorization-token")
+
+  /**
+   * Itegration Framework (If) Environment
+   */
+  val ifEnvironment: String = getConfigString("if.environment")
+
+  /**
+   * Itegration Framework (If) Authorisation Token
+   */
+  val ifAuthToken: String = getConfigString("if.authorization-token")
+
   val ifAPI1171Token = getConfigString("if.authorization-api1171-token")
   val ifAPI1712Token = getConfigString("if.authorization-api1712-token")
   val ifAPI1495Token = getConfigString("if.authorization-api1495-token")

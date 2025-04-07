@@ -79,7 +79,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   val es = resettingMock[EnrolmentStoreProxyConnector]
   val des = resettingMock[DesConnector]
-  val ifConnector = resettingMock[IFConnector]
+  val ifConnector = resettingMock[GetBusinessDetailsConnector]
   val relationshipConnector = resettingMock[RelationshipConnector]
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]

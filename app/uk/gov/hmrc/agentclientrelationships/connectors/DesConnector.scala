@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DesConnector @Inject() (httpClient: HttpClient, val ec: ExecutionContext)(implicit
   val metrics: Metrics,
   val appConfig: AppConfig
-) extends HttpAPIMonitor
+) extends HttpApiMonitor
     with Logging {
 
   private val desBaseUrl = appConfig.desUrl

@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.config
 
 import com.google.inject.AbstractModule
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.agentclientrelationships.connectors.{HIPConnector, IFRelationshipConnector, RelationshipConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{RelationshipConnectorHip, RelationshipConnectorIf, RelationshipConnector}
 import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
 
 import java.time.{Clock, ZoneId}
@@ -43,11 +43,11 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
 
     if (hipConnectorEnabled) {
       bind(classOf[RelationshipConnector])
-        .to(classOf[HIPConnector])
+        .to(classOf[RelationshipConnectorHip])
         .asEagerSingleton()
     } else {
       bind(classOf[RelationshipConnector])
-        .to(classOf[IFRelationshipConnector])
+        .to(classOf[RelationshipConnectorIf])
         .asEagerSingleton()
     }
 

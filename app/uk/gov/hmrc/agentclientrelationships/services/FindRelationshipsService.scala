@@ -34,10 +34,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class FindRelationshipsService @Inject() (
-  ifConnector: IFConnector,
-  relationshipConnector: RelationshipConnector,
-  appConfig: AppConfig,
-  val metrics: Metrics
+                                           ifConnector: GetBusinessDetailsConnector,
+                                           relationshipConnector: RelationshipConnector,
+                                           appConfig: AppConfig,
+                                           val metrics: Metrics
 ) extends Monitoring
     with Logging {
 
@@ -49,7 +49,7 @@ class FindRelationshipsService @Inject() (
       mtdItId <- ifConnector.getMtdIdFor(nino)
       relationships <-
         mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
-          relationshipConnector.getActiveClientRelationships(_, service)
+          relationshipConnector.getActiveClientRelationship(_, service)
         )
     } yield relationships
 
@@ -77,7 +77,7 @@ class FindRelationshipsService @Inject() (
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     )
-      relationshipConnector.getActiveClientRelationships(taxIdentifier, service)
+      relationshipConnector.getActiveClientRelationship(taxIdentifier, service)
     else {
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(None)
