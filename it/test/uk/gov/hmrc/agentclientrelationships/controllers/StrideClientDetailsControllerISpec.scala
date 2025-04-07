@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
-import uk.gov.hmrc.agentclientrelationships.model.stride.{ActiveClientsRelationshipResponse, ClientRelationshipRequest, ClientsRelationshipsRequest, InvitationWithAgentName}
+import uk.gov.hmrc.agentclientrelationships.model.stride.{ActiveClientRelationship, ActiveClientsRelationshipResponse, ClientRelationshipRequest, ClientsRelationshipsRequest, InvitationWithAgentName}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuthRelationship, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HIPAgentClientRelationshipStub}
@@ -652,6 +652,14 @@ class StrideClientDetailsControllerISpec
       givenAgentRecordFound(arn2, testAgentRecord2)
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
+      val expectedPartialAuthRelationship = ActiveClientRelationship(
+        clientId = cr.clientId,
+        clientName = "Matthew Kovacic",
+        arn = arn2.value,
+        agentName = "DEF Ltd",
+        service = Service.MtdIt.id
+      )
+
       // Test
       val result = doAgentPostRequest(
         requestPath,
@@ -662,28 +670,9 @@ class StrideClientDetailsControllerISpec
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
-      response.activeClientRelationships.size shouldBe 1
-      val mainRelationships =
-        response.activeClientRelationships.filter(x =>
-          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value
-        )
-
-      val partialAuthRelationships =
-        response.activeClientRelationships.filter(x =>
-          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value
-        )
-
-      val suppRelationships =
-        response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
-
-      val irvRelationships = response.activeClientRelationships.filter(x =>
-        x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
+        Seq(expectedPartialAuthRelationship)
       )
-
-      mainRelationships.size shouldBe 0
-      partialAuthRelationships.size shouldBe 1
-      suppRelationships.size shouldBe 0
-      irvRelationships.size shouldBe 0
 
     }
 
@@ -699,6 +688,14 @@ class StrideClientDetailsControllerISpec
       givenAgentRecordFound(arn2, testAgentRecord2)
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
+      val expectedPartialAuthRelationship = ActiveClientRelationship(
+        clientId = cr.clientId,
+        clientName = "Matthew Kovacic",
+        arn = arn2.value,
+        agentName = "DEF Ltd",
+        service = Service.MtdIt.id
+      )
+
       // Test
       val result = doAgentPostRequest(
         requestPath,
@@ -709,28 +706,9 @@ class StrideClientDetailsControllerISpec
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
-      response.activeClientRelationships.size shouldBe 1
-      val mainRelationships =
-        response.activeClientRelationships.filter(x =>
-          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value
-        )
-
-      val partialAuthRelationships =
-        response.activeClientRelationships.filter(x =>
-          x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value
-        )
-
-      val suppRelationships =
-        response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
-
-      val irvRelationships = response.activeClientRelationships.filter(x =>
-        x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
+        Seq(expectedPartialAuthRelationship)
       )
-
-      mainRelationships.size shouldBe 0
-      partialAuthRelationships.size shouldBe 1
-      suppRelationships.size shouldBe 0
-      irvRelationships.size shouldBe 0
 
     }
 
