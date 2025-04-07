@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector,
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending, Rejected, TrackRequestsResult}
+import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Rejected, TrackRequestsResult}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
@@ -34,7 +34,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future.successful
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -92,19 +91,11 @@ class InvitationService @Inject() (
 
   def rejectInvitation(
     invitationId: String
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Unit]] =
-    (for {
-      invitation <- EitherT(
-                      invitationsRepository
-                        .updateStatusFromTo(invitationId, Pending, Rejected)
-                        .map(_.fold[Either[InvitationFailureResponse, Invitation]](Left(NoPendingInvitation))(Right(_)))
-                    )
-      _ <-
-        EitherT.right[InvitationFailureResponse](emailService.sendRejectedEmail(invitation).fallbackTo(successful(())))
-      // TODO WG  auditEvent
-    } yield invitation)
-      .map(_ => ())
-      .value
+  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Invitation] =
+    for {
+      invitation <- invitationsRepository.updateStatus(invitationId, Rejected)
+      _          <- emailService.sendRejectedEmail(invitation)
+    } yield invitation
 
   def cancelInvitation(
     arn: Arn,

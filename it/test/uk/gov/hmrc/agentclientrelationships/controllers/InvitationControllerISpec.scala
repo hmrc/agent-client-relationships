@@ -21,14 +21,15 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
-import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
+import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, AuthStub, ClientDetailsStub, EmailStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -49,6 +50,7 @@ class InvitationControllerISpec
     with AuthStub {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
+  val auditService: AuditService = app.injector.instanceOf[AuditService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -64,6 +66,7 @@ class InvitationControllerISpec
   val controller =
     new InvitationController(
       invitationService,
+      auditService,
       authConnector,
       appConfig,
       stubControllerComponents()
@@ -391,9 +394,10 @@ class InvitationControllerISpec
 
         val clientIdentifier = ClientIdentifier(clientId, clientIdType)
 
+        givenUserIsSubscribedClient(clientIdentifier.underlying)
         givenEmailSent(emailInfo)
 
-        await(
+        val pendingInvitation = await(
           invitationRepo.create(
             arn.value,
             Service.forId(taxService),
@@ -406,11 +410,6 @@ class InvitationControllerISpec
             Some("personal")
           )
         )
-
-        val pendingInvitation = invitationRepo
-          .findAllForAgent(arn.value)
-          .futureValue
-          .head
 
         val result =
           doAgentPutRequest(

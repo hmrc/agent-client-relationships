@@ -203,22 +203,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFuture()
 
-  def findByArnClientIdService(arn: Arn, suppliedClientId: ClientId, service: Service): Future[Seq[Invitation]] =
-    collection
-      .find(
-        and(
-          equal(arnKey, arn.value),
-          equal("suppliedClientId", encryptedString(suppliedClientId.value)),
-          equal("service", service.id)
-        )
-      )
-      .toFuture()
-
   def updateStatus(
     invitationId: String,
     status: InvitationStatus,
     timestamp: Option[Instant] = None
-  ): Future[Option[Invitation]] =
+  ): Future[Invitation] =
     collection
       .findOneAndUpdate(
         equal(invitationIdKey, invitationId),
@@ -228,7 +217,8 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         ),
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
-      .toFutureOption()
+      .headOption()
+      .map(_.getOrElse(throw new RuntimeException(s"Could not find an invitation with invitationId '$invitationId'")))
 
   def deauthInvitation(
     invitationId: String,

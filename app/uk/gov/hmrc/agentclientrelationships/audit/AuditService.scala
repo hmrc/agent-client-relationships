@@ -22,7 +22,7 @@ import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -37,8 +37,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
-  val CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES, TerminateRelationship,
-    TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned =
+  val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES,
+    TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned =
     Value
   type AgentClientRelationshipEvent = Value
 }
@@ -65,6 +65,17 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
       field <- fields
       value <- data.get(field)
     } yield (field, value)
+
+  private val respondToInvitationFields: Seq[String] = Seq(
+    arnKey,
+    serviceKey,
+    clientIdKey,
+    clientIdTypeKey,
+    respondedByKey,
+    responseKey,
+    invitationIdKey,
+    suppliedClientIdKey
+  )
 
   private val createRelationshipDetailsFields: Seq[String] = Seq(
     agentCodeKey,
@@ -157,6 +168,29 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     "numberOfAttempts",
     "abandonmentReason"
   )
+
+  def sendRespondToInvitationAuditEvent(invitation: Invitation, accepted: Boolean, isStride: Boolean)(implicit
+    hc: HeaderCarrier,
+    request: Request[Any],
+    ec: ExecutionContext
+  ): Future[Unit] =
+    auditEvent(
+      AgentClientRelationshipEvent.RespondToInvitation,
+      "respond-to-invitation",
+      collectDetails(
+        data = Map(
+          arnKey              -> invitation.arn,
+          serviceKey          -> invitation.service,
+          clientIdKey         -> invitation.clientId,
+          clientIdTypeKey     -> invitation.clientIdType,
+          invitationIdKey     -> invitation.invitationId,
+          suppliedClientIdKey -> invitation.suppliedClientId,
+          responseKey         -> (if (accepted) acceptedInvitation else rejectedInvitation),
+          respondedByKey      -> (if (isStride) respondedByHmrc else respondedByClient)
+        ),
+        fields = createRelationshipDetailsFields
+      )
+    )
 
   def sendCreateRelationshipAuditEvent()(implicit
     hc: HeaderCarrier,
@@ -386,8 +420,15 @@ object AuditKeys {
   val howRelationshipTerminatedKey: String = "howRelationshipTerminated"
   val howPartialAuthTerminatedKey: String = "howPartialAuthorisationTerminated"
   val howPartialAuthCreatedKey: String = "howPartialAuthorisationCreated"
-
+  val respondedByKey: String = "respondedBy"
+  val responseKey: String = "response"
   val invitationIdKey: String = "invitationId"
+
+  // Respond to Invitation
+  val respondedByHmrc: String = "HMRC"
+  val respondedByClient: String = "Client"
+  val acceptedInvitation: String = "Accepted"
+  val rejectedInvitation: String = "Rejected"
 
   // Create Relationship
   val copyExistingCesa: String = "CopyExistingCESARelationship"

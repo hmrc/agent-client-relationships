@@ -226,7 +226,7 @@ class AuthorisationAcceptServiceSpec
         "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
           mockCreateRelationship(testArn, vatEnrolment)(Future.successful(Some(DbUpdateSucceeded)))
           mockUpdateStatus(vatInvitation.invitationId, Accepted)(
-            Future.successful(Some(vatInvitation.copy(status = Accepted)))
+            Future.successful(vatInvitation.copy(status = Accepted))
           )
           mockFindAllBy(None, Seq(vatEnrolment.service), Seq(vatInvitation.clientId), Some(Accepted))(
             Future.successful(Seq(vatInvitation.copy(status = Accepted), oltVatInvitation))
@@ -236,7 +236,7 @@ class AuthorisationAcceptServiceSpec
           )
           mockSendAcceptedEmail(vatInvitation)()
 
-          await(TestService.accept(vatInvitation, vatEnrolment)) shouldBe Some(vatInvitation.copy(status = Accepted))
+          await(TestService.accept(vatInvitation, vatEnrolment)) shouldBe vatInvitation.copy(status = Accepted)
 
           // Verifying non blocking side effects actually happen
           verifySideEffectsOccur { _ =>
@@ -256,7 +256,7 @@ class AuthorisationAcceptServiceSpec
         "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
           mockCreateFiRelationship(testArn, pirInvitation.service, pirInvitation.clientId)(Future.successful(true))
           mockUpdateStatus(pirInvitation.invitationId, Accepted)(
-            Future.successful(Some(pirInvitation.copy(status = Accepted)))
+            Future.successful(pirInvitation.copy(status = Accepted))
           )
           mockFindAllBy(None, Seq(pirEnrolment.service), Seq(pirInvitation.clientId), Some(Accepted))(
             Future.successful(Seq(pirInvitation.copy(status = Accepted), oldPirInvitation))
@@ -266,7 +266,7 @@ class AuthorisationAcceptServiceSpec
           )
           mockSendAcceptedEmail(pirInvitation)()
 
-          await(TestService.accept(pirInvitation, pirEnrolment)) shouldBe Some(pirInvitation.copy(status = Accepted))
+          await(TestService.accept(pirInvitation, pirEnrolment)) shouldBe pirInvitation.copy(status = Accepted)
 
           // Verifying non blocking side effects actually happen
           verifySideEffectsOccur { _ =>
@@ -292,7 +292,7 @@ class AuthorisationAcceptServiceSpec
             mockDeauthorisePartialAuth(MtdIt.id, testNino, testArn3)(Future.successful(true))
             mockCreateRelationship(testArn, itsaEnrolment)(Future.successful(Some(DbUpdateSucceeded)))
             mockUpdateStatus(itsaInvitation.invitationId, Accepted)(
-              Future.successful(Some(itsaInvitation.copy(status = Accepted)))
+              Future.successful(itsaInvitation.copy(status = Accepted))
             )
             mockFindAllBy(None, Seq(itsaEnrolment.service), Seq(itsaInvitation.clientId), Some(Accepted))(
               Future.successful(Seq(itsaInvitation.copy(status = Accepted), oldItsaInvitation))
@@ -308,9 +308,7 @@ class AuthorisationAcceptServiceSpec
             )
             mockSendAcceptedEmail(itsaInvitation)()
 
-            await(TestService.accept(itsaInvitation, itsaEnrolment)) shouldBe Some(
-              itsaInvitation.copy(status = Accepted)
-            )
+            await(TestService.accept(itsaInvitation, itsaEnrolment)) shouldBe itsaInvitation.copy(status = Accepted)
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
@@ -335,12 +333,12 @@ class AuthorisationAcceptServiceSpec
             )
             mockCreateRelationship(testArn, itsaEnrolment)(Future.successful(Some(DbUpdateSucceeded)))
             mockUpdateStatus(itsaSuppInvitation.invitationId, Accepted)(
-              Future.successful(Some(itsaSuppInvitation.copy(status = Accepted)))
+              Future.successful(itsaSuppInvitation.copy(status = Accepted))
             )
             mockSendAcceptedEmail(itsaSuppInvitation)()
 
-            await(TestService.accept(itsaSuppInvitation, itsaEnrolment)) shouldBe Some(
-              itsaSuppInvitation.copy(status = Accepted)
+            await(TestService.accept(itsaSuppInvitation, itsaEnrolment)) shouldBe itsaSuppInvitation.copy(status =
+              Accepted
             )
 
             // Verifying non blocking side effects actually happen
@@ -364,7 +362,7 @@ class AuthorisationAcceptServiceSpec
             mockDeauthorisePartialAuth(MtdIt.id, testNino, testArn3)(Future.successful(true))
             mockCreatePartialAuth(testArn, MtdIt.id, testNino)()
             mockUpdateStatus(altItsaInvitation.invitationId, PartialAuth)(
-              Future.successful(Some(altItsaInvitation.copy(status = PartialAuth)))
+              Future.successful(altItsaInvitation.copy(status = PartialAuth))
             )
             mockFindAllBy(None, Seq(altItsaInvitation.service), Seq(altItsaInvitation.clientId), Some(PartialAuth))(
               Future.successful(Seq(altItsaInvitation.copy(status = PartialAuth), oldAltItsaInvitation))
@@ -374,8 +372,8 @@ class AuthorisationAcceptServiceSpec
             )
             mockSendAcceptedEmail(altItsaInvitation)()
 
-            await(TestService.accept(altItsaInvitation, itsaEnrolment)) shouldBe Some(
-              altItsaInvitation.copy(status = PartialAuth)
+            await(TestService.accept(altItsaInvitation, itsaEnrolment)) shouldBe altItsaInvitation.copy(status =
+              PartialAuth
             )
 
             // Verifying non blocking side effects actually happen
@@ -401,12 +399,12 @@ class AuthorisationAcceptServiceSpec
             )
             mockCreatePartialAuth(testArn, MtdItSupp.id, testNino)()
             mockUpdateStatus(altItsaSuppInvitation.invitationId, PartialAuth)(
-              Future.successful(Some(altItsaSuppInvitation.copy(status = PartialAuth)))
+              Future.successful(altItsaSuppInvitation.copy(status = PartialAuth))
             )
             mockSendAcceptedEmail(altItsaSuppInvitation)()
 
-            await(TestService.accept(altItsaSuppInvitation, itsaEnrolment)) shouldBe Some(
-              altItsaSuppInvitation.copy(status = PartialAuth)
+            await(TestService.accept(altItsaSuppInvitation, itsaEnrolment)) shouldBe altItsaSuppInvitation.copy(status =
+              PartialAuth
             )
 
             // Verifying non blocking side effects actually happen

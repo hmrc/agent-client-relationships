@@ -55,7 +55,7 @@ class AuthorisationAcceptService @Inject() (
     request: Request[_],
     currentUser: CurrentUser,
     auditData: AuditData
-  ): Future[Option[Invitation]] = {
+  ): Future[Invitation] = {
     val timestamp = Instant.now
     val isAltItsa = invitation.isAltItsa
     val isItsa = Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)

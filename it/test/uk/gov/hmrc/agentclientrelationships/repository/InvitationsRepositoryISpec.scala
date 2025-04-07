@@ -188,13 +188,13 @@ class InvitationsRepositoryISpec
       val invitation = pendingInvitation()
       await(repository.collection.insertOne(invitation).toFuture())
 
-      lazy val updatedInvitation = await(repository.updateStatus(invitation.invitationId, Accepted)).get
+      lazy val updatedInvitation = await(repository.updateStatus(invitation.invitationId, Accepted))
       updatedInvitation.status shouldBe Accepted
       updatedInvitation.lastUpdated.isAfter(invitation.lastUpdated)
     }
 
     "fail to update the status of an invitation when a matching invitation is not found" in {
-      await(repository.updateStatus("ABC", Accepted)) shouldBe None
+      intercept[RuntimeException](await(repository.updateStatus("ABC", Accepted)))
     }
 
     "update the status from Pending to Rejected of an invitation when a matching invitation is found" in {

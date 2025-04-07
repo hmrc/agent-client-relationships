@@ -21,7 +21,7 @@ import play.api.libs.json.{Format, Json, Reads, __}
 import uk.gov.hmrc.agentclientrelationships.model.transitional.StatusChangeEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{InvitationId, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, InvitationId, Service}
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
@@ -48,6 +48,8 @@ case class Invitation(
   created: Instant,
   lastUpdated: Instant
 ) {
+
+  def enrolmentKey: EnrolmentKey = EnrolmentKey(service, ClientIdType.forId(clientIdType).createUnderlying(clientId))
 
   def isAltItsa: Boolean =
     (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(this.service) &&

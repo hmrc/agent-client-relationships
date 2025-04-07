@@ -32,8 +32,8 @@ trait MockInvitationsRepository {
   val mockInvitationsRepository: InvitationsRepository = resettingMock[InvitationsRepository]
 
   def mockUpdateStatus(invitationId: String, status: InvitationStatus)(
-    response: Future[Option[Invitation]]
-  ): OngoingStubbing[Future[Option[Invitation]]] =
+    response: Future[Invitation]
+  ): OngoingStubbing[Future[Invitation]] =
     when(
       mockInvitationsRepository.updateStatus(eqs(invitationId), eqs(status), any[Option[Instant]])
     )
