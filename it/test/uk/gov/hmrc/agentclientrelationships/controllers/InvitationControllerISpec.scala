@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationReq
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
@@ -46,10 +46,10 @@ class InvitationControllerISpec
     with AfiRelationshipStub
     with AgentAssuranceStubs
     with EmailStubs
-    with TestData
-    with AuthStub {
+    with TestData {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
+  val validationService: ValidationService = app.injector.instanceOf[ValidationService]
   val auditService: AuditService = app.injector.instanceOf[AuditService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -67,6 +67,7 @@ class InvitationControllerISpec
     new InvitationController(
       invitationService,
       auditService,
+      validationService,
       authConnector,
       appConfig,
       stubControllerComponents()
@@ -393,6 +394,7 @@ class InvitationControllerISpec
         val clientIdentifier = ClientIdentifier(clientId, clientIdType)
 
         givenUserIsSubscribedClient(clientIdentifier.underlying)
+        if (taxService == HMRCCBCORG) givenCbcUkExistsInES(cbcId, utr.value)
         givenEmailSent(emailInfo)
 
         val pendingInvitation = await(

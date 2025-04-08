@@ -48,9 +48,6 @@ case class Invitation(
   created: Instant,
   lastUpdated: Instant
 ) {
-
-  def enrolmentKey: EnrolmentKey = EnrolmentKey(service, ClientIdType.forId(clientIdType).createUnderlying(clientId))
-
   def isAltItsa: Boolean =
     (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(this.service) &&
       this.clientId == this.suppliedClientId) ||

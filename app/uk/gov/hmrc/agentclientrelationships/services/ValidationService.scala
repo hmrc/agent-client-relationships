@@ -37,6 +37,7 @@ class ValidationService @Inject() (
   appConfig: AppConfig
 ) extends Logging {
 
+  // TODO look into updating this to not be an either as we never actually handle the Left it returns in a useful way
   // noinspection ScalaStyle
   def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(implicit
     hc: HeaderCarrier,
