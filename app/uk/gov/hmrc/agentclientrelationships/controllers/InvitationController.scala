@@ -25,9 +25,9 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
-import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentclientrelationships.services.{InvitationService, ValidationService}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Trust, TrustNT}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service, UrnType, UtrType}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -38,6 +38,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class InvitationController @Inject() (
   invitationService: InvitationService,
   auditService: AuditService,
+  validationService: ValidationService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -111,15 +112,37 @@ class InvitationController @Inject() (
   def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     invitationService.findInvitation(invitationId).flatMap {
       case Some(invitation) if invitation.status == Pending =>
-        authorisedUser(None, invitation.enrolmentKey.oneTaxIdentifier(), strideRoles) { currentUser =>
-          invitationService
-            .rejectInvitation(invitationId)
-            .map { _ =>
-              auditService
-                .sendRespondToInvitationAuditEvent(invitation, accepted = false, isStride = currentUser.isStride)
-              NoContent
+        for {
+          enrolment <-
+            validationService
+              .validateForEnrolmentKey(
+                invitation.service,
+                ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                invitation.clientId
+              )
+              .map(either =>
+                either.getOrElse(
+                  throw new RuntimeException(
+                    s"Could not parse invitation details into enrolment reason: ${either.left}"
+                  )
+                )
+              )
+          result <-
+            authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { currentUser =>
+              invitationService
+                .rejectInvitation(invitationId)
+                .map { _ =>
+                  auditService
+                    .sendRespondToInvitationAuditEvent(
+                      invitation,
+                      accepted = false,
+                      isStride = currentUser.isStride
+                    )
+                  NoContent
+                }
             }
-        }
+        } yield result
+
       case _ =>
         val msg = s"Pending Invitation not found for invitationId '$invitationId'"
         Logger(getClass).warn(msg)

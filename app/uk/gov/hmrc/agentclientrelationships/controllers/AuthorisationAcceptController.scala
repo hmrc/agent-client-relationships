@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -57,10 +57,24 @@ class AuthorisationAcceptController @Inject() (
         implicit val auditData: AuditData = prepareAuditData(invitation)
 
         for {
+          enrolment <-
+            validationService
+              .validateForEnrolmentKey(
+                invitation.service,
+                ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                invitation.clientId
+              )
+              .map(either =>
+                either.getOrElse(
+                  throw new RuntimeException(
+                    s"Could not parse invitation details into enrolment reason: ${either.left}"
+                  )
+                )
+              )
           result <-
-            authorisedUser(None, invitation.enrolmentKey.oneTaxIdentifier(), strideRoles) { implicit currentUser =>
+            authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { implicit currentUser =>
               authorisationAcceptService
-                .accept(invitation, invitation.enrolmentKey)
+                .accept(invitation, enrolment)
                 .map { _ =>
                   auditService
                     .sendRespondToInvitationAuditEvent(invitation, accepted = true, isStride = currentUser.isStride)
@@ -71,7 +85,7 @@ class AuthorisationAcceptController @Inject() (
                   case err                      => throw err
                 }
             }
-          _ <- if (result == NoContent) friendlyNameService.updateFriendlyName(invitation, invitation.enrolmentKey)
+          _ <- if (result == NoContent) friendlyNameService.updateFriendlyName(invitation, enrolment)
                else Future.unit
         } yield result
       case _ =>
