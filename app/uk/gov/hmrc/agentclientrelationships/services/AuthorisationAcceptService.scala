@@ -33,6 +33,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import java.time.{Instant, LocalDateTime, ZoneId}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Success
 
 // scalastyle:off method.length
 @Singleton
@@ -55,7 +56,7 @@ class AuthorisationAcceptService @Inject() (
     request: Request[_],
     currentUser: CurrentUser,
     auditData: AuditData
-  ): Future[Option[Invitation]] = {
+  ): Future[Invitation] = {
     val timestamp = Instant.now
     val isAltItsa = invitation.isAltItsa
     val isItsa = Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)
@@ -131,7 +132,7 @@ class AuthorisationAcceptService @Inject() (
             service = invitation.service,
             nino = Nino(invitation.clientId)
           )
-          .andThen(_ => auditService.sendCreatePartialAuthAuditEvent())
+          .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
       case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
         deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
           partialAuthRepository
@@ -141,7 +142,7 @@ class AuthorisationAcceptService @Inject() (
               service = invitation.service,
               nino = Nino(invitation.clientId)
             )
-            .andThen(_ => auditService.sendCreatePartialAuthAuditEvent())
+            .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
         }
       case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
         deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
@@ -163,7 +164,7 @@ class AuthorisationAcceptService @Inject() (
             clientId = invitation.clientId,
             acceptedDate = LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
           )
-          .andThen(_ => auditService.sendCreateRelationshipAuditEvent())
+          .andThen { case Success(_) => auditService.sendCreateRelationshipAuditEvent() }
       case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
         createRelationshipsService
           .createRelationship(

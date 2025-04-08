@@ -22,10 +22,48 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
 
 trait DataStreamStub extends Eventually {
 
   private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(1, Seconds)), scaled(Span(50, Millis)))
+
+  def verifyCreateInvitationAuditSent(requestPath: String, invitation: Invitation): Unit =
+    verifyAuditRequestSent(
+      1,
+      event = AgentClientRelationshipEvent.CreateInvitation,
+      detail = Map(
+        "agentReferenceNumber" -> invitation.arn,
+        "service"              -> invitation.service,
+        "clientId"             -> invitation.clientId,
+        "clientIdType"         -> invitation.clientIdType,
+        "suppliedClientId"     -> invitation.suppliedClientId,
+        "invitationId"         -> invitation.invitationId
+      ),
+      tags = Map("transactionName" -> "create-invitation", "path" -> requestPath)
+    )
+
+  def verifyRespondToInvitationAuditSent(
+    requestPath: String,
+    invitation: Invitation,
+    accepted: Boolean,
+    isStride: Boolean
+  ): Unit =
+    verifyAuditRequestSent(
+      1,
+      event = AgentClientRelationshipEvent.RespondToInvitation,
+      detail = Map(
+        "agentReferenceNumber" -> invitation.arn,
+        "service"              -> invitation.service,
+        "clientId"             -> invitation.clientId,
+        "clientIdType"         -> invitation.clientIdType,
+        "suppliedClientId"     -> invitation.suppliedClientId,
+        "invitationId"         -> invitation.invitationId,
+        "response"             -> (if (accepted) "Accepted" else "Rejected"),
+        "respondedBy"          -> (if (isStride) "HMRC" else "Client")
+      ),
+      tags = Map("transactionName" -> "respond-to-invitation", "path" -> requestPath)
+    )
 
   def verifyCreateRelationshipAuditSent(
     requestPath: String,

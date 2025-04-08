@@ -19,8 +19,10 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
@@ -35,6 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class InvitationController @Inject() (
   invitationService: InvitationService,
+  auditService: AuditService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -43,6 +46,8 @@ class InvitationController @Inject() (
     with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
+
+  private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   def createInvitation(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body
@@ -94,26 +99,31 @@ class InvitationController @Inject() (
 
                 case _ => BadRequest
               },
-              invitation => Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
+              invitation => {
+                auditService.sendCreateInvitationAuditEvent(invitation)
+                Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
+              }
             )
           }
       )
   }
 
   def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
-    invitationService.rejectInvitation(invitationId).map { response =>
-      response.fold(
-        {
-          case NoPendingInvitation =>
-            val msg = s"""Pending Invitation not found
-                         | for invitationId "$invitationId"""".stripMargin
-            Logger(getClass).warn(msg)
-            NoPendingInvitation.getResult(msg)
-
-          case _ => BadRequest
-        },
-        _ => NoContent
-      )
+    invitationService.findInvitation(invitationId).flatMap {
+      case Some(invitation) if invitation.status == Pending =>
+        authorisedUser(None, invitation.enrolmentKey.oneTaxIdentifier(), strideRoles) { currentUser =>
+          invitationService
+            .rejectInvitation(invitationId)
+            .map { _ =>
+              auditService
+                .sendRespondToInvitationAuditEvent(invitation, accepted = false, isStride = currentUser.isStride)
+              NoContent
+            }
+        }
+      case _ =>
+        val msg = s"Pending Invitation not found for invitationId '$invitationId'"
+        Logger(getClass).warn(msg)
+        Future.successful(NoPendingInvitation.getResult(msg))
     }
   }
 

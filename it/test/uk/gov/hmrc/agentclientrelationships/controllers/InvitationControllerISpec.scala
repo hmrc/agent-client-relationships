@@ -21,14 +21,15 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
-import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
+import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, AuthStub, ClientDetailsStub, EmailStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -49,6 +50,7 @@ class InvitationControllerISpec
     with AuthStub {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
+  val auditService: AuditService = app.injector.instanceOf[AuditService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -64,6 +66,7 @@ class InvitationControllerISpec
   val controller =
     new InvitationController(
       invitationService,
+      auditService,
       authConnector,
       appConfig,
       stubControllerComponents()
@@ -119,7 +122,7 @@ class InvitationControllerISpec
 
   val dateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
-  "create invitation link" should {
+  "create invitation" should {
 
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
@@ -139,11 +142,8 @@ class InvitationControllerISpec
 
         givenAgentRecordFound(arn, testAgentRecord)
 
-        val result =
-          doAgentPostRequest(
-            s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-            Json.toJson(inputData).toString()
-          )
+        val requestPath = s"/agent-client-relationships/agent/${arn.value}/authorisation-request"
+        val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
         result.status shouldBe 201
 
         val invitationSeq = invitationRepo
@@ -166,6 +166,7 @@ class InvitationControllerISpec
         invitation.service shouldBe inputData.service
         invitation.clientName shouldBe clientName
 
+        verifyCreateInvitationAuditSent(requestPath, invitation)
       }
     )
 
@@ -391,9 +392,10 @@ class InvitationControllerISpec
 
         val clientIdentifier = ClientIdentifier(clientId, clientIdType)
 
+        givenUserIsSubscribedClient(clientIdentifier.underlying)
         givenEmailSent(emailInfo)
 
-        await(
+        val pendingInvitation = await(
           invitationRepo.create(
             arn.value,
             Service.forId(taxService),
@@ -406,16 +408,9 @@ class InvitationControllerISpec
             Some("personal")
           )
         )
-
-        val pendingInvitation = invitationRepo
-          .findAllForAgent(arn.value)
-          .futureValue
-          .head
-
-        val result =
-          doAgentPutRequest(
-            s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
-          )
+        val requestPath =
+          s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
+        val result = doAgentPutRequest(requestPath)
         result.status shouldBe 204
 
         val invitationSeq = invitationRepo
@@ -426,6 +421,7 @@ class InvitationControllerISpec
         invitationSeq.head.status shouldBe Rejected
 
         verifyRejectInvitationSent(emailInfo)
+        verifyRespondToInvitationAuditSent(requestPath, pendingInvitation, accepted = false, isStride = false)
       }
     )
 
