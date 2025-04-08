@@ -62,7 +62,6 @@ class CheckRelationshipsOrchestratorService @Inject() (
     (service, clientIdType, clientId) match {
       // Used by BTA to handle non MTD ITSA users
       case ("IR-SA", _, _) if Nino.isValid(clientId) =>
-        // TODO make sure this checks partial auth on ACR instead of ACA
         withIrSaSuspensionCheck(arn) {
           checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
         }
@@ -72,7 +71,6 @@ class CheckRelationshipsOrchestratorService @Inject() (
           checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(service, mtdItId))
         }
       // Legacy VAT enrolment check
-      // TODO: Investigate if needed, no requests on Kibana and copy across is disabled
       case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) =>
         checkWithVrn(arn, Vrn(clientId))
       // PIR relationships are done through agent-fi-relationships
@@ -89,7 +87,6 @@ class CheckRelationshipsOrchestratorService @Inject() (
   private def withValidEnrolment(service: String, clientIdType: String, clientId: String)(
     proceed: EnrolmentKey => Future[CheckRelationshipResult]
   )(implicit hc: HeaderCarrier): Future[CheckRelationshipResult] =
-    // TODO, unnecessary ES20 call?
     validationService.validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
       case Right(enrolmentKey) => proceed(enrolmentKey)
       case Left(validationError) =>
@@ -107,11 +104,6 @@ class CheckRelationshipsOrchestratorService @Inject() (
 
     val result = for {
       _ <- agentUserService.getAgentAdminAndSetAuditData(arn)
-      /* The method above (agentUserService.getAgentAdminUserFor) is no longer necessary and is called only so that
-         the relevant auditData fields are populated, which our tests expect.
-         TODO: Must refactor to remove these hidden side-effects and put them somewhere more explicit.
-         Statements populating audit data should be gathered together as much as possible, preferably at the controller level,
-         and not scattered throughout lots of methods in different classes. */
       isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
       res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
              else Future.failed(RelationshipDeletePending())
