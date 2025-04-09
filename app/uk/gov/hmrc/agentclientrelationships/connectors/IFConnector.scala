@@ -288,11 +288,11 @@ class IFRelationshipConnector @Inject() (
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
+          s"$ifBaseUrl/registration/relationship?referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01&$authProfileParam"
         )
       case Vrn(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
+          s"$ifBaseUrl/registration/relationship?idType=VRN&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01&$authProfileParam"
         )
       case Utr(_) =>
         new URL(
@@ -304,11 +304,11 @@ class IFRelationshipConnector @Inject() (
         )
       case CgtRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
+          s"$ifBaseUrl/registration/relationship?idType=ZCGT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01&$authProfileParam"
         )
       case PptRef(_) =>
         new URL(
-          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01$authProfileParam"
+          s"$ifBaseUrl/registration/relationship?idType=ZPPT&referenceNumber=$encodedClientId&agent=false&active-only=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationship=ZA01&$authProfileParam"
         )
       case CbcId(_) =>
         new URL(
