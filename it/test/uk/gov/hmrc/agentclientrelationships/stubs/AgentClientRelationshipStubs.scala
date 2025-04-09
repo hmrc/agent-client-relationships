@@ -1612,17 +1612,17 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
     taxIdentifier match {
       case MtdItId(mtdItId) =>
-        s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=$activeOnly&regime=ITSA$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+        s"/registration/relationship?referenceNumber=$mtdItId&agent=false&active-only=$activeOnly&regime=ITSA$dateRangeParams&relationship=ZA01&$authProfileParam"
       case Vrn(vrn) =>
-        s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=$activeOnly&regime=VATC$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+        s"/registration/relationship?idType=VRN&referenceNumber=$vrn&agent=false&active-only=$activeOnly&regime=VATC$dateRangeParams&relationship=ZA01&$authProfileParam"
       case Utr(utr) =>
         s"/registration/relationship?idType=UTR&referenceNumber=$utr&agent=false&active-only=$activeOnly&regime=TRS$dateRangeParams"
       case Urn(urn) =>
         s"/registration/relationship?idType=URN&referenceNumber=$urn&agent=false&active-only=$activeOnly&regime=TRS$dateRangeParams"
       case CgtRef(ref) =>
-        s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=CGT$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+        s"/registration/relationship?idType=ZCGT&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=CGT$dateRangeParams&relationship=ZA01&$authProfileParam"
       case PptRef(ref) =>
-        s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=PPT$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+        s"/registration/relationship?idType=ZPPT&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=PPT$dateRangeParams&relationship=ZA01&$authProfileParam"
       case CbcId(ref) =>
         s"/registration/relationship?idType=CBC&referenceNumber=$ref&agent=false&active-only=$activeOnly&regime=CBC$dateRangeParams"
       case PlrId(ref) =>

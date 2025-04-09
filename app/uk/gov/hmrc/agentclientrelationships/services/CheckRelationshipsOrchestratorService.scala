@@ -103,7 +103,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
     maybeUserId.foreach(auditData.set(credIdKey, _))
 
     val result = for {
-      _ <- agentUserService.getAgentAdminAndSetAuditData(arn)
+      _       <- agentUserService.getAgentAdminAndSetAuditData(arn)
       isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
       res <- if (isClear) checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
              else Future.failed(RelationshipDeletePending())
