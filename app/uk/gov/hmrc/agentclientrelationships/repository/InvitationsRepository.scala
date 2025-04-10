@@ -161,18 +161,20 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     clientIds: Seq[String] = Nil,
     status: Option[InvitationStatus] = None
   ): Future[Seq[Invitation]] =
-    collection
-      .find(
-        and(
-          Seq(
-            arn.map(equal(arnKey, _)),
-            if (services.nonEmpty) Some(in(serviceKey, services: _*)) else None,
-            if (clientIds.nonEmpty) Some(in(clientIdKey, clientIds.map(encryptedString): _*)) else None,
-            status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
-          ).flatten: _*
+    if (arn.isEmpty && clientIds.isEmpty) Future.successful(Nil) // no user-specific identifiers were provided
+    else
+      collection
+        .find(
+          and(
+            Seq(
+              arn.map(equal(arnKey, _)),
+              if (services.nonEmpty) Some(in(serviceKey, services: _*)) else None,
+              if (clientIds.nonEmpty) Some(in(clientIdKey, clientIds.map(encryptedString): _*)) else None,
+              status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
+            ).flatten: _*
+          )
         )
-      )
-      .toFuture()
+        .toFuture()
 
   def findOneByIdForClient(invitationId: String): Future[Option[Invitation]] =
     collection
