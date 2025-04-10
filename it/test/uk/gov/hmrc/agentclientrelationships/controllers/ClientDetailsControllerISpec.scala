@@ -23,7 +23,7 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponen
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
+import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsOrchestratorService, ClientDetailsService}
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
@@ -42,11 +42,12 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository =
     app.injector.instanceOf[PartialAuthRepository]
-  val relationshipsController: RelationshipsController = app.injector.instanceOf[RelationshipsController]
+  val checkRelationshipsService: CheckRelationshipsOrchestratorService =
+    app.injector.instanceOf[CheckRelationshipsOrchestratorService]
 
   val controller = new ClientDetailsController(
     clientDetailsService,
-    relationshipsController,
+    checkRelationshipsService,
     invitationsRepo,
     partialAuthRepo,
     authConnector,
