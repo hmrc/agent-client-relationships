@@ -17,17 +17,18 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
+import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
+import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCCBCNONUKORG, HMRCCBCORG, HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -36,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ClientDetailsController @Inject() (
   clientDetailsService: ClientDetailsService,
-  relationshipsController: RelationshipsController,
+  checkRelationshipsService: CheckRelationshipsOrchestratorService,
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   val authConnector: AuthConnector,
@@ -47,90 +48,70 @@ class ClientDetailsController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  private def expectedResults(results: Seq[Result]): Boolean =
-    results.forall(result => result.header.status == 200 | result.header.status == 404)
-
-  private def existingRelationshipFound(results: Seq[Result]): Boolean =
-    results.exists(result => result.header.status == 200)
-
-  private def mapOverseasRefinement(
-    clientDetailsResponse: Either[ClientDetailsFailureResponse, ClientDetailsResponse],
+  private def refineService(
+    clientDetails: ClientDetailsResponse,
     service: String
   ): String =
-    clientDetailsResponse match {
-      case Right(details) if service == HMRCCBCORG && details.isOverseas.contains(true) => HMRCCBCNONUKORG
-      case _                                                                            => service
+    service match {
+      case `HMRCCBCORG` if clientDetails.isOverseas.contains(true) => HMRCCBCNONUKORG
+      case service                                                 => service
     }
 
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
   def findClientDetails(service: String, clientId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
-      for {
-        clientDetailsResponse <- clientDetailsService.findClientDetails(service, clientId)
-        refinedService = mapOverseasRefinement(clientDetailsResponse, service)
-        clientIdType = Service(refinedService).supportedSuppliedClientIdType.enrolmentId
-        pendingRelResponse <-
-          invitationsRepository.findAllForAgent(
-            arn.value,
-            Seq(refinedService),
-            Seq(clientId),
-            isSuppliedClientId = true
+      clientDetailsService.findClientDetails(service, clientId).flatMap {
+        case Right(clientDetails) =>
+          val refinedService = refineService(clientDetails, service)
+          val clientIdType = Service(refinedService).supportedSuppliedClientIdType.enrolmentId
+          for {
+            pendingInvitationMain <- pendingInvitation(arn, refinedService, clientId)
+            pendingInvitationSupp <-
+              if (multiAgentServices.contains(refinedService))
+                pendingInvitation(arn, multiAgentServices(refinedService), clientId)
+              else Future.successful(false)
+            currentRelationshipMain <- existingRelationship(arn, refinedService, clientIdType, clientId)
+            currentRelationshipSupp <-
+              if (multiAgentServices.contains(refinedService))
+                existingRelationship(arn, multiAgentServices(refinedService), clientIdType, clientId)
+              else Future.successful(None)
+          } yield Ok(
+            Json.toJson(
+              clientDetails.copy(
+                hasPendingInvitation = pendingInvitationMain || pendingInvitationSupp,
+                hasExistingRelationshipFor = currentRelationshipMain.orElse(currentRelationshipSupp)
+              )
+            )
           )
-        pendingRelResponseSupp <-
-          if (multiAgentServices.contains(service))
-            invitationsRepository
-              .findAllForAgent(arn.value, Seq(multiAgentServices(service)), Seq(clientId), isSuppliedClientId = true)
-          else Future.successful(Nil)
-        existingRelResponseMain <-
-          relationshipsController.checkForRelationship(
-            arn,
-            refinedService,
-            clientIdType,
-            clientId,
-            None
-          )(request)
-        existingRelResponseSupp <- if (multiAgentServices.contains(service))
-                                     relationshipsController.checkForRelationship(
-                                       arn,
-                                       multiAgentServices(service),
-                                       clientIdType,
-                                       clientId,
-                                       None
-                                     )(request)
-                                   else Future(NotFound)
-        additionalInvitations <-
-          if (service == HMRCMTDIT && !existingRelationshipFound(Seq(existingRelResponseMain, existingRelResponseSupp)))
-            findAltItsaInvitations(Nino(clientId), arn)
-          else Future(None)
-      } yield clientDetailsResponse match {
-        case Right(details) if expectedResults(Seq(existingRelResponseMain, existingRelResponseSupp)) =>
-          val pendingRelationship =
-            pendingRelResponse.exists(_.status == Pending) || pendingRelResponseSupp.exists(_.status == Pending)
-          val existingRelationship =
-            (existingRelResponseMain.header.status, existingRelResponseSupp.header.status) match {
-              case (OK, _) => Some(mapOverseasRefinement(clientDetailsResponse, service))
-              case (_, OK) => Some(multiAgentServices(service))
-              case _       => additionalInvitations
-            }
-          val response = details.copy(
-            hasPendingInvitation = pendingRelationship,
-            hasExistingRelationshipFor = existingRelationship
+        case Left(ClientDetailsNotFound) => Future.successful(NotFound)
+        case Left(ErrorRetrievingClientDetails(status, message)) =>
+          throw new RuntimeException(
+            s"Client details lookup failed - status: '$status', error: '$message''"
           )
-          Ok(Json.toJson(response))
-        case Left(ClientDetailsNotFound) => NotFound
-        case _                           => InternalServerError
       }
     }
   }
 
-  private def findAltItsaInvitations(nino: Nino, arn: Arn): Future[Option[String]] = for {
-    existingMain <- partialAuthRepository.findActive(HMRCMTDIT, nino, arn)
-    existingSupp <- if (existingMain.isDefined) Future(None)
-                    else partialAuthRepository.findActive(HMRCMTDITSUPP, nino, arn)
-  } yield (existingMain, existingSupp) match {
-    case (Some(_), _) => Some(HMRCMTDIT)
-    case (_, Some(_)) => Some(HMRCMTDITSUPP)
-    case (None, None) => None
-  }
+  private def existingRelationship(arn: Arn, service: String, clientIdType: String, clientId: String)(implicit
+    hc: HeaderCarrier,
+    request: Request[Any]
+  ): Future[Option[String]] =
+    checkRelationshipsService
+      .checkForRelationship(arn, service, clientIdType, clientId, None)
+      .map {
+        case CheckRelationshipFound          => Some(service)
+        case CheckRelationshipNotFound(_)    => None
+        case CheckRelationshipInvalidRequest => throw new RuntimeException("Unexpected error during relationship check")
+      }
+      .flatMap {
+        case None if Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(service) =>
+          partialAuthRepository.findActive(service, Nino(clientId), arn).map(_.map(_ => service))
+        case result => Future.successful(result)
+      }
+
+  private def pendingInvitation(arn: Arn, service: String, clientId: String): Future[Boolean] =
+    invitationsRepository
+      .findAllForAgent(arn.value, Seq(service), Seq(clientId), isSuppliedClientId = true)
+      .map(_.exists(_.status == Pending))
 }

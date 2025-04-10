@@ -16,26 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
-import org.mockito.Mockito.when
-import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.http.HeaderCarrier
-
-import scala.concurrent.{ExecutionContext, Future}
 
 trait MockAuditService {
   this: ResettingMockitoSugar =>
 
   val mockAuditService: AuditService = resettingMock[AuditService]
-
-//  def mockSendAcceptedEmail(
-//    invitation: Invitation
-//  )(response: Boolean = true): OngoingStubbing[Future[Boolean]] =
-//    when(mockAuditService..(eqs(invitation))(any[HeaderCarrier], any[ExecutionContext]))
-//      .thenReturn(Future.successful(response))
 
 }
