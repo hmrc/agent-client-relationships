@@ -181,19 +181,6 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(itsaInvitation, suppItsaInvitation))
       }
-      "queried with status that matches some data" in {
-        givenAuditConnector()
-        givenAuthorised()
-
-        await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
-        await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
-        await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
-
-        val result = doGetRequest(invitationsUrl + s"?status=$Accepted")
-
-        result.status shouldBe 200
-        result.json shouldBe Json.toJson(Seq(acceptedItsaInvitation))
-      }
       "queried with multiple params that match some data" in {
         givenAuditConnector()
         givenAuthorised()

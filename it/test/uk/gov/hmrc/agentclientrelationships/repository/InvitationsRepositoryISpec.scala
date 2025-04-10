@@ -26,7 +26,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR, MtdIt, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCMTDVAT, HMRCPIR, MtdIt, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service, Vrn}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -443,6 +443,62 @@ class InvitationsRepositoryISpec
 
       result shouldBe true
       updatedInvitation.get.expiredEmailSent shouldBe true
+    }
+
+    "return invitations matching the given criteria with the .findAllBy function" when {
+
+      val relevantInvitation = pendingInvitation()
+      val irrelevantInvitation =
+        pendingInvitation().copy(arn = "TARN7654321", service = HMRCMTDIT, clientId = "AABBCC12D", status = Accepted)
+
+      "all parameters are provided" in {
+        await(repository.collection.insertMany(Seq(relevantInvitation, irrelevantInvitation)).toFuture())
+        val result = await(
+          repository.findAllBy(
+            arn = Some("XARN1234567"),
+            services = Seq(HMRCMTDVAT),
+            clientIds = Seq("123456789"),
+            status = Some(Pending)
+          )
+        )
+
+        result shouldBe Seq(relevantInvitation)
+      }
+
+      "only an ARN is provided" in {
+        await(repository.collection.insertMany(Seq(relevantInvitation, irrelevantInvitation)).toFuture())
+        val result = await(repository.findAllBy(arn = Some("XARN1234567")))
+
+        result shouldBe Seq(relevantInvitation)
+      }
+
+      "only a list of clientIds is provided" in {
+        await(repository.collection.insertMany(Seq(relevantInvitation, irrelevantInvitation)).toFuture())
+        val result = await(repository.findAllBy(clientIds = Seq("123456789")))
+
+        result shouldBe Seq(relevantInvitation)
+      }
+
+      "only a list of services is provided (does not query database)" in {
+        await(repository.collection.insertMany(Seq(relevantInvitation, irrelevantInvitation)).toFuture())
+        val result = await(repository.findAllBy(services = Seq(HMRCMTDVAT)))
+
+        result shouldBe Nil
+      }
+
+      "only a status is provided (does not query database)" in {
+        await(repository.collection.insertMany(Seq(relevantInvitation, irrelevantInvitation)).toFuture())
+        val result = await(repository.findAllBy(status = Some(Pending)))
+
+        result shouldBe Nil
+      }
+
+      "no parameters are provided (does not query database)" in {
+        await(repository.collection.insertMany(Seq(relevantInvitation, irrelevantInvitation)).toFuture())
+        val result = await(repository.findAllBy())
+
+        result shouldBe Nil
+      }
     }
   }
 }
