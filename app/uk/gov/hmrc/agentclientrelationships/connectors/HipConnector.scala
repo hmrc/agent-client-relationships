@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
@@ -123,6 +123,7 @@ class HipConnector @Inject() (
               None
             case _ =>
               logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
+              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
               None
           }
       }
@@ -180,12 +181,14 @@ class HipConnector @Inject() (
           (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
         case Left(errorResponse) =>
           errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND => Seq.empty[InactiveRelationship]
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
-              Seq.empty[InactiveRelationship]
+            case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
             case _ =>
               logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
               Seq.empty[InactiveRelationship]
+              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
+              Nil
           }
       }
   }
@@ -212,12 +215,14 @@ class HipConnector @Inject() (
             (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
           case Left(errorResponse) =>
             errorResponse.statusCode match {
-              case Status.BAD_REQUEST | Status.NOT_FOUND => Seq.empty[InactiveRelationship]
-              case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
-                Seq.empty[InactiveRelationship]
+              case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
+              case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
+              case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
               case _ =>
                 logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
                 Seq.empty[InactiveRelationship]
+                // TODO WG - check - that looks so wrong to rerun any value, should be an exception
+                Nil
             }
         }
     }
