@@ -801,17 +801,17 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
 
     taxIdentifier match {
       case MtdItId(mtdItId) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=$activeOnly&regime=ITSA$dateRangeParams&relationshipType=ZA01$authProfileParam"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=$activeOnly&regime=ITSA$dateRangeParams&relationshipType=ZA01&$authProfileParam"
       case Vrn(vrn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=$activeOnly&regime=VATC$dateRangeParams&relationshipType=ZA01$authProfileParam"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=$activeOnly&regime=VATC$dateRangeParams&relationshipType=ZA01&$authProfileParam"
       case Utr(utr) =>
         s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
       case Urn(urn) =>
         s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
       case CgtRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CGT$dateRangeParams&relationshipType=ZA01$authProfileParam"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CGT$dateRangeParams&relationshipType=ZA01&$authProfileParam"
       case PptRef(ref) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=PPT$dateRangeParams&relationshipType=ZA01$authProfileParam"
+        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=PPT$dateRangeParams&relationshipType=ZA01&$authProfileParam"
       case CbcId(ref) =>
         s"/etmp/RESTAdapter/rosm/agent-relationship?idType=CBC&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CBC$dateRangeParams"
       case PlrId(ref) =>
