@@ -33,15 +33,14 @@ import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-class RelationshipsControllerWithoutMongoHIPISpec
+class RelationshipsControllerWithoutMongoHipISpec
     extends UnitSpec
     with MongoSupport
     with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
-    with IFStubs
-    with HIPAgentClientRelationshipStub
+    with HipStub
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
@@ -70,7 +69,8 @@ class RelationshipsControllerWithoutMongoHIPISpec
         "agent.cache.expires"                                   -> "1 millis",
         "agent.cache.enabled"                                   -> true,
         "mongodb.uri"                                           -> mongoUri,
-        "hip.enabled"                                           -> true
+        "hip.enabled"                                           -> true,
+        "hip.BusinessDetails.enabled"                           -> true
       )
       .overrides(new AbstractModule {
         override def configure(): Unit = {

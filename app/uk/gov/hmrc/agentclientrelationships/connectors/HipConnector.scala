@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
@@ -40,42 +40,8 @@ import java.time.{Instant, LocalDate, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-trait RelationshipConnector {
-  def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Option[RegistrationRelationshipResponse]]
-
-  def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Option[RegistrationRelationshipResponse]]
-
-  def getActiveClientRelationships(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]]
-
-  def getAllRelationships(
-    taxIdentifier: TaxIdentifier,
-    activeOnly: Boolean
-  )(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]]
-
-  def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]]
-
-  def getInactiveRelationships(
-    arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]]
-}
-
 @Singleton
-class HIPConnector @Inject() (
+class HipConnector @Inject() (
   httpClient: HttpClientV2,
   agentCacheProvider: AgentCacheProvider,
   headers: HIPHeaders,
@@ -83,8 +49,7 @@ class HIPConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val appConfig: AppConfig
-) extends RelationshipConnector
-    with HttpAPIMonitor
+) extends HttpAPIMonitor
     with Logging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
@@ -100,7 +65,7 @@ class HIPConnector @Inject() (
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
     val requestBody = createAgentRelationshipHipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
-    postRelationship("CreateAgentRelationship", url, requestBody)
+    postWithHipHeaders("CreateAgentRelationship", url, requestBody)
       .map {
         case Right(response) =>
           Option(response.json.as[RegistrationRelationshipResponse])
@@ -123,7 +88,7 @@ class HIPConnector @Inject() (
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
     val requestBody = deleteAgentRelationshipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
-    postRelationship("DeleteAgentRelationship", url, requestBody)
+    postWithHipHeaders("DeleteAgentRelationship", url, requestBody)
       .map {
         case Right(response) =>
           Option(response.json.as[RegistrationRelationshipResponse])
@@ -147,7 +112,7 @@ class HIPConnector @Inject() (
 
     implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
 
-    getRelationship(s"GetActiveClientRelationships", url)
+    getWithHipHeaders(s"GetActiveClientRelationships", url)
       .map {
         case Right(response) =>
           (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
@@ -158,14 +123,13 @@ class HIPConnector @Inject() (
               None
             case _ =>
               logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
-              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
               None
           }
       }
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship //url and error handling is different to getActiveClientRelationships
-  override def getAllRelationships(
+  def getAllRelationships(
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean
   )(implicit
@@ -176,7 +140,7 @@ class HIPConnector @Inject() (
 
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.hipReads
 
-    EitherT(getRelationship(s"GetAllActiveClientRelationships", url))
+    EitherT(getWithHipHeaders(s"GetAllActiveClientRelationships", url))
       .map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
@@ -210,7 +174,7 @@ class HIPConnector @Inject() (
       relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
-    getRelationship(s"GetInactiveClientRelationships", url)
+    getWithHipHeaders(s"GetInactiveClientRelationships", url)
       .map {
         case Right(response) =>
           (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
@@ -221,7 +185,6 @@ class HIPConnector @Inject() (
               Seq.empty[InactiveRelationship]
             case _ =>
               logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
-              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
               Seq.empty[InactiveRelationship]
           }
       }
@@ -243,7 +206,7 @@ class HIPConnector @Inject() (
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
-      getRelationship(s"GetInactiveRelationships", url)
+      getWithHipHeaders(s"GetInactiveRelationships", url)
         .map {
           case Right(response) =>
             (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
@@ -254,14 +217,50 @@ class HIPConnector @Inject() (
                 Seq.empty[InactiveRelationship]
               case _ =>
                 logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
-                // TODO WG - check - that looks so wrong to rerun any value, should be an exception
                 Seq.empty[InactiveRelationship]
             }
         }
     }
   }
+  // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
+  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
+    val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
+    val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
 
-  private def getRelationship(apiName: String, url: URL)(implicit
+    getWithHipHeaders(s"GetBusinessDetailsByMtdId", url)
+      .map {
+        case Right(response) => Option((response.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case Left(errorResponse) =>
+          errorResponse.statusCode match {
+            case Status.NOT_FOUND => None
+            case _ =>
+              val msg = s"Error in HIP API#5266 'GetBusinessDetailsByMtdId ${errorResponse.getMessage()}"
+              logger.error(message = msg, error = throw new RuntimeException(msg))
+              None
+          }
+      }
+  }
+
+  // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
+  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
+    val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
+    val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
+
+    getWithHipHeaders(s"GetBusinessDetailsByNino", url)
+      .map {
+        case Right(response) => Option((response.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case Left(errorResponse) =>
+          errorResponse.statusCode match {
+            case Status.NOT_FOUND => None
+            case _ =>
+              val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
+              logger.error(message = msg, error = throw new RuntimeException(msg))
+              None
+          }
+      }
+  }
+
+  private def getWithHipHeaders(apiName: String, url: URL)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
@@ -272,7 +271,7 @@ class HIPConnector @Inject() (
         .execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
 
-  private def postRelationship(apiName: String, url: URL, body: JsValue)(implicit
+  private def postWithHipHeaders(apiName: String, url: URL, body: JsValue)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
@@ -319,11 +318,11 @@ class HIPConnector @Inject() (
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
         )
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
         )
       case Utr(_) =>
         new URL(
@@ -335,11 +334,11 @@ class HIPConnector @Inject() (
         )
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
         )
       case PptRef(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
         )
       case CbcId(_) =>
         new URL(

@@ -20,7 +20,7 @@ import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IFConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IfOrHipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
@@ -40,7 +40,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
-  ifConnector: IFConnector,
+  ifOrHipConnector: IfOrHipConnector,
   agentAssuranceConnector: AgentAssuranceConnector,
   emailService: EmailService,
   appConfig: AppConfig
@@ -156,7 +156,7 @@ class InvitationService @Inject() (
     hc: HeaderCarrier
   ): Future[Either[InvitationFailureResponse, ClientId]] = (service, suppliedClientId.typeId) match {
     case (MtdIt | MtdItSupp, NinoType.id) =>
-      ifConnector
+      ifOrHipConnector
         .getMtdIdFor(Nino(suppliedClientId.value))
         .map(
           _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>

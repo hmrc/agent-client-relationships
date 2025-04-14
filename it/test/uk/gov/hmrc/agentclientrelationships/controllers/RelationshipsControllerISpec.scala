@@ -1,4 +1,20 @@
 /*
+ * Copyright 2025 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +39,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentmtdidentifiers.model.{Identifier, MtdItId, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
@@ -31,11 +48,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.{LocalDate, LocalDateTime}
 import java.util.Base64
 
-class RelationshipsIFControllerISpec extends RelationshipsControllerISpec with RelationshipsBaseIFControllerISpec
-
-class RelationshipsHIPControllerISpec extends RelationshipsControllerISpec with RelationshipsBaseHIPControllerISpec
-
-trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
+class RelationshipsHIPControllerISpec extends RelationshipsBaseControllerISpec with HipStub {
 
   val relationshipCopiedSuccessfully: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
@@ -57,7 +70,6 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
   val cbcNonUkClient: TestClient = TestClient(Service.CbcNonUk.id, "CBC", cbcId)
   val pillar2Client: TestClient = TestClient(Service.Pillar2.id, "PLRID", plrId)
 
-  // TODO WG -test for Supp
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
   val businessList =
     List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
@@ -276,7 +288,6 @@ trait RelationshipsControllerISpec extends RelationshipsBaseControllerISpec {
     "return 200 with a map of relationships and filter only on active ones" in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
 
-      // TODO WG - test Supp
       getActiveRelationshipsViaClient(mtdItId, arn)
       getActiveRelationshipsViaClient(vrn, arn2)
       getActiveRelationshipsViaClient(utr, arn)

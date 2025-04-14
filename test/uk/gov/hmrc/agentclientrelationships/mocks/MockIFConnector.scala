@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{IfConnector, IfOrHipConnector}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 
 trait MockIFConnector {
   this: ResettingMockitoSugar =>
 
-  val mockIFConnector: IFConnector = resettingMock[IFConnector]
+  val mockIfOrHipConnector: IfOrHipConnector = resettingMock[IfOrHipConnector]
 
 }

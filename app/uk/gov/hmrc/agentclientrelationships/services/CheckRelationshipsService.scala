@@ -37,7 +37,7 @@ class CheckRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ap: AgentPermissionsConnector,
   agentAssuranceConnector: AgentAssuranceConnector,
-  ifConnector: IFConnector,
+  ifOrHipConnector: IfOrHipConnector,
   groupSearch: UsersGroupsSearchConnector,
   partialAuthRepository: PartialAuthRepository,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
@@ -127,7 +127,7 @@ class CheckRelationshipsService @Inject() (
             )
           )
       case None =>
-        ifConnector.getMtdIdFor(Nino(invitation.clientId)).flatMap {
+        ifOrHipConnector.getMtdIdFor(Nino(invitation.clientId)).flatMap {
           case Some(mtdItId) =>
             getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
               case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)

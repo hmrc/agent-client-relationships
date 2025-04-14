@@ -22,16 +22,16 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model.{CustomerStatus, Invitation, PartialAuthRelationship, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, HIPAgentClientRelationshipStub}
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, HipStub}
 
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 
 class CustomerStatusControllerISpec
     extends BaseControllerISpec
-    with HIPAgentClientRelationshipStub
     with AfiRelationshipStub
-    with AgentAssuranceStubs {
+    with AgentAssuranceStubs
+    with HipStub {
 
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]

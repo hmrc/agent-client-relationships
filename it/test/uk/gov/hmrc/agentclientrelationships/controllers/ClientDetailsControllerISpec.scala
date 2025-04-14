@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsOrchestratorService, ClientDetailsService}
-import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, HipStub}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -33,7 +33,7 @@ import uk.gov.hmrc.domain.Nino
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
-class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub {
+class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub with HipStub {
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -75,6 +75,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -94,6 +96,9 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+
           await(
             invitationsRepo
               .create(
@@ -127,6 +132,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           await(
             invitationsRepo
               .create(
@@ -160,6 +167,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -180,6 +189,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -219,6 +230,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           await(
             partialAuthRepo
               .create(
@@ -248,6 +261,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           await(
             partialAuthRepo
               .create(
@@ -277,6 +292,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           await(
             invitationsRepo
               .create(

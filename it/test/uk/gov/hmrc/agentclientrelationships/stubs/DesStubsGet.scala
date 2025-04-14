@@ -69,7 +69,6 @@ trait DesStubsGet {
         )
     )
 
-  // TODO WG - that should not be used as return different json
   def getVrnIsKnownInETMPFor(vrn: Vrn): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))

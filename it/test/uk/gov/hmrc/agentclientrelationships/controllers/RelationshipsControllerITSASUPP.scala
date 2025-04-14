@@ -17,9 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 
 trait RelationshipsControllerITSASUPP {
-  this: RelationshipsBaseControllerISpec =>
+  this: RelationshipsBaseControllerISpec with HipStub =>
 
   def relationshipControllerITSASUPPBehaviours(): Unit = {
     val requestPath: String =
