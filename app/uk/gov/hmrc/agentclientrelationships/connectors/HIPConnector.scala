@@ -319,11 +319,11 @@ class HIPConnector @Inject() (
     taxIdentifier match {
       case MtdItId(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
         )
       case Vrn(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
         )
       case Utr(_) =>
         new URL(
@@ -335,11 +335,11 @@ class HIPConnector @Inject() (
         )
       case CgtRef(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
         )
       case PptRef(_) =>
         new URL(
-          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01&$authProfileParam"
+          s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPPT&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams&relationshipType=ZA01$authProfileParam"
         )
       case CbcId(_) =>
         new URL(
