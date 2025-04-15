@@ -118,9 +118,9 @@ class HipConnector @Inject() (
           (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
         case Left(errorResponse) =>
           errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND => None
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
-              None
+            case Status.BAD_REQUEST | Status.NOT_FOUND                                         => None
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => None
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => None
             case _ =>
               logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
               // TODO WG - check - that looks so wrong to rerun any value, should be an exception
