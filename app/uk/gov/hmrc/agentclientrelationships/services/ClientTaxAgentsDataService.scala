@@ -123,20 +123,25 @@ class ClientTaxAgentsDataService @Inject() (
       invitationEvents ++ authorisationsAcceptedEvents ++ authorisationsDeAuthorisedEvents
 
     val result = authorisationEventWithoutAgentName
-      .map { authorisation =>
+      .groupBy(_.arn)
+      .map { case (arn, authorisations) =>
         for {
-          agentDetails <- EitherT(findAgentDetailsByArn(Arn(authorisation.arn)))
-        } yield (AuthorisationEvent(
-          agentDetails.agencyDetails.agencyName,
-          authorisation.service,
-          authorisation.eventDate,
-          authorisation.eventType
-        ))
+          agentDetails <- EitherT(findAgentDetailsByArn(Arn(arn)))
+        } yield authorisations.map(authorisation =>
+          AuthorisationEvent(
+            agentDetails.agencyDetails.agencyName,
+            authorisation.service,
+            authorisation.eventDate,
+            authorisation.eventType
+          )
+        )
       }
+      .toSeq
       .map(x => filterOutSuspendedAgent(x))
       .sequence
       .map(_.flatten)
       .map(partitionMap)
+      .map(_.map(_.flatten))
 
     EitherT(result)
   }
@@ -304,6 +309,7 @@ class ClientTaxAgentsDataService @Inject() (
 
   }
 
+  // TODO WG - that is called multiple time ofr same ARN
   private def findAgentDetailsByArn(
     arn: Arn
   )(implicit
