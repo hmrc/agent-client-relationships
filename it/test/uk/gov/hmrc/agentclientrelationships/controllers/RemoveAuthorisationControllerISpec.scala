@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.libs.json.Json
+import play.api.libs.json.{JsString, Json}
 import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
@@ -33,6 +33,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonU
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.http.HttpResponse
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
@@ -126,8 +127,8 @@ trait RemoveAuthorisationControllerISpec
         givenCacheRefresh(arn)
 
         taxIdentifier match {
-          case mtdItId @ MtdItId(value) =>
-            givenMtdItIdIsKnownFor(nino, mtdItId)
+          case mtdItIdentifier @ MtdItId(value) =>
+            givenMtdItIdIsKnownFor(nino, mtdItIdentifier)
             givenItsaBusinessDetailsExists("nino", nino.value, value)
           case _ @CbcId(_) if service == Cbc =>
             givenKnownFactsQuery(
@@ -416,7 +417,7 @@ trait RemoveAuthorisationControllerISpec
       )
 
       result.status shouldBe 404
-      result.json shouldBe toJson(ErrorBody("INVITATION_NOT_FOUND", "The specified invitation was not found."))
+      result.json shouldBe toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
     }
 
     "return 500 when AFI returns 500" in new StubsForThisScenario {
@@ -430,8 +431,10 @@ trait RemoveAuthorisationControllerISpec
     }
   }
 
-  "handle errors" should {
-    "when request data are incorrect" should {
+  "handle errors" when {
+
+    "request data is incorrect" should {
+
       "return BadRequest 400 status when clientId is not valid for service" in {
         val result = doAgentPostRequest(
           requestPath,
@@ -459,7 +462,71 @@ trait RemoveAuthorisationControllerISpec
       }
     }
 
-    "when MtdId business details errors" should {
+    "an ES relationship is not found" in {
+      val enrolmentKey: EnrolmentKey = EnrolmentKey(Vat.enrolmentKey, vrn)
+      givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+      givenPrincipalAgentUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAdminUser("foo", "any")
+      givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey)
+      givenCacheRefresh(arn)
+
+      val result: HttpResponse =
+        doAgentPostRequest(
+          requestPath,
+          Json.toJson(RemoveAuthorisationRequest(vrn.value, Vat.id)).toString()
+        )
+      result.status shouldBe 404
+
+      result.json shouldBe toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
+    }
+
+    "an ETMP relationship is not found" in {
+      val enrolmentKey: EnrolmentKey = EnrolmentKey(Vat.enrolmentKey, vrn)
+      givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+      givenPrincipalAgentUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAdminUser("foo", "any")
+      givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
+      givenDelegatedGroupIdsExistForEnrolmentKey(enrolmentKey)
+      val noRelationshipFoundErrorMessage =
+        """{"errors":{"processingDate":"2020-01-01T11:11:11Z","code":"014","text":"No active relationship found"}}"""
+      givenAgentCanNotBeDeallocated(422, noRelationshipFoundErrorMessage)
+      givenCacheRefresh(arn)
+
+      val result: HttpResponse =
+        doAgentPostRequest(
+          requestPath,
+          Json.toJson(RemoveAuthorisationRequest(vrn.value, Vat.id)).toString()
+        )
+      result.status shouldBe 404
+
+      result.json shouldBe toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
+    }
+
+    "the call to delete relationship from ETMP returns an unexpected error" in {
+      val enrolmentKey: EnrolmentKey = EnrolmentKey(Vat.enrolmentKey, vrn)
+      givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+      givenPrincipalAgentUser(arn, "foo")
+      givenGroupInfo("foo", "bar")
+      givenAdminUser("foo", "any")
+      givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
+      givenDelegatedGroupIdsExistForEnrolmentKey(enrolmentKey)
+      givenAgentCanNotBeDeallocated(503)
+      givenCacheRefresh(arn)
+
+      val result: HttpResponse =
+        doAgentPostRequest(
+          requestPath,
+          Json.toJson(RemoveAuthorisationRequest(vrn.value, Vat.id)).toString()
+        )
+      result.status shouldBe 500
+
+      result.json shouldBe JsString("RELATIONSHIP_DELETE_FAILED_ETMP")
+    }
+
+    "MtdId business details errors" should {
+
       "return Forbidden 403 status and JSON Error when MtdId business details record is empty " in {
         givenEmptyItsaBusinessDetailsExists(nino.value)
         val result =
