@@ -798,7 +798,7 @@ trait HipStub {
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}""")
+            .withBody(s"""{"success":{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}}""")
         )
     )
 
@@ -820,7 +820,7 @@ trait HipStub {
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}""")
+            .withBody(s"""{"success":{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}}""")
         )
     )
 
