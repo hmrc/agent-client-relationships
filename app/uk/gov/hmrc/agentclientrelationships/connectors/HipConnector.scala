@@ -65,7 +65,7 @@ class HipConnector @Inject() (
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
     val requestBody = createAgentRelationshipHipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
-    postWithHipHeaders("CreateAgentRelationship", url, requestBody)
+    postWithHipHeaders("CreateAgentRelationship", url, requestBody, headers.subscriptionHeaders)
       .map {
         case Right(response) =>
           Option(response.json.as[RegistrationRelationshipResponse])
@@ -88,7 +88,7 @@ class HipConnector @Inject() (
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
     val requestBody = deleteAgentRelationshipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
-    postWithHipHeaders("DeleteAgentRelationship", url, requestBody)
+    postWithHipHeaders("DeleteAgentRelationship", url, requestBody, headers.subscriptionHeaders)
       .map {
         case Right(response) =>
           Option(response.json.as[RegistrationRelationshipResponse])
@@ -112,7 +112,7 @@ class HipConnector @Inject() (
 
     implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
 
-    getWithHipHeaders(s"GetActiveClientRelationships", url)
+    getWithHipHeaders(s"GetActiveClientRelationships", url, headers.subscriptionHeaders)
       .map {
         case Right(response) =>
           (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
@@ -141,7 +141,7 @@ class HipConnector @Inject() (
 
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.hipReads
 
-    EitherT(getWithHipHeaders(s"GetAllActiveClientRelationships", url))
+    EitherT(getWithHipHeaders(s"GetAllActiveClientRelationships", url, headers.subscriptionHeaders))
       .map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
@@ -175,7 +175,7 @@ class HipConnector @Inject() (
       relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
-    getWithHipHeaders(s"GetInactiveClientRelationships", url)
+    getWithHipHeaders(s"GetInactiveClientRelationships", url, headers.subscriptionHeaders)
       .map {
         case Right(response) =>
           (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
@@ -209,7 +209,7 @@ class HipConnector @Inject() (
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
-      getWithHipHeaders(s"GetInactiveRelationships", url)
+      getWithHipHeaders(s"GetInactiveRelationships", url, headers.subscriptionHeaders)
         .map {
           case Right(response) =>
             (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
@@ -232,9 +232,9 @@ class HipConnector @Inject() (
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
 
-    getWithHipHeaders(s"GetBusinessDetailsByMtdId", url)
+    getWithHipHeaders(s"GetBusinessDetailsByMtdId", url, headers.subscriptionBusinessDetailsHeaders)
       .map {
-        case Right(response) => Option((response.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
         case Left(errorResponse) =>
           errorResponse.statusCode match {
             case Status.NOT_FOUND => None
@@ -251,9 +251,9 @@ class HipConnector @Inject() (
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
-    getWithHipHeaders(s"GetBusinessDetailsByNino", url)
+    getWithHipHeaders(s"GetBusinessDetailsByNino", url, headers.subscriptionBusinessDetailsHeaders)
       .map {
-        case Right(response) => Option((response.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
         case Left(errorResponse) =>
           errorResponse.statusCode match {
             case Status.NOT_FOUND => None
@@ -265,25 +265,26 @@ class HipConnector @Inject() (
       }
   }
 
-  private def getWithHipHeaders(apiName: String, url: URL)(implicit
+  private def getWithHipHeaders(apiName: String, url: URL, getHeaders: () => Seq[(String, String)])(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-GET") {
       httpClient
         .get(url)
-        .setHeader(headers.subscriptionHeaders(): _*)
+        .setHeader(getHeaders(): _*)
         .execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
 
-  private def postWithHipHeaders(apiName: String, url: URL, body: JsValue)(implicit
+  private def postWithHipHeaders(apiName: String, url: URL, body: JsValue, getHeaders: () => Seq[(String, String)])(
+    implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-POST") {
       httpClient
         .post(url)
-        .setHeader(headers.subscriptionHeaders(): _*)
+        .setHeader(getHeaders(): _*)
         .withBody(body)
         .execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
