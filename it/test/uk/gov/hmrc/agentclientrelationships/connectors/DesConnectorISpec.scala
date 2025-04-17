@@ -22,7 +22,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IFStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IfStub}
 import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
@@ -38,7 +38,7 @@ class DesConnectorISpec
     with DesStubs
     with DesStubsGet
     with DataStreamStub
-    with IFStubs {
+    with IfStub {
 
   override implicit lazy val app: Application = appBuilder
     .build()

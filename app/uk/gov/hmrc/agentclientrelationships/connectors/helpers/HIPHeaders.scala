@@ -28,9 +28,12 @@ class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig:
   private val xOriginatingSystemHeader: String = "X-Originating-System"
   private val xReceiptDateHeader: String = "X-Receipt-Date"
   private val xTransmittingSystemHeader: String = "X-Transmitting-System"
+  private val xMessageType: String = "X-Message-Type"
+  private val xRegimeType: String = "X-Regime-Type"
 
   private val mdtp = "MDTP"
   private val hip = "HIP"
+  private val itsa = "ITSA"
 
   def subscriptionHeaders(): Seq[(String, String)] =
     Seq(
@@ -39,5 +42,16 @@ class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig:
       (xOriginatingSystemHeader, mdtp),
       (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
       (xTransmittingSystemHeader, hip)
+    )
+
+  def subscriptionBusinessDetailsHeaders(): Seq[(String, String)] =
+    Seq(
+      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+      (correlationIdHeader, randomUUIDGenerator.uuid),
+      (xOriginatingSystemHeader, mdtp),
+      (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
+      (xTransmittingSystemHeader, hip),
+      (xMessageType, "TaxpayerDisplay"),
+      (xRegimeType, itsa)
     )
 }

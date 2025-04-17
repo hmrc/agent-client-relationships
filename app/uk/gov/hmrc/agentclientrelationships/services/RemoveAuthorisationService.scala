@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, InvalidClientId, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, ValidRequest}
@@ -40,7 +40,7 @@ class RemoveAuthorisationService @Inject() (
   deleteService: DeleteRelationshipsServiceWithAcr,
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository,
-  ifConnector: IFConnector
+  ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -101,7 +101,7 @@ class RemoveAuthorisationService @Inject() (
   ): Future[Either[InvitationFailureResponse, EnrolmentKey]] =
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
-        ifConnector
+        ifOrHipConnector
           .getMtdIdFor(Nino(suppliedClientId.value))
           .map {
             case Some(mtdItId) => Right(EnrolmentKey(service, mtdItId))

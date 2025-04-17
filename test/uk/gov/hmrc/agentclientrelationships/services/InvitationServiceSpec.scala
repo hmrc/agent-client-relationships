@@ -46,7 +46,7 @@ class InvitationServiceSpec
       extends InvitationService(
         mockInvitationsRepository,
         mockPartialAuthRepository,
-        mockIFConnector,
+        mockIfOrHipConnector,
         mockAgentAssuranceConnector,
         mockEmailService,
         mockAppConfig

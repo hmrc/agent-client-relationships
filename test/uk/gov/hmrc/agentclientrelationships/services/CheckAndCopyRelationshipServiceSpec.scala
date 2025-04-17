@@ -79,8 +79,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   val es = resettingMock[EnrolmentStoreProxyConnector]
   val des = resettingMock[DesConnector]
-  val ifConnector = resettingMock[IFConnector]
-  val relationshipConnector = resettingMock[RelationshipConnector]
+  val ifOrHipConnector = resettingMock[IfOrHipConnector]
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]
   val aca = resettingMock[AgentClientAuthorisationConnector]
@@ -133,7 +132,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
-          ifConnector,
+          ifOrHipConnector,
           des,
           mapping,
           ugs,
@@ -141,7 +140,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            relationshipConnector,
+            ifOrHipConnector,
             relationshipCopyRepository,
             lockService,
             auditService,
@@ -177,7 +176,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -185,7 +184,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -232,7 +231,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -240,7 +239,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -295,7 +294,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -303,7 +302,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -351,7 +350,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -359,7 +358,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -407,7 +406,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -415,7 +414,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -457,7 +456,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -465,7 +464,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -518,7 +517,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -526,7 +525,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -563,7 +562,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -571,7 +570,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -606,7 +605,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -614,7 +613,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -651,7 +650,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -659,7 +658,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -704,7 +703,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
-          ifConnector,
+          ifOrHipConnector,
           des,
           mapping,
           ugs,
@@ -712,7 +711,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            relationshipConnector,
+            ifOrHipConnector,
             relationshipCopyRepository,
             lockService,
             auditService,
@@ -753,7 +752,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
-          ifConnector,
+          ifOrHipConnector,
           des,
           mapping,
           ugs,
@@ -761,7 +760,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            relationshipConnector,
+            ifOrHipConnector,
             relationshipCopyRepository,
             lockService,
             auditService,
@@ -804,7 +803,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
-          ifConnector,
+          ifOrHipConnector,
           des,
           mapping,
           ugs,
@@ -812,7 +811,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            relationshipConnector,
+            ifOrHipConnector,
             relationshipCopyRepository,
             lockService,
             auditService,
@@ -854,7 +853,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -862,7 +861,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -903,7 +902,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -911,7 +910,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -951,7 +950,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -959,7 +958,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -1003,7 +1002,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
-          ifConnector,
+          ifOrHipConnector,
           des,
           mapping,
           ugs,
@@ -1011,7 +1010,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            relationshipConnector,
+            ifOrHipConnector,
             relationshipCopyRepository,
             lockService,
             auditService,
@@ -1058,7 +1057,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -1066,7 +1065,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -1113,7 +1112,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -1121,7 +1120,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -1156,7 +1155,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -1164,7 +1163,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -1211,7 +1210,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -1219,7 +1218,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -1267,7 +1266,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -1275,7 +1274,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -1323,7 +1322,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -1331,7 +1330,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -1372,7 +1371,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -1380,7 +1379,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -1430,7 +1429,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val lockService = new FakeLockService
           val relationshipsService = new CheckAndCopyRelationshipsService(
             es,
-            ifConnector,
+            ifOrHipConnector,
             des,
             mapping,
             ugs,
@@ -1438,7 +1437,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             relationshipCopyRepository,
             new CreateRelationshipsService(
               es,
-              relationshipConnector,
+              ifOrHipConnector,
               relationshipCopyRepository,
               lockService,
               auditService,
@@ -1474,7 +1473,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -1482,7 +1481,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -1516,7 +1515,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val lockService = new FakeLockService
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -1524,7 +1523,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -1567,7 +1566,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val lockService = new FakeLockService
         val relationshipsService = new CheckAndCopyRelationshipsService(
           es,
-          ifConnector,
+          ifOrHipConnector,
           des,
           mapping,
           ugs,
@@ -1575,7 +1574,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
-            relationshipConnector,
+            ifOrHipConnector,
             relationshipCopyRepository,
             lockService,
             auditService,
@@ -1615,7 +1614,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -1623,7 +1622,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -1656,7 +1655,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val relationshipsService = new CheckAndCopyRelationshipsService(
         es,
-        ifConnector,
+        ifOrHipConnector,
         des,
         mapping,
         ugs,
@@ -1664,7 +1663,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipCopyRepository,
         new CreateRelationshipsService(
           es,
-          relationshipConnector,
+          ifOrHipConnector,
           relationshipCopyRepository,
           lockService,
           auditService,
@@ -1715,7 +1714,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipsService =
             new CheckAndCopyRelationshipsService(
               es,
-              ifConnector,
+              ifOrHipConnector,
               des,
               mapping,
               ugs,
@@ -1723,7 +1722,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               relationshipCopyRepository,
               new CreateRelationshipsService(
                 es,
-                relationshipConnector,
+                ifOrHipConnector,
                 relationshipCopyRepository,
                 lockService,
                 auditService,
@@ -1752,7 +1751,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   }
 
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq())
   }
@@ -1764,7 +1763,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
       .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
@@ -1780,7 +1779,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   }
 
   private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] =
-    when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
 
   private def partialAuthExistsInAcr(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
     when(partialAuthRepository.findActive(eqs(nino), eqs(arn)))
@@ -1816,7 +1815,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   }
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
     when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
       .thenReturn(Future successful Seq(saAgentRef))
@@ -1861,7 +1860,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(relationshipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(eqs(hc), eqs(ec)))
+    when(ifOrHipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(eqs(hc), eqs(ec)))
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
@@ -1909,16 +1908,16 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future.successful(true))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(relationshipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifOrHipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(relationshipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifOrHipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(relationshipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifOrHipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEtmpRecordNotCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(relationshipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(ifOrHipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
 
   def verifyEsRecordCreated(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(

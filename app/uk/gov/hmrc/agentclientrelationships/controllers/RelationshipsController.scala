@@ -19,16 +19,15 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{arnKey, cesaRelationshipKey, clientAcceptedInvitation, clientIdKey, clientIdTypeKey, copyExistingCesa, hmrcAcceptedInvitation, howRelationshipCreatedKey, invitationIdKey, saAgentRefKey, serviceKey, suppliedClientIdKey}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, IFConnector, MappingConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, IfOrHipConnector, MappingConnector}
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -50,7 +49,7 @@ class RelationshipsController @Inject() (
   findService: FindRelationshipsService,
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
-  ifConnector: IFConnector,
+  ifOrHipConnector: IfOrHipConnector,
   val esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
   auditService: AuditService,
@@ -133,7 +132,7 @@ class RelationshipsController @Inject() (
               maybeEk <- taxIdentifier match {
                            // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
                            case nino @ Nino(_) =>
-                             ifConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
+                             ifOrHipConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
                            case _ => Future.successful(Some(enrolmentKey))
                          }
               _ <- maybeEk.fold {

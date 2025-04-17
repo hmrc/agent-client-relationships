@@ -24,6 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReferenceRecord, ExistingMainAgent, ValidateInvitationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, MtdIt, MtdItSupp}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -32,7 +33,7 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
-class InvitationLinkControllerISpec extends BaseControllerISpec with TestData {
+class InvitationLinkControllerISpec extends BaseControllerISpec with TestData with HipStub {
 
   val uid = "TestUID"
   val existingAgentUid = "ExitingAgentUid"

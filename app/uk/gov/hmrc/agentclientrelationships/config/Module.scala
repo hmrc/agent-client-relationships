@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.config
 
 import com.google.inject.AbstractModule
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.agentclientrelationships.connectors.{HIPConnector, IFRelationshipConnector, RelationshipConnector}
 import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
 
 import java.time.{Clock, ZoneId}
@@ -29,7 +28,6 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
 
     val internalAuthTokenEnabled: Boolean = configuration.get[Boolean]("internal-auth-token-enabled-on-start")
-    val hipConnectorEnabled: Boolean = configuration.get[Boolean]("hip.enabled")
 
     if (internalAuthTokenEnabled) {
       bind(classOf[InternalAuthTokenInitialiser])
@@ -38,16 +36,6 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     } else {
       bind(classOf[InternalAuthTokenInitialiser])
         .to(classOf[NoOpInternalAuthTokenInitialiser])
-        .asEagerSingleton()
-    }
-
-    if (hipConnectorEnabled) {
-      bind(classOf[RelationshipConnector])
-        .to(classOf[HIPConnector])
-        .asEagerSingleton()
-    } else {
-      bind(classOf[RelationshipConnector])
-        .to(classOf[IFRelationshipConnector])
         .asEagerSingleton()
     }
 

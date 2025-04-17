@@ -22,7 +22,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.IFConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.services.{AltItsaCreateRelationshipSuccess, AltItsaNotFoundOrFailed, CheckAndCopyRelationshipsService, FoundAndCopied, NotFound => CheckAndCopyNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ItsaPostSignupController @Inject() (
-  ifConnector: IFConnector,
+  ifOrHipConnector: IfOrHipConnector,
   checkAndCopyRelationshipsService: CheckAndCopyRelationshipsService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
@@ -49,7 +49,7 @@ class ItsaPostSignupController @Inject() (
 
   def itsaPostSignupCreateRelationship(nino: Nino): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
-      ifConnector.getMtdIdFor(nino).flatMap {
+      ifOrHipConnector.getMtdIdFor(nino).flatMap {
         case Some(mtdItId) =>
           checkAndCopyRelationshipsService
             .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(

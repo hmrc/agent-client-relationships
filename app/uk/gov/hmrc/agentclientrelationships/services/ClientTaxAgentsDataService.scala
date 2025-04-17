@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import cats.implicits._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, IFConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, IfOrHipConnector}
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
@@ -41,7 +41,7 @@ class ClientTaxAgentsDataService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   findRelationshipsService: FindRelationshipsService,
   partialAuthRepository: PartialAuthRepository,
-  ifConnector: IFConnector
+  ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext, appConfig: AppConfig) {
 
   val supportedServices = appConfig.supportedServices
@@ -278,7 +278,7 @@ class ClientTaxAgentsDataService @Inject() (
 
   private def getAllInvitationsForAllServices(
     clientIds: Seq[String]
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[Invitation]] =
+  ): EitherT[Future, RelationshipFailureResponse, Seq[Invitation]] =
     for {
       invitations <- EitherT.right[RelationshipFailureResponse](invitationsRepository.findAllBy(clientIds = clientIds))
     } yield invitations

@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HIPAgentClientRelationshipStub}
+import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HipStub}
 import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, MtdIt, MtdItSupp, Pillar2, Ppt, Trust, TrustNT, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -42,7 +42,7 @@ class HipConnectorISpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
-    with HIPAgentClientRelationshipStub
+    with HipStub
     with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder
@@ -76,13 +76,15 @@ class HipConnectorISpec
         "agent.trackPage.cache.expires"                        -> "1 millis",
         "agent.trackPage.cache.enabled"                        -> false,
         "microservice.services.hip.port"                       -> wireMockPort,
-        "microservice.services.hip.authorization-token"        -> "token"
+        "microservice.services.hip.authorization-token"        -> "token",
+        "hip.enabled"                                          -> true,
+        "hip.BusinessDetails.enabled"                          -> true
       )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val hipConnector =
-    new HIPConnector(httpClient, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
+    new HipConnector(httpClient, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

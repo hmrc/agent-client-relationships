@@ -83,7 +83,6 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
               .toString()
           )
           result.status shouldBe NOT_FOUND
-          // TODO WG - check that does not exists
         }
 
       }
@@ -318,7 +317,6 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
         result.json shouldBe toJson(ErrorBody("UNSUPPORTED_SERVICE", message))
       }
 
-      // TODO WG - do UpdateStatusFailed
     }
   }
 

@@ -44,15 +44,14 @@ class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComp
     Future.failed(new Exception("Could not connect the mongo db."))
 }
 
-class RelationshipsControllerWithoutMongoISpec
+class RelationshipsControllerWithoutMongoIfISpec
     extends UnitSpec
     with MongoSupport
     with GuiceOneServerPerSuite
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
-    with IFStubs
-    with IFAgentClientRelationshipStub
+    with IfStub
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
@@ -81,7 +80,8 @@ class RelationshipsControllerWithoutMongoISpec
         "agent.cache.expires"                                   -> "1 millis",
         "agent.cache.enabled"                                   -> true,
         "mongodb.uri"                                           -> mongoUri,
-        "hip.enabled"                                           -> false
+        "hip.enabled"                                           -> false,
+        "hip.BusinessDetails.enabled"                           -> false
       )
       .overrides(new AbstractModule {
         override def configure(): Unit = {

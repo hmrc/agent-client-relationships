@@ -21,13 +21,14 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
 import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.AgentCode
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
 
-trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerISpec =>
+trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerISpec with HipStub =>
 
   def relationshipControllerVATSpecificBehaviours(): Unit = {
     val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(

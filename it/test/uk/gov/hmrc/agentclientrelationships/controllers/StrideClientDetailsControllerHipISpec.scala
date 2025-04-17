@@ -20,10 +20,10 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
-import uk.gov.hmrc.agentclientrelationships.model.stride.{ActiveClientRelationship, ActiveClientsRelationshipResponse, ClientRelationshipRequest, ClientsRelationshipsRequest, InvitationWithAgentName}
+import uk.gov.hmrc.agentclientrelationships.model.stride._
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuthRelationship, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HIPAgentClientRelationshipStub}
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HipStub}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, CbcNonUk}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
@@ -31,11 +31,13 @@ import uk.gov.hmrc.domain.Nino
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 
-class StrideClientDetailsControllerISpec
+class StrideClientDetailsControllerHipISpec
     extends BaseControllerISpec
     with ClientDetailsStub
-    with HIPAgentClientRelationshipStub
+    with HipStub
     with AfiRelationshipStub {
+
+  override def additionalConfig: Map[String, Any] = Map("hip.enabled" -> true, "hip.BusinessDetails.enabled" -> true)
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
@@ -490,7 +492,6 @@ class StrideClientDetailsControllerISpec
     "find relationships for all clientTypes and send back Json" in {
 
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        // TODO WG - do not know how to test PersonalIncome
         Seq(
           ClientRelationshipRequest(NinoType.id, nino.value),
           ClientRelationshipRequest(VrnType.id, vrn.value),

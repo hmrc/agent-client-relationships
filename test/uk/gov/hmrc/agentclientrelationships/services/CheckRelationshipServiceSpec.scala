@@ -54,7 +54,7 @@ class CheckRelationshipServiceSpec
   val metrics = mock[Metrics]
   private val mockPartialAuthRepo = mock[PartialAuthRepository]
   private val mockAgentAssuranceConnector = mock[AgentAssuranceConnector]
-  private val mockIfConnector = mock[IFConnector]
+  private val mockIfOrHipConnector = mock[IfOrHipConnector]
   private val mockAgentFiConnector = mock[AgentFiRelationshipConnector]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -82,7 +82,7 @@ class CheckRelationshipServiceSpec
           es,
           ap,
           mockAgentAssuranceConnector,
-          mockIfConnector,
+          mockIfOrHipConnector,
           gs,
           mockPartialAuthRepo,
           mockAgentFiConnector,
@@ -111,7 +111,7 @@ class CheckRelationshipServiceSpec
           es,
           ap,
           mockAgentAssuranceConnector,
-          mockIfConnector,
+          mockIfOrHipConnector,
           gs,
           mockPartialAuthRepo,
           mockAgentFiConnector,
@@ -140,7 +140,7 @@ class CheckRelationshipServiceSpec
           es,
           ap,
           mockAgentAssuranceConnector,
-          mockIfConnector,
+          mockIfOrHipConnector,
           gs,
           mockPartialAuthRepo,
           mockAgentFiConnector,
@@ -165,7 +165,7 @@ class CheckRelationshipServiceSpec
           es,
           ap,
           mockAgentAssuranceConnector,
-          mockIfConnector,
+          mockIfOrHipConnector,
           gs,
           mockPartialAuthRepo,
           mockAgentFiConnector,
@@ -196,7 +196,7 @@ class CheckRelationshipServiceSpec
           es,
           ap,
           mockAgentAssuranceConnector,
-          mockIfConnector,
+          mockIfOrHipConnector,
           gs,
           mockPartialAuthRepo,
           mockAgentFiConnector,
@@ -224,7 +224,7 @@ class CheckRelationshipServiceSpec
           es,
           ap,
           mockAgentAssuranceConnector,
-          mockIfConnector,
+          mockIfOrHipConnector,
           gs,
           mockPartialAuthRepo,
           mockAgentFiConnector,
@@ -249,7 +249,7 @@ class CheckRelationshipServiceSpec
           es,
           ap,
           mockAgentAssuranceConnector,
-          mockIfConnector,
+          mockIfOrHipConnector,
           gs,
           mockPartialAuthRepo,
           mockAgentFiConnector,
