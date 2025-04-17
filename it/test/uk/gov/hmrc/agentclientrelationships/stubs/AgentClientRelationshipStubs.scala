@@ -38,7 +38,7 @@ trait AgentClientRelationshipStub {
 
   def givenAgentHasNoActiveRelationship(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping
 
-  def givenAgentCanNotBeDeallocated(status: Int): StubMapping
+  def givenAgentCanNotBeDeallocated(status: Int, errorBody: String = ""): StubMapping
 
   def getActiveRelationshipFailsWith(
     taxIdentifier: TaxIdentifier,
@@ -213,14 +213,14 @@ trait HIPAgentClientRelationshipStub extends AgentClientRelationshipStub {
         )
     )
 
-  override def givenAgentCanNotBeDeallocated(status: Int): StubMapping =
+  override def givenAgentCanNotBeDeallocated(status: Int, errorBody: String = ""): StubMapping =
     stubFor(
       post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
         .withRequestBody(containing("\"0002\""))
         .willReturn(
           aResponse()
             .withStatus(status)
-            .withBody(s"""{"reason": "Service unavailable"}""")
+            .withBody(errorBody)
         )
     )
 
@@ -984,14 +984,14 @@ trait IFAgentClientRelationshipStub extends AgentClientRelationshipStub {
         )
     )
 
-  override def givenAgentCanNotBeDeallocated(status: Int): StubMapping =
+  override def givenAgentCanNotBeDeallocated(status: Int, errorBody: String = ""): StubMapping =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(
           aResponse()
             .withStatus(status)
-            .withBody(s"""{"reason": "Service unavailable"}""")
+            .withBody(errorBody)
         )
     )
 

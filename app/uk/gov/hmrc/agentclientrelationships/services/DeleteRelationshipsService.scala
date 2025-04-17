@@ -138,15 +138,19 @@ private[services] abstract class DeleteRelationshipsService(
                          enrolmentKey,
                          arn
                        ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
-      if maybeResponse.nonEmpty
-      _ = auditData.set(etmpRelationshipRemovedKey, true)
+      _ = if (maybeResponse.nonEmpty) auditData.set(etmpRelationshipRemovedKey, true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)
       .recoverWith {
-        case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, _) if e.statusCode >= 500 && e.statusCode < 600 =>
-          recoverFromException(e, UpstreamErrorResponse(s"RELATIONSHIP_DELETE_FAILED_IF", upstreamCode, reportAs))
+        case e @ UpstreamErrorResponse(_, _, _, _) if e.getMessage().contains("No active relationship found") =>
+          logger.warn(
+            s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: No active relationship found"
+          )
+          updateEtmpSyncStatus(Success).flatMap(_ => Future.failed(RelationshipNotFound("RELATIONSHIP_NOT_FOUND")))
+        case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, _) =>
+          recoverFromException(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_ETMP", upstreamCode, reportAs))
         case NonFatal(ex) =>
-          recoverFromException(ex, new Exception(s"RELATIONSHIP_DELETE_FAILED_IF"))
+          recoverFromException(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ETMP"))
       }
 
   }
@@ -171,9 +175,9 @@ private[services] abstract class DeleteRelationshipsService(
       case RelationshipNotFound(errorCode) =>
         logger.warn(
           s"De-allocating ES record for ${arn.value}, ${enrolmentKey.tag} " +
-            s"not possible because of incomplete data: $errorCode"
+            s"was not possible because a relationship between the Agent and Client was not found: $errorCode"
         )
-        updateEsSyncStatus(IncompleteInputParams).map(_ => DbUpdateFailed)
+        updateEsSyncStatus(Success).flatMap(_ => Future.failed(RelationshipNotFound(errorCode)))
     }
 
     lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {

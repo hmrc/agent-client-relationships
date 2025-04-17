@@ -27,6 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
 import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound => RelationshipNotFoundEx}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
@@ -176,6 +177,8 @@ class RemoveAuthorisationController @Inject() (
       .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
       .map(_ => Right(true))
       .recover {
+        case RelationshipNotFoundEx(_) =>
+          Left(RelationshipNotFound)
         case upS: UpstreamErrorResponse =>
           Left(RelationshipDeleteFailed(upS.getMessage))
         case NonFatal(ex) =>

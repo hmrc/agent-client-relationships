@@ -36,7 +36,7 @@ import uk.gov.hmrc.agentclientrelationships.support.{NoRequest, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain._
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
@@ -87,9 +87,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
       implicit val currentUser: CurrentUser =
         CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
-      an[Exception] shouldBe thrownBy {
-        await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
-      }
+
+      val exceptionMessage: String =
+        intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
+      exceptionMessage shouldBe "RELATIONSHIP_DELETE_FAILED_ES"
 
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasNOTBeenPerformed
@@ -109,9 +110,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
       implicit val currentUser: CurrentUser =
         CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
-      an[Exception] shouldBe thrownBy {
-        await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
-      }
+
+      val exceptionMessage: String =
+        intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
+      exceptionMessage shouldBe "RELATIONSHIP_DELETE_FAILED_ETMP"
 
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
@@ -120,6 +122,43 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         case Some(DeleteRecord(arn.value, _, _, _, _, Some(Failed), Some(Success), None, _, _, Some("HMRC"))) =>
       }
       await(repo.remove(arn, mtdItEnrolmentKey))
+    }
+
+    "save deleteRecord with syncToESStatus of Success when an ES relationship does not exist" in new TestFixture {
+      givenRelationshipBetweenAgentAndClientDoesNotExist
+      givenAgentExists
+
+      implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+      implicit val currentUser: CurrentUser =
+        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+
+      val exceptionMessage: String =
+        intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
+      exceptionMessage shouldBe "RELATIONSHIP_NOT_FOUND"
+
+      await(repo.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
+        case Some(DeleteRecord(arn.value, _, _, _, _, None, Some(Success), None, _, _, Some("HMRC"))) =>
+      }
+    }
+
+    "save deleteRecord with syncToETMPStatus of Success when an ETMP relationship does not exist" in new TestFixture {
+      givenAgentExists
+      givenRelationshipBetweenAgentAndClientExists
+      givenESDeAllocationSucceeds
+      givenETMPDeAuthNoRelationshipFound
+      givenAucdCacheRefresh
+
+      implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+      implicit val currentUser: CurrentUser =
+        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+
+      val exceptionMessage: String =
+        intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
+      exceptionMessage shouldBe "RELATIONSHIP_NOT_FOUND"
+
+      await(repo.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
+        case Some(DeleteRecord(arn.value, _, _, _, _, Some(Success), Some(Success), None, _, _, Some("HMRC"))) =>
+      }
     }
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
@@ -311,7 +350,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     // FAILURE SCENARIOS
 
-    "When retry ETMP de-authorisation fails keep status Failed" in new TestFixture {
+    "keep ETMP sync status Failed when ETMP de-authorisation fails" in new TestFixture {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
@@ -322,9 +361,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.create(deleteRecord))
       givenETMPDeAuthFails
 
-      an[Exception] shouldBe thrownBy {
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
-      }
+      val exceptionMessage: String =
+        intercept[Exception](await(underTest.resumeRelationshipRemoval(deleteRecord))).getMessage
+      exceptionMessage shouldBe "RELATIONSHIP_DELETE_FAILED_ETMP"
 
       verifyESDeAllocateHasNOTBeenPerformed
       verifyETMPDeAuthorisationHasBeenPerformed
@@ -334,7 +373,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       record.flatMap(_.syncToESStatus) shouldBe Some(Success)
     }
 
-    "When retry ES de-allocation fails keep status failed" in new TestFixture {
+    "keep ES sync status Failed when ES de-allocation fails" in new TestFixture {
       val deleteRecord: DeleteRecord =
         DeleteRecord(
           arn.value,
@@ -348,9 +387,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       when(es.deallocateEnrolmentFromAgent("group0001", mtdItEnrolmentKey))
         .thenReturn(Future.failed(new Exception()))
 
-      an[Exception] shouldBe thrownBy {
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
-      }
+      val exceptionMessage: String =
+        intercept[Exception](await(underTest.resumeRelationshipRemoval(deleteRecord))).getMessage
+      exceptionMessage shouldBe "RELATIONSHIP_DELETE_FAILED_ES"
 
       verifyESDeAllocateHasBeenPerformed
       verifyETMPDeAuthorisationHasNOTBeenPerformed
@@ -567,6 +606,16 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       )
         .thenReturn(Future.successful(true))
 
+    def givenRelationshipBetweenAgentAndClientDoesNotExist: OngoingStubbing[Future[Boolean]] =
+      when(
+        checkService
+          .checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(
+            any[ExecutionContext],
+            any[HeaderCarrier]
+          )
+      )
+        .thenReturn(Future.successful(false))
+
     def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
         relationshipConnector
@@ -580,6 +629,16 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
           .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       )
         .thenReturn(Future.failed(new Exception))
+
+    val noRelationshipFoundErrorMessage =
+      """{"errors":{"processingDate":"2020-01-01T11:11:11Z","code":"014","text":"No active relationship found"}}"""
+
+    def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
+      when(
+        relationshipConnector
+          .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
+      )
+        .thenReturn(Future.failed(UpstreamErrorResponse.apply(noRelationshipFoundErrorMessage, 422)))
 
     def givenESDeAllocationSucceeds: OngoingStubbing[Future[Unit]] =
       when(
