@@ -87,14 +87,14 @@ trait IfStub {
         )
     )
 
-  def givenAgentCanNotBeDeallocated(status: Int): StubMapping =
+  def givenAgentCanNotBeDeallocated(status: Int, errorBody: String = ""): StubMapping =
     stubFor(
       post(urlEqualTo(s"/registration/relationship"))
         .withRequestBody(containing("\"De-Authorise\""))
         .willReturn(
           aResponse()
             .withStatus(status)
-            .withBody(s"""{"reason": "Service unavailable"}""")
+            .withBody(errorBody)
         )
     )
 

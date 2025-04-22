@@ -40,8 +40,7 @@ class IFConnectorISpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
-    with IFStubs
-    with IFAgentClientRelationshipStub
+    with IfStub
     with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder

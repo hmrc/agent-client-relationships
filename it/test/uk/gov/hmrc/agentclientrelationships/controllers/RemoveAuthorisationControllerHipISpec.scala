@@ -415,7 +415,7 @@ class RemoveAuthorisationControllerHipISpec
       )
 
       result.status shouldBe 404
-      result.json shouldBe toJson(ErrorBody("INVITATION_NOT_FOUND", "The specified invitation was not found."))
+      result.json shouldBe toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
     }
 
     "return 500 when AFI returns 500" in new StubsForThisScenario {

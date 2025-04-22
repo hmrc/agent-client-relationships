@@ -635,7 +635,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        relationshipConnector
+        ifOrHipConnector
           .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       )
         .thenReturn(Future.failed(UpstreamErrorResponse.apply(noRelationshipFoundErrorMessage, 422)))
