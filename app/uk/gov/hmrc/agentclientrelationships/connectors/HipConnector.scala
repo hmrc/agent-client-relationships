@@ -93,11 +93,8 @@ class HipConnector @Inject() (
         case Right(response) =>
           Option(response.json.as[RegistrationRelationshipResponse])
         case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case _ =>
-              logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
-              None
-          }
+          logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
+          throw errorResponse
       }
   }
 

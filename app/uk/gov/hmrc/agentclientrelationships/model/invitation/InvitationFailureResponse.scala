@@ -73,7 +73,7 @@ object InvitationFailureResponse {
 
   case object RelationshipNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(
-      toJson(ErrorBody("INVITATION_NOT_FOUND", "The specified invitation was not found."))
+      toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
     )
   }
 

@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -211,7 +211,7 @@ class IfConnector @Inject() (
         case Status.OK => Option(response.json.as[RegistrationRelationshipResponse])
         case other: Int =>
           logger.error(s"Error in IF DeleteAgentRelationship: $other, ${response.body}")
-          None
+          throw UpstreamErrorResponse(response.body, other)
       }
     }
   }
