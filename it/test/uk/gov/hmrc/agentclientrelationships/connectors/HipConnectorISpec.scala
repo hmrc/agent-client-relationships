@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, MtdIt, MtdItSupp, Pillar2, Ppt, Trust, TrustNT, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -353,13 +353,17 @@ class HipConnectorISpec
     "not delete relationship between agent and client and return nothing for ItSa service" in {
       givenAgentCanNotBeDeallocated(status = 404)
       givenAuditConnector()
-      await(hipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
+      an[UpstreamErrorResponse] should be thrownBy await(
+        hipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))
+      )
     }
 
     "not delete relationship between agent and client and return nothing for Vat service" in {
       givenAgentCanNotBeDeallocated(status = 404)
       givenAuditConnector()
-      await(hipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
+      an[UpstreamErrorResponse] should be thrownBy await(
+        hipConnector.deleteAgentRelationship(mtdItEnrolmentKey, Arn("bar"))
+      )
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
@@ -368,14 +372,18 @@ class HipConnectorISpec
       )
     }
 
-    "return nothing when IF is throwing errors" in {
+    "return an exception when HIP has returned an error" in {
       givenReturnsServerError()
-      await(hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      an[UpstreamErrorResponse] should be thrownBy await(
+        hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))
+      )
     }
 
-    "return nothing when IF is unavailable" in {
+    "return an exception when HIP is unavailable" in {
       givenReturnsServiceUnavailable()
-      await(hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      an[UpstreamErrorResponse] should be thrownBy await(
+        hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))
+      )
     }
   }
 
