@@ -805,7 +805,18 @@ trait HipStub {
   def givenNinoIsUnknownFor(mtdId: MtdItId): StubMapping =
     stubFor(
       get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdId.value}"))
-        .willReturn(aResponse().withStatus(404))
+        .willReturn(
+          aResponse()
+            .withStatus(422)
+            .withBody(s"""
+                         {
+                         |"errors": {
+                         |"processingDate": "2024-07-15T09:45:17Z",
+                         |"code": "008",
+                         |"text": "ID not found"
+                         |}
+                         |}""".stripMargin)
+        )
     )
 
   def givenmtdIdIsInvalid(mtdId: MtdItId): StubMapping =
@@ -827,7 +838,18 @@ trait HipStub {
   def givenMtdItIdIsUnKnownFor(nino: Nino): StubMapping =
     stubFor(
       get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
-        .willReturn(aResponse().withStatus(404))
+        .willReturn(
+          aResponse()
+            .withStatus(422)
+            .withBody(s"""
+                         {
+                         |"errors": {
+                         |"processingDate": "2024-07-15T09:45:17Z",
+                         |"code": "008",
+                         |"text": "ID not found"
+                         |}
+                         |}""".stripMargin)
+        )
     )
 
   def givenNinoIsInvalid(nino: Nino): StubMapping =
