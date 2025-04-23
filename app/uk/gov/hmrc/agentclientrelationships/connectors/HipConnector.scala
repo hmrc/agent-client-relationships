@@ -238,7 +238,8 @@ class HipConnector @Inject() (
         case Left(errorResponse) =>
           errorResponse.statusCode match {
             case Status.NOT_FOUND                                                        => None
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("008") => None
+            case Status.UNPROCESSABLE_ENTITY
+              if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") => None
             case _ =>
               val msg = s"Error in HIP API#5266 'GetBusinessDetailsByMtdId ${errorResponse.getMessage()}"
               logger.error(message = msg, error = throw new RuntimeException(msg))
@@ -258,7 +259,8 @@ class HipConnector @Inject() (
         case Left(errorResponse) =>
           errorResponse.statusCode match {
             case Status.NOT_FOUND                                                        => None
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("008") => None
+            case Status.UNPROCESSABLE_ENTITY
+              if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") => None
             case _ =>
               val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
               logger.error(message = msg, error = throw new RuntimeException(msg))
