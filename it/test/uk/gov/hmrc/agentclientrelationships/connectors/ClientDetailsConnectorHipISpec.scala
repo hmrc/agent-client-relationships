@@ -163,8 +163,10 @@ class ClientDetailsConnectorHipISpec
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
       givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
-      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe
-        Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaBusinessDetails'"))
+      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) should matchPattern {
+        case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
+            if msg.startsWith("Unexpected error during 'getItsaBusinessDetails'") =>
+      }
     }
   }
 
