@@ -295,8 +295,8 @@ class HipConnector @Inject() (
                 if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
               Left(ClientDetailsNotFound)
             case status =>
-              logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
+              logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}")
+              Left(ErrorRetrievingClientDetails(status, s"Unexpected error during 'getItsaBusinessDetails' message:${errorResponse.getMessage}"))
           }
       }
   }
