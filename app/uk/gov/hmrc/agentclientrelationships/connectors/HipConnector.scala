@@ -237,9 +237,10 @@ class HipConnector @Inject() (
         case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
         case Left(errorResponse) =>
           errorResponse.statusCode match {
-            case Status.NOT_FOUND                                                        => None
+            case Status.NOT_FOUND => None
             case Status.UNPROCESSABLE_ENTITY
-              if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") => None
+                if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
+              None
             case _ =>
               val msg = s"Error in HIP API#5266 'GetBusinessDetailsByMtdId ${errorResponse.getMessage()}"
               logger.error(message = msg, error = throw new RuntimeException(msg))
@@ -258,9 +259,10 @@ class HipConnector @Inject() (
         case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
         case Left(errorResponse) =>
           errorResponse.statusCode match {
-            case Status.NOT_FOUND                                                        => None
+            case Status.NOT_FOUND => None
             case Status.UNPROCESSABLE_ENTITY
-              if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") => None
+                if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
+              None
             case _ =>
               val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
               logger.error(message = msg, error = throw new RuntimeException(msg))
@@ -295,8 +297,15 @@ class HipConnector @Inject() (
                 if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
               Left(ClientDetailsNotFound)
             case status =>
-              logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
+              logger.warn(
+                s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}"
+              )
+              Left(
+                ErrorRetrievingClientDetails(
+                  status,
+                  s"Unexpected error during 'getItsaBusinessDetails' message:${errorResponse.getMessage}"
+                )
+              )
           }
       }
   }

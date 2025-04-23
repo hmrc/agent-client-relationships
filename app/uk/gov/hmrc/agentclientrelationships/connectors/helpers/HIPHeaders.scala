@@ -24,7 +24,7 @@ import java.time.{Clock, Instant}
 import javax.inject.Inject
 
 class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig: AppConfig, clock: Clock) {
-  private val correlationIdHeader: String = "correlationId"
+  private val correlationIdHeader: String = "correlationid"
   private val xOriginatingSystemHeader: String = "X-Originating-System"
   private val xReceiptDateHeader: String = "X-Receipt-Date"
   private val xTransmittingSystemHeader: String = "X-Transmitting-System"
