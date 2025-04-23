@@ -41,7 +41,7 @@ import scala.util.control.NonFatal
 
 private[services] abstract class DeleteRelationshipsService(
   es: EnrolmentStoreProxyConnector,
-  relationshipConnector: RelationshipConnector,
+  ifOrHipConnector: IfOrHipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: MongoLockService,
@@ -134,7 +134,7 @@ private[services] abstract class DeleteRelationshipsService(
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- relationshipConnector.deleteAgentRelationship(
+      maybeResponse <- ifOrHipConnector.deleteAgentRelationship(
                          enrolmentKey,
                          arn
                        ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
@@ -367,7 +367,7 @@ private[services] abstract class DeleteRelationshipsService(
 @Singleton
 class DeleteRelationshipsServiceWithAca @Inject() (
   es: EnrolmentStoreProxyConnector,
-  relationshipConnector: RelationshipConnector,
+  ifOrHipConnector: IfOrHipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: MongoLockService,
@@ -379,7 +379,7 @@ class DeleteRelationshipsServiceWithAca @Inject() (
 )(implicit override val appConfig: AppConfig, ec: ExecutionContext)
     extends DeleteRelationshipsService(
       es,
-      relationshipConnector,
+      ifOrHipConnector,
       deleteRecordRepository,
       agentUserClientDetailsConnector,
       lockService,
@@ -393,7 +393,7 @@ class DeleteRelationshipsServiceWithAca @Inject() (
 @Singleton
 class DeleteRelationshipsServiceWithAcr @Inject() (
   es: EnrolmentStoreProxyConnector,
-  relationshipConnector: RelationshipConnector,
+  ifOrHipConnector: IfOrHipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: MongoLockService,
@@ -405,7 +405,7 @@ class DeleteRelationshipsServiceWithAcr @Inject() (
 )(implicit override val appConfig: AppConfig, ec: ExecutionContext)
     extends DeleteRelationshipsService(
       es,
-      relationshipConnector,
+      ifOrHipConnector,
       deleteRecordRepository,
       agentUserClientDetailsConnector,
       lockService,

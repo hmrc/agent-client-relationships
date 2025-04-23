@@ -91,41 +91,6 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, http: HttpClient, 
       }
     }
 
-  // API#1171 Get Business Details
-  def getItsaBusinessDetails(
-    nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
-
-    val url = new URL(s"${appConfig.ifPlatformBaseUrl}/registration/business-details/nino/$nino")
-
-    val isInternal = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
-    monitor(s"ConsumedAPI-IF-GetBusinessDetails-GET") {
-      http
-        .GET(url.toString, headers = desOrIFHeaders(appConfig.ifAPI1171Token, appConfig.ifEnvironment, isInternal))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer ${appConfig.ifAPI1171Token}"))) else hc,
-          ec
-        )
-        .map { response =>
-          response.status match {
-            case OK =>
-              val optionalData = Try(response.json \ "taxPayerDisplayResponse" \ "businessData").map(_(0))
-              optionalData match {
-                case Success(businessData) => Right(businessData.as[ItsaBusinessDetails])
-                case Failure(_) =>
-                  logger.warn("Unable to retrieve relevant details as the businessData array was empty")
-                  Left(ClientDetailsNotFound)
-              }
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
-          }
-        }
-    }
-  }
-
   def getVatCustomerInfo(
     vrn: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, VatCustomerDetails]] = {

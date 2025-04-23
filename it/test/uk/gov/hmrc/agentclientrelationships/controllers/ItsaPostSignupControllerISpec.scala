@@ -20,17 +20,19 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.stubs.HIPAgentClientRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.Instant
 
-class ItsaPostSignupControllerISpec
-    extends RelationshipsBaseControllerISpec
-    with TestData
-    with HIPAgentClientRelationshipStub {
+class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec with TestData with HipStub {
+
+  override def additionalConfig: Map[String, Any] = Map(
+    "hip.enabled"                 -> true,
+    "hip.BusinessDetails.enabled" -> true
+  )
 
   val testUrl = s"/agent-client-relationships/itsa-post-signup/create-relationship/$nino"
 

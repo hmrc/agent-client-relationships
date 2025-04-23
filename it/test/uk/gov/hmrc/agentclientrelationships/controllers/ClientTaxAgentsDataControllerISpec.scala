@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HIPAgentClientRelationshipStub}
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HipStub}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model._
 
@@ -29,8 +29,8 @@ import java.time.{Instant, ZoneOffset}
 class ClientTaxAgentsDataControllerISpec
     extends BaseControllerISpec
     with ClientDetailsStub
-    with HIPAgentClientRelationshipStub
     with AfiRelationshipStub
+    with HipStub
     with TestData {
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -290,7 +290,6 @@ class ClientTaxAgentsDataControllerISpec
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 404, activeOnly = false)
       getActiveRelationshipFailsWith(mtdItId, 422)
 
-      // TODO WG - no events
       // TODO UID is created each time
       givenAgentRecordFound(arn, testAgentRecord1)
       val result = doGetRequest(testEndpoint)
@@ -764,7 +763,6 @@ class ClientTaxAgentsDataControllerISpec
 
     }
 
-    // TODO WG - fix that with next iteration
     "last error from authorisation check - depends what future finish first " in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
       givenAuditConnector()

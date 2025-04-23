@@ -21,6 +21,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.mongo.lock.Lock
@@ -33,7 +34,7 @@ import java.time.{Instant, LocalDate, ZoneOffset}
 // For this reason, only legacy non-Granular Permissions logic is tested here.
 // The new Granular Permissions behaviours are tested directly in CheckRelationshipServiceSpec.
 
-trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControllerISpec =>
+trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControllerISpec with HipStub =>
 
   def relationshipsControllerISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
     relationshipsControllerGetISpec(serviceId, clientId, clientIdType)

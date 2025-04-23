@@ -21,7 +21,7 @@ import org.mockito.Mockito.when
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{ClientDetailsConnector, IfOrHipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.{Deregistered, Inactive, Insolvent}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
@@ -36,13 +36,14 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class ClientDetailsServiceSpec extends UnitSpec {
 
   val mockConnector: ClientDetailsConnector = mock[ClientDetailsConnector]
+  val mockIfOrHipConnector: IfOrHipConnector = mock[IfOrHipConnector]
   val mockAppConfig: AppConfig = mock[AppConfig]
-  val service = new ClientDetailsService(mockConnector, mockAppConfig)
+  val service = new ClientDetailsService(mockConnector, mockAppConfig, mockIfOrHipConnector)
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   ".findClientDetails" when {
@@ -52,7 +53,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
       "the IF Get Business Details API returns a successful response" should {
 
         "return a ClientDetailsResponse if expected data is returned" in {
-          when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+          when(
+            mockIfOrHipConnector
+              .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier], any[ExecutionContext])
+          )
             .thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", Some("AA1 1AA"), "GB"))))
 
           val resultModel =
@@ -62,7 +66,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
         }
 
         "return a ClientDetailsNotFound error if no postcode was returned" in {
-          when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+          when(
+            mockIfOrHipConnector
+              .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier], any[ExecutionContext])
+          )
             .thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", None, "GB"))))
 
           await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
@@ -74,7 +81,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
         "the Citizen Details APIs (alt-ITSA) return successful responses" should {
 
           "return a ClientDetailsResponse if expected data is returned" in {
-            when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+            when(
+              mockIfOrHipConnector
+                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier], any[ExecutionContext])
+            )
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(
@@ -90,7 +100,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no postcode was returned" in {
-            when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+            when(
+              mockIfOrHipConnector
+                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier], any[ExecutionContext])
+            )
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(
@@ -103,7 +116,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no name was returned" in {
-            when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+            when(
+              mockIfOrHipConnector
+                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier], any[ExecutionContext])
+            )
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Right(ItsaCitizenDetails(None, None, None, Some("11223344")))))
@@ -114,7 +130,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no SA UTR was returned" in {
-            when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+            when(
+              mockIfOrHipConnector
+                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier], any[ExecutionContext])
+            )
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, None))))
@@ -128,7 +147,10 @@ class ClientDetailsServiceSpec extends UnitSpec {
         "the Citizen Details APIs (alt-ITSA) return 404 responses" should {
 
           "return a ClientDetailsNotFound error" in {
-            when(mockConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
+            when(
+              mockIfOrHipConnector
+                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier], any[ExecutionContext])
+            )
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[HeaderCarrier]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))

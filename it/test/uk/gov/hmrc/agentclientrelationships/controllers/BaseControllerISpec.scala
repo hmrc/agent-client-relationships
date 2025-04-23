@@ -46,7 +46,6 @@ trait BaseControllerISpec
     with WireMockSupport
     with RelationshipStubs
     with DesStubs
-    with IFStubs
     with DesStubsGet
     with MappingStubs
     with DataStreamStub

@@ -559,7 +559,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     val checkService: CheckRelationshipsService = mock[CheckRelationshipsService]
     val agentUserService: AgentUserService = mock[AgentUserService]
     val metrics: Metrics = mock[Metrics]
-    val relationshipConnector: RelationshipConnector = mock[RelationshipConnector]
+    val ifOrHipConnector: IfOrHipConnector = mock[IfOrHipConnector]
     val aca: AgentClientAuthorisationConnector = mock[AgentClientAuthorisationConnector]
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
     val acaDeAuthoriseInvitationService: AcaDeAuthoriseInvitationService = new AcaDeAuthoriseInvitationService(aca)
@@ -578,7 +578,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     val underTest = new DeleteRelationshipsServiceWithAca(
       es,
-      relationshipConnector,
+      ifOrHipConnector,
       repo,
       aucdConnector,
       lockService,
@@ -618,14 +618,14 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        relationshipConnector
+        ifOrHipConnector
           .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       )
         .thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
 
     def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        relationshipConnector
+        ifOrHipConnector
           .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       )
         .thenReturn(Future.failed(new Exception))
@@ -635,7 +635,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        relationshipConnector
+        ifOrHipConnector
           .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
       )
         .thenReturn(Future.failed(UpstreamErrorResponse.apply(noRelationshipFoundErrorMessage, 422)))
@@ -698,11 +698,11 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[HeaderCarrier])
 
     def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(relationshipConnector, times(1))
+      verify(ifOrHipConnector, times(1))
         .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
     def verifyETMPDeAuthorisationHasNOTBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(relationshipConnector, never)
+      verify(ifOrHipConnector, never)
         .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[HeaderCarrier], any[ExecutionContext])
 
   }

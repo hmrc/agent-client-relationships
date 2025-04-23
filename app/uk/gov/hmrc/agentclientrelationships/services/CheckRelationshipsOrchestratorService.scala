@@ -40,7 +40,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   validationService: ValidationService,
   agentUserService: AgentUserService,
   deleteService: DeleteRelationshipsServiceWithAca,
-  ifConnector: IFConnector,
+  ifOrHipConnector: IfOrHipConnector,
   desConnector: DesConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector
 )(implicit executionContext: ExecutionContext)
@@ -154,7 +154,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
   )(implicit hc: HeaderCarrier): Future[CheckRelationshipResult] =
-    ifConnector.getMtdIdFor(Nino(clientId)).flatMap {
+    ifOrHipConnector.getMtdIdFor(Nino(clientId)).flatMap {
       case Some(mtdItId) => proceed(mtdItId)
       case None          => Future.successful(CheckRelationshipNotFound())
     }

@@ -24,6 +24,8 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ErrorRetrievingClientDetails}
 import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, ClientRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
@@ -39,73 +41,23 @@ import java.time.{Instant, LocalDate, ZoneOffset}
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 @Singleton
-class IFConnector @Inject() (val httpClient: HttpClient, val ec: ExecutionContext)(implicit
-  val metrics: Metrics,
-  val appConfig: AppConfig
-) extends IFConnectorCommon
-    with HttpAPIMonitor
-    with Logging {
-
-  private val ifBaseUrl = appConfig.ifPlatformBaseUrl
-
-  private val ifAPI1171Token = appConfig.ifAPI1171Token
-  private val ifEnv = appConfig.ifEnvironment
-
-  /*
-  API#1171 Get Business Details (for ITSA customers)
-  https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
-   * */
-  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
-
-    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
-      result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
-        case NOT_FOUND => None
-        case other =>
-          logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
-  /*
-    API#1171 Get Business Details (for ITSA customers)
-    https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
-   * */
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
-
-    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
-      result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
-        case NOT_FOUND => None
-        case other =>
-          logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
-          None
-      }
-    }
-  }
-
-}
-
-class IFRelationshipConnector @Inject() (
+class IfConnector @Inject() (
   val httpClient: HttpClient,
   agentCacheProvider: AgentCacheProvider,
   val ec: ExecutionContext
 )(implicit
   val metrics: Metrics,
   val appConfig: AppConfig
-) extends IFConnectorCommon
-    with RelationshipConnector
-    with HttpAPIMonitor
+) extends HttpAPIMonitor
     with Logging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 
   private val ifAuthToken = appConfig.ifAuthToken
+  private val ifAPI1171Token = appConfig.ifAPI1171Token
   private val ifEnv = appConfig.ifEnvironment
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
@@ -145,7 +97,7 @@ class IFRelationshipConnector @Inject() (
   }
 
   // IF API #1168 //url and error handling is different to getActiveClientRelationships
-  override def getAllRelationships(
+  def getAllRelationships(
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean
   )(implicit
@@ -265,6 +217,71 @@ class IFRelationshipConnector @Inject() (
           throw UpstreamErrorResponse(response.body, other)
       }
     }
+  }
+
+  /*
+API#1171 Get Business Details (for ITSA customers)
+https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
+          None
+      }
+    }
+  }
+
+  /*
+    API#1171 Get Business Details (for ITSA customers)
+    https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
+   * */
+  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
+    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
+
+    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case NOT_FOUND => None
+        case other =>
+          logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
+          None
+      }
+    }
+  }
+
+  // API#1171 Get Business Details
+  def getItsaBusinessDetails(
+    nino: String
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
+
+    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino)}")
+
+    getWithIFHeaders("ConsumedAPI-IF-GetBusinessDetails-GET", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK =>
+          val optionalData = Try(result.json \ "taxPayerDisplayResponse" \ "businessData").map(_(0))
+          optionalData match {
+            case Success(businessData) => Right(businessData.as[ItsaBusinessDetails])
+            case Failure(_) =>
+              logger.warn("Unable to retrieve relevant details as the businessData array was empty")
+              Left(ClientDetailsNotFound)
+          }
+        case NOT_FOUND => Left(ClientDetailsNotFound)
+        case status =>
+          logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
+          Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
+      }
+    }
+
   }
 
   private def relationshipIFUrl(
@@ -417,14 +434,6 @@ class IFRelationshipConnector @Inject() (
   private val idType = "idType"
   private val authProfile = "authProfile"
   private val relationshipType = "relationshipType"
-}
-
-trait IFConnectorCommon extends HttpAPIMonitor {
-
-  val httpClient: HttpClient
-  val ec: ExecutionContext
-  val metrics: Metrics
-  val appConfig: AppConfig
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
@@ -486,4 +495,5 @@ trait IFConnectorCommon extends HttpAPIMonitor {
     val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
     commonHeaders ++ additionalHeaders
   }
+
 }

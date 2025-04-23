@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsOrchestratorService, ClientDetailsService}
-import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, HipStub}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -33,7 +33,7 @@ import uk.gov.hmrc.domain.Nino
 import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
-class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub {
+class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub with HipStub {
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -54,6 +54,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
     stubControllerComponents()
   )
 
+  override def additionalConfig: Map[String, Any] = Map(
+    "hip.enabled"                 -> true,
+    "hip.BusinessDetails.enabled" -> true
+  )
+
   def setupCommonStubs(request: FakeRequest[?]): Unit = {
     givenAuthorisedAsValidAgent(request, "XARN1234567")
     givenAuditConnector()
@@ -71,10 +76,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there are no pending invitations or existing relationship" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -90,10 +95,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there is a pending invitation" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+
           await(
             invitationsRepo
               .create(
@@ -123,8 +129,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there is a pending supporting ITSA invitation" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
@@ -156,8 +162,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there is an existing relationship in a main role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
 
@@ -176,8 +182,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there is an existing relationship in a supporting role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
 
@@ -215,8 +221,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a main role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
@@ -244,8 +250,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a supporting role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
@@ -273,8 +279,8 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
         "there is both a pending invitation and an existing relationship" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenItsaBusinessDetailsExists("nino", "AA000001B")
-          givenItsaBusinessDetailsExists("mtdId", "XAIT0000111122")
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(

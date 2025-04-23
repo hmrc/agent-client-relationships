@@ -45,7 +45,7 @@ class RecoverySchedulerISpec
     with WireMockSupport
     with RelationshipStubs
     with DataStreamStub
-    with HIPAgentClientRelationshipStub
+    with HipStub
     with ACAStubs
     with AUCDStubs
     with BeforeAndAfterEach {

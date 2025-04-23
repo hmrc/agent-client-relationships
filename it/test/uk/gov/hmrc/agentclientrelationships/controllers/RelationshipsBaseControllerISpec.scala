@@ -15,6 +15,5 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.controllers
-import uk.gov.hmrc.agentclientrelationships.stubs._
 
-trait RelationshipsBaseControllerISpec extends BaseControllerISpec with AgentClientRelationshipStub
+trait RelationshipsBaseControllerISpec extends BaseControllerISpec

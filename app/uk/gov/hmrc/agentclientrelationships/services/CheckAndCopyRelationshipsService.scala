@@ -86,7 +86,7 @@ case object VrnNotFoundInEtmp extends CheckAndCopyResult {
 @Singleton
 class CheckAndCopyRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
-  ifConnector: IFConnector,
+  ifOrHipConnector: IfOrHipConnector,
   des: DesConnector,
   mapping: MappingConnector,
   ugs: UsersGroupsSearchConnector,
@@ -263,7 +263,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
 
     for {
-      mNino        <- mNino.fold(ifConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
+      mNino        <- mNino.fold(ifOrHipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
       mPartialAuth <- findPartialAuth(arn, mNino)
       createFromPartialAuthRes <-
         mPartialAuth.fold[Future[CheckAndCopyResult]](Future.successful(AltItsaNotFoundOrFailed))(partialAuth =>
