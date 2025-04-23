@@ -23,6 +23,8 @@ import play.api.libs.json._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ErrorRetrievingClientDetails}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
@@ -39,6 +41,7 @@ import java.net.URL
 import java.time.{Instant, LocalDate, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 @Singleton
 class HipConnector @Inject() (
@@ -260,6 +263,38 @@ class HipConnector @Inject() (
               val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
               logger.error(message = msg, error = throw new RuntimeException(msg))
               None
+          }
+      }
+  }
+
+  // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
+  def getItsaBusinessDetails(nino: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
+    val encodedNino = UriEncoding.encodePathSegment(nino, "UTF-8")
+    val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
+
+    getWithHipHeaders(s"ConsumedAPI-IF-GetBusinessDetails-GET", url, headers.subscriptionBusinessDetailsHeaders)
+      .map {
+        case Right(response) =>
+          Try((response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData"))
+            .map(_(0))
+            .map(_.as[ItsaBusinessDetails])
+            .toOption
+            .toRight {
+              logger.warn("Unable to retrieve relevant details as the businessData array was empty")
+              ClientDetailsNotFound
+            }
+        case Left(errorResponse) =>
+          errorResponse.statusCode match {
+            case Status.NOT_FOUND => Left(ClientDetailsNotFound)
+            case Status.UNPROCESSABLE_ENTITY
+                if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
+              Left(ClientDetailsNotFound)
+            case status =>
+              logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
+              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
           }
       }
   }

@@ -19,6 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -84,4 +86,12 @@ class IfOrHipConnector @Inject() (
     if (hipBusinessDetailsEnabled) hipConnector.getMtdIdFor(nino)
     else ifConnector.getMtdIdFor(nino)
 
+  def getItsaBusinessDetails(nino: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] =
+    if (hipBusinessDetailsEnabled)
+      hipConnector.getItsaBusinessDetails(nino)
+    else
+      ifConnector.getItsaBusinessDetails(nino)
 }

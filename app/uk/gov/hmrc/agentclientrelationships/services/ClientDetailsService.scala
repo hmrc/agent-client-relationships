@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{ClientDetailsConnector, IfOrHipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
@@ -35,7 +35,11 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConnector, appConfig: AppConfig)(implicit
+class ClientDetailsService @Inject() (
+  clientDetailsConnector: ClientDetailsConnector,
+  appConfig: AppConfig,
+  ifOrHipConnector: IfOrHipConnector
+)(implicit
   ec: ExecutionContext
 ) extends Logging {
 
@@ -89,7 +93,7 @@ class ClientDetailsService @Inject() (clientDetailsConnector: ClientDetailsConne
   private def getItsaClientDetails(
     nino: String
   )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
-    clientDetailsConnector.getItsaBusinessDetails(nino).flatMap {
+    ifOrHipConnector.getItsaBusinessDetails(nino).flatMap {
       case Right(details @ ItsaBusinessDetails(name, Some(postcode), _)) =>
         Future
           .successful(

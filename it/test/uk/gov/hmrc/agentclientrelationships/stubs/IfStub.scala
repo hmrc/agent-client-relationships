@@ -876,4 +876,80 @@ trait IfStub {
       get(urlMatching(s"/registration/.*?/nino/${nino.value}"))
         .willReturn(aResponse().withStatus(400))
     )
+
+  def givenItsaBusinessDetailsExists(idType: String, id: String, mtdId: String = "XAIT0000111122"): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/$idType/$id"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |  "taxPayerDisplayResponse": {
+                         |    "businessData": [
+                         |      {
+                         |        "tradingName": "Erling Haal",
+                         |        "businessAddressDetails": {
+                         |          "postalCode": "AA1 1AA",
+                         |          "countryCode": "GB"
+                         |        }
+                         |      }
+                         |    ],
+                         |    "mtdId": "$mtdId"
+                         |  }
+                         |}
+          """.stripMargin)
+        )
+    )
+
+  def givenMultipleItsaBusinessDetailsExists(nino: String): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/nino/$nino"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |  "taxPayerDisplayResponse": {
+                         |    "businessData": [
+                         |      {
+                         |        "tradingName": "Erling Haal",
+                         |        "businessAddressDetails": {
+                         |          "postalCode": "AA1 1AA",
+                         |          "countryCode": "GB"
+                         |        }
+                         |      },
+                         |      {
+                         |        "tradingName": "Bernard Silver",
+                         |        "businessAddressDetails": {
+                         |          "postalCode": "BB1 1BB",
+                         |          "countryCode": "PT"
+                         |        }
+                         |      }
+                         |    ]
+                         |  }
+                         |}
+          """.stripMargin)
+        )
+    )
+
+  def givenEmptyItsaBusinessDetailsExists(nino: String): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/nino/$nino"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |  "taxPayerDisplayResponse": {
+                         |    "businessData": []
+                         |  }
+                         |}
+          """.stripMargin)
+        )
+    )
+
+  def givenItsaBusinessDetailsError(nino: String, status: Int): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/registration/business-details/nino/$nino"))
+        .willReturn(aResponse().withStatus(status))
+    )
+
 }

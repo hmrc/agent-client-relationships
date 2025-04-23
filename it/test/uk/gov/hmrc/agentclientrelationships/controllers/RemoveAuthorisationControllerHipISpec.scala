@@ -127,7 +127,7 @@ class RemoveAuthorisationControllerHipISpec
         taxIdentifier match {
           case mtdItId @ MtdItId(value) =>
             givenMtdItIdIsKnownFor(nino, mtdItId)
-            givenItsaBusinessDetailsExists("nino", nino.value, value)
+            givenMtdItsaBusinessDetailsExists(nino, mtdItId)
           case _ @CbcId(_) if service == Cbc =>
             givenKnownFactsQuery(
               Service.Cbc,

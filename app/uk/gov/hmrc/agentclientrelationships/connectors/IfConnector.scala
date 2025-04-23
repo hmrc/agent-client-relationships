@@ -24,6 +24,8 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ErrorRetrievingClientDetails}
 import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, ClientRelationshipResponse}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
@@ -39,6 +41,7 @@ import java.time.{Instant, LocalDate, ZoneOffset}
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 @Singleton
 class IfConnector @Inject() (
@@ -250,6 +253,35 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
           None
       }
     }
+  }
+
+  // API#1171 Get Business Details
+  def getItsaBusinessDetails(
+    nino: String
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
+
+    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino)}")
+
+    getWithIFHeaders("ConsumedAPI-IF-GetBusinessDetails-GET", url, ifAPI1171Token, ifEnv).map { result =>
+      result.status match {
+        case OK =>
+          val optionalData = Try(result.json \ "taxPayerDisplayResponse" \ "businessData").map(_(0))
+          optionalData match {
+            case Success(businessData) => Right(businessData.as[ItsaBusinessDetails])
+            case Failure(_) =>
+              logger.warn("Unable to retrieve relevant details as the businessData array was empty")
+              Left(ClientDetailsNotFound)
+          }
+        case NOT_FOUND => Left(ClientDetailsNotFound)
+        case status =>
+          logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
+          Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
+      }
+    }
+
   }
 
   private def relationshipIFUrl(

@@ -22,6 +22,7 @@ import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails}
@@ -29,20 +30,26 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2R
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.{VatCustomerDetails, VatIndividual}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsNotFound, ErrorRetrievingClientDetails}
-import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, DataStreamStub}
+import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
+import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, DataStreamStub, HipStub}
 import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.LocalDate
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ClientDetailsConnectorISpec
+class ClientDetailsConnectorHipISpec
     extends UnitSpec
     with GuiceOneServerPerSuite
     with WireMockSupport
     with DataStreamStub
-    with ClientDetailsStub {
+    with ClientDetailsStub
+    with HipStub {
 
   override lazy val app: Application = appBuilder.build()
 
@@ -51,18 +58,31 @@ class ClientDetailsConnectorISpec
       .configure(
         "microservice.services.citizen-details.port" -> wireMockPort,
         "microservice.services.if.port"              -> wireMockPort,
+        "microservice.services.hip.port"             -> wireMockPort,
         "microservice.services.eis.port"             -> wireMockPort,
         "microservice.services.des.port"             -> wireMockPort,
         "auditing.consumer.baseUri.host"             -> wireMockHost,
-        "auditing.consumer.baseUri.port"             -> wireMockPort
+        "auditing.consumer.baseUri.port"             -> wireMockPort,
+        "hip.enabled"                                -> true,
+        "hip.BusinessDetails.enabled"                -> true
       )
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
+  val httpClient2: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  val metrics: Metrics = app.injector.instanceOf[Metrics]
+  val hipHeaders: HIPHeaders = app.injector.instanceOf[HIPHeaders]
 
   val connector = new ClientDetailsConnector(appConfig, httpClient, app.injector.instanceOf[Metrics])
+
+  val ifConnector = new IfConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
+  val hipConnector = new HipConnector(httpClient2, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
+
+  val ifOrHipConnector = new IfOrHipConnector(hipConnector, ifConnector)(appConfig)
 
   ".getItsaDesignatoryDetails" should {
 
@@ -114,8 +134,8 @@ class ClientDetailsConnectorISpec
 
     "return business details when receiving a 200 status" in {
       givenAuditConnector()
-      givenItsaBusinessDetailsExists("nino", "AA000001B")
-      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+      givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
         ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
       )
     }
@@ -123,7 +143,7 @@ class ClientDetailsConnectorISpec
     "return the first set of business details when receiving multiple" in {
       givenAuditConnector()
       givenMultipleItsaBusinessDetailsExists("AA000001B")
-      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
         ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
       )
     }
@@ -131,19 +151,19 @@ class ClientDetailsConnectorISpec
     "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
       givenAuditConnector()
       givenEmptyItsaBusinessDetailsExists("AA000001B")
-      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
       givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
-      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
       givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
-      await(connector.getItsaBusinessDetails("AA000001B")) shouldBe
+      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaBusinessDetails'"))
     }
   }

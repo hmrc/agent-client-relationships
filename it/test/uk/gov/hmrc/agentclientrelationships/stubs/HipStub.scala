@@ -858,4 +858,112 @@ trait HipStub {
         .willReturn(aResponse().withStatus(400))
     )
 
+  // idType: String, id: String, foundId: String = "XAIT0000111122"
+  def givenNinoItsaBusinessDetailsExists(mtdId: MtdItId, nino: Nino): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdId.value}"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |    "success": {
+                         |        "taxPayerDisplayResponse": {
+                         |            "businessData": [
+                         |                {
+                         |                    "tradingName": "Erling Haal",
+                         |                    "businessAddressDetails": {
+                         |                        "postalCode": "AA1 1AA",
+                         |                        "countryCode": "GB"
+                         |                    }
+                         |                }
+                         |            ],
+                         |            "nino": "${nino.value}"
+                         |        }
+                         |    }
+                         |}
+          """.stripMargin)
+        )
+    )
+
+  def givenMtdItsaBusinessDetailsExists(nino: Nino, mtdId: MtdItId): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |    "success": {
+                         |        "taxPayerDisplayResponse": {
+                         |            "businessData": [
+                         |                {
+                         |                    "tradingName": "Erling Haal",
+                         |                    "businessAddressDetails": {
+                         |                        "postalCode": "AA1 1AA",
+                         |                        "countryCode": "GB"
+                         |                    }
+                         |                }
+                         |            ],
+                         |            "mtdId": "${mtdId.value}"
+                         |        }
+                         |    }
+                         |}
+          """.stripMargin)
+        )
+    )
+
+  def givenMultipleItsaBusinessDetailsExists(nino: String): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |    "success": {
+                         |        "taxPayerDisplayResponse": {
+                         |            "businessData": [
+                         |                {
+                         |                    "tradingName": "Erling Haal",
+                         |                    "businessAddressDetails": {
+                         |                        "postalCode": "AA1 1AA",
+                         |                        "countryCode": "GB"
+                         |                    }
+                         |                },
+                         |                {
+                         |                    "tradingName": "Bernard Silver",
+                         |                    "businessAddressDetails": {
+                         |                        "postalCode": "BB1 1BB",
+                         |                        "countryCode": "PT"
+                         |                    }
+                         |                }
+                         |            ]
+                         |        }
+                         |    }
+                         |}
+          """.stripMargin)
+        )
+    )
+
+  def givenEmptyItsaBusinessDetailsExists(nino: String): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino"))
+        .willReturn(
+          aResponse()
+            .withBody(s"""
+                         |{
+                         |    "success": {
+                         |        "taxPayerDisplayResponse": {
+                         |            "businessData": []
+                         |        }
+                         |    }
+                         |}
+          """.stripMargin)
+        )
+    )
+
+  def givenItsaBusinessDetailsError(nino: String, status: Int): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino"))
+        .willReturn(aResponse().withStatus(status))
+    )
+
 }
