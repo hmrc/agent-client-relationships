@@ -35,6 +35,8 @@ POST          /invitations/trusts-enrolment-orchestrator/:urn/update         @uk
 
 GET           /customer-status                                               @uk.gov.hmrc.agentclientrelationships.controllers.CustomerStatusController.customerStatus
 
+PUT           /set-relationship-ended                                        @uk.gov.hmrc.agentclientrelationships.controllers.SetRelationshipEndedController.deauthoriseInvitation
+
 # stride endpoints
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
 POST          /stride/active-relationships                                   @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getActiveRelationships
