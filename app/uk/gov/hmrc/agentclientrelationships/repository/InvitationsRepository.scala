@@ -222,6 +222,30 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .headOption()
       .map(_.getOrElse(throw new RuntimeException(s"Could not find an invitation with invitationId '$invitationId'")))
 
+  def deauthAcceptedInvitation(
+    service: String,
+    clientId: String,
+    arn: String,
+    relationshipEndedBy: String,
+    timestamp: Option[Instant] = None
+  ): Future[Boolean] =
+    collection
+      .updateOne(
+        filter = and(
+          in("status", "Accepted", "Partialauth"),
+          equal("service", service),
+          equal("clientId", encryptedString(clientId)),
+          equal("arn", arn)
+        ),
+        update = combine(
+          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
+          set("lastUpdated", timestamp.getOrElse(Instant.now())),
+          set("relationshipEndedBy", relationshipEndedBy)
+        )
+      )
+      .toFuture()
+      .map(_.getModifiedCount == 1L)
+
   def deauthInvitation(
     invitationId: String,
     relationshipEndedBy: String,
