@@ -29,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 @Singleton
-class SetRelationshipEndedService @Inject() (
+class CleanUpInvitationStatusService @Inject()(
   invitationsRepository: InvitationsRepository
 )(implicit ec: ExecutionContext)
     extends Logging {

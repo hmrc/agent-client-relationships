@@ -20,26 +20,26 @@ import cats.data.EitherT
 import play.api.Logger
 import play.api.libs.json.JsValue
 import play.api.mvc.{Action, ControllerComponents, Result}
-import uk.gov.hmrc.agentclientrelationships.model.SetRelationshipEndedRequest
+import uk.gov.hmrc.agentclientrelationships.model.CleanUpInvitationStatusRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvalidClientId, InvitationNotFound, UnsupportedService, UpdateStatusFailed}
-import uk.gov.hmrc.agentclientrelationships.services.SetRelationshipEndedService
+import uk.gov.hmrc.agentclientrelationships.services.CleanUpInvitationStatusService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class SetRelationshipEndedController @Inject() (
-  setRelationshipEndedService: SetRelationshipEndedService,
-  cc: ControllerComponents
+class CleanUpInvitationStatusController @Inject()(
+                                                   setRelationshipEndedService: CleanUpInvitationStatusService,
+                                                   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
   def deauthoriseInvitation: Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       request.body
-        .validate[SetRelationshipEndedRequest]
+        .validate[CleanUpInvitationStatusRequest]
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
           payload => {

@@ -31,7 +31,7 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-class SetRelationshipEndedControllerISpec extends BaseControllerISpec with TestData {
+class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -66,11 +66,11 @@ class SetRelationshipEndedControllerISpec extends BaseControllerISpec with TestD
   )
 
   val requestPath: String =
-    "/agent-client-relationships/set-relationship-ended"
+    "/agent-client-relationships/cleanup-invitation-status"
 
   def requestJson(arn: String, clientId: String, service: String) = Json
     .toJson(
-      SetRelationshipEndedRequest(
+      CleanUpInvitationStatusRequest(
         arn = arn,
         clientId = clientId,
         service = service
@@ -79,7 +79,7 @@ class SetRelationshipEndedControllerISpec extends BaseControllerISpec with TestD
     .toString()
 
   allServices.foreach(testset =>
-    "/agent-client-relationships/set-relationship-ended" should {
+    "/agent-client-relationships/cleanup-invitation-status" should {
       val (service, taxIdentifier) = testset
       val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
       val serviceId = service match {

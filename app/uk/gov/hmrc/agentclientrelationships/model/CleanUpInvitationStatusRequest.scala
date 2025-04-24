@@ -18,8 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.{Json, OFormat}
 
-case class SetRelationshipEndedRequest(arn: String, clientId: String, service: String)
+case class CleanUpInvitationStatusRequest(arn: String, clientId: String, service: String)
 
-object SetRelationshipEndedRequest {
-  implicit val jsonFormat: OFormat[SetRelationshipEndedRequest] = Json.format[SetRelationshipEndedRequest]
+object CleanUpInvitationStatusRequest {
+  implicit val jsonFormat: OFormat[CleanUpInvitationStatusRequest] = Json.format[CleanUpInvitationStatusRequest]
 }
