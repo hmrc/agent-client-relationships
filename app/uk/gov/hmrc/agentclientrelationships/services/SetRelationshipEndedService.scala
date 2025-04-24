@@ -44,37 +44,21 @@ class SetRelationshipEndedService @Inject() (
                   .fold(_ => Left(InvalidClientId), Right(_))
   } yield clientId
 
-  def validateInvitation(
-    arn: String,
-    service: String,
-    clientId: String
-  ): Future[Either[InvitationFailureResponse, Invitation]] = for {
-    invitations <- invitationsRepository
-                     .findAllForAgent(
-                       arn = arn,
-                       services = Seq(service),
-                       clientIds = Seq(clientId),
-                       isSuppliedClientId = false
-                     )
-  } yield invitations
-    .filter(invitation => invitation.status == Accepted | invitation.status == PartialAuth)
-    .headOption match {
-    case Some(invitation: Invitation) => Right(invitation)
-    case None                         => Left(InvitationNotFound)
-  }
-
   def deauthoriseInvitation(
-    invitationId: String,
+    arn: String,
+    clientId: String,
+    service: String,
     relationshipEndedBy: String
   ): Future[Either[InvitationFailureResponse, Unit]] =
     invitationsRepository
-      .deauthInvitation(
-        invitationId = invitationId,
+      .deauthAcceptedInvitation(
+        arn = arn,
+        clientId = clientId,
+        service = service,
         relationshipEndedBy = relationshipEndedBy
       )
-      .map(
-        _.fold[Either[InvitationFailureResponse, Unit]](
-          Left(UpdateStatusFailed("Update status for invitation failed."))
-        )(_ => Right(()))
-      )
+      .map {
+        case true  => Right(())
+        case false => Left(InvitationNotFound)
+      }
 }

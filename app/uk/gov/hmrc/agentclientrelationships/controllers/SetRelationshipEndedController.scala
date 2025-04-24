@@ -50,13 +50,11 @@ class SetRelationshipEndedController @Inject() (
               clientId <- EitherT.fromEither[Future](
                             setRelationshipEndedService.validateClientId(service, payload.clientId)
                           )
-              invitationToDeauth <-
-                EitherT(
-                  setRelationshipEndedService.validateInvitation(payload.arn, service.id, clientId.value)
-                )
               result <- EitherT(
                           setRelationshipEndedService.deauthoriseInvitation(
-                            invitationId = invitationToDeauth.invitationId,
+                            arn = payload.arn,
+                            clientId = clientId.value,
+                            service = service.id,
                             relationshipEndedBy = "HMRC"
                           )
                         )
