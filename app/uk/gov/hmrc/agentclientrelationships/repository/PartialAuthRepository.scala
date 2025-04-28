@@ -60,20 +60,6 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
   // Permanent store of alt itsa authorisations
   override lazy val requiresTtlIndex: Boolean = false
 
-  private val indexToDrop = "clientQueryIndex" // unwanted index that remains in production environment.
-
-  // TODO remove on the next PR!
-  collection
-    .dropIndex(indexToDrop)
-    .toFuture()
-    .map { _ =>
-      logger.warn(s"[partial-auth collection] successfully dropped $indexToDrop")
-      collection
-        .listIndexes()
-        .toFuture()
-        .map(indexes => for (elem <- indexes) logger.warn(s"[partial-auth collection] index defined: $elem"))
-    }
-
   def create(
     created: Instant,
     arn: Arn,
