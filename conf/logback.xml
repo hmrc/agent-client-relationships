@@ -31,7 +31,7 @@
 
     <logger name="uk.gov.hmrc.agentclientrelationships" level="INFO"/>
 
-    <logger name="uk.gov.hmrc.agentclientrelationships.repository" level="ERROR"/>
+    <logger name="uk.gov.hmrc.agentclientrelationships.repository" level="WARN"/>
 
     <logger name="reactivemongo" level="ERROR"/>
 

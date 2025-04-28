@@ -30,9 +30,9 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class CleanUpInvitationStatusController @Inject()(
-                                                   setRelationshipEndedService: CleanUpInvitationStatusService,
-                                                   cc: ControllerComponents
+class CleanUpInvitationStatusController @Inject() (
+  setRelationshipEndedService: CleanUpInvitationStatusService,
+  cc: ControllerComponents
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 

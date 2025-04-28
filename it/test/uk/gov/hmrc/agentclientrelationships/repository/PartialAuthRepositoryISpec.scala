@@ -64,13 +64,17 @@ class PartialAuthRepositoryISpec
 
       val allRecordsIndex = customIndexes(0)
       val activeRecordsIndex = customIndexes(1)
+      val ninoIndex = customIndexes(2)
 
       allRecordsIndex.getKeys shouldBe Indexes.ascending("service", "nino", "arn", "active")
       allRecordsIndex.getOptions.isUnique shouldBe false
+      allRecordsIndex.getOptions.getName shouldBe "allRelationshipsIndex"
       activeRecordsIndex.getKeys shouldBe Indexes.ascending("service", "nino", "arn")
       activeRecordsIndex.getOptions.getName shouldBe "activeRelationshipsIndex"
       activeRecordsIndex.getOptions.getPartialFilterExpression.toBsonDocument shouldBe BsonDocument("active" -> true)
       activeRecordsIndex.getOptions.isUnique shouldBe true
+      ninoIndex.getKeys shouldBe Indexes.ascending("nino")
+      ninoIndex.getOptions.getName shouldBe "ninoIndex"
 
     }
 
