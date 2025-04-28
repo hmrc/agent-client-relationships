@@ -43,7 +43,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
       collectionName = "partial-auth",
       domainFormat = PartialAuthRelationship.mongoFormat,
       indexes = Seq(
-        IndexModel(Indexes.ascending("service", "nino", "arn", "active")),
+        IndexModel(Indexes.ascending("service", "nino", "arn", "active"), IndexOptions().name("allRelationshipsIndex")),
         IndexModel(
           Indexes.ascending("service", "nino", "arn"),
           IndexOptions()
@@ -51,7 +51,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
             .unique(true)
             .name("activeRelationshipsIndex")
         ),
-        IndexModel(Indexes.ascending("nino"))
+        IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex"))
       ),
       replaceIndexes = true
     )
@@ -59,6 +59,20 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
 
   // Permanent store of alt itsa authorisations
   override lazy val requiresTtlIndex: Boolean = false
+
+  private val indexToDrop = "clientQueryIndex" // unwanted index that remains in production environment.
+
+  // TODO remove on the next PR!
+  collection
+    .dropIndex(indexToDrop)
+    .toFuture()
+    .map { _ =>
+      logger.warn(s"[partial-auth collection] successfully dropped $indexToDrop")
+      collection
+        .listIndexes()
+        .toFuture()
+        .map(indexes => for (elem <- indexes) logger.warn(s"[partial-auth collection] index defined: $elem"))
+    }
 
   def create(
     created: Instant,
