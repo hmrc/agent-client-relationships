@@ -348,7 +348,7 @@ private[services] abstract class DeleteRelationshipsService(
       case _                                                                 => Some("HMRC")
     }
 
-  private def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
+  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Done] =

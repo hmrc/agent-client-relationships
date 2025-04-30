@@ -33,8 +33,9 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonU
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.http.HttpResponse
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
 class RemoveAuthorisationControllerHipISpec
@@ -55,10 +56,10 @@ class RemoveAuthorisationControllerHipISpec
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val deleteRelationshipService: DeleteRelationshipsServiceWithAcr =
     app.injector.instanceOf[DeleteRelationshipsServiceWithAcr]
-  val validationService = app.injector.instanceOf[ValidationService]
+  val validationService: ValidationService = app.injector.instanceOf[ValidationService]
   val agentFiRelationshipConnector: AgentFiRelationshipConnector =
     app.injector.instanceOf[AgentFiRelationshipConnector]
-  val auditSerice = app.injector.instanceOf[AuditService]
+  val auditSerice: AuditService = app.injector.instanceOf[AuditService]
 
   val controller =
     new RemoveAuthorisationController(
@@ -125,9 +126,9 @@ class RemoveAuthorisationControllerHipISpec
         givenCacheRefresh(arn)
 
         taxIdentifier match {
-          case mtdItId @ MtdItId(value) =>
-            givenMtdItIdIsKnownFor(nino, mtdItId)
-            givenMtdItsaBusinessDetailsExists(nino, mtdItId)
+          case mtdIdentifier @ MtdItId(_) =>
+            givenMtdItIdIsKnownFor(nino, mtdIdentifier)
+            givenMtdItsaBusinessDetailsExists(nino, mtdIdentifier)
           case _ @CbcId(_) if service == Cbc =>
             givenKnownFactsQuery(
               Service.Cbc,
@@ -361,7 +362,7 @@ class RemoveAuthorisationControllerHipISpec
     }
 
     "return None when PartialAuth do not exists in PartialAuth Repo" in new StubsForThisScenario {
-      val result = doAgentPostRequest(
+      val result: HttpResponse = doAgentPostRequest(
         requestPath,
         Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
       )
@@ -385,6 +386,22 @@ class RemoveAuthorisationControllerHipISpec
     }
 
     "return 204 when AFI deletes the relationship" in new StubsForThisScenario {
+      val pirInvitation: Invitation = Invitation
+        .createNew(
+          arn.value,
+          PersonalIncomeRecord,
+          nino,
+          nino,
+          "TestClientName",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          None
+        )
+        .copy(status = Accepted)
+
+      await(invitationRepo.collection.insertOne(pirInvitation).toFuture())
+
       givenTerminateAfiRelationshipSucceeds(arn, PersonalIncomeRecord.id, nino.value)
 
       doAgentPostRequest(
@@ -404,12 +421,14 @@ class RemoveAuthorisationControllerHipISpec
         credId = None,
         agentCode = None
       )
+
+      await(invitationRepo.findOneById(pirInvitation.invitationId)).get.status shouldBe DeAuthorised
     }
 
     "return 404 when AFI returns 404" in new StubsForThisScenario {
       givenTerminateAfiRelationshipFails(arn, PersonalIncomeRecord.id, nino.value, 404)
 
-      val result = doAgentPostRequest(
+      val result: HttpResponse = doAgentPostRequest(
         requestPath,
         Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
       )
@@ -421,7 +440,7 @@ class RemoveAuthorisationControllerHipISpec
     "return 500 when AFI returns 500" in new StubsForThisScenario {
       givenTerminateAfiRelationshipFails(arn, PersonalIncomeRecord.id, nino.value)
 
-      val result = doAgentPostRequest(
+      val result: HttpResponse = doAgentPostRequest(
         requestPath,
         Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
       )
@@ -458,8 +477,7 @@ class RemoveAuthorisationControllerHipISpec
       }
     }
 
-    // TODO - FIX
-    /*    "when MtdId business details errors" should {
+    "when MtdId business details errors" should {
       "return Forbidden 403 status and JSON Error when MtdId business details record is empty " in {
         givenEmptyItsaBusinessDetailsExists(nino.value)
         val result =
@@ -476,8 +494,7 @@ class RemoveAuthorisationControllerHipISpec
           )
         )
       }
-    }*/
-
+    }
   }
 
 }
