@@ -49,7 +49,6 @@ trait RelationshipsControllerITSASUPP {
         givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
         givenNinoIsKnownFor(mtdItId, nino)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, responseStatus = 404)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest

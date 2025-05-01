@@ -90,7 +90,6 @@ class CheckAndCopyRelationshipsService @Inject() (
   des: DesConnector,
   mapping: MappingConnector,
   ugs: UsersGroupsSearchConnector,
-  aca: AgentClientAuthorisationConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
   partialAuthRepo: PartialAuthRepository,
@@ -191,35 +190,28 @@ class CheckAndCopyRelationshipsService @Inject() (
   }
 
   private def endPartialAuth(arn: Arn, service: String, nino: Option[Nino], mtdItId: MtdItId)(implicit
-    hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Boolean] =
     nino.fold(Future.successful(false))(ni =>
       partialAuthRepo
         .deleteActivePartialAuth(service, ni, arn)
-        .flatMap {
-          case true => invitationsRepository.updatePartialAuthToAcceptedStatus(arn, service, ni, mtdItId)
-          case false =>
-            aca.updateStatusToAccepted(ni, service).map { acaResult =>
-              if (!acaResult) logger.error("error ending partialauth")
-              acaResult
-            }
+        .flatMap { deleteResult =>
+          if (deleteResult) {
+            invitationsRepository.updatePartialAuthToAcceptedStatus(arn, service, ni, mtdItId)
+          } else {
+            logger.error("error ending partialauth")
+            Future.successful(false)
+          }
         }
     )
 
   private def findPartialAuth(arn: Arn, nino: Option[Nino])(implicit
-    hc: HeaderCarrier,
     ec: ExecutionContext,
     auditData: AuditData
   ): Future[Option[String]] =
     nino.fold[Future[Option[String]]](Future.successful(None)) { ni =>
       auditData.set(ninoKey, ni)
-      partialAuthRepo.findActive(ni, arn).map(_.map(_.service)).flatMap {
-        case Some(svc) => Future.successful(Option(svc))
-        case None =>
-          logger.warn(s"partialAuth not found in ACR, looking in ACA...")
-          aca.getPartialAuth(ni, arn).map(_.headOption)
-      }
+      partialAuthRepo.findActive(ni, arn).map(_.map(_.service))
     }
 
   private def tryCreateRelationshipFromPartialAuth(
@@ -405,10 +397,10 @@ class CheckAndCopyRelationshipsService @Inject() (
   )(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
-        aca.getPartialAuth(nino, arn).map { hasPartialAuth =>
-          auditData.set("partialAuth", hasPartialAuth.nonEmpty)
+        partialAuthRepo.findActive(nino, arn).map { optPartialAuth =>
+          auditData.set("partialAuth", optPartialAuth.nonEmpty)
           auditService.sendCheckCesaAndPartialAuthAuditEvent()
-          hasPartialAuth.nonEmpty
+          optPartialAuth.nonEmpty
         }
       } else Future successful true
     )

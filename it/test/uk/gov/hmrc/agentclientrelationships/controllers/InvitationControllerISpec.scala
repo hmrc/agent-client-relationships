@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationReq
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, InvitationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, InvitationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
@@ -61,8 +61,8 @@ class InvitationControllerISpec
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val es: EnrolmentStoreProxyConnector = app.injector.instanceOf[EnrolmentStoreProxyConnector]
-  val deleteRelationshipService: DeleteRelationshipsServiceWithAcr =
-    app.injector.instanceOf[DeleteRelationshipsServiceWithAcr]
+  val deleteRelationshipService: DeleteRelationshipsService =
+    app.injector.instanceOf[DeleteRelationshipsService]
   val agentFiRelationshipConnector: AgentFiRelationshipConnector =
     app.injector.instanceOf[AgentFiRelationshipConnector]
   lazy val messagesApi: MessagesApi = app.injector.instanceOf[MessagesApi]

@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnec
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound => RelationshipNotFoundEx}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -42,7 +42,7 @@ import scala.util.control.NonFatal
 class RemoveAuthorisationController @Inject() (
   deauthorisationService: RemoveAuthorisationService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
-  deleteService: DeleteRelationshipsServiceWithAcr,
+  deleteService: DeleteRelationshipsService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   validationService: ValidationService,

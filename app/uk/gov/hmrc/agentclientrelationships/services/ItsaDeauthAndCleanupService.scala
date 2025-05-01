@@ -37,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class ItsaDeauthAndCleanupService @Inject() (
   partialAuthRepository: PartialAuthRepository,
   checkRelationshipsService: CheckRelationshipsService,
-  deleteRelationshipsServiceWithAcr: DeleteRelationshipsServiceWithAcr,
+  deleteRelationshipsService: DeleteRelationshipsService,
   invitationsRepository: InvitationsRepository,
   auditService: AuditService
 )(implicit ec: ExecutionContext) {
@@ -82,7 +82,7 @@ class ItsaDeauthAndCleanupService @Inject() (
                         case (true, _) =>
                           implicit val auditData: AuditData = new AuditData()
                           auditData.set(howRelationshipTerminatedKey, agentRoleChange)
-                          deleteRelationshipsServiceWithAcr
+                          deleteRelationshipsService
                             .deleteRelationship(
                               Arn(arn),
                               EnrolmentKey(

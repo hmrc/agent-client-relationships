@@ -17,9 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, PartialAuth}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvalidClientId, InvitationNotFound, UnsupportedService, UpdateStatusFailed}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvalidClientId, InvitationNotFound, UnsupportedService}
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}

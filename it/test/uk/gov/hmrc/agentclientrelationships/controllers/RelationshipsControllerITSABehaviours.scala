@@ -64,7 +64,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         givenNinoIsUnknownFor(mtdItId)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
@@ -78,7 +77,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
@@ -94,7 +92,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         givenNinoIsKnownFor(mtdItId, nino)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenArnIsUnknownFor(arn)
         givenAdminUser("foo", "any")
@@ -114,7 +111,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenAgentCanBeAllocated(mtdItId, arn)
@@ -298,13 +294,11 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
       "return 404 when no relationship in CESA and no alt-itsa invitation for client" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenPartialAuthNotExistsFor(arn, nino)
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
         givenArnIsUnknownFor(arn)
         givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenAltItsaUpdate(nino, responseStatus = 200)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
 
         val result = doRequest
@@ -319,7 +313,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenAgentCanNotBeAllocated(status = 404)
@@ -348,7 +341,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenAgentCanBeAllocated(mtdItId, arn)
@@ -413,7 +405,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenNinoIsKnownFor(mtdItId, nino)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
@@ -433,7 +424,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
           givenNinoIsKnownFor(mtdItId, nino)
           givenMtdItIdIsKnownFor(nino, mtdItId)
-          givenPartialAuthNotExistsFor(arn, nino)
           givenArnIsKnownFor(arn, SaAgentReference("foo"))
           givenClientHasRelationshipWithAgentInCESA(nino, "foo")
 
@@ -453,7 +443,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenServiceReturnsServiceUnavailable()
         givenAdminUser("foo", "any")
@@ -489,7 +478,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenMtdItIdIsKnownFor(nino, mtdItId)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenAdminUser("foo", "any")
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientRelationshipWithAgentCeasedInCESA(nino, "baz")
@@ -513,7 +501,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenNinoIsUnknownFor(mtdItId)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
 
@@ -528,7 +515,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsKnownFor(mtdItId, nino)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
 
         val result = doRequest
@@ -542,7 +528,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsKnownFor(mtdItId, nino)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenServiceReturnsServiceUnavailable()
 
@@ -556,7 +541,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsKnownFor(mtdItId, nino)
-        givenPartialAuthNotExistsFor(arn, nino)
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenArnIsUnknownFor(arn)
 
@@ -637,7 +621,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocated(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
-          givenSetRelationshipEnded(mtdItId, arn)
           givenCacheRefresh(arn)
         }
 
@@ -735,7 +718,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocated(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
-          givenSetRelationshipEnded(mtdItId, arn)
           givenCacheRefresh(arn)
         }
 
@@ -767,7 +749,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocated(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
-          givenSetRelationshipEnded(mtdItId, arn)
           givenCacheRefresh(arn)
         }
 
@@ -794,7 +775,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeDeallocated(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
-          givenSetRelationshipEnded(mtdItId, arn)
           givenCacheRefresh(arn)
         }
 
@@ -821,7 +801,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenPrincipalGroupIdExistsFor(mtdItEnrolmentKey, "clientGroupId")
           givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
           givenAgentCanBeDeallocated(mtdItId, arn)
-          givenSetRelationshipEnded(mtdItId, arn)
           givenAdminUser("foo", "any")
         }
 
@@ -840,7 +819,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenPrincipalGroupIdExistsFor(mtdItEnrolmentKey, "clientGroupId")
           givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
           givenAgentHasNoActiveRelationship(mtdItId, arn)
-          givenSetRelationshipEnded(mtdItId, arn)
           givenAdminUser("foo", "any")
         }
 
@@ -860,7 +838,6 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentHasNoActiveRelationship(mtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", mtdItEnrolmentKey)
           givenAdminUser("foo", "any")
-          givenSetRelationshipEnded(mtdItId, arn)
           givenCacheRefresh(arn)
         }
 

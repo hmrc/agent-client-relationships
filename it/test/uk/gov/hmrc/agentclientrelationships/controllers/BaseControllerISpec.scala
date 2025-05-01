@@ -52,7 +52,6 @@ trait BaseControllerISpec
     with AuthStub
     with MockitoSugar
     with JsonMatchers
-    with ACAStubs
     with AUCDStubs
     with AgentAssuranceStubs
     with IntegrationPatience {

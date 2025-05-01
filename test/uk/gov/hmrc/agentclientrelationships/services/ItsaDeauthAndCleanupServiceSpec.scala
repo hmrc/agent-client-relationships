@@ -40,7 +40,7 @@ class ItsaDeauthAndCleanupServiceSpec
     extends UnitSpec
     with ResettingMockitoSugar
     with MockCheckRelationshipsService
-    with MockDeleteRelationshipsServiceWithAcr
+    with MockDeleteRelationshipsService
     with MockPartialAuthRepository
     with MockInvitationsRepository
     with MockAuditService {
@@ -49,7 +49,7 @@ class ItsaDeauthAndCleanupServiceSpec
       extends ItsaDeauthAndCleanupService(
         partialAuthRepository = mockPartialAuthRepository,
         checkRelationshipsService = mockCheckRelationshipsService,
-        deleteRelationshipsServiceWithAcr = mockDeleteRelationshipsService,
+        deleteRelationshipsService = mockDeleteRelationshipsService,
         invitationsRepository = mockInvitationsRepository,
         auditService = mockAuditService
       )
