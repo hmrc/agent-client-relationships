@@ -27,7 +27,6 @@ import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentS
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -197,16 +196,6 @@ class RelationshipsController @Inject() (
             }
           }
         case Left(error) => Future.successful(BadRequest(error))
-      }
-  }
-
-  // Note test only?? Move!
-  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { _ =>
-    checkOldAndCopyService
-      .cleanCopyStatusRecord(arn, mtdItId)
-      .map(_ => NoContent)
-      .recover { case ex: RelationshipNotFound =>
-        NotFound(ex.getMessage)
       }
   }
 
