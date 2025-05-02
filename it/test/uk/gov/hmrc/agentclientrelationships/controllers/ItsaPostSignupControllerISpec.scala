@@ -136,7 +136,6 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenPartialAuthNotExistsFor(arn, nino)
 
       givenClientHasRelationshipWithAgentInCESA(nino, "1234")
       givenArnIsKnownFor(arn, SaAgentReference("1234"))
@@ -208,7 +207,6 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenPartialAuthNotExistsFor(arn, nino)
 
       givenClientHasRelationshipWithAgentInCESA(nino, "1234")
       givenArnIsKnownFor(arn, SaAgentReference("1234"))
@@ -286,7 +284,6 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenPartialAuthNotExistsFor(arn, nino)
 
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
 

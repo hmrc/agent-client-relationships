@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector,
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Rejected, TrackRequestsResult}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, Rejected, TrackRequestsResult}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
@@ -105,6 +105,15 @@ class InvitationService @Inject() (
       case true => Right(())
       case _    => Left(NoPendingInvitation)
     }
+
+  def deauthoriseInvitation(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    endedBy: String
+  )(implicit ec: ExecutionContext): Future[Boolean] =
+    invitationsRepository
+      .deauthorise(arn.value, enrolmentKey.oneIdentifier().value, enrolmentKey.service, endedBy)
+      .map(_.fold(false)(_ => true))
 
   def findInvitationForClient(invitationId: String): Future[Option[Invitation]] =
     invitationsRepository.findOneByIdForClient(invitationId)

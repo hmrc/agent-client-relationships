@@ -28,7 +28,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository._
-import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsServiceWithAca
+import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.mongo.test.MongoSupport
@@ -46,7 +46,6 @@ class RecoverySchedulerISpec
     with RelationshipStubs
     with DataStreamStub
     with HipStub
-    with ACAStubs
     with AUCDStubs
     with BeforeAndAfterEach {
 
@@ -72,7 +71,7 @@ class RecoverySchedulerISpec
 
   private lazy val recoveryRepo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
-  private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsServiceWithAca]
+  private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
 
   override implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
@@ -112,7 +111,6 @@ class RecoverySchedulerISpec
     "attempt to recover if a DeleteRecord exists and it requires only ETMP (because ES had already succeeded)" in {
 
       givenAgentCanBeDeallocated(mtdItId, arn)
-      givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
 
       val deleteRecord = DeleteRecord(
@@ -141,7 +139,6 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenAdminUser("foo", "userId")
       givenAgentCanBeDeallocated(mtdItId, arn)
-      givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
       givenCacheRefresh(arn)
 
@@ -171,7 +168,6 @@ class RecoverySchedulerISpec
       givenGroupInfo("foo", "bar")
       givenAdminUser("foo", "userId")
       givenAgentCanBeDeallocated(mtdItId, arn)
-      givenSetRelationshipEnded(mtdItId, arn)
       givenAuditConnector()
       givenCacheRefresh(arn)
 
@@ -209,7 +205,6 @@ class RecoverySchedulerISpec
         )
 
         givenAgentCanBeDeallocated(iMtdItId, arn)
-        givenSetRelationshipEnded(iMtdItId, arn)
         givenAuditConnector()
         givenCacheRefresh(arn)
 
@@ -249,7 +244,6 @@ class RecoverySchedulerISpec
           givenEnrolmentDeallocationFailsWith(503)("foo", deleteRecord.enrolmentKey.get)
         else {
           givenAgentCanBeDeallocated(iMtdItId, arn)
-          givenSetRelationshipEnded(iMtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, iMtdItId))
           givenCacheRefresh(arn)
         }

@@ -44,7 +44,7 @@ class RelationshipsController @Inject() (
   checkOrchestratorService: CheckRelationshipsOrchestratorService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,
-  deleteService: DeleteRelationshipsServiceWithAca,
+  deleteService: DeleteRelationshipsService,
   findService: FindRelationshipsService,
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
