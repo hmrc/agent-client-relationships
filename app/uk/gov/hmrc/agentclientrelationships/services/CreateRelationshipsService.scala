@@ -37,7 +37,7 @@ import scala.util.control.NonFatal
 @Singleton
 class CreateRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   lockService: MongoLockService,
   auditService: AuditService,
@@ -114,7 +114,7 @@ class CreateRelationshipsService @Inject() (
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
       maybeResponse <-
-        ifOrHipConnector
+        hipConnector
           .createAgentRelationship(enrolmentKey, arn)
       if maybeResponse.nonEmpty
       _ = auditData.set(etmpRelationshipCreatedKey, true)

@@ -236,7 +236,7 @@ class AuthorisationAcceptServiceSpec
           )
           mockSendAcceptedEmail(vatInvitation)()
 
-          await(TestService.accept(vatInvitation, vatEnrolment)) shouldBe vatInvitation.copy(status = Accepted)
+          TestService.accept(vatInvitation, vatEnrolment).futureValue shouldBe vatInvitation.copy(status = Accepted)
 
           // Verifying non blocking side effects actually happen
           verifySideEffectsOccur { _ =>

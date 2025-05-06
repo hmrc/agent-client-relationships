@@ -31,13 +31,13 @@ import uk.gov.hmrc.domain.Nino
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 
-class StrideClientDetailsControllerHipISpec
+class StrideClientDetailsControllerISpec
     extends BaseControllerISpec
     with ClientDetailsStub
     with HipStub
     with AfiRelationshipStub {
 
-  override def additionalConfig: Map[String, Any] = Map("hip.enabled" -> true, "hip.BusinessDetails.enabled" -> true)
+  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]

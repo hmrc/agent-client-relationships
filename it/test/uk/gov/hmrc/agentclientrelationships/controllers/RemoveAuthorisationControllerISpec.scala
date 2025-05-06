@@ -38,7 +38,7 @@ import uk.gov.hmrc.http.HttpResponse
 import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
-class RemoveAuthorisationControllerHipISpec
+class RemoveAuthorisationControllerISpec
     extends RelationshipsBaseControllerISpec
     with HipStub
     with ClientDetailsStub
@@ -46,7 +46,6 @@ class RemoveAuthorisationControllerHipISpec
     with TestData {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled"                 -> true,
     "hip.BusinessDetails.enabled" -> true
   )
 

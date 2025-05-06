@@ -30,7 +30,6 @@ import java.time.Instant
 class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec with TestData with HipStub {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled"                 -> true,
     "hip.BusinessDetails.enabled" -> true
   )
 
