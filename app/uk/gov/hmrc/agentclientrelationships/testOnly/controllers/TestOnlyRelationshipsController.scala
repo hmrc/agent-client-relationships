@@ -25,10 +25,11 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TestOnlyRelationshipsController @Inject()(checkOldAndCopyService: CheckAndCopyRelationshipsService,
-                                                controllerComponents: ControllerComponents
-                                               )(implicit ec: ExecutionContext)
-  extends BackendController(controllerComponents) {
+class TestOnlyRelationshipsController @Inject() (
+  checkOldAndCopyService: CheckAndCopyRelationshipsService,
+  controllerComponents: ControllerComponents
+)(implicit ec: ExecutionContext)
+    extends BackendController(controllerComponents) {
 
   def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { _ =>
     checkOldAndCopyService

@@ -42,7 +42,7 @@ import scala.util.control.NonFatal
 @Singleton
 class DeleteRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: MongoLockService,
@@ -135,7 +135,7 @@ class DeleteRelationshipsService @Inject() (
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- ifOrHipConnector.deleteAgentRelationship(
+      maybeResponse <- hipConnector.deleteAgentRelationship(
                          enrolmentKey,
                          arn
                        ) // TODO DG oneTaxIdentifier may not return what we want for CBC!

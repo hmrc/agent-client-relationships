@@ -63,7 +63,6 @@ class ClientDetailsConnectorHipISpec
         "microservice.services.des.port"             -> wireMockPort,
         "auditing.consumer.baseUri.host"             -> wireMockHost,
         "auditing.consumer.baseUri.port"             -> wireMockPort,
-        "hip.enabled"                                -> true,
         "hip.BusinessDetails.enabled"                -> true
       )
 
@@ -79,7 +78,7 @@ class ClientDetailsConnectorHipISpec
 
   val connector = new ClientDetailsConnector(appConfig, httpClient, app.injector.instanceOf[Metrics])
 
-  val ifConnector = new IfConnector(httpClient, agentCacheProvider, ec)(metrics, appConfig)
+  val ifConnector = new IfConnector(httpClient, ec)(metrics, appConfig)
   val hipConnector = new HipConnector(httpClient2, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
 
   val ifOrHipConnector = new IfOrHipConnector(hipConnector, ifConnector)(appConfig)

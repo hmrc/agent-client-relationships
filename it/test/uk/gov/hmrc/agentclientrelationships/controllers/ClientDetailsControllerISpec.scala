@@ -55,7 +55,6 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
   )
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled"                 -> true,
     "hip.BusinessDetails.enabled" -> true
   )
 

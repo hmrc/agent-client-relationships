@@ -24,19 +24,29 @@ import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, PartialAuthRepository, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, PartialAuthRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-class RelationshipsControllerWithoutMongoHipISpec
+class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
+    extends MongoRelationshipCopyRecordRepository(moduleComponent) {
+  override def create(record: RelationshipCopyRecord): Future[Int] =
+    Future.failed(new Exception("Could not connect the mongo db."))
+}
+
+class RelationshipsControllerWithoutMongoISpec
     extends UnitSpec
     with MongoSupport
     with GuiceOneServerPerSuite
@@ -71,7 +81,6 @@ class RelationshipsControllerWithoutMongoHipISpec
         "agent.cache.expires"                                   -> "1 millis",
         "agent.cache.enabled"                                   -> true,
         "mongodb.uri"                                           -> mongoUri,
-        "hip.enabled"                                           -> true,
         "hip.BusinessDetails.enabled"                           -> true
       )
       .overrides(new AbstractModule {
