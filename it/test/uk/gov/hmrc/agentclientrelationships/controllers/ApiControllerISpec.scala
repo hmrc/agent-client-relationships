@@ -229,8 +229,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-//      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     // PENDING INVITATION
@@ -255,8 +253,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      // verifyCreateInvitationAuditSent(requestPath, invitation) //TODO
     }
 
     // can not be MAIN and SUPP pending invitations at the same time for the same agent
@@ -285,8 +281,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      // verifyCreateInvitationAuditSent(requestPath, invitation) //TODO
     }
 
     s"return Forbidden status and valid JSON DUPLICATE_AUTHORISATION_REQUEST for ITSA SUPP request when ITSA MAIN Pending invitation already exists" in {
@@ -314,8 +308,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      // verifyCreateInvitationAuditSent(requestPath, invitation) //TODO
     }
 
     s"return 201 status and valid JSON for ITSA request when Rejected request already exists in repo" in {
@@ -380,7 +372,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
         result.status shouldBe FORBIDDEN
         result.json shouldBe expectedJson
-//    verifyCreateInvitationAuditSent(requestPath, invitation)
       }
     )
 
@@ -407,7 +398,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-      //    verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return FORBIDDEN status and valid JSON ALREADY_AUTHORISED when request ITSA SUPP but ITSA MAIN relationship already exists" in {
@@ -433,7 +423,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-      //    verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId and PartialAuth relationship exists" in {
@@ -466,8 +455,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      //    verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth relationship exists" in {
@@ -498,8 +485,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      //    verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth for Alt Itsa Supp relationship exists" in {
@@ -530,8 +515,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      //    verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa Supp - client mtdItId exists and PartialAuth for Alt Itsa Main relationship exists" in {
@@ -562,8 +545,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      //    verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     // VALIDATION
@@ -585,7 +566,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
         result.status shouldBe BAD_REQUEST
         result.json shouldBe expectedJson
-//        verifyCreateInvitationAuditSent(requestPath, invitation)
       }
     )
 
@@ -607,17 +587,12 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe BAD_REQUEST
       result.json shouldBe expectedJson
-      //        verifyCreateInvitationAuditSent(requestPath, invitation) //TODO
     }
 
     // AGENT
     allServices.keySet.foreach(taxService =>
-      s"return Forbidden status and valid JSON AGENT_NOT_SUBSCRIBED when agent is suspended for $taxService" in {
+      s"return Forbidden status and valid JSON AGENT_TYPE_NOT_SUPPORTED when agent is suspended for $taxService" in {
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
-
-        val clientId =
-          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value
-          else inputData.suppliedClientId
 
         getStandartStubForApiInvitation(taxService)
         givenAgentRecordFound(
@@ -631,17 +606,15 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val expectedJson: JsValue = Json.toJson(
           toJson(
             ErrorBody(
-              "AGENT_NOT_SUBSCRIBED",
-              "This agent needs to create an agent services account before they can use this service."
+              "AGENT_TYPE_NOT_SUPPORTED",
+              "The agent type requested is not supported. Check the API documentation to find which agent types are supported."
             )
           )
         )
 
-        result.status shouldBe FORBIDDEN
+        result.status shouldBe BAD_REQUEST
 
         result.json shouldBe expectedJson
-
-//    verifyCreateInvitationAuditSent(requestPath, invitation) //TODO
       }
     )
 
@@ -657,7 +630,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
 
         result.status shouldBe INTERNAL_SERVER_ERROR
 
-        //    verifyCreateInvitationAuditSent(requestPath, invitation) //TODO
       }
     )
 
@@ -683,7 +655,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
 
-      //      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     // KnowFacts checks
@@ -707,7 +678,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       result.status shouldBe BAD_REQUEST
       result.json shouldBe expectedJson
 
-      //      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON VAT_REG_DATE_DOES_NOT_MATCH when VAT knowFact date not match" in {
@@ -729,8 +699,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
-
-      //      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON POSTCODE_FORMAT_INVALID when ITSA knowFact postcode is wrong format" in {
@@ -753,7 +721,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       result.status shouldBe BAD_REQUEST
       result.json shouldBe expectedJson
 
-      //      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON POSTCODE_DOES_NOT_MATCH when ITSA knowFact postcode do not MATCH" in {
@@ -776,7 +743,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
 
-      //      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON POSTCODE_DOES_NOT_MATCH when ITSA client is oversea" in {
@@ -800,7 +766,6 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       result.status shouldBe FORBIDDEN
       result.json shouldBe expectedJson
 
-      //      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
   }

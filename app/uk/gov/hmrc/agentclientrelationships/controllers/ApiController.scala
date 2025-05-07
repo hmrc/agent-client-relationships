@@ -57,14 +57,13 @@ class ApiController @Inject() (
           apiService.createInvitation(arn, apiCreateInvitationRequest, apiSupportedServices).map { response =>
             response.fold(
               {
-                // TODO WG - add audit for error cases
                 // InputData Validation
                 case UnsupportedService      => ApiErrorResults.UnsupportedService
                 case InvalidClientId         => ApiErrorResults.ClientIdInvalidFormat
                 case UnsupportedClientIdType => ApiErrorResults.ClientIdDoesNotMatchService
 
                 // Get Agent, suspention check NoPermissionOnAgency
-                case AgentSuspended                     => ApiErrorResults.AgentNotSubscribed
+                case AgentSuspended                     => ApiErrorResults.UnsupportedAgentType
                 case x @ ErrorRetrievingAgentDetails(_) => x.getResult("")
 
                 // Get Client Data

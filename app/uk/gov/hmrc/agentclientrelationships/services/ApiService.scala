@@ -63,7 +63,6 @@ class ApiService @Inject() (
         EitherT.fromEither[Future](apiCreateInvitationInputData.getSuppliedClientId(supportedServices))
       service  <- EitherT.fromEither[Future](apiCreateInvitationInputData.getService(supportedServices))
       clientId <- EitherT(getClientId(suppliedClientId, service))
-//      _ = println(s"${Console.MAGENTA} Wojciech clientId:$clientId ${Console.RESET}")
 
       _           <- EitherT(checkPendingInvitation(arn, service.id, suppliedClientId.value))
       agentRecord <- EitherT(getAgentDetailsByArn(arn))
@@ -98,7 +97,6 @@ class ApiService @Inject() (
                     )
     } yield invitation
     invitationT.value
-//    Future.successful(Left(InvitationFailureResponse.PostcodeRequired))
   }
 
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
@@ -123,7 +121,7 @@ class ApiService @Inject() (
     clientName: String,
     clientType: Option[String],
     agentDetails: AgencyDetails
-  )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
+  ): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
       invitation <-
@@ -148,8 +146,7 @@ class ApiService @Inject() (
   }
 
   private def getAgentDetailsByArn(arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    hc: HeaderCarrier
   ): Future[Either[InvitationFailureResponse, AgentDetailsDesResponse]] =
     agentAssuranceConnector
       .getAgentRecordWithChecks(arn)
