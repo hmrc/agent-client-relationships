@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
-class RelationshipsControllerServiceHipISpec
+class RelationshipsControllerServiceISpec
     extends RelationshipsBaseControllerISpec
     with RelationshipsControllerGenericBehaviours
     with RelationshipsControllerVATBehaviours
@@ -27,7 +27,6 @@ class RelationshipsControllerServiceHipISpec
     with HipStub {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled"                 -> true,
     "hip.BusinessDetails.enabled" -> true
   )
 

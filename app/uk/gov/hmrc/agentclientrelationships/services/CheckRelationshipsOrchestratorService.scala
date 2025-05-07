@@ -39,7 +39,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   validationService: ValidationService,
   agentUserService: AgentUserService,
-  deleteService: DeleteRelationshipsServiceWithAca,
+  deleteService: DeleteRelationshipsService,
   ifOrHipConnector: IfOrHipConnector,
   desConnector: DesConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector

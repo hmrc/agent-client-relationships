@@ -35,6 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class FindRelationshipsService @Inject() (
   ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   appConfig: AppConfig,
   val metrics: Metrics
 ) extends Monitoring
@@ -48,7 +49,7 @@ class FindRelationshipsService @Inject() (
       mtdItId <- ifOrHipConnector.getMtdIdFor(nino)
       relationships <-
         mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
-          ifOrHipConnector.getActiveClientRelationships(_, service)
+          hipConnector.getActiveClientRelationships(_, service)
         )
     } yield relationships
 
@@ -62,7 +63,7 @@ class FindRelationshipsService @Inject() (
     (for {
       mtdItId <- EitherT.fromOptionF(ifOrHipConnector.getMtdIdFor(nino), RelationshipFailureResponse.TaxIdentifierError)
       relationships <-
-        EitherT(ifOrHipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
+        EitherT(hipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
     } yield relationships.filter(_.isActive))
       .leftFlatMap(recoverGetRelationships)
       .value
@@ -77,7 +78,7 @@ class FindRelationshipsService @Inject() (
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     )
-      ifOrHipConnector.getActiveClientRelationships(taxIdentifier, service)
+      hipConnector.getActiveClientRelationships(taxIdentifier, service)
     else {
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(None)
@@ -96,7 +97,7 @@ class FindRelationshipsService @Inject() (
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     ) {
-      EitherT(ifOrHipConnector.getAllRelationships(taxIdentifier = taxIdentifier, activeOnly = activeOnly))
+      EitherT(hipConnector.getAllRelationships(taxIdentifier = taxIdentifier, activeOnly = activeOnly))
         .leftFlatMap(recoverGetRelationships)
         .value
 
@@ -119,7 +120,7 @@ class FindRelationshipsService @Inject() (
   def getInactiveRelationshipsForAgent(
     arn: Arn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
-    ifOrHipConnector.getInactiveRelationships(arn)
+    hipConnector.getInactiveRelationships(arn)
 
   def getActiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
@@ -156,7 +157,7 @@ class FindRelationshipsService @Inject() (
         _.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId
       )
     ) {
-      ifOrHipConnector.getInactiveClientRelationships(taxIdentifier, service)
+      hipConnector.getInactiveClientRelationships(taxIdentifier, service)
     } else { // otherwise...
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(Seq.empty)

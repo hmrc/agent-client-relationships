@@ -37,7 +37,7 @@ import scala.util.control.NonFatal
 
 @Singleton
 class RemoveAuthorisationService @Inject() (
-  deleteService: DeleteRelationshipsServiceWithAcr,
+  deleteService: DeleteRelationshipsService,
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository,
   ifOrHipConnector: IfOrHipConnector

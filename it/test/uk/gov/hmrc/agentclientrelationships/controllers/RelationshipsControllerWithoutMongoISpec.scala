@@ -23,17 +23,30 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, PartialAuthRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-class RelationshipsControllerWithoutMongoHipISpec
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
+    extends MongoRelationshipCopyRecordRepository(moduleComponent) {
+  override def create(record: RelationshipCopyRecord): Future[Int] =
+    Future.failed(new Exception("Could not connect the mongo db."))
+}
+
+class RelationshipsControllerWithoutMongoISpec
     extends UnitSpec
     with MongoSupport
     with GuiceOneServerPerSuite
@@ -44,7 +57,6 @@ class RelationshipsControllerWithoutMongoHipISpec
     with DesStubsGet
     with MappingStubs
     with DataStreamStub
-    with ACAStubs
     with AuthStub {
 
   override implicit lazy val app: Application = appBuilder
@@ -69,7 +81,6 @@ class RelationshipsControllerWithoutMongoHipISpec
         "agent.cache.expires"                                   -> "1 millis",
         "agent.cache.enabled"                                   -> true,
         "mongodb.uri"                                           -> mongoUri,
-        "hip.enabled"                                           -> true,
         "hip.BusinessDetails.enabled"                           -> true
       )
       .overrides(new AbstractModule {
@@ -83,6 +94,8 @@ class RelationshipsControllerWithoutMongoHipISpec
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
+
+  val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   override def beforeEach() = {
     super.beforeEach()
@@ -98,6 +111,15 @@ class RelationshipsControllerWithoutMongoHipISpec
   val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
   val oldAgentCode = "oldAgentCode"
   val mtdVatIdType = "VRN"
+
+  def partialAuthRelationship(service: String): PartialAuthRelationship = PartialAuthRelationship(
+    Instant.now().truncatedTo(ChronoUnit.SECONDS),
+    arn.value,
+    service,
+    nino.value,
+    active = true,
+    lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+  )
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
@@ -230,11 +252,11 @@ class RelationshipsControllerWithoutMongoHipISpec
       )
     }
 
-    "return 200 when relationship does not exist in CESA but there is a PartialAuth invitation for main agent type" in {
+    "return 200 when relationship does not exist in CESA but there is a PartialAuth for main agent type" in {
       getAgentRecordForClient(arn)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenPartialAuthExistsFor(arn, nino, HMRCMTDIT)
       givenAuditConnector()
+      await(partialAuthRepo.collection.insertOne(partialAuthRelationship(HMRCMTDIT)).toFuture())
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
@@ -258,11 +280,11 @@ class RelationshipsControllerWithoutMongoHipISpec
       )
     }
 
-    "return 200 when relationship does not exist in CESA but there is a PartialAuth invitation for supporting agent type" in {
+    "return 200 when relationship does not exist in CESA but there is a PartialAuth for supporting agent type" in {
       getAgentRecordForClient(arn)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenPartialAuthExistsFor(arn, nino, HMRCMTDITSUPP)
       givenAuditConnector()
+      await(partialAuthRepo.collection.insertOne(partialAuthRelationship(HMRCMTDITSUPP)).toFuture())
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
@@ -286,10 +308,9 @@ class RelationshipsControllerWithoutMongoHipISpec
       )
     }
 
-    "return 404 when relationship does not exist in CESA and there is no PartialAuth invitation" in {
+    "return 404 when relationship does not exist in CESA and there is no PartialAuth" in {
       getAgentRecordForClient(arn)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenPartialAuthNotExistsFor(arn, nino)
       givenAuditConnector()
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe empty
@@ -298,34 +319,6 @@ class RelationshipsControllerWithoutMongoHipISpec
       result.status shouldBe 404
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe empty
-
-      verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentClientRelationshipEvent.CheckCESA,
-        detail = Map(
-          "agentReferenceNumber" -> arn.value,
-          "nino"                 -> nino.value,
-          "cesaRelationship"     -> "false",
-          "partialAuth"          -> "false"
-        ),
-        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
-      )
-    }
-
-    "return 404 when relationship does not exist in CESA and ACA returns a 5xx for the PartialAuth call" in {
-      getAgentRecordForClient(arn)
-      givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-      givenAgentClientAuthorisationReturnsError(arn, nino, 503)
-      givenAuditConnector()
-
-      await(repo.findBy(arn, enrolmentKey)) shouldBe None
-
-      val result = doAgentRequest(requestPath)
-      result.status shouldBe 404
-
-      await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
       verifyAuditRequestNotSent(event = AgentClientRelationshipEvent.CreateRelationship)
 

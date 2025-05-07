@@ -23,7 +23,7 @@ import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsServiceWithAcr
+import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AffinityGroup
@@ -31,11 +31,11 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 
-trait MockDeleteRelationshipsServiceWithAcr {
+trait MockDeleteRelationshipsService {
   this: ResettingMockitoSugar =>
 
-  val mockDeleteRelationshipsService: DeleteRelationshipsServiceWithAcr =
-    resettingMock[DeleteRelationshipsServiceWithAcr]
+  val mockDeleteRelationshipsService: DeleteRelationshipsService =
+    resettingMock[DeleteRelationshipsService]
 
   def mockDeleteRelationship(
     arn: Arn,

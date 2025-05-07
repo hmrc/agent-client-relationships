@@ -39,18 +39,19 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-private[services] abstract class DeleteRelationshipsService(
+@Singleton
+class DeleteRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: MongoLockService,
   checkService: CheckRelationshipsService,
   agentUserService: AgentUserService,
-  val auditService: AuditService,
+  auditService: AuditService,
   val metrics: Metrics,
-  deAuthoriseInvitationService: DeAuthoriseInvitationService
-)(implicit val appConfig: AppConfig, ec: ExecutionContext)
+  invitationService: InvitationService
+)(implicit appConfig: AppConfig, ec: ExecutionContext)
     extends Monitoring
     with Logging {
 
@@ -134,7 +135,7 @@ private[services] abstract class DeleteRelationshipsService(
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- ifOrHipConnector.deleteAgentRelationship(
+      maybeResponse <- hipConnector.deleteAgentRelationship(
                          enrolmentKey,
                          arn
                        ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
@@ -348,12 +349,11 @@ private[services] abstract class DeleteRelationshipsService(
       case _                                                                 => Some("HMRC")
     }
 
-  private def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
-    hc: HeaderCarrier,
+  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     ec: ExecutionContext
   ): Future[Done] =
-    deAuthoriseInvitationService
-      .deAuthoriseInvitation(arn, enrolmentKey, endedBy)
+    invitationService
+      .deauthoriseInvitation(arn, enrolmentKey, endedBy)
       .map(success =>
         if (success) Done
         else {
@@ -363,55 +363,3 @@ private[services] abstract class DeleteRelationshipsService(
       )
 
 }
-
-@Singleton
-class DeleteRelationshipsServiceWithAca @Inject() (
-  es: EnrolmentStoreProxyConnector,
-  ifOrHipConnector: IfOrHipConnector,
-  deleteRecordRepository: DeleteRecordRepository,
-  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  lockService: MongoLockService,
-  checkService: CheckRelationshipsService,
-  agentUserService: AgentUserService,
-  override val auditService: AuditService,
-  override val metrics: Metrics,
-  acaDeAuthoriseInvitationService: AcaDeAuthoriseInvitationService
-)(implicit override val appConfig: AppConfig, ec: ExecutionContext)
-    extends DeleteRelationshipsService(
-      es,
-      ifOrHipConnector,
-      deleteRecordRepository,
-      agentUserClientDetailsConnector,
-      lockService,
-      checkService,
-      agentUserService,
-      auditService,
-      metrics,
-      acaDeAuthoriseInvitationService
-    )
-
-@Singleton
-class DeleteRelationshipsServiceWithAcr @Inject() (
-  es: EnrolmentStoreProxyConnector,
-  ifOrHipConnector: IfOrHipConnector,
-  deleteRecordRepository: DeleteRecordRepository,
-  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  lockService: MongoLockService,
-  checkService: CheckRelationshipsService,
-  agentUserService: AgentUserService,
-  override val auditService: AuditService,
-  override val metrics: Metrics,
-  acrDeAuthoriseInvitationService: AcrDeAuthoriseInvitationService
-)(implicit override val appConfig: AppConfig, ec: ExecutionContext)
-    extends DeleteRelationshipsService(
-      es,
-      ifOrHipConnector,
-      deleteRecordRepository,
-      agentUserClientDetailsConnector,
-      lockService,
-      checkService,
-      agentUserService,
-      auditService,
-      metrics,
-      acrDeAuthoriseInvitationService
-    )

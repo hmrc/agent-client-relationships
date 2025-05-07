@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnec
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsServiceWithAcr, RemoveAuthorisationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound => RelationshipNotFoundEx}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -42,7 +42,7 @@ import scala.util.control.NonFatal
 class RemoveAuthorisationController @Inject() (
   deauthorisationService: RemoveAuthorisationService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
-  deleteService: DeleteRelationshipsServiceWithAcr,
+  deleteService: DeleteRelationshipsService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   validationService: ValidationService,
@@ -89,6 +89,7 @@ class RemoveAuthorisationController @Inject() (
         )
     }
 
+  // scalastyle:off method.length
   private def removeAuthorisationForValidRequest(
     arn: Arn,
     validRequest: ValidRequest,
@@ -99,12 +100,13 @@ class RemoveAuthorisationController @Inject() (
     currentUser: CurrentUser
   ): Future[Either[InvitationFailureResponse, Boolean]] =
     (validRequest.service, enrolmentKey.oneTaxIdentifier()) match {
-      // TODO after enabling ACRF must update AFI to use a different callback for invitation deauth
       case (Service.PersonalIncomeRecord, _) =>
         agentFiRelationshipConnector
           .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
           .map { result =>
             if (result) {
+              val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse("HMRC")
+              deleteService.setRelationshipEnded(arn, enrolmentKey, userType)
               auditService.auditForPirTermination(arn, enrolmentKey)
               Right(true)
             } else Left(RelationshipNotFound)
@@ -144,6 +146,7 @@ class RemoveAuthorisationController @Inject() (
       case _ =>
         deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
     }
+  // scalastyle:on method.length
 
   private def getEnrolmentKey(validRequest: ValidRequest)(implicit
     hc: HeaderCarrier,

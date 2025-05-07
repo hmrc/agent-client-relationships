@@ -52,7 +52,6 @@ trait BaseControllerISpec
     with AuthStub
     with MockitoSugar
     with JsonMatchers
-    with ACAStubs
     with AUCDStubs
     with AgentAssuranceStubs
     with IntegrationPatience {
@@ -105,7 +104,6 @@ trait BaseControllerISpec
         "agent.trackPage.cache.enabled"                         -> true,
         "mongodb.uri"                                           -> mongoUri,
         "internal-auth.token"                                   -> "internalAuthToken",
-        "hip.enabled"                                           -> true,
         "new.auth.stride.role"                                  -> NEW_STRIDE_ROLE,
         "old.auth.stride.role"                                  -> STRIDE_ROLE
       )

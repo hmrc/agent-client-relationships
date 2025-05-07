@@ -30,7 +30,6 @@ import java.time.Instant
 class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec with TestData with HipStub {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled"                 -> true,
     "hip.BusinessDetails.enabled" -> true
   )
 
@@ -136,7 +135,6 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenPartialAuthNotExistsFor(arn, nino)
 
       givenClientHasRelationshipWithAgentInCESA(nino, "1234")
       givenArnIsKnownFor(arn, SaAgentReference("1234"))
@@ -208,7 +206,6 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenPartialAuthNotExistsFor(arn, nino)
 
       givenClientHasRelationshipWithAgentInCESA(nino, "1234")
       givenArnIsKnownFor(arn, SaAgentReference("1234"))
@@ -286,7 +283,6 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenPartialAuthNotExistsFor(arn, nino)
 
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
 

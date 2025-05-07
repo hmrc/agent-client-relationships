@@ -63,7 +63,6 @@ class HipConnectorISpec
         "microservice.services.if.port"                        -> wireMockPort,
         "microservice.services.auth.port"                      -> wireMockPort,
         "microservice.services.if.environment"                 -> "stub",
-        "microservice.services.if.authorization-token"         -> "token",
         "microservice.services.if.authorization-api1171-token" -> "token",
         "microservice.services.agent-mapping.port"             -> wireMockPort,
         "auditing.consumer.baseUri.host"                       -> wireMockHost,
@@ -77,7 +76,6 @@ class HipConnectorISpec
         "agent.trackPage.cache.enabled"                        -> false,
         "microservice.services.hip.port"                       -> wireMockPort,
         "microservice.services.hip.authorization-token"        -> "token",
-        "hip.enabled"                                          -> true,
         "hip.BusinessDetails.enabled"                          -> true
       )
 
