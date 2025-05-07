@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.support
 
 import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
-import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -30,41 +30,40 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Service }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-import java.time.{ LocalDateTime, ZoneOffset }
+import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class RecoverySchedulerISpec
-  extends TestKit(ActorSystem("testSystem"))
-  with UnitSpec
-  with MongoSupport
-  with GuiceOneServerPerSuite
-  with WireMockSupport
-  with RelationshipStubs
-  with DataStreamStub
-  with HipStub
-  with AUCDStubs
-  with BeforeAndAfterEach {
+extends TestKit(ActorSystem("testSystem"))
+with UnitSpec
+with MongoSupport
+with GuiceOneServerPerSuite
+with WireMockSupport
+with RelationshipStubs
+with DataStreamStub
+with HipStub
+with AUCDStubs
+with BeforeAndAfterEach {
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "microservice.services.users-groups-search.port" -> wireMockPort,
-        "microservice.services.hip.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "features.copy-relationship.mtd-it" -> true,
-        "features.copy-relationship.mtd-vat" -> true,
-        "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-        "microservice.services.agent-user-client-details.port" -> wireMockPort,
-        "features.recovery-enable" -> false,
-        "auditing.enabled" -> true,
-        "mongodb.uri" -> mongoUri)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
+    "microservice.services.tax-enrolments.port"             -> wireMockPort,
+    "microservice.services.users-groups-search.port"        -> wireMockPort,
+    "microservice.services.hip.port"                        -> wireMockPort,
+    "auditing.consumer.baseUri.host"                        -> wireMockHost,
+    "auditing.consumer.baseUri.port"                        -> wireMockPort,
+    "features.copy-relationship.mtd-it"                     -> true,
+    "features.copy-relationship.mtd-vat"                    -> true,
+    "microservice.services.agent-client-authorisation.port" -> wireMockPort,
+    "microservice.services.agent-user-client-details.port"  -> wireMockPort,
+    "features.recovery-enable"                              -> false,
+    "auditing.enabled"                                      -> true,
+    "mongodb.uri"                                           -> mongoUri
+  )
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -72,8 +71,10 @@ class RecoverySchedulerISpec
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
   private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
 
-  override implicit val patienceConfig: PatienceConfig =
-    PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(
+    scaled(Span(30, Seconds)),
+    scaled(Span(2, Seconds))
+  )
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   private val arn: Arn = Arn("AARN0000002")
@@ -92,14 +93,17 @@ class RecoverySchedulerISpec
 
   val testKit: ActorTestKit = ActorTestKit()
   val actorRef: ActorRef = system.actorOf(
-    Props(new TaskActor(recoveryRepo, 2, deleteRelationshipService.tryToResume(new AuditData()).map(_ => ())(ec))(ec)))
+    Props(new TaskActor(recoveryRepo, 2, deleteRelationshipService.tryToResume(new AuditData()).map(_ => ())(ec))(ec))
+  )
 
-  testKit.scheduler.scheduleOnce(
-    1.second,
-    new Runnable {
-      def run =
-        actorRef ! "uid"
-    })(ec)
+  testKit
+    .scheduler
+    .scheduleOnce(
+      1.second,
+      new Runnable {
+        def run = actorRef ! "uid"
+      }
+    )(ec)
 
   "Recovery Scheduler" should {
 
@@ -113,7 +117,8 @@ class RecoverySchedulerISpec
         Some(mtdItEnrolmentKey),
         dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Success),
-        syncToETMPStatus = Some(SyncStatus.Failed))
+        syncToETMPStatus = Some(SyncStatus.Failed)
+      )
 
       await(deleteRepo.collection.insertOne(deleteRecord).toFuture())
       await(deleteRepo.findBy(arn, mtdItEnrolmentKey)).isDefined shouldBe true
@@ -141,7 +146,8 @@ class RecoverySchedulerISpec
         Some(mtdItEnrolmentKey),
         dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
-        syncToETMPStatus = Some(SyncStatus.Failed))
+        syncToETMPStatus = Some(SyncStatus.Failed)
+      )
 
       await(deleteRepo.create(deleteRecord))
       await(deleteRepo.findBy(arn, mtdItEnrolmentKey)).isDefined shouldBe true
@@ -169,7 +175,8 @@ class RecoverySchedulerISpec
         Some(mtdItEnrolmentKey),
         dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
-        syncToETMPStatus = Some(SyncStatus.Failed))
+        syncToETMPStatus = Some(SyncStatus.Failed)
+      )
       await(deleteRepo.create(deleteRecord))
       await(deleteRepo.findBy(arn, mtdItEnrolmentKey)).isDefined shouldBe true
 
@@ -193,7 +200,8 @@ class RecoverySchedulerISpec
           Some(EnrolmentKey(Service.MtdIt, iMtdItId)),
           dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Success),
-          syncToETMPStatus = Some(SyncStatus.Failed))
+          syncToETMPStatus = Some(SyncStatus.Failed)
+        )
 
         givenAgentCanBeDeallocated(iMtdItId, arn)
         givenAuditConnector()
@@ -221,7 +229,8 @@ class RecoverySchedulerISpec
           Some(EnrolmentKey(Service.MtdIt, iMtdItId)),
           dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Failed),
-          syncToETMPStatus = Some(SyncStatus.Failed))
+          syncToETMPStatus = Some(SyncStatus.Failed)
+        )
 
         givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
         givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), "userId")

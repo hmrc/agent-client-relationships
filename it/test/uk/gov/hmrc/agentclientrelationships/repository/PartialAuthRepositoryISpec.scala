@@ -24,7 +24,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers.{ await, defaultAwaitTimeout }
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.Nino
@@ -34,15 +34,14 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext
 
 class PartialAuthRepositoryISpec
-  extends AnyWordSpec
-  with Matchers
-  with GuiceOneAppPerSuite
-  with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
 
-  override lazy val app: Application =
-    new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-      .build()
+  override lazy val app: Application = new GuiceApplicationBuilder()
+    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
+    .build()
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -53,7 +52,8 @@ class PartialAuthRepositoryISpec
     "HMRC-MTD-IT",
     "SX579189D",
     active = true,
-    Instant.parse("2020-02-02T00:00:00.000Z"))
+    Instant.parse("2020-02-02T00:00:00.000Z")
+  )
 
   "partialAuthRepository.create" should {
 
@@ -80,14 +80,16 @@ class PartialAuthRepositoryISpec
     "insert a new partial auth record" in {
       await(
         repository
-          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D")))
+          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D"))
+      )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }
 
     "throw an exception if invalid service passed in" in {
       an[IllegalArgumentException] shouldBe thrownBy(
         repository
-          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-VAT", Nino("SX579189D")))
+          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-VAT", Nino("SX579189D"))
+      )
     }
 
     "throw an exception if duplicate active record is passed in" in {
@@ -97,7 +99,9 @@ class PartialAuthRepositoryISpec
       an[MongoWriteException] shouldBe thrownBy(
         await(
           repository
-            .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D"))))
+            .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D"))
+        )
+      )
     }
   }
 
@@ -146,11 +150,13 @@ class PartialAuthRepositoryISpec
     "deauthorise PartialAuth invitation success" in {
       await(
         repository
-          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D")))
+          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D"))
+      )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
       await(
         repository
-          .deauthorise("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z")))
+          .deauthorise("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z"))
+      )
       val result = await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567")))
       result.isEmpty shouldBe true
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
@@ -160,7 +166,8 @@ class PartialAuthRepositoryISpec
       await(repository.collection.countDocuments().toFuture()) shouldBe 0
       await(
         repository
-          .deauthorise("HMRC-MTD-VAT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z")))
+          .deauthorise("HMRC-MTD-VAT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z"))
+      )
       await(repository.collection.countDocuments().toFuture()) shouldBe 0
     }
   }

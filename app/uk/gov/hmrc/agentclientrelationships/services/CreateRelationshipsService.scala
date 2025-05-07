@@ -47,8 +47,8 @@ class CreateRelationshipsService @Inject() (
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   val metrics: Metrics
 )(implicit ec: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   // noinspection ScalaStyle
   def createRelationship(

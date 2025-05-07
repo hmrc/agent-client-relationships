@@ -19,13 +19,13 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.{ InvitationsRepository, PartialAuthRepository }
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat }
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
-import java.time.{ Instant, ZoneOffset }
+import java.time.{Instant, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
 class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with TestData {
@@ -36,21 +36,25 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
-  def allActions: Map[String, Set[InvitationStatus]] =
-    Map("accept" -> Set(Accepted, PartialAuth), "reject" -> Set(Rejected), "cancel" -> Set(Cancelled))
+  def allActions: Map[String, Set[InvitationStatus]] = Map(
+    "accept" -> Set(Accepted, PartialAuth),
+    "reject" -> Set(Rejected),
+    "cancel" -> Set(Cancelled)
+  )
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt -> mtdItId,
+    MtdIt                -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat -> vrn,
-    Trust -> utr,
-    TrustNT -> urn,
-    CapitalGains -> cgtRef,
-    Ppt -> pptRef,
-    Cbc -> cbcId,
-    CbcNonUk -> cbcId,
-    Pillar2 -> plrId,
-    MtdItSupp -> mtdItId)
+    Vat                  -> vrn,
+    Trust                -> utr,
+    TrustNT              -> urn,
+    CapitalGains         -> cgtRef,
+    Ppt                  -> pptRef,
+    Cbc                  -> cbcId,
+    CbcNonUk             -> cbcId,
+    Pillar2              -> plrId,
+    MtdItSupp            -> mtdItId
+  )
 
   def requestPath(invitationId: String, action: String): String =
     s"/agent-client-relationships/authorisation-request/action-invitation/$invitationId/action/$action"
@@ -61,10 +65,11 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         val expectedStatus = testActionData._2
         val (service, taxIdentifier) = testset
         val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
-        val suppliedClientId = taxIdentifier match {
-          case _: MtdItId => ClientIdentifier(nino)
-          case taxId => ClientIdentifier(taxId)
-        }
+        val suppliedClientId =
+          taxIdentifier match {
+            case _: MtdItId => ClientIdentifier(nino)
+            case taxId      => ClientIdentifier(taxId)
+          }
         val clientName = "TestClientName"
         val agentName = "testAgentName"
         val agentEmail = "agent@email.com"
@@ -79,17 +84,17 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
 
         s"when invitation exists with Pending status in invitationStore for ${service.id}" should {
           s"update status to " in {
-            val newInvitation: Invitation = Invitation
-              .createNew(
-                arn.value,
-                service,
-                clientId,
-                suppliedClientId,
-                clientName,
-                agentName,
-                agentEmail,
-                expiryDate,
-                None)
+            val newInvitation: Invitation = Invitation.createNew(
+              arn.value,
+              service,
+              clientId,
+              suppliedClientId,
+              clientName,
+              agentName,
+              agentEmail,
+              expiryDate,
+              None
+            )
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
             doAgentPutRequest(requestPath(newInvitation.invitationId, action), "").status shouldBe 204
@@ -115,7 +120,8 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
                 agentName,
                 agentEmail,
                 expiryDate,
-                None)
+                None
+              )
               .copy(status = DeAuthorised)
 
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -126,7 +132,9 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
           }
         }
 
-      }))
+      }
+    )
+  )
 
   s"/authorisation-request/action-invitation/:invitationId/action/:action MtdIt PartialAuth" should {
     val service = MtdIt
@@ -143,17 +151,17 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE, "strideId-1234456")
         givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
 
-        val newInvitation = Invitation
-          .createNew(
-            arn.value,
-            service,
-            clientId,
-            suppliedClientId,
-            clientName,
-            agentName,
-            agentEmail,
-            expiryDate,
-            None)
+        val newInvitation = Invitation.createNew(
+          arn.value,
+          service,
+          clientId,
+          suppliedClientId,
+          clientName,
+          agentName,
+          agentEmail,
+          expiryDate,
+          None
+        )
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
         doAgentPutRequest(requestPath(newInvitation.invitationId, "accept"), "").status shouldBe 204

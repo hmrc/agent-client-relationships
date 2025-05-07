@@ -36,7 +36,7 @@ class ChangeInvitationStatusService @Inject() (
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   val validStatusChangesFrom: Map[InvitationStatus, Set[InvitationStatus]] = Map(
     DeAuthorised -> Set(Accepted, PartialAuth)

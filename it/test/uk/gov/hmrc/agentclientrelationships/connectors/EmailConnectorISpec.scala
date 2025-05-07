@@ -22,7 +22,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
-import uk.gov.hmrc.agentclientrelationships.support.{ UnitSpec, WireMockSupport }
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 
@@ -32,13 +32,12 @@ class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with Wire
 
   override lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.email.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "internal-auth.token" -> "internalAuthToken")
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.email.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host"   -> wireMockHost,
+    "auditing.consumer.baseUri.port"   -> wireMockPort,
+    "internal-auth.token"              -> "internalAuthToken"
+  )
 
   val connector: EmailConnector = app.injector.instanceOf[EmailConnector]
 

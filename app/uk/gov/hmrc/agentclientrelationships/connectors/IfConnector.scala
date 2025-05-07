@@ -46,8 +46,8 @@ class IfConnector @Inject() (
   randomUuidGenerator: CorrelationIdGenerator,
   appConfig: AppConfig
 )(implicit val metrics: Metrics, val ec: ExecutionContext)
-    extends HttpApiMonitor
-    with Logging {
+extends HttpApiMonitor
+with Logging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 

@@ -35,16 +35,17 @@ import scala.concurrent.{ExecutionContext, Future}
 class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter with Decrypter
-) extends PlayMongoRepository[AgentReferenceRecord](
-      mongoComponent = mongo,
-      collectionName = "agent-reference",
-      domainFormat = AgentReferenceRecord.mongoFormat,
-      indexes = List(
-        IndexModel(ascending("uid"), IndexOptions().unique(true)),
-        IndexModel(ascending("arn"), IndexOptions().unique(true))
-      )
-    )
-    with Logging {
+)
+extends PlayMongoRepository[AgentReferenceRecord](
+  mongoComponent = mongo,
+  collectionName = "agent-reference",
+  domainFormat = AgentReferenceRecord.mongoFormat,
+  indexes = List(
+    IndexModel(ascending("uid"), IndexOptions().unique(true)),
+    IndexModel(ascending("arn"), IndexOptions().unique(true))
+  )
+)
+with Logging {
 
   val localLogger: Logger = logger
 

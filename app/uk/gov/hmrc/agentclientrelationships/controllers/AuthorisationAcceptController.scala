@@ -43,9 +43,9 @@ class AuthorisationAcceptController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions
-    with Logging {
+extends BackendController(cc)
+with AuthActions
+with Logging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 

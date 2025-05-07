@@ -23,13 +23,13 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.model.{ EnrolmentKey, PartialAuthRelationship }
-import uk.gov.hmrc.agentclientrelationships.repository.{ MongoRelationshipCopyRecordRepository, PartialAuthRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository }
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
+import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, PartialAuthRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentclientrelationships.support.{ Resource, UnitSpec, WireMockSupport }
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ HMRCMTDIT, HMRCMTDITSUPP }
+import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{ AgentCode, Nino, SaAgentReference }
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import uk.gov.hmrc.mongo.MongoComponent
@@ -42,53 +42,52 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
-  extends MongoRelationshipCopyRecordRepository(moduleComponent) {
-  override def create(record: RelationshipCopyRecord): Future[Int] =
-    Future.failed(new Exception("Could not connect the mongo db."))
+extends MongoRelationshipCopyRecordRepository(moduleComponent) {
+  override def create(record: RelationshipCopyRecord): Future[Int] = Future
+    .failed(new Exception("Could not connect the mongo db."))
 }
 
 class RelationshipsControllerWithoutMongoISpec
-  extends UnitSpec
-  with MongoSupport
-  with GuiceOneServerPerSuite
-  with WireMockSupport
-  with RelationshipStubs
-  with DesStubs
-  with HipStub
-  with DesStubsGet
-  with MappingStubs
-  with DataStreamStub
-  with AuthStub {
+extends UnitSpec
+with MongoSupport
+with GuiceOneServerPerSuite
+with WireMockSupport
+with RelationshipStubs
+with DesStubs
+with HipStub
+with DesStubsGet
+with MappingStubs
+with DataStreamStub
+with AuthStub {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "microservice.services.users-groups-search.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "microservice.services.if.port" -> wireMockPort,
-        "microservice.services.hip.port" -> wireMockPort,
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-mapping.port" -> wireMockPort,
-        "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "features.copy-relationship.mtd-vat" -> true,
-        "features.recovery-enable" -> false,
-        "agent.cache.expires" -> "1 millis",
-        "agent.cache.enabled" -> true,
-        "mongodb.uri" -> mongoUri,
-        "hip.BusinessDetails.enabled" -> true)
-      .overrides(new AbstractModule {
-        override def configure(): Unit = {
-          bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
-          ()
-        }
-      })
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure(
+      "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
+      "microservice.services.tax-enrolments.port"             -> wireMockPort,
+      "microservice.services.users-groups-search.port"        -> wireMockPort,
+      "microservice.services.des.port"                        -> wireMockPort,
+      "microservice.services.if.port"                         -> wireMockPort,
+      "microservice.services.hip.port"                        -> wireMockPort,
+      "microservice.services.auth.port"                       -> wireMockPort,
+      "microservice.services.agent-mapping.port"              -> wireMockPort,
+      "microservice.services.agent-client-authorisation.port" -> wireMockPort,
+      "auditing.consumer.baseUri.host"                        -> wireMockHost,
+      "auditing.consumer.baseUri.port"                        -> wireMockPort,
+      "features.copy-relationship.mtd-vat"                    -> true,
+      "features.recovery-enable"                              -> false,
+      "agent.cache.expires"                                   -> "1 millis",
+      "agent.cache.enabled"                                   -> true,
+      "mongodb.uri"                                           -> mongoUri,
+      "hip.BusinessDetails.enabled"                           -> true
+    )
+    .overrides(new AbstractModule {
+      override def configure(): Unit = {
+        bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
+        ()
+      }
+    })
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val request: RequestHeader = FakeRequest()
@@ -118,7 +117,8 @@ class RelationshipsControllerWithoutMongoISpec
     service,
     nino.value,
     active = true,
-    lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS))
+    lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+  )
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
@@ -152,10 +152,12 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "cesaRelationship" -> "true"),
-        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath))
+          "nino"                 -> nino.value,
+          "saAgentRef"           -> "foo",
+          "cesaRelationship"     -> "true"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
   }
 
@@ -186,28 +188,32 @@ class RelationshipsControllerWithoutMongoISpec
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "agentReferenceNumber" -> arn.value,
-          "service" -> "mtd-vat",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "ESRelationship" -> "true",
+          "credId"                  -> "any",
+          "agentCode"               -> "bar",
+          "agentReferenceNumber"    -> arn.value,
+          "service"                 -> "mtd-vat",
+          "vrn"                     -> vrn.value,
+          "oldAgentCodes"           -> oldAgentCode,
+          "ESRelationship"          -> "true",
           "etmpRelationshipCreated" -> "false",
-          "enrolmentDelegated" -> "false",
-          "howRelationshipCreated" -> "CopyExistingESRelationship",
-          "vrnExistsInEtmp" -> "true"),
-        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath))
+          "enrolmentDelegated"      -> "false",
+          "howRelationshipCreated"  -> "CopyExistingESRelationship",
+          "vrnExistsInEtmp"         -> "true"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CheckES,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "ESRelationship" -> "true",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode),
-        tags = Map("transactionName" -> "check-es", "path" -> requestPath))
+          "ESRelationship"       -> "true",
+          "vrn"                  -> vrn.value,
+          "oldAgentCodes"        -> oldAgentCode
+        ),
+        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+      )
     }
   }
 
@@ -237,10 +243,12 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "nino" -> nino.value,
-          "saAgentRef" -> "foo",
-          "cesaRelationship" -> "true"),
-        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath))
+          "nino"                 -> nino.value,
+          "saAgentRef"           -> "foo",
+          "cesaRelationship"     -> "true"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
 
     "return 200 when relationship does not exist in CESA but there is a PartialAuth for main agent type" in {
@@ -263,10 +271,12 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "nino" -> nino.value,
-          "cesaRelationship" -> "false",
-          "partialAuth" -> "true"),
-        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath))
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "false",
+          "partialAuth"          -> "true"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
 
     "return 200 when relationship does not exist in CESA but there is a PartialAuth for supporting agent type" in {
@@ -289,10 +299,12 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "nino" -> nino.value,
-          "cesaRelationship" -> "false",
-          "partialAuth" -> "true"),
-        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath))
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "false",
+          "partialAuth"          -> "true"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
 
     "return 404 when relationship does not exist in CESA and there is no PartialAuth" in {
@@ -314,10 +326,12 @@ class RelationshipsControllerWithoutMongoISpec
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "nino" -> nino.value,
-          "cesaRelationship" -> "false",
-          "partialAuth" -> "false"),
-        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath))
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "false",
+          "partialAuth"          -> "false"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+      )
     }
   }
 

@@ -36,7 +36,7 @@ class ChangeInvitationStatusByIdService @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   val validInvitationStatusActionsFrom: Map[InvitationStatusAction, Set[InvitationStatus]] = Map(
     InvitationStatusAction.Accept -> Set(Pending),

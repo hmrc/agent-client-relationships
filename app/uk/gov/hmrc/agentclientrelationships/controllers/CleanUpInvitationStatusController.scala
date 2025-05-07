@@ -34,7 +34,7 @@ class CleanUpInvitationStatusController @Inject() (
   setRelationshipEndedService: CleanUpInvitationStatusService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
   def deauthoriseInvitation: Action[JsValue] =
     Action.async(parse.json) { implicit request =>

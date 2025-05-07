@@ -29,7 +29,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector)(implicit
   executionContext: ExecutionContext
-) extends Logging {
+)
+extends Logging {
 
   def updateFriendlyName(invitation: Invitation, enrolment: EnrolmentKey)(implicit
     request: RequestHeader

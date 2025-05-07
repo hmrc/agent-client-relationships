@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{ await, defaultAwaitTimeout }
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -29,8 +29,11 @@ class AgentDetailsControllerISpec extends BaseControllerISpec with TestData {
 
   val uid = "TestUID"
   val normalizedAgentName = "TestNormalizedAgentName"
-  val agentReferenceRecord: AgentReferenceRecord =
-    AgentReferenceRecord(uid = uid, arn = arn, normalisedAgentNames = Seq(normalizedAgentName, "NormalisedAgentName2"))
+  val agentReferenceRecord: AgentReferenceRecord = AgentReferenceRecord(
+    uid = uid,
+    arn = arn,
+    normalisedAgentNames = Seq(normalizedAgentName, "NormalisedAgentName2")
+  )
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
@@ -47,12 +50,12 @@ class AgentDetailsControllerISpec extends BaseControllerISpec with TestData {
       givenAgentRecordFound(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result =
-        doGetRequest(testUrl)
+      val result = doGetRequest(testUrl)
       result.status shouldBe 200
       result.json shouldBe Json.obj(
-        "agencyDetails" -> Json.obj("agencyName" -> "My Agency", "agencyEmail" -> "abc@abc.com"),
-        "suspensionDetails" -> Json.obj("suspensionStatus" -> false))
+        "agencyDetails"     -> Json.obj("agencyName" -> "My Agency", "agencyEmail" -> "abc@abc.com"),
+        "suspensionDetails" -> Json.obj("suspensionStatus" -> false)
+      )
 
     }
   }

@@ -52,8 +52,8 @@ class HipConnector @Inject() (
   headers: HipHeaders,
   appConfig: AppConfig
 )(implicit val metrics: Metrics, val ec: ExecutionContext)
-    extends HttpApiMonitor
-    with Logging {
+extends HttpApiMonitor
+with Logging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays

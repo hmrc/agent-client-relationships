@@ -28,7 +28,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class EmailService @Inject() (emailConnector: EmailConnector, messagesApi: MessagesApi, langs: Langs)(implicit
   ec: ExecutionContext
-) extends Logging {
+)
+extends Logging {
 
   // TODO: Currently, the language defaults to English by selecting the first available language.
   // Update the implementation to allow the frontend to specify the desired language for sending emails.

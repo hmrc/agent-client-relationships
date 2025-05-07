@@ -36,8 +36,8 @@ class AgentReferenceController @Inject() (
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthorisedFunctions {
+extends BackendController(cc)
+with AuthorisedFunctions {
 
   def fetchOrCreateRecord(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request =>

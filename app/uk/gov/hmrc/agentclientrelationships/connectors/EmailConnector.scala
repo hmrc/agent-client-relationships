@@ -35,9 +35,10 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 @Singleton
 class EmailConnector @Inject() (appConfig: AppConfig, httpClient: HttpClientV2, val metrics: Metrics)(implicit
   val ec: ExecutionContext
-) extends HttpApiMonitor
-    with HttpErrorFunctions
-    with Logging {
+)
+extends HttpApiMonitor
+with HttpErrorFunctions
+with Logging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 

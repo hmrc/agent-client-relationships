@@ -33,20 +33,20 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import org.mongodb.scala.model.Filters
-import play.api.libs.json.{ Format, JsObject }
+import play.api.libs.json.{Format, JsObject}
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.model.{ DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse }
-import uk.gov.hmrc.agentclientrelationships.repository.{ DeleteRecord, RelationshipCopyRecord, SyncStatus }
+import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
+import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Identifier, MtdItId, Service }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Identifier, MtdItId, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{ HeaderCarrier, HeaderNames, HttpResponse }
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.time.{ LocalDate, LocalDateTime }
+import java.time.{LocalDate, LocalDateTime}
 import java.util.Base64
 
 class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec with HipStub {
@@ -55,7 +55,8 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     arn.value,
     Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToESStatus = Some(SyncStatus.Success))
+    syncToESStatus = Some(SyncStatus.Success)
+  )
 
   case class TestClient(service: String, regime: String, clientId: TaxIdentifier)
 
@@ -71,11 +72,18 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   val pillar2Client: TestClient = TestClient(Service.Pillar2.id, "PLRID", plrId)
 
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
-  val businessList =
-    List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
+  val businessList = List(
+    vatClient,
+    trustClient,
+    trustNTClient,
+    cgtClient,
+    pptClient,
+    cbcClient,
+    cbcNonUkClient,
+    pillar2Client
+  )
 
-  val servicesInIF =
-    List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
+  val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
 
   val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
 
@@ -83,9 +91,12 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     if (isLoggedInClientStride) {
       givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE, "strideId-1234456")
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
-    } else if (isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
-    else if (isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId)
-    else requestIsNotAuthenticated()
+    } else if (isLoggedInClientInd)
+      givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
+    else if (isLoggedInClientBusiness)
+      givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId)
+    else
+      requestIsNotAuthenticated()
   }
 
   "GET /client/relationships/service/:service" should {
@@ -109,15 +120,16 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   def runActiveRelationshipsScenario(
     testClient: TestClient,
     isLoggedInClientInd: Boolean,
-    isLoggedInBusiness: Boolean): Unit = {
+    isLoggedInBusiness: Boolean
+  ): Unit = {
     val requestPath: String = s"/agent-client-relationships/client/relationships/service/${testClient.service}"
 
     def doRequest() = doGetRequest(requestPath)
 
-    s"find relationship for service ${testClient.service} and user ${
-      if (isLoggedInClientInd) "Individual"
-      else "Business"
-    }" in
+    s"find relationship for service ${testClient.service} and user ${if (isLoggedInClientInd)
+      "Individual"
+    else
+      "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipsViaClient(testClient.clientId, arn)
@@ -130,7 +142,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       }
 
     s"find multiple relationships for service ${testClient.service} " +
-      s"but filter out active and ended relationships for user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"but filter out active and ended relationships for user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getSomeActiveRelationshipsViaClient(testClient.clientId, arn.value, arn2.value, arn3.value)
@@ -145,13 +160,17 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   def runActiveRelationshipsErrorScenario(
     testClient: TestClient,
     isLoggedInClientInd: Boolean,
-    isLoggedInBusiness: Boolean): Unit = {
+    isLoggedInBusiness: Boolean
+  ): Unit = {
     val requestPath: String = s"/agent-client-relationships/relationships/service/${testClient.service}"
 
     def doRequest() = doGetRequest(requestPath)
 
     "find relationship but filter out if the end date has been changed from 9999-12-31 " +
-      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getInactiveRelationshipViaClient(testClient.clientId, arn.value)
@@ -161,7 +180,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       }
 
     "return 404 when DES returns 404 relationship not found " +
-      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipFailsWith(testClient.clientId, 404)
@@ -171,7 +193,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       }
 
     "return 404 when IF returns 400 (treated as relationship not found) " +
-      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipFailsWith(testClient.clientId, 400)
@@ -201,7 +226,11 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      val clientType = if (testClient.clientId.isInstanceOf[MtdItId]) "personal" else "business"
+      val clientType =
+        if (testClient.clientId.isInstanceOf[MtdItId])
+          "personal"
+        else
+          "business"
 
       val otherId: TaxIdentifier = otherTaxIdentifier(testClient.clientId)
 
@@ -360,7 +389,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
             Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
-            syncToESStatus = Some(SyncStatus.Failed))))
+            syncToESStatus = Some(SyncStatus.Failed)
+          )
+        )
+      )
 
       // insert copy-relationship document
       await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
@@ -372,7 +404,9 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       response shouldBe TerminationResponse(
         Seq(
           DeletionCount("agent-client-relationships", "delete-record", 1),
-          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)))
+          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)
+        )
+      )
 
       // verify termination has deleted all record for that agent
       await(deleteRecordRepository.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
@@ -466,8 +500,7 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       val validationService = app.injector.instanceOf[ValidationService]
       givenCbcUkDoesNotExistInES(cbcId)
       givenCbcNonUkDoesNotExistInES(cbcId)
-      await(validationService.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern {
-        case Left(_) =>
+      await(validationService.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern { case Left(_) =>
       }
     }
   }

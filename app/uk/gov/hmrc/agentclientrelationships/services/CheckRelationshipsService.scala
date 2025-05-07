@@ -43,8 +43,8 @@ class CheckRelationshipsService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   val metrics: Metrics
 )(implicit executionContext: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: LocalEnrolmentKey)(implicit
     request: RequestHeader

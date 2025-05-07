@@ -31,7 +31,7 @@ class ChangeInvitationStatusByIdController @Inject() (
   changeInvitationStatusByIdService: ChangeInvitationStatusByIdService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
   def changeInvitationStatusById(invitationId: String, action: String): Action[AnyContent] = Action.async { _ =>
     val responseT =

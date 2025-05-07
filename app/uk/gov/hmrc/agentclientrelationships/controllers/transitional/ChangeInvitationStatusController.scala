@@ -37,7 +37,7 @@ class ChangeInvitationStatusController @Inject() (
   changeInvitationStatusService: ChangeInvitationStatusService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
   def changeInvitationStatus(arn: Arn, serviceStr: String, clientIdStr: String): Action[JsValue] =
     Action.async(parse.json) { implicit request =>

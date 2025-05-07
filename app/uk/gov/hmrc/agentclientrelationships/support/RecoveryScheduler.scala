@@ -37,7 +37,7 @@ class RecoveryScheduler @Inject() (
   actorSystem: ActorSystem,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   val recoveryInterval = appConfig.recoveryInterval
   val recoveryEnable = appConfig.recoveryEnabled
@@ -58,8 +58,8 @@ class TaskActor(
   recoveryInterval: Int,
   recover: => Future[Unit]
 )(implicit ec: ExecutionContext)
-    extends Actor
-    with Logging {
+extends Actor
+with Logging {
 
   def receive: PartialFunction[Any, Unit] = { case uid: String =>
     mongoRecoveryScheduleRepository

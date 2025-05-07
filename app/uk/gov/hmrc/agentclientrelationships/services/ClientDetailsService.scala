@@ -40,7 +40,7 @@ class ClientDetailsService @Inject() (
   appConfig: AppConfig,
   ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier

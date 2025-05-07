@@ -25,11 +25,11 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.stubs.{ DataStreamStub, EnrolmentStoreProxyStubs }
-import uk.gov.hmrc.agentclientrelationships.support.{ RelationshipNotFound, UnitSpec, WireMockSupport }
+import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{ AgentCode, Nino }
+import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.http
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -38,34 +38,32 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import scala.concurrent.ExecutionContext
 
 class EnrolmentStoreProxyConnectorSpec
-  extends UnitSpec
-  with GuiceOneServerPerSuite
-  with WireMockSupport
-  with EnrolmentStoreProxyStubs
-  with DataStreamStub
-  with MockitoSugar {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with EnrolmentStoreProxyStubs
+with DataStreamStub
+with MockitoSugar {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port" -> wireMockPort,
-        "microservice.services.users-groups-search.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-mapping.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "features.copy-relationship.mtd-it" -> true,
-        "features.copy-relationship.mtd-vat" -> true,
-        "features.recovery-enable" -> false,
-        "agent.cache.expires" -> "1 millis",
-        "agent.cache.enabled" -> true,
-        "agent.trackPage.cache.expires" -> "1 millis",
-        "agent.trackPage.cache.enabled" -> true)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+    "microservice.services.tax-enrolments.port"        -> wireMockPort,
+    "microservice.services.users-groups-search.port"   -> wireMockPort,
+    "microservice.services.des.port"                   -> wireMockPort,
+    "microservice.services.auth.port"                  -> wireMockPort,
+    "microservice.services.agent-mapping.port"         -> wireMockPort,
+    "auditing.consumer.baseUri.host"                   -> wireMockHost,
+    "auditing.consumer.baseUri.port"                   -> wireMockPort,
+    "features.copy-relationship.mtd-it"                -> true,
+    "features.copy-relationship.mtd-vat"               -> true,
+    "features.recovery-enable"                         -> false,
+    "agent.cache.expires"                              -> "1 millis",
+    "agent.cache.enabled"                              -> true,
+    "agent.trackPage.cache.expires"                    -> "1 millis",
+    "agent.trackPage.cache.enabled"                    -> true
+  )
 
   implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -73,8 +71,7 @@ class EnrolmentStoreProxyConnectorSpec
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  val connector =
-    new EnrolmentStoreProxyConnector(httpClient, app.injector.instanceOf[Metrics], appConfig)(ec)
+  val connector = new EnrolmentStoreProxyConnector(httpClient, app.injector.instanceOf[Metrics], appConfig)(ec)
 
   "EnrolmentStoreProxy" should {
 
@@ -163,7 +160,8 @@ class EnrolmentStoreProxyConnectorSpec
       givenAuditConnector()
       givenUpdateEnrolmentFriendlyNameResponse(testGroupId, testEnrolment, INTERNAL_SERVER_ERROR)
       intercept[UpstreamErrorResponse](
-        await(connector.updateEnrolmentFriendlyName(testGroupId, testEnrolment, "testName")))
+        await(connector.updateEnrolmentFriendlyName(testGroupId, testEnrolment, "testName"))
+      )
     }
 
     "return some utr for cbcId (known fact)" in {
@@ -171,8 +169,8 @@ class EnrolmentStoreProxyConnectorSpec
       val expectedUtr = "1172123849"
       givenAuditConnector()
       givenCbcUkExistsInES(cbcId, expectedUtr)
-      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain(
-        Identifier("UTR", expectedUtr))
+      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))))
+        .get should contain(Identifier("UTR", expectedUtr))
     }
 
     "return some utr for plrId (known fact)" in {
@@ -180,8 +178,8 @@ class EnrolmentStoreProxyConnectorSpec
       val expectedUtr = "1172123849"
       givenAuditConnector()
       givenCbcUkExistsInES(cbcId, expectedUtr)
-      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))).get should contain(
-        Identifier("UTR", expectedUtr))
+      await(connector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))))
+        .get should contain(Identifier("UTR", expectedUtr))
     }
   }
 

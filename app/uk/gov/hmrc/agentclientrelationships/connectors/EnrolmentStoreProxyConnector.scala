@@ -62,8 +62,9 @@ object ES20Request {
 @Singleton
 class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metrics: Metrics, appConfig: AppConfig)(
   implicit val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   val espBaseUrl = appConfig.enrolmentStoreProxyUrl
   val teBaseUrl = appConfig.taxEnrolmentsUrl

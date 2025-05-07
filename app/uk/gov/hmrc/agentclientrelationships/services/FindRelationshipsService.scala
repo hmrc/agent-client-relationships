@@ -39,8 +39,8 @@ class FindRelationshipsService @Inject() (
   appConfig: AppConfig,
   val metrics: Metrics
 )(implicit executionContext: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   def getItsaRelationshipForClient(nino: Nino, service: Service)(implicit
     request: RequestHeader

@@ -20,7 +20,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
-import uk.gov.hmrc.agentclientrelationships.repository.{ RelationshipCopyRecord, SyncStatus }
+import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.AgentCode
@@ -35,7 +35,8 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
       arn.value,
       Some(EnrolmentKey(Service.Vat, vrn)),
       syncToETMPStatus = Some(SyncStatus.Success),
-      syncToESStatus = Some(SyncStatus.Success))
+      syncToESStatus = Some(SyncStatus.Success)
+    )
 
     "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
 
@@ -68,36 +69,41 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           Symbol("enrolmentKey")(Some(vatEnrolmentKey)),
           Symbol("references")(Some(Set(VatRef(AgentCode(oldAgentCode))))),
           Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
-          Symbol("syncToESStatus")(Some(SyncStatus.Success)))
+          Symbol("syncToESStatus")(Some(SyncStatus.Success))
+        )
 
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
-            "oldAgentCodes" -> oldAgentCode,
-            "service" -> "mtd-vat",
-            "vrn" -> vrn.value,
-            "ESRelationship" -> "true",
+            "agentReferenceNumber"    -> arn.value,
+            "credId"                  -> "any",
+            "agentCode"               -> "bar",
+            "oldAgentCodes"           -> oldAgentCode,
+            "service"                 -> "mtd-vat",
+            "vrn"                     -> vrn.value,
+            "ESRelationship"          -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated" -> "true",
-            "howRelationshipCreated" -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp" -> "true"),
-          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath))
+            "enrolmentDelegated"      -> "true",
+            "howRelationshipCreated"  -> "CopyExistingESRelationship",
+            "vrnExistsInEtmp"         -> "true"
+          ),
+          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+        )
 
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
-            "oldAgentCodes" -> oldAgentCode,
-            "vrn" -> vrn.value,
-            "ESRelationship" -> "true"),
-          tags = Map("transactionName" -> "check-es", "path" -> requestPath))
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "oldAgentCodes"        -> oldAgentCode,
+            "vrn"                  -> vrn.value,
+            "ESRelationship"       -> "true"
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
 
       "return 200 when agent credentials unknown but relationship exists in HMCE-VATDEC-ORG" in {
@@ -122,10 +128,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "vrn" -> vrn.value,
-            "oldAgentCodes" -> oldAgentCode,
-            "ESRelationship" -> "true"),
-          tags = Map("transactionName" -> "check-es", "path" -> requestPath))
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode,
+            "ESRelationship"       -> "true"
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
 
       // HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
@@ -152,7 +160,8 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           Symbol("enrolmentKey")(Some(vatEnrolmentKey)),
           Symbol("references")(Some(Set(VatRef(AgentCode(oldAgentCode))))),
           Symbol("syncToETMPStatus")(Some(SyncStatus.Failed)),
-          Symbol("syncToESStatus")(None))
+          Symbol("syncToESStatus")(None)
+        )
       }
 
       "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
@@ -177,36 +186,41 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           Symbol("enrolmentKey")(Some(vatEnrolmentKey)),
           Symbol("references")(Some(Set(VatRef(AgentCode(oldAgentCode))))),
           Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
-          Symbol("syncToESStatus")(Some(SyncStatus.Failed)))
+          Symbol("syncToESStatus")(Some(SyncStatus.Failed))
+        )
 
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
-            "service" -> "mtd-vat",
-            "vrn" -> vrn.value,
-            "oldAgentCodes" -> oldAgentCode,
-            "ESRelationship" -> "true",
+            "agentReferenceNumber"    -> arn.value,
+            "credId"                  -> "any",
+            "agentCode"               -> "bar",
+            "service"                 -> "mtd-vat",
+            "vrn"                     -> vrn.value,
+            "oldAgentCodes"           -> oldAgentCode,
+            "ESRelationship"          -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated" -> "false",
-            "howRelationshipCreated" -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp" -> "true"),
-          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath))
+            "enrolmentDelegated"      -> "false",
+            "howRelationshipCreated"  -> "CopyExistingESRelationship",
+            "vrnExistsInEtmp"         -> "true"
+          ),
+          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+        )
 
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
-            "ESRelationship" -> "true",
-            "vrn" -> vrn.value,
-            "oldAgentCodes" -> oldAgentCode),
-          tags = Map("transactionName" -> "check-es", "path" -> requestPath))
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "ESRelationship"       -> "true",
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
 
       "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because vrn is not known in ETMP" in {
@@ -229,26 +243,30 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber" -> arn.value,
-            "service" -> "mtd-vat",
-            "vrn" -> vrn.value,
-            "oldAgentCodes" -> oldAgentCode,
-            "ESRelationship" -> "true",
+            "agentReferenceNumber"   -> arn.value,
+            "service"                -> "mtd-vat",
+            "vrn"                    -> vrn.value,
+            "oldAgentCodes"          -> oldAgentCode,
+            "ESRelationship"         -> "true",
             "howRelationshipCreated" -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp" -> "false"),
-          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath))
+            "vrnExistsInEtmp"        -> "false"
+          ),
+          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+        )
 
         verifyAuditRequestSent(
           1,
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
-            "ESRelationship" -> "true",
-            "vrn" -> vrn.value,
-            "oldAgentCodes" -> oldAgentCode),
-          tags = Map("transactionName" -> "check-es", "path" -> requestPath))
+            "credId"               -> "any",
+            "agentCode"            -> "bar",
+            "ESRelationship"       -> "true",
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
 
       "return 404 when relationship is not found in es but relationship copy was made before" in {
@@ -351,10 +369,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "vrn" -> vrn.value,
-            "oldAgentCodes" -> oldAgentCode,
-            "ESRelationship" -> "true"),
-          tags = Map("transactionName" -> "check-es", "path" -> requestPath))
+            "vrn"                  -> vrn.value,
+            "oldAgentCodes"        -> oldAgentCode,
+            "ESRelationship"       -> "true"
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
     }
   }

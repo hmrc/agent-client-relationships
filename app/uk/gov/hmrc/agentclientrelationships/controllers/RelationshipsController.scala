@@ -55,8 +55,8 @@ class RelationshipsController @Inject() (
   validationService: ValidationService,
   override val controllerComponents: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(controllerComponents)
-    with AuthActions {
+extends BackendController(controllerComponents)
+with AuthActions {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 

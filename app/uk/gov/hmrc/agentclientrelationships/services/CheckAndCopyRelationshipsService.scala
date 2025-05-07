@@ -99,8 +99,8 @@ class CheckAndCopyRelationshipsService @Inject() (
   val metrics: Metrics,
   val appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag

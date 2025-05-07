@@ -45,7 +45,7 @@ class InvitationService @Inject() (
   emailService: EmailService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def trackRequests(
     arn: Arn,

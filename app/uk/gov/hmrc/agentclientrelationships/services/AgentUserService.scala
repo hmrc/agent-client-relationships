@@ -35,7 +35,7 @@ class AgentUserService @Inject() (
   ugs: UsersGroupsSearchConnector,
   agentCacheProvider: AgentCacheProvider
 )(implicit val executionContext: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache

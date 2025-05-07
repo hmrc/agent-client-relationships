@@ -30,7 +30,8 @@ import scala.util.Try
 @Singleton
 class CleanUpInvitationStatusService @Inject() (invitationsRepository: InvitationsRepository)(implicit
   ec: ExecutionContext
-) extends Logging {
+)
+extends Logging {
 
   def validateService(serviceStr: String): Either[InvitationFailureResponse, Service] =
     for {

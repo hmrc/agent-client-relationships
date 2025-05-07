@@ -35,7 +35,7 @@ class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
   agentAssuranceConnector: AgentAssuranceConnector
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
 

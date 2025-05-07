@@ -35,8 +35,9 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AgentPermissionsConnector @Inject() (httpClient: HttpClientV2, appConfig: AppConfig, val metrics: Metrics)(
   implicit val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   def isClientUnassigned(arn: Arn, enrolmentKey: EnrolmentKey)(implicit rh: RequestHeader): Future[Boolean] = {
     val url = url"${appConfig.agentPermissionsUrl}/agent-permissions/arn/${arn.value}/client/${enrolmentKey.tag}/groups"

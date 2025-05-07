@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ HMRCMTDIT, HMRCMTDITSUPP }
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.Instant
@@ -53,7 +53,8 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
       givenCacheRefresh(arn, 404)
 
-      mongoPartialAuthRepo.collection
+      mongoPartialAuthRepo
+        .collection
         .insertOne(PartialAuthRelationship(Instant.now, arn.value, HMRCMTDIT, nino.value, active = true, Instant.now))
         .toFuture()
         .futureValue
@@ -67,15 +68,17 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "agentReferenceNumber" -> arn.value,
-          "howRelationshipCreated" -> "PartialAuth",
-          "clientId" -> mtdItId.value,
-          "service" -> HMRCMTDIT,
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "PartialAuth",
+          "clientId"                -> mtdItId.value,
+          "service"                 -> HMRCMTDIT,
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "true",
-          "nino" -> nino.value,
-          "clientIdType" -> "mtditid"),
-        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl))
+          "enrolmentDelegated"      -> "true",
+          "nino"                    -> nino.value,
+          "clientIdType"            -> "mtditid"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
+      )
     }
 
     s"return 201 Created when partial-auth exists for service $HMRCMTDITSUPP and client is signed up to ITSA" in {
@@ -95,9 +98,11 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       givenCacheRefresh(arn, 404)
 
-      mongoPartialAuthRepo.collection
+      mongoPartialAuthRepo
+        .collection
         .insertOne(
-          PartialAuthRelationship(Instant.now, arn.value, HMRCMTDITSUPP, nino.value, active = true, Instant.now))
+          PartialAuthRelationship(Instant.now, arn.value, HMRCMTDITSUPP, nino.value, active = true, Instant.now)
+        )
         .toFuture()
         .futureValue
 
@@ -110,15 +115,17 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "agentReferenceNumber" -> arn.value,
-          "howRelationshipCreated" -> "PartialAuth",
-          "clientId" -> mtdItId.value,
-          "service" -> HMRCMTDITSUPP,
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "PartialAuth",
+          "clientId"                -> mtdItId.value,
+          "service"                 -> HMRCMTDITSUPP,
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "true",
-          "nino" -> nino.value,
-          "clientIdType" -> "mtditid"),
-        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl))
+          "enrolmentDelegated"      -> "true",
+          "nino"                    -> nino.value,
+          "clientIdType"            -> "mtditid"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
+      )
     }
 
     "return 201 Created when no partial-auth exists but there is a legacy SA relationship and the client is signed up to ITSA" in {
@@ -152,25 +159,29 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "saAgentRef" -> "1234",
-          "nino" -> nino.value,
-          "cesaRelationship" -> "true"),
-        tags = Map("transactionName" -> "check-cesa", "path" -> testUrl))
+          "saAgentRef"           -> "1234",
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "true"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> testUrl)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "agentReferenceNumber" -> arn.value,
-          "howRelationshipCreated" -> "CopyExistingCESARelationship",
-          "clientId" -> mtdItId.value,
-          "service" -> HMRCMTDIT,
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "CopyExistingCESARelationship",
+          "clientId"                -> mtdItId.value,
+          "service"                 -> HMRCMTDIT,
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "true",
-          "nino" -> nino.value,
-          "clientIdType" -> "mtditid",
-          "cesaRelationship" -> "true"),
-        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl))
+          "enrolmentDelegated"      -> "true",
+          "nino"                    -> nino.value,
+          "clientIdType"            -> "mtditid",
+          "cesaRelationship"        -> "true"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
+      )
 
     }
 
@@ -222,40 +233,46 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
         event = AgentClientRelationshipEvent.CheckCESA,
         detail = Map(
           "agentReferenceNumber" -> arn.value,
-          "saAgentRef" -> "1234",
-          "nino" -> nino.value,
-          "cesaRelationship" -> "true"),
-        tags = Map("transactionName" -> "check-cesa", "path" -> testUrl))
+          "saAgentRef"           -> "1234",
+          "nino"                 -> nino.value,
+          "cesaRelationship"     -> "true"
+        ),
+        tags = Map("transactionName" -> "check-cesa", "path" -> testUrl)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.CreateRelationship,
         detail = Map(
-          "agentReferenceNumber" -> arn.value,
-          "howRelationshipCreated" -> "CopyExistingCESARelationship",
-          "clientId" -> mtdItId.value,
-          "service" -> HMRCMTDIT,
+          "agentReferenceNumber"    -> arn.value,
+          "howRelationshipCreated"  -> "CopyExistingCESARelationship",
+          "clientId"                -> mtdItId.value,
+          "service"                 -> HMRCMTDIT,
           "etmpRelationshipCreated" -> "true",
-          "enrolmentDelegated" -> "true",
-          "nino" -> nino.value,
-          "clientIdType" -> "mtditid",
-          "cesaRelationship" -> "true"),
-        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl))
+          "enrolmentDelegated"      -> "true",
+          "nino"                    -> nino.value,
+          "clientIdType"            -> "mtditid",
+          "cesaRelationship"        -> "true"
+        ),
+        tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
+      )
 
       verifyAuditRequestSent(
         1,
         event = AgentClientRelationshipEvent.TerminateRelationship,
         detail = Map(
-          "agentCode" -> "NQJUEJCWT14",
-          "credId" -> "any",
-          "agentReferenceNumber" -> arn.value,
-          "clientId" -> mtdItId.value,
-          "service" -> HMRCMTDITSUPP,
-          "clientIdType" -> "MTDITID",
-          "enrolmentDeallocated" -> "true",
-          "etmpRelationshipRemoved" -> "true",
-          "howRelationshipTerminated" -> "AgentRoleChanged"),
-        tags = Map("transactionName" -> "terminate-relationship", "path" -> testUrl))
+          "agentCode"                 -> "NQJUEJCWT14",
+          "credId"                    -> "any",
+          "agentReferenceNumber"      -> arn.value,
+          "clientId"                  -> mtdItId.value,
+          "service"                   -> HMRCMTDITSUPP,
+          "clientIdType"              -> "MTDITID",
+          "enrolmentDeallocated"      -> "true",
+          "etmpRelationshipRemoved"   -> "true",
+          "howRelationshipTerminated" -> "AgentRoleChanged"
+        ),
+        tags = Map("transactionName" -> "terminate-relationship", "path" -> testUrl)
+      )
 
     }
 
@@ -288,7 +305,8 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAdminUser("foo", "any")
       givenAgentCanNotBeAllocated(503)
 
-      mongoPartialAuthRepo.collection
+      mongoPartialAuthRepo
+        .collection
         .insertOne(PartialAuthRelationship(Instant.now, arn.value, HMRCMTDIT, nino.value, active = true, Instant.now))
         .toFuture()
         .futureValue

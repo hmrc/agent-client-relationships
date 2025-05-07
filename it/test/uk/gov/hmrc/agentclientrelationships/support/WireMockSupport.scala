@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import java.net.{ ServerSocket, URL }
+import java.net.{ServerSocket, URL}
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock.{ configureFor, reset }
+import com.github.tomakehurst.wiremock.client.WireMock.{configureFor, reset}
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, Suite }
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import play.api.Logging
 
 import scala.annotation.tailrec
@@ -98,6 +98,7 @@ object Port extends Logging {
     catch {
       case t: Throwable => false
     } finally
-      if (socket != null) socket.close()
+      if (socket != null)
+        socket.close()
   }
 }

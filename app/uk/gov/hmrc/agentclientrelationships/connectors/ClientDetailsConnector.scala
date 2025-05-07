@@ -46,8 +46,9 @@ import scala.util.{Failure, Success, Try}
 @Singleton
 class ClientDetailsConnector @Inject() (appConfig: AppConfig, httpClient: HttpClientV2, val metrics: Metrics)(implicit
   val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
     "Environment" -> appConfig.desEnv,

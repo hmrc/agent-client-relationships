@@ -44,8 +44,8 @@ class CheckRelationshipsOrchestratorService @Inject() (
   desConnector: DesConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector
 )(implicit executionContext: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   def checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String, userId: Option[String])(
     implicit request: RequestHeader

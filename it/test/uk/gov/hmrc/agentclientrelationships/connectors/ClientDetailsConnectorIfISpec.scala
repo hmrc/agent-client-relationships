@@ -18,43 +18,42 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
-import play.api.http.Status.{ INTERNAL_SERVER_ERROR, NOT_FOUND }
+import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{ await, defaultAwaitTimeout }
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails }
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.{ VatCustomerDetails, VatIndividual }
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ ClientDetailsNotFound, ErrorRetrievingClientDetails }
-import uk.gov.hmrc.agentclientrelationships.stubs.{ ClientDetailsStub, DataStreamStub, IfStub }
-import uk.gov.hmrc.agentclientrelationships.support.{ UnitSpec, WireMockSupport }
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.{VatCustomerDetails, VatIndividual}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsNotFound, ErrorRetrievingClientDetails}
+import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, DataStreamStub, IfStub}
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 
 import java.time.LocalDate
 
 class ClientDetailsConnectorIfISpec
-  extends UnitSpec
-  with GuiceOneServerPerSuite
-  with WireMockSupport
-  with DataStreamStub
-  with ClientDetailsStub
-  with IfStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DataStreamStub
+with ClientDetailsStub
+with IfStub {
 
   override lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.citizen-details.port" -> wireMockPort,
-        "microservice.services.if.port" -> wireMockPort,
-        "microservice.services.eis.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
-        "hip.BusinessDetails.enabled" -> false)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.citizen-details.port" -> wireMockPort,
+    "microservice.services.if.port"              -> wireMockPort,
+    "microservice.services.eis.port"             -> wireMockPort,
+    "microservice.services.des.port"             -> wireMockPort,
+    "auditing.consumer.baseUri.host"             -> wireMockHost,
+    "auditing.consumer.baseUri.port"             -> wireMockPort,
+    "hip.BusinessDetails.enabled"                -> false
+  )
 
   implicit val request: RequestHeader = FakeRequest()
 
@@ -88,8 +87,12 @@ class ClientDetailsConnectorIfISpec
     "return citizen details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaCitizenDetailsExists("AA000001B")
-      val expectedModel =
-        ItsaCitizenDetails(Some("Matthew"), Some("Kovacic"), Some(LocalDate.parse("2000-01-01")), Some("11223344"))
+      val expectedModel = ItsaCitizenDetails(
+        Some("Matthew"),
+        Some("Kovacic"),
+        Some(LocalDate.parse("2000-01-01")),
+        Some("11223344")
+      )
       await(connector.getItsaCitizenDetails("AA000001B")) shouldBe Right(expectedModel)
     }
 
@@ -113,14 +116,16 @@ class ClientDetailsConnectorIfISpec
       givenAuditConnector()
       givenItsaBusinessDetailsExists("nino", "AA000001B")
       await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
-        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB"))
+        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
+      )
     }
 
     "return the first set of business details when receiving multiple" in {
       givenAuditConnector()
       givenMultipleItsaBusinessDetailsExists("AA000001B")
       await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
-        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB"))
+        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
+      )
     }
 
     "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
@@ -153,7 +158,8 @@ class ClientDetailsConnectorIfISpec
         Some(VatIndividual(Some("Mr"), Some("Ilkay"), Some("Silky"), Some("Gundo"))),
         Some("CFG Solutions"),
         Some(LocalDate.parse("2020-01-01")),
-        isInsolvent = false)
+        isInsolvent = false
+      )
       await(connector.getVatCustomerInfo("123456789")) shouldBe Right(expectedModel)
     }
 
@@ -229,7 +235,8 @@ class ClientDetailsConnectorIfISpec
       givenPptDetailsExist("XAPPT0004567890")
       await(connector.getPptSubscriptionDetails("XAPPT0004567890")) shouldBe
         Right(
-          PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), Some(LocalDate.parse("2030-01-01"))))
+          PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), Some(LocalDate.parse("2030-01-01")))
+        )
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
@@ -257,7 +264,9 @@ class ClientDetailsConnectorIfISpec
             Some("CFG Solutions"),
             Seq("Erling Haal", "Kevin De Burner"),
             isGBUser = true,
-            Seq("test@email.com", "test2@email.com")))
+            Seq("test@email.com", "test2@email.com")
+          )
+        )
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
@@ -294,7 +303,8 @@ class ClientDetailsConnectorIfISpec
       givenPillar2DetailsError("XAPLR2222222222", INTERNAL_SERVER_ERROR)
       await(connector.getPillar2SubscriptionDetails("XAPLR2222222222")) shouldBe
         Left(
-          ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getPillar2SubscriptionDetails'"))
+          ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getPillar2SubscriptionDetails'")
+        )
     }
   }
 }

@@ -19,10 +19,10 @@ package uk.gov.hmrc.agentclientrelationships.controllers.transitional
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseControllerISpec
-import uk.gov.hmrc.agentclientrelationships.model.{ Invitation, PartialAuth }
-import uk.gov.hmrc.agentclientrelationships.repository.{ InvitationsRepository, PartialAuthRepository }
+import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuth}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
-import uk.gov.hmrc.agentclientrelationships.stubs.{ AfiRelationshipStub, AgentAssuranceStubs, ClientDetailsStub, EmailStubs }
+import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, ClientDetailsStub, EmailStubs}
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -30,24 +30,23 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 
 import java.time.temporal.ChronoUnit.MILLIS
-import java.time.{ LocalDate, LocalDateTime, ZoneOffset }
+import java.time.{LocalDate, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
 class MigratePartialAuthControllerISpec
-  extends BaseControllerISpec
-  with ClientDetailsStub
-  with AfiRelationshipStub
-  with AgentAssuranceStubs
-  with EmailStubs
-  with TestData {
+extends BaseControllerISpec
+with ClientDetailsStub
+with AfiRelationshipStub
+with AgentAssuranceStubs
+with EmailStubs
+with TestData {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val controller =
-    new MigratePartialAuthController(invitationService, stubControllerComponents())
+  val controller = new MigratePartialAuthController(invitationService, stubControllerComponents())
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -59,24 +58,25 @@ class MigratePartialAuthControllerISpec
   val activeExpiryDate: LocalDate = now.plusDays(21).toLocalDate
   val outOfRangeCreatedDate: LocalDateTime = now.minusDays(30)
   val outOfRangeExpiryDate: LocalDate = now.minusDays(9).toLocalDate
-  val baseAltItsaInvitation: Invitation =
-    Invitation.createNew(
-      arn.value,
-      MtdIt,
-      mtdItId,
-      nino,
-      clientName,
-      testAgentName,
-      testAgentEmail,
-      activeExpiryDate,
-      Some("personal"))
+  val baseAltItsaInvitation: Invitation = Invitation.createNew(
+    arn.value,
+    MtdIt,
+    mtdItId,
+    nino,
+    clientName,
+    testAgentName,
+    testAgentEmail,
+    activeExpiryDate,
+    Some("personal")
+  )
 
   val activePartialAuthInvitation: Invitation = baseAltItsaInvitation.copy(
     status = PartialAuth,
     clientId = nino.value,
     clientIdType = NinoType.id,
     created = now.minusDays(10).toInstant(ZoneOffset.UTC),
-    lastUpdated = now.minusDays(10).toInstant(ZoneOffset.UTC))
+    lastUpdated = now.minusDays(10).toInstant(ZoneOffset.UTC)
+  )
 
   val expiredPartialAuthInvitation: Invitation = baseAltItsaInvitation.copy(
     status = PartialAuth,
@@ -84,7 +84,8 @@ class MigratePartialAuthControllerISpec
     clientIdType = NinoType.id,
     created = outOfRangeCreatedDate.toInstant(ZoneOffset.UTC),
     lastUpdated = outOfRangeCreatedDate.toInstant(ZoneOffset.UTC),
-    expiryDate = outOfRangeExpiryDate)
+    expiryDate = outOfRangeExpiryDate
+  )
 
   def jsonStringForAcaInvitation(invitation: Invitation): String =
     s"""
@@ -105,10 +106,10 @@ class MigratePartialAuthControllerISpec
   "migratePartialAuth" should {
 
     "return 204 status, store partial auth record and store active invitation" in {
-      val result =
-        doAgentPostRequest(
-          "/agent-client-relationships/migrate/partial-auth-record",
-          jsonStringForAcaInvitation(activePartialAuthInvitation))
+      val result = doAgentPostRequest(
+        "/agent-client-relationships/migrate/partial-auth-record",
+        jsonStringForAcaInvitation(activePartialAuthInvitation)
+      )
 
       result.status shouldBe 204
 
@@ -116,9 +117,7 @@ class MigratePartialAuthControllerISpec
         .findActive(Nino(activePartialAuthInvitation.clientId), Arn(activePartialAuthInvitation.arn))
         .futureValue shouldBe defined
 
-      val activeInvitation = invitationRepo
-        .findOneById(activePartialAuthInvitation.invitationId)
-        .futureValue
+      val activeInvitation = invitationRepo.findOneById(activePartialAuthInvitation.invitationId).futureValue
 
       lazy val storedInvitation = activeInvitation.get
 
@@ -132,10 +131,10 @@ class MigratePartialAuthControllerISpec
     }
 
     "return 204 status and store only partial auth record when invitation has expired" in {
-      val result =
-        doAgentPostRequest(
-          "/agent-client-relationships/migrate/partial-auth-record",
-          jsonStringForAcaInvitation(expiredPartialAuthInvitation))
+      val result = doAgentPostRequest(
+        "/agent-client-relationships/migrate/partial-auth-record",
+        jsonStringForAcaInvitation(expiredPartialAuthInvitation)
+      )
 
       result.status shouldBe 204
 
@@ -143,16 +142,14 @@ class MigratePartialAuthControllerISpec
         .findActive(Nino(expiredPartialAuthInvitation.clientId), Arn(expiredPartialAuthInvitation.arn))
         .futureValue shouldBe defined
 
-      invitationRepo
-        .findOneById(activePartialAuthInvitation.invitationId)
-        .futureValue shouldBe None
+      invitationRepo.findOneById(activePartialAuthInvitation.invitationId).futureValue shouldBe None
     }
 
     "return BadRequest 400 status when invitation is not partial auth" in {
-      val result =
-        doAgentPostRequest(
-          "/agent-client-relationships/migrate/partial-auth-record",
-          jsonStringForAcaInvitation(baseAltItsaInvitation))
+      val result = doAgentPostRequest(
+        "/agent-client-relationships/migrate/partial-auth-record",
+        jsonStringForAcaInvitation(baseAltItsaInvitation)
+      )
 
       result.status shouldBe 400
 

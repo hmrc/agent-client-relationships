@@ -39,7 +39,7 @@ class EmailScheduler @Inject() (
   invitationsRepository: InvitationsRepository,
   mongoLockService: MongoLockService
 )(implicit ec: ExecutionContext, mat: Materializer, appConfig: AppConfig)
-    extends Logging {
+extends Logging {
 
   if (appConfig.emailSchedulerEnabled) {
 
@@ -82,8 +82,8 @@ class WarningEmailActor(
   emailService: EmailService,
   mongoLockService: MongoLockService
 )(implicit ec: ExecutionContext, mat: Materializer, appConfig: AppConfig)
-    extends Actor
-    with Logging {
+extends Actor
+with Logging {
 
   def receive: Receive = { case _ =>
     mongoLockService.schedulerLock("WarningEmailSchedule") {
@@ -116,8 +116,8 @@ class ExpiredEmailActor(
   emailService: EmailService,
   mongoLockService: MongoLockService
 )(implicit ec: ExecutionContext, mat: Materializer, appConfig: AppConfig)
-    extends Actor
-    with Logging {
+extends Actor
+with Logging {
 
   def receive: Receive = { case _ =>
     mongoLockService.schedulerLock("ExpiredEmailSchedule") {

@@ -44,8 +44,8 @@ class ClientDetailsController @Inject() (
   cc: ControllerComponents,
   appConfig: AppConfig
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 

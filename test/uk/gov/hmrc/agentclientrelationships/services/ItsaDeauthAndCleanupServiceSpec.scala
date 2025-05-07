@@ -37,22 +37,22 @@ import java.time.{Instant, LocalDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 class ItsaDeauthAndCleanupServiceSpec
-    extends UnitSpec
-    with ResettingMockitoSugar
-    with MockCheckRelationshipsService
-    with MockDeleteRelationshipsService
-    with MockPartialAuthRepository
-    with MockInvitationsRepository
-    with MockAuditService {
+extends UnitSpec
+with ResettingMockitoSugar
+with MockCheckRelationshipsService
+with MockDeleteRelationshipsService
+with MockPartialAuthRepository
+with MockInvitationsRepository
+with MockAuditService {
 
   object TestService
-      extends ItsaDeauthAndCleanupService(
-        partialAuthRepository = mockPartialAuthRepository,
-        checkRelationshipsService = mockCheckRelationshipsService,
-        deleteRelationshipsService = mockDeleteRelationshipsService,
-        invitationsRepository = mockInvitationsRepository,
-        auditService = mockAuditService
-      )
+  extends ItsaDeauthAndCleanupService(
+    partialAuthRepository = mockPartialAuthRepository,
+    checkRelationshipsService = mockCheckRelationshipsService,
+    deleteRelationshipsService = mockDeleteRelationshipsService,
+    invitationsRepository = mockInvitationsRepository,
+    auditService = mockAuditService
+  )
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()

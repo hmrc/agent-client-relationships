@@ -54,8 +54,8 @@ class DeleteRelationshipsService @Inject() (
   invitationService: InvitationService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   private val recoveryTimeout: Int = appConfig.recoveryTimeout
 

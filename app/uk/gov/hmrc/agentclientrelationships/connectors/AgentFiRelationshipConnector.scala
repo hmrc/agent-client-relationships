@@ -39,7 +39,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, httpClient: HttpClientV2, val metrics: Metrics)(
   implicit val ec: ExecutionContext
-) extends HttpApiMonitor {
+)
+extends HttpApiMonitor {
 
   private def afiRelationshipUrl(arn: Arn, service: String, clientId: String): URL =
     url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"

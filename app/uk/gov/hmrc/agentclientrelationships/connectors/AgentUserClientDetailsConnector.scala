@@ -34,8 +34,9 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AgentUserClientDetailsConnector @Inject() (httpClient: HttpClientV2, val metrics: Metrics, appConfig: AppConfig)(
   implicit val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   val baseUrl = appConfig.agentUserClientDetailsUrl
 

@@ -40,20 +40,21 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
   val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
-  val partialAuthRepo: PartialAuthRepository =
-    app.injector.instanceOf[PartialAuthRepository]
-  val checkRelationshipsService: CheckRelationshipsOrchestratorService =
-    app.injector.instanceOf[CheckRelationshipsOrchestratorService]
+  val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
+  val checkRelationshipsService: CheckRelationshipsOrchestratorService = app
+    .injector
+    .instanceOf[CheckRelationshipsOrchestratorService]
 
-  val controller = new ClientDetailsController(
-    clientDetailsService,
-    checkRelationshipsService,
-    invitationsRepo,
-    partialAuthRepo,
-    authConnector,
-    stubControllerComponents(),
-    appConfig
-  )
+  val controller =
+    new ClientDetailsController(
+      clientDetailsService,
+      checkRelationshipsService,
+      invitationsRepo,
+      partialAuthRepo,
+      authConnector,
+      stubControllerComponents(),
+      appConfig
+    )
 
   override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
@@ -99,18 +100,17 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
 
           await(
-            invitationsRepo
-              .create(
-                "XARN1234567",
-                MtdIt,
-                Nino("AA000001B"),
-                Nino("AA000001B"),
-                "Erling Haal",
-                "testAgentName",
-                "agent@email.com",
-                LocalDate.now(),
-                Some("personal")
-              )
+            invitationsRepo.create(
+              "XARN1234567",
+              MtdIt,
+              Nino("AA000001B"),
+              Nino("AA000001B"),
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doGetRequest(request.uri)
@@ -132,18 +132,17 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            invitationsRepo
-              .create(
-                "XARN1234567",
-                MtdItSupp,
-                Nino("AA000001B"),
-                Nino("AA000001B"),
-                "Erling Haal",
-                "testAgentName",
-                "agent@email.com",
-                LocalDate.now(),
-                Some("personal")
-              )
+            invitationsRepo.create(
+              "XARN1234567",
+              MtdItSupp,
+              Nino("AA000001B"),
+              Nino("AA000001B"),
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doGetRequest(request.uri)
@@ -224,13 +223,12 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            partialAuthRepo
-              .create(
-                Instant.parse("2020-01-01T00:00:00.000Z"),
-                Arn("XARN1234567"),
-                MtdIt.toString(),
-                Nino("AA000001B")
-              )
+            partialAuthRepo.create(
+              Instant.parse("2020-01-01T00:00:00.000Z"),
+              Arn("XARN1234567"),
+              MtdIt.toString(),
+              Nino("AA000001B")
+            )
           )
 
           val result = doGetRequest(request.uri)
@@ -253,8 +251,7 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            partialAuthRepo
-              .create(Instant.now(), Arn("XARN1234567"), MtdItSupp.toString(), Nino("AA000001B"))
+            partialAuthRepo.create(Instant.now(), Arn("XARN1234567"), MtdItSupp.toString(), Nino("AA000001B"))
           )
 
           val result = doGetRequest(request.uri)
@@ -277,18 +274,17 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            invitationsRepo
-              .create(
-                "XARN1234567",
-                MtdIt,
-                Nino("AA000001B"),
-                Nino("AA000001B"),
-                "Erling Haal",
-                "testAgentName",
-                "agent@email.com",
-                LocalDate.now(),
-                Some("personal")
-              )
+            invitationsRepo.create(
+              "XARN1234567",
+              MtdIt,
+              Nino("AA000001B"),
+              Nino("AA000001B"),
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doGetRequest(request.uri)

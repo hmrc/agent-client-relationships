@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import play.api.libs.json.{ Format, Json, OFormat }
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ AgencyDetails, AgentDetailsDesResponse }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ SuspensionDetails, Utr }
+import play.api.libs.json.{Format, Json, OFormat}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
+import uk.gov.hmrc.agentmtdidentifiers.model.{SuspensionDetails, Utr}
 
 trait TestData {
 
@@ -28,7 +28,8 @@ trait TestData {
     addressLine3: Option[String] = None,
     addressLine4: Option[String] = None,
     postalCode: Option[String],
-    countryCode: String)
+    countryCode: String
+  )
 
   object TestBusinessAddress {
     implicit val format: OFormat[TestBusinessAddress] = Json.format
@@ -38,7 +39,8 @@ trait TestData {
     agencyName: Option[String],
     agencyEmail: Option[String],
     agencyTelephone: Option[String],
-    agencyAddress: Option[TestBusinessAddress])
+    agencyAddress: Option[TestBusinessAddress]
+  )
 
   object TestAgencyDetails {
     implicit val format: OFormat[TestAgencyDetails] = Json.format
@@ -47,7 +49,8 @@ trait TestData {
   case class TestAgentDetailsDesResponse(
     uniqueTaxReference: Option[Utr],
     agencyDetails: Option[TestAgencyDetails],
-    suspensionDetails: Option[SuspensionDetails])
+    suspensionDetails: Option[SuspensionDetails]
+  )
 
   object TestAgentDetailsDesResponse {
     implicit val format: Format[TestAgentDetailsDesResponse] = Json.format[TestAgentDetailsDesResponse]
@@ -61,45 +64,57 @@ trait TestData {
     Some("My Agency"),
     Some("abc@abc.com"),
     Some("07345678901"),
-    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB")))
+    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
+  )
 
   val existingAgencyDetailsResponse: TestAgencyDetails = TestAgencyDetails(
     Some("ExistingAgent"),
     Some("abc@example.com"),
     Some("07345678901"),
-    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB")))
+    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
+  )
 
   val agentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = Some(Utr("0123456789")),
     agencyDetails = Some(agencyDetailsResponse),
-    suspensionDetails = Some(suspensionDetails))
+    suspensionDetails = Some(suspensionDetails)
+  )
 
   val existingAgentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = Some(Utr("0123456989")),
     agencyDetails = Some(existingAgencyDetailsResponse),
-    suspensionDetails = Some(suspensionDetails))
+    suspensionDetails = Some(suspensionDetails)
+  )
 
   val agentRecordResponseWithNoAgentName: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = Some(Utr("0123456789")),
     agencyDetails = Some(agencyDetailsResponse.copy(agencyName = None)),
-    suspensionDetails = Some(suspensionDetails))
+    suspensionDetails = Some(suspensionDetails)
+  )
 
   val suspendedAgentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = Some(Utr("0123456789")),
     agencyDetails = Some(agencyDetailsResponse),
-    suspensionDetails = Some(suspensionDetailsSuspended))
+    suspensionDetails = Some(suspensionDetailsSuspended)
+  )
 
   val agentDetails: AgencyDetails = AgencyDetails("My Agency", "abc@abc.com")
 
   val existingAgentDetails: AgencyDetails = AgencyDetails("ExistingAgent", "abc@abc.com")
 
-  val agentRecord: AgentDetailsDesResponse =
-    AgentDetailsDesResponse(agencyDetails = agentDetails, suspensionDetails = Some(suspensionDetails))
+  val agentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
+    agencyDetails = agentDetails,
+    suspensionDetails = Some(suspensionDetails)
+  )
 
-  val existingAgentRecord: AgentDetailsDesResponse =
-    AgentDetailsDesResponse(agencyDetails = existingAgentDetails, suspensionDetails = Some(suspensionDetails))
+  val existingAgentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
+    agencyDetails = existingAgentDetails,
+    suspensionDetails = Some(suspensionDetails)
+  )
 
-  val suspendedAgentRecordOption: AgentDetailsDesResponse =
-    AgentDetailsDesResponse(agencyDetails = agentDetails, suspensionDetails = Some(suspensionDetailsSuspended))
+  val suspendedAgentRecordOption: AgentDetailsDesResponse = AgentDetailsDesResponse(
+    agencyDetails = agentDetails,
+    suspensionDetails = Some(suspensionDetailsSuspended)
+  )
 
 }

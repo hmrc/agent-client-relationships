@@ -55,8 +55,9 @@ object AgentCodeMappings {
 class MappingConnector @Inject() (httpClient: HttpClientV2, appConfig: AppConfig)(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] =
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {

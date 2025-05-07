@@ -40,8 +40,9 @@ class NoOpInternalAuthTokenInitialiser @Inject() extends InternalAuthTokenInitia
 @Singleton
 class InternalAuthTokenInitialiserImpl @Inject() (appConfig: AppConfig, httpClient: HttpClientV2)(implicit
   ec: ExecutionContext
-) extends InternalAuthTokenInitialiser
-    with Logging {
+)
+extends InternalAuthTokenInitialiser
+with Logging {
 
   override val initialised: Future[Done] =
     for {

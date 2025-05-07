@@ -46,7 +46,7 @@ class AuthorisationAcceptService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   auditService: AuditService
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def accept(invitation: Invitation, enrolment: EnrolmentKey)(implicit
     request: RequestHeader,

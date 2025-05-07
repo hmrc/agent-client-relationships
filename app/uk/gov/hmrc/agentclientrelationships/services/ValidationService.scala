@@ -34,7 +34,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class ValidationService @Inject() (esConnector: EnrolmentStoreProxyConnector, appConfig: AppConfig)(implicit
   ec: ExecutionContext
-) extends Logging {
+)
+extends Logging {
 
   // TODO look into updating this to not be an either as we never actually handle the Left it returns in a useful way
   // noinspection ScalaStyle

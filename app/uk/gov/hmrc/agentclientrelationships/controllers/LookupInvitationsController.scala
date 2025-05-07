@@ -36,8 +36,8 @@ class LookupInvitationsController @Inject() (
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthorisedFunctions {
+extends BackendController(cc)
+with AuthorisedFunctions {
 
   def lookupInvitations(
     arn: Option[Arn],

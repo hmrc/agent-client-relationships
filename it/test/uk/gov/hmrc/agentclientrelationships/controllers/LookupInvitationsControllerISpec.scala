@@ -17,14 +17,14 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.test.Helpers.{ await, defaultAwaitTimeout }
-import uk.gov.hmrc.agentclientrelationships.model.{ Accepted, Invitation, PartialAuth, PartialAuthRelationship }
-import uk.gov.hmrc.agentclientrelationships.repository.{ InvitationsRepository, PartialAuthRepository }
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ MtdIt, MtdItSupp }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId }
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, PartialAuth, PartialAuthRelationship}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.domain.Nino
 
-import java.time.{ Instant, LocalDate, ZoneId }
+import java.time.{Instant, LocalDate, ZoneId}
 
 class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
@@ -44,61 +44,67 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
   val testMtdItId1: MtdItId = MtdItId("XAIT0000111122")
   val testMtdItId2: MtdItId = MtdItId("XAIT0000111123")
 
-  val itsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdIt,
-        testMtdItId1,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal"))
-      .copy(created = testTime, lastUpdated = testTime)
-  val suppItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn2.value,
-        MtdItSupp,
-        testMtdItId1,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal"))
-      .copy(created = testTime, lastUpdated = testTime)
-  val acceptedItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdIt,
-        testMtdItId2,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal"))
-      .copy(created = testTime, lastUpdated = testTime, status = Accepted)
+  val itsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn.value,
+      MtdIt,
+      testMtdItId1,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime)
+  val suppItsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn2.value,
+      MtdItSupp,
+      testMtdItId1,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime)
+  val acceptedItsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn.value,
+      MtdIt,
+      testMtdItId2,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime, status = Accepted)
 
-  val altItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdIt,
-        testNino,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal"))
-      .copy(created = testTime, lastUpdated = testTime, status = PartialAuth)
-  val partialAuth: PartialAuthRelationship =
-    PartialAuthRelationship(testTime, testArn.value, MtdIt.id, testNino.value, active = true, testTime)
+  val altItsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn.value,
+      MtdIt,
+      testNino,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime, status = PartialAuth)
+  val partialAuth: PartialAuthRelationship = PartialAuthRelationship(
+    testTime,
+    testArn.value,
+    MtdIt.id,
+    testNino.value,
+    active = true,
+    testTime
+  )
 
   s"GET $invitationsUrl" should {
     "return BadRequest" when {
@@ -169,9 +175,9 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         await(invitationRepo.collection.insertOne(suppItsaInvitation).toFuture())
         await(invitationRepo.collection.insertOne(acceptedItsaInvitation).toFuture())
 
-        val result =
-          doGetRequest(
-            invitationsUrl + s"?services=${MtdIt.id}&services=${MtdItSupp.id}&clientIds=${testMtdItId1.value}")
+        val result = doGetRequest(
+          invitationsUrl + s"?services=${MtdIt.id}&services=${MtdItSupp.id}&clientIds=${testMtdItId1.value}"
+        )
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(itsaInvitation, suppItsaInvitation))
@@ -186,7 +192,8 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         val result = doGetRequest(
           invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}&services=${MtdItSupp.id}" +
-            s"&clientIds=${testMtdItId1.value}&clientIds=${testMtdItId2.value}")
+            s"&clientIds=${testMtdItId1.value}&clientIds=${testMtdItId2.value}"
+        )
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(itsaInvitation, acceptedItsaInvitation))
@@ -202,7 +209,8 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         val result = doGetRequest(
           invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}" +
-            s"&clientIds=${testNino.value}&status=$PartialAuth")
+            s"&clientIds=${testNino.value}&status=$PartialAuth"
+        )
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(altItsaInvitation))
@@ -215,7 +223,8 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         val result = doGetRequest(
           invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}" +
-            s"&clientIds=${testNino.value}&status=$PartialAuth")
+            s"&clientIds=${testNino.value}&status=$PartialAuth"
+        )
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(partialAuth.asInvitation))

@@ -42,7 +42,7 @@ class RemoveAuthorisationService @Inject() (
   invitationsRepository: InvitationsRepository,
   ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def validateRequest(serviceStr: String, clientIdStr: String): Either[InvitationFailureResponse, ValidRequest] =
     for {
