@@ -53,8 +53,13 @@ extends Logging {
     clientName: Option[String],
     pageNumber: Int,
     pageSize: Int
-  ): Future[TrackRequestsResult] = invitationsRepository
-    .trackRequests(arn.value, statusFilter, clientName, pageNumber, pageSize)
+  ): Future[TrackRequestsResult] = invitationsRepository.trackRequests(
+    arn.value,
+    statusFilter,
+    clientName,
+    pageNumber,
+    pageSize
+  )
 
   def createInvitation(arn: Arn, createInvitationInputData: CreateInvitationRequest)(implicit
     request: RequestHeader
@@ -96,8 +101,10 @@ extends Logging {
       _          <- emailService.sendRejectedEmail(invitation)
     } yield invitation
 
-  def cancelInvitation(arn: Arn, invitationId: String): Future[Unit] = invitationsRepository
-    .cancelByIdForAgent(arn.value, invitationId)
+  def cancelInvitation(arn: Arn, invitationId: String): Future[Unit] = invitationsRepository.cancelByIdForAgent(
+    arn.value,
+    invitationId
+  )
 
   def deauthoriseInvitation(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     ec: ExecutionContext
@@ -144,8 +151,14 @@ extends Logging {
     newService: String,
     newClientId: String,
     newClientIdType: String
-  ): Future[Boolean] = invitationsRepository
-    .updateInvitation(service, clientId, clientIdType, newService, newClientId, newClientIdType)
+  ): Future[Boolean] = invitationsRepository.updateInvitation(
+    service,
+    clientId,
+    clientIdType,
+    newService,
+    newClientId,
+    newClientIdType
+  )
 
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
     request: RequestHeader
@@ -194,8 +207,12 @@ extends Logging {
 
   def migratePartialAuth(invitation: Invitation): Future[Unit] =
     for {
-      _ <- partialAuthRepository
-             .create(invitation.created, Arn(invitation.arn), invitation.service, Nino(invitation.clientId))
+      _ <- partialAuthRepository.create(
+             invitation.created,
+             Arn(invitation.arn),
+             invitation.service,
+             Nino(invitation.clientId)
+           )
       _ <-
         if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
           invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())

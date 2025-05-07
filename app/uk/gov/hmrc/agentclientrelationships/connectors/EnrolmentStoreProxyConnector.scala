@@ -256,8 +256,10 @@ with Logging {
         .map { response =>
           response.status match {
             case Status.OK =>
-              (response
-                .json \ "enrolments").as[Seq[JsObject]].headOption.map(obj => (obj \ "identifiers").as[Seq[Identifier]])
+              (response.json \ "enrolments")
+                .as[Seq[JsObject]]
+                .headOption
+                .map(obj => (obj \ "identifiers").as[Seq[Identifier]])
             // TODO: The endpoint shoulud return OK with empty list for that case
             case Status.NO_CONTENT => None
             case other             => throw UpstreamErrorResponse(response.body, other, other)

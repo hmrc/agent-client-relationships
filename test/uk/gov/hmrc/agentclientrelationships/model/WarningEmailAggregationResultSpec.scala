@@ -23,10 +23,13 @@ import uk.gov.hmrc.crypto.{Decrypter, Encrypter, SymmetricCryptoFactory}
 
 import java.time.{Instant, LocalDate}
 
-class WarningEmailAggregationResultSpec extends UnitSpec {
+class WarningEmailAggregationResultSpec
+extends UnitSpec {
 
-  implicit val crypto: Encrypter with Decrypter = SymmetricCryptoFactory
-    .aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  implicit val crypto: Encrypter
+    with Decrypter = SymmetricCryptoFactory.aesCrypto(
+    "edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g="
+  )
 
   val invitation: Invitation = Invitation(
     "123",
@@ -49,8 +52,11 @@ class WarningEmailAggregationResultSpec extends UnitSpec {
     Instant.parse("2020-03-03T00:00:00.000Z")
   )
 
-  val invitation2: Invitation = invitation
-    .copy(invitationId = "456", clientId = "999999999", suppliedClientId = "888888888")
+  val invitation2: Invitation = invitation.copy(
+    invitationId = "456",
+    clientId = "999999999",
+    suppliedClientId = "888888888"
+  )
 
   val json: JsObject = Json.obj(
     "_id" -> "XARN1234567",

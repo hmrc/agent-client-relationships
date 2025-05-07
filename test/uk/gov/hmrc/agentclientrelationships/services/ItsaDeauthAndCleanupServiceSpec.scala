@@ -123,16 +123,24 @@ with MockAuditService {
         ) shouldBe true
 
         verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
-        verify(mockCheckRelationshipsService, times(1))
-          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
-        verify(mockDeleteRelationshipsService, times(0))
-          .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
-            any[RequestHeader],
-            any[CurrentUser],
-            any[AuditData]
-          )
-        verify(mockInvitationsRepository, times(1))
-          .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+        verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
+          any[RequestHeader]()
+        )
+        verify(mockDeleteRelationshipsService, times(0)).deleteRelationship(
+          any[Arn],
+          any[EnrolmentKey],
+          any[Option[AffinityGroup]]
+        )(
+          any[RequestHeader],
+          any[CurrentUser],
+          any[AuditData]
+        )
+        verify(mockInvitationsRepository, times(1)).findAllBy(
+          any[Option[String]],
+          any[Seq[String]],
+          any[Seq[String]],
+          any[Option[InvitationStatus]]
+        )
         verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
     }
@@ -153,16 +161,24 @@ with MockAuditService {
         ) shouldBe true
 
         verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
-        verify(mockCheckRelationshipsService, times(1))
-          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
-        verify(mockDeleteRelationshipsService, times(1))
-          .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
-            any[RequestHeader],
-            any[CurrentUser],
-            any[AuditData]
-          )
-        verify(mockInvitationsRepository, times(1))
-          .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+        verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
+          any[RequestHeader]()
+        )
+        verify(mockDeleteRelationshipsService, times(1)).deleteRelationship(
+          any[Arn],
+          any[EnrolmentKey],
+          any[Option[AffinityGroup]]
+        )(
+          any[RequestHeader],
+          any[CurrentUser],
+          any[AuditData]
+        )
+        verify(mockInvitationsRepository, times(1)).findAllBy(
+          any[Option[String]],
+          any[Seq[String]],
+          any[Seq[String]],
+          any[Option[InvitationStatus]]
+        )
         verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
     }
@@ -173,16 +189,24 @@ with MockAuditService {
         await(TestService.deleteSameAgentRelationship(MtdItSupp.id, testArn.value, None, testNino.nino)) shouldBe false
 
         verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
-        verify(mockCheckRelationshipsService, times(0))
-          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
-        verify(mockDeleteRelationshipsService, times(0))
-          .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
-            any[RequestHeader],
-            any[CurrentUser],
-            any[AuditData]
-          )
-        verify(mockInvitationsRepository, times(0))
-          .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+        verify(mockCheckRelationshipsService, times(0)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
+          any[RequestHeader]()
+        )
+        verify(mockDeleteRelationshipsService, times(0)).deleteRelationship(
+          any[Arn],
+          any[EnrolmentKey],
+          any[Option[AffinityGroup]]
+        )(
+          any[RequestHeader],
+          any[CurrentUser],
+          any[AuditData]
+        )
+        verify(mockInvitationsRepository, times(0)).findAllBy(
+          any[Option[String]],
+          any[Seq[String]],
+          any[Seq[String]],
+          any[Option[InvitationStatus]]
+        )
         verify(mockInvitationsRepository, times(0)).deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
     }

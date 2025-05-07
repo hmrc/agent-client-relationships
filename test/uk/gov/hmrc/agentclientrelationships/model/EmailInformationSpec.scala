@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model
 import play.api.libs.json.Json.toJson
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class EmailInformationSpec extends UnitSpec {
+class EmailInformationSpec
+extends UnitSpec {
 
   val emails = Seq("someone@something.go.global")
   val templateId = "client_accepted_email"

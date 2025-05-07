@@ -238,5 +238,7 @@ extends Logging {
 
 }
 
-sealed trait AuthorisationResponseError extends Exception
-case object CreateRelationshipLocked extends AuthorisationResponseError
+sealed trait AuthorisationResponseError
+extends Exception
+case object CreateRelationshipLocked
+extends AuthorisationResponseError

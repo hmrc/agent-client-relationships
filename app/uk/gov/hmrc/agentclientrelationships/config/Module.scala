@@ -22,7 +22,8 @@ import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
 
 import java.time.{Clock, ZoneId}
 
-class Module(environment: Environment, configuration: Configuration) extends AbstractModule {
+class Module(environment: Environment, configuration: Configuration)
+extends AbstractModule {
 
   override def configure(): Unit = {
     bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))

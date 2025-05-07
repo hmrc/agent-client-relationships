@@ -40,8 +40,10 @@ extends Logging {
 
   def validateClientId(service: Service, clientIdStr: String): Either[InvitationFailureResponse, ClientId] =
     for {
-      clientId <- Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id))
-                    .fold(_ => Left(InvalidClientId), Right(_))
+      clientId <- Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)).fold(
+                    _ => Left(InvalidClientId),
+                    Right(_)
+                  )
     } yield clientId
 
   def deauthoriseInvitation(

@@ -20,6 +20,8 @@ import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
 
 object CryptoUtil {
 
-  def encryptedString(string: String)(implicit crypto: Encrypter with Decrypter): String =
-    crypto.encrypt(PlainText(string)).value
+  def encryptedString(string: String)(implicit
+    crypto: Encrypter
+      with Decrypter
+  ): String = crypto.encrypt(PlainText(string)).value
 }

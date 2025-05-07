@@ -37,7 +37,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter with Decrypter
+  @Named("aes") crypto: Encrypter
+    with Decrypter
 )
 extends PlayMongoRepository[PartialAuthRelationship](
   mongoComponent = mongoComponent,

@@ -39,7 +39,8 @@ trait MongoLockService {
 }
 
 @Singleton
-class MongoLockServiceImpl @Inject() (lockRepository: MongoLockRepository) extends MongoLockService {
+class MongoLockServiceImpl @Inject() (lockRepository: MongoLockRepository)
+extends MongoLockService {
 
   def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
     body: => Future[T]

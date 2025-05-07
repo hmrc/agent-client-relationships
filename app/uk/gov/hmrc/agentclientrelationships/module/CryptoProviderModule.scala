@@ -23,22 +23,29 @@ import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainBytes, PlainConte
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-class CryptoProviderModule extends Module {
+class CryptoProviderModule
+extends Module {
 
-  def aesCryptoInstance(configuration: Configuration): Encrypter with Decrypter =
+  def aesCryptoInstance(configuration: Configuration): Encrypter
+    with Decrypter =
     if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
       SymmetricCryptoFactory.aesCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
     else
       NoCrypto
 
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
-    bind[Encrypter with Decrypter].qualifiedWith("aes").toInstance(aesCryptoInstance(configuration))
+    bind[
+      Encrypter
+        with Decrypter
+    ].qualifiedWith("aes").toInstance(aesCryptoInstance(configuration))
   )
 }
 
 /** Encrypter/decrypter that does nothing (i.e. leaves content in plaintext). Only to be used for debugging.
   */
-trait NoCrypto extends Encrypter with Decrypter {
+trait NoCrypto
+extends Encrypter
+with Decrypter {
   def encrypt(plain: PlainContent): Crypted =
     plain match {
       case PlainText(text)   => Crypted(text)
@@ -48,4 +55,5 @@ trait NoCrypto extends Encrypter with Decrypter {
   def decryptAsBytes(nullEncrypted: Crypted): PlainBytes = PlainBytes(Base64.getDecoder.decode(nullEncrypted.value))
 }
 
-object NoCrypto extends NoCrypto
+object NoCrypto
+extends NoCrypto

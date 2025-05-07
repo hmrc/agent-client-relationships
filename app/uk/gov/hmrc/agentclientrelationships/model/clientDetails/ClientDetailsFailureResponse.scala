@@ -18,5 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
 sealed trait ClientDetailsFailureResponse
 
-case object ClientDetailsNotFound extends ClientDetailsFailureResponse
-case class ErrorRetrievingClientDetails(status: Int, message: String) extends ClientDetailsFailureResponse
+case object ClientDetailsNotFound
+extends ClientDetailsFailureResponse
+case class ErrorRetrievingClientDetails(status: Int, message: String)
+extends ClientDetailsFailureResponse

@@ -57,7 +57,10 @@ case class Invitation(
 object Invitation {
   implicit val format: Format[Invitation] = Json.format[Invitation]
 
-  def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[Invitation] = {
+  def mongoFormat(implicit
+    crypto: Encrypter
+      with Decrypter
+  ): Format[Invitation] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     implicit val mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
     ((__ \ "invitationId").format[String] and

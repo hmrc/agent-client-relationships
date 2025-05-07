@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships
 
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class UriPathEncodingSpec extends UnitSpec {
+class UriPathEncodingSpec
+extends UnitSpec {
   "encodePathSegments" should {
     "separate segments with forward slashes" in {
       UriPathEncoding.encodePathSegments("one", "two", "three") shouldBe "/one/two/three"

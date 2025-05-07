@@ -24,7 +24,8 @@ sealed trait RelationshipReference {
 }
 
 object RelationshipReference {
-  case class SaRef(value: SaAgentReference) extends RelationshipReference
+  case class SaRef(value: SaAgentReference)
+  extends RelationshipReference
 
   object SaRef {
     implicit val saReads: Reads[SaRef] = (__ \ "saAgentReference").read[SaAgentReference].map(SaRef.apply)
@@ -35,7 +36,8 @@ object RelationshipReference {
       }
   }
 
-  case class VatRef(value: AgentCode) extends RelationshipReference
+  case class VatRef(value: AgentCode)
+  extends RelationshipReference
 
   object VatRef {
     implicit val vatReads: Reads[VatRef] = (__ \ "oldAgentCode").read[AgentCode].map(VatRef.apply)

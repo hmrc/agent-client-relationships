@@ -27,8 +27,9 @@ object TaxIdentifierSupport {
     taxIdentifier match {
       case _: Arn => "ARN"
       case taxId =>
-        Try(ClientIdentifier(taxId).enrolmentId)
-          .getOrElse(throw new IllegalArgumentException("unsupported tax identifier: " + taxId))
+        Try(ClientIdentifier(taxId).enrolmentId).getOrElse(
+          throw new IllegalArgumentException("unsupported tax identifier: " + taxId)
+        )
     }
 
   def from(value: String, `type`: String): TaxIdentifier =

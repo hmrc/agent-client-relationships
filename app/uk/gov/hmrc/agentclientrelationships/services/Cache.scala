@@ -32,7 +32,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
-trait KenshooCacheMetrics extends Logging {
+trait KenshooCacheMetrics
+extends Logging {
 
   val kenshooRegistry: MetricRegistry
 
@@ -46,7 +47,8 @@ trait Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T]
 }
 
-class DoNotCache[T] extends Cache[T] {
+class DoNotCache[T]
+extends Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = body
 }
 

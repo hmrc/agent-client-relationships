@@ -23,10 +23,13 @@ import uk.gov.hmrc.crypto.{Decrypter, Encrypter, SymmetricCryptoFactory}
 
 import java.time.Instant
 
-class PartialAuthRelationshipSpec extends UnitSpec {
+class PartialAuthRelationshipSpec
+extends UnitSpec {
 
-  implicit val crypto: Encrypter with Decrypter = SymmetricCryptoFactory
-    .aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  implicit val crypto: Encrypter
+    with Decrypter = SymmetricCryptoFactory.aesCrypto(
+    "edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g="
+  )
 
   val activeTestModel: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),

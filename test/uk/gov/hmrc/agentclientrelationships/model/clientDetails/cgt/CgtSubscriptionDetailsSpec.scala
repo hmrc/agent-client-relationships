@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class CgtSubscriptionDetailsSpec extends UnitSpec {
+class CgtSubscriptionDetailsSpec
+extends UnitSpec {
 
   "CgtSubscriptionDetails" should {
 
@@ -28,8 +29,11 @@ class CgtSubscriptionDetailsSpec extends UnitSpec {
       "the data indicates the client is an individual" in {
         val json = Json.obj(
           "subscriptionDetails" -> Json.obj(
-            "typeOfPersonDetails" -> Json
-              .obj("typeOfPerson" -> "Individual", "firstName" -> "Erling", "lastName" -> "Haal"),
+            "typeOfPersonDetails" -> Json.obj(
+              "typeOfPerson" -> "Individual",
+              "firstName"    -> "Erling",
+              "lastName"     -> "Haal"
+            ),
             "addressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
           )
         )

@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ValidateInvitationRequestSpec extends UnitSpec {
+class ValidateInvitationRequestSpec
+extends UnitSpec {
 
   "ValidateInvitationRequest" should {
 

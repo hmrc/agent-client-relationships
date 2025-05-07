@@ -25,7 +25,8 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordRepository {
+class FakeRelationshipCopyRecordRepository
+extends RelationshipCopyRecordRepository {
   private val data: mutable.Map[(Arn, EnrolmentKey), RelationshipCopyRecord] = mutable.Map()
   private val UPDATED_RECORD_COUNT = 1
 

@@ -20,7 +20,8 @@ import play.api.libs.json.{JsString, Json}
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus.unapply
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class InvitationStatusSpec extends UnitSpec {
+class InvitationStatusSpec
+extends UnitSpec {
 
   "InvitationStatus" should {
 
@@ -34,9 +35,8 @@ class InvitationStatusSpec extends UnitSpec {
       InvitationStatus("Partialauth") shouldBe PartialAuth
     }
 
-    "fail to instantiate when the provided value is not recognised" in {
+    "fail to instantiate when the provided value is not recognised" in
       intercept[IllegalArgumentException](InvitationStatus("Destroyed"))
-    }
 
     "unapply to a String" in {
       unapply(Pending) shouldBe "Pending"
@@ -58,9 +58,8 @@ class InvitationStatusSpec extends UnitSpec {
       JsString("Partialauth").as[InvitationStatus] shouldBe PartialAuth
     }
 
-    "fail to read from JSON when the status is not recognised" in {
+    "fail to read from JSON when the status is not recognised" in
       intercept[IllegalArgumentException](JsString("Destroyed").as[InvitationStatus])
-    }
 
     "write to JSON" in {
       Json.toJson(InvitationStatus("Pending")) shouldBe JsString("Pending")

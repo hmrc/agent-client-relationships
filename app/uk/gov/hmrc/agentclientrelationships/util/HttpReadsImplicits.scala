@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.util
 
 import uk.gov.hmrc.http.{HttpReads, HttpReadsInstances, UpstreamErrorResponse}
 
-object HttpReadsImplicits extends HttpReadsInstances { self: HttpReadsInstances =>
+object HttpReadsImplicits
+extends HttpReadsInstances { self: HttpReadsInstances =>
 
   private val r: HttpReads[Either[UpstreamErrorResponse, Unit]] = readEitherOf[Unit](self.readUnit)
 

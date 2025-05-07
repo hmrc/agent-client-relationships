@@ -21,7 +21,8 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.LocalDate
 
-class ItsaCitizenDetailsSpec extends UnitSpec {
+class ItsaCitizenDetailsSpec
+extends UnitSpec {
 
   "ItsaCitizenDetails" should {
 

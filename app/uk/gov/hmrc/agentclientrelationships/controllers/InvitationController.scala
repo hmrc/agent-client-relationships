@@ -71,14 +71,15 @@ with AuthActions {
                     case InvalidClientId =>
                       val msg =
                         s"""Invalid clientId "${createInvitationRequest
-                          .clientId}", for service type "${createInvitationRequest.service}""""
+                            .clientId}", for service type "${createInvitationRequest.service}""""
                       Logger(getClass).warn(msg)
                       InvalidClientId.getResult(msg)
 
                     case UnsupportedClientIdType =>
                       val msg =
                         s"""Unsupported clientIdType "${createInvitationRequest
-                          .suppliedClientIdType}", for service type "${createInvitationRequest.service}"""".stripMargin
+                            .suppliedClientIdType}", for service type "${createInvitationRequest.service}""""
+                          .stripMargin
                       Logger(getClass).warn(msg)
                       UnsupportedClientIdType.getResult(msg)
 

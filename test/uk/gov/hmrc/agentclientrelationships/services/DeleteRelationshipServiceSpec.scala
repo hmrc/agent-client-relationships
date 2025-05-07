@@ -42,7 +42,8 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.{ExecutionContext, Future}
 
-class DeleteRelationshipServiceSpec extends UnitSpec {
+class DeleteRelationshipServiceSpec
+extends UnitSpec {
 
   implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -576,8 +577,9 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     when(servicesConfig.getInt(eqs("recovery-timeout"))).thenReturn(100)
     when(servicesConfig.getString(any[String])).thenReturn("")
-    when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]]))
-      .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
+    when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]])).thenReturn(
+      Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$")
+    )
     val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
     val underTest =

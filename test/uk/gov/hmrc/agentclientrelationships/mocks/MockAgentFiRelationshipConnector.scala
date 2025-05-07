@@ -34,8 +34,9 @@ trait MockAgentFiRelationshipConnector {
   val mockAgentFiRelationshipConnector: AgentFiRelationshipConnector = resettingMock[AgentFiRelationshipConnector]
 
   def mockCreateFiRelationship(arn: Arn, service: String, clientId: String): OngoingStubbing[Future[Unit]] = when(
-    mockAgentFiRelationshipConnector
-      .createRelationship(eqs(arn), eqs(service), eqs(clientId), any[LocalDateTime])(any[RequestHeader])
+    mockAgentFiRelationshipConnector.createRelationship(eqs(arn), eqs(service), eqs(clientId), any[LocalDateTime])(
+      any[RequestHeader]
+    )
   ).thenReturn(Future.unit)
 
   def mockFindRelationshipForClient(

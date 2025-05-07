@@ -39,7 +39,9 @@ case class CurrentUser(credentials: Option[Credentials], affinityGroup: Option[A
   def isStride: Boolean = credentials.map(_.providerType).contains("PrivilegedApplication")
 }
 
-trait AuthActions extends AuthorisedFunctions with Logging {
+trait AuthActions
+extends AuthorisedFunctions
+with Logging {
   me: Results =>
 
   implicit val executionContext: ExecutionContext
@@ -120,8 +122,9 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   private def isAgent(affinity: Option[AffinityGroup]): Boolean = affinity.contains(AffinityGroup.Agent)
 
-  def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean = strideRoles
-    .exists(s => enrolments.enrolments.exists(_.key == s))
+  def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean = strideRoles.exists(s =>
+    enrolments.enrolments.exists(_.key == s)
+  )
 
   private def typedIdentifier(enrolment: Enrolment): Option[TaxIdentifier] = {
     val service = Service.forId(enrolment.key)
@@ -132,23 +135,24 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   def authorisedAsClient[A](
     serviceKey: String
   )(body: TaxIdentifier => Future[Result])(implicit request: RequestHeader): Future[Result] =
-    authorised(Enrolment(serviceKey) and AuthProviders(GovernmentGateway))
-      .retrieve(authorisedEnrolments and affinityGroup) { case enrolments ~ affinityG =>
-        affinityG match {
-          case Some(Individual) | Some(Organisation) =>
-            val id =
-              if (supportedServices.exists(_.id == serviceKey)) {
-                enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
-              } else
-                None
+    authorised(Enrolment(serviceKey) and AuthProviders(GovernmentGateway)).retrieve(
+      authorisedEnrolments and affinityGroup
+    ) { case enrolments ~ affinityG =>
+      affinityG match {
+        case Some(Individual) | Some(Organisation) =>
+          val id =
+            if (supportedServices.exists(_.id == serviceKey)) {
+              enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
+            } else
+              None
 
-            id match {
-              case Some(i) => body(i)
-              case _       => Future.successful(NoPermissionToPerformOperation)
-            }
-          case _ => Future.successful(NoPermissionToPerformOperation)
-        }
+          id match {
+            case Some(i) => body(i)
+            case _       => Future.successful(NoPermissionToPerformOperation)
+          }
+        case _ => Future.successful(NoPermissionToPerformOperation)
       }
+    }
 
   // Authorisation request response is a special case where we need to check for multiple services
   def withAuthorisedClientForServiceKeys[A, T](
@@ -160,7 +164,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           for {
             serviceKey <- serviceKeys
             enrolment  <- enrolments.getEnrolment(serviceKey)
-          } yield (LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value))))
+          } yield LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value)))
 
         requiredEnrolments match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)

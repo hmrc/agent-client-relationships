@@ -21,7 +21,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier, Enrolments}
 
-class EnrolmentsWithNinoSpec extends UnitSpec {
+class EnrolmentsWithNinoSpec
+extends UnitSpec {
 
   val nino = "AA111111A"
   val mtdItId = "XAIT1234567"

@@ -91,8 +91,10 @@ with MockValidationService {
     Some("personal")
   )
 
-  val itsaInvitationWithAgentName: InvitationWithAgentName = InvitationWithAgentName
-    .fromInvitationAndAgentRecord(itsaInvitation, testAgentDetailsDesResponse)
+  val itsaInvitationWithAgentName: InvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+    itsaInvitation,
+    testAgentDetailsDesResponse
+  )
 
   val testPartialauthRelationship: PartialAuthRelationship = PartialAuthRelationship(
     Instant.now,
@@ -128,8 +130,10 @@ with MockValidationService {
     "pending invitations exist for HMRC-MTD-IT-SUPP" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val itsaSuppPendingInvitation = itsaInvitation.copy(service = MtdItSupp.id)
-        val itsaSuppPendingInvitationWithAgentName = InvitationWithAgentName
-          .fromInvitationAndAgentRecord(itsaSuppPendingInvitation, testAgentDetailsDesResponse)
+        val itsaSuppPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          itsaSuppPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testNino.value, Seq(HMRCMTDIT, HMRCMTDITSUPP))(Seq(itsaSuppPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockFindMainAgent(testNino.value)(
@@ -151,8 +155,10 @@ with MockValidationService {
     "pending invitations exist for PERSONAL-INCOME-RECORD" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val irvPendingInvitation = itsaInvitation.copy(service = PersonalIncomeRecord.id)
-        val irvPendingInvitationWithAgentName = InvitationWithAgentName
-          .fromInvitationAndAgentRecord(irvPendingInvitation, testAgentDetailsDesResponse)
+        val irvPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          irvPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testNino.value, Seq(PersonalIncomeRecord.id))(Seq(irvPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockFindRelationshipForClient(testNino.value)(
@@ -185,8 +191,10 @@ with MockValidationService {
     "pending invitations exist for HMRC-MTD-VAT" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val vatPendingInvitation = itsaInvitation.copy(service = HMRCMTDVAT)
-        val vatPendingInvitationWithAgentName = InvitationWithAgentName
-          .fromInvitationAndAgentRecord(vatPendingInvitation, testAgentDetailsDesResponse)
+        val vatPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          vatPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testVrn.value, Seq(HMRCMTDVAT))(Seq(vatPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testVrn, Vat)(
@@ -208,8 +216,10 @@ with MockValidationService {
     "pending invitations exist for HMRC-CGT-PD" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val cgtPendingInvitation = itsaInvitation.copy(service = HMRCCGTPD)
-        val cgtPendingInvitationWithAgentName = InvitationWithAgentName
-          .fromInvitationAndAgentRecord(cgtPendingInvitation, testAgentDetailsDesResponse)
+        val cgtPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          cgtPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testCgtPdRef.value, Seq(HMRCCGTPD))(Seq(cgtPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testCgtPdRef, CapitalGains)(
@@ -232,8 +242,10 @@ with MockValidationService {
     "pending invitations exist for HMRC-CBC-ORG" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val cbcPendingInvitation = itsaInvitation.copy(service = HMRCCBCORG)
-        val cbcPendingInvitationWithAgentName = InvitationWithAgentName
-          .fromInvitationAndAgentRecord(cbcPendingInvitation, testAgentDetailsDesResponse)
+        val cbcPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          cbcPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testCbcId.value, Seq(HMRCCBCORG))(Seq(cbcPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testCbcId, Cbc)(
@@ -256,8 +268,10 @@ with MockValidationService {
     "pending invitations exist for HMRC-PILLAR2-ORG" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val pillar2PendingInvitation = itsaInvitation.copy(service = HMRCPILLAR2ORG)
-        val pillar2PendingInvitationWithAgentName = InvitationWithAgentName
-          .fromInvitationAndAgentRecord(pillar2PendingInvitation, testAgentDetailsDesResponse)
+        val pillar2PendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          pillar2PendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testPillar2Ref.value, Seq(HMRCPILLAR2ORG))(Seq(pillar2PendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testPillar2Ref, Pillar2)(
@@ -280,8 +294,10 @@ with MockValidationService {
     "pending invitations exist for HMRC-PPT-ORG" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val pptPendingInvitation = itsaInvitation.copy(service = HMRCPPTORG)
-        val pptPendingInvitationWithAgentName = InvitationWithAgentName
-          .fromInvitationAndAgentRecord(pptPendingInvitation, testAgentDetailsDesResponse)
+        val pptPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          pptPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testPptRef.value, Seq(HMRCPPTORG))(Seq(pptPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testPptRef, Ppt)(

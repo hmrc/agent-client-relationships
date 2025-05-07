@@ -21,7 +21,8 @@ import play.api.libs.typedmap.TypedMap
 import play.api.mvc.request.{RemoteConnection, RequestTarget}
 import play.api.mvc.{Headers, Request}
 
-object NoRequest extends Request[Any] {
+object NoRequest
+extends Request[Any] {
   override def body: Any = ""
   override def method: String = ""
   override def version: String = ""

@@ -32,7 +32,9 @@ import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
+class EmailServiceSpec
+extends UnitSpec
+with ResettingMockitoSugar {
 
   val mockEmailConnector: EmailConnector = resettingMock[EmailConnector]
   lazy val messagesApi: MessagesApi = stubControllerComponents().messagesApi
@@ -108,8 +110,7 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
       "HMRC-PILLAR2-ORG"
     )
 
-    "send the correct model to the connector" when {
-
+    "send the correct model to the connector" when
       serviceKeys.foreach { serviceKey =>
         s"the service is $serviceKey" in {
           val expectedEmailInfoModel = EmailInformation(
@@ -127,6 +128,5 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
           verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
         }
       }
-    }
   }
 }

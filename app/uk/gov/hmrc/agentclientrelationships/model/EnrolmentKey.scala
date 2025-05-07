@@ -57,8 +57,9 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
 
 object EnrolmentKey {
 
-  def apply(s: String): EnrolmentKey = parse(s)
-    .getOrElse(throw new IllegalArgumentException("Invalid enrolment key: " + s))
+  def apply(s: String): EnrolmentKey = parse(s).getOrElse(
+    throw new IllegalArgumentException("Invalid enrolment key: " + s)
+  )
 
   def apply(service: Service, taxIdentifier: TaxIdentifier): EnrolmentKey = EnrolmentKey(service.id, taxIdentifier)
 

@@ -22,7 +22,8 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.Instant
 
-class ValidateInvitationResponseSpec extends UnitSpec {
+class ValidateInvitationResponseSpec
+extends UnitSpec {
 
   "ValidateInvitationResponse" should {
 

@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.binders
 
 import play.api.mvc.PathBindable
 
-class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: Manifest[T]) extends PathBindable[T] {
+class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: Manifest[T])
+extends PathBindable[T] {
   override def bind(key: String, value: String): Either[String, T] =
     try Right(bind(value))
     catch {

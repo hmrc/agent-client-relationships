@@ -42,12 +42,11 @@ object InactiveRelationship {
         val dateTo = (json \ "dateTo").asOpt[LocalDate]
         val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
         val clientId = (json \ "referenceNumber").as[String]
-        val clientType = {
+        val clientType =
           if ((json \ "individual").asOpt[JsValue].isDefined)
             "personal"
           else
             "business"
-        }
         val service =
           clientId match {
             case _ if clientId.matches(CgtRef.cgtRegex)                => Service.CapitalGains.id
@@ -70,12 +69,11 @@ object InactiveRelationship {
         val dateTo = (json \ "dateTo").asOpt[LocalDate]
         val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
         val clientId = (json \ "refNumber").as[String]
-        val clientType = {
+        val clientType =
           if ((json \ "individual").asOpt[JsValue].isDefined)
             "personal"
           else
             "business"
-        }
         val service =
           clientId match {
             case _ if clientId.matches(CgtRef.cgtRegex)                => Service.CapitalGains.id
@@ -104,6 +102,6 @@ object InactiveRelationship {
 case class InactiveRelationshipResponse(relationship: Seq[InactiveRelationship])
 
 object InactiveRelationshipResponse {
-  implicit val inActiveRelationshipResponse: OFormat[InactiveRelationshipResponse] = Json
-    .format[InactiveRelationshipResponse]
+  implicit val inActiveRelationshipResponse
+    : OFormat[InactiveRelationshipResponse] = Json.format[InactiveRelationshipResponse]
 }

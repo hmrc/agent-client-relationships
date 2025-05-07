@@ -144,7 +144,8 @@ extends Logging {
 
   private def getAgencyName(
     agentDetailsDesResponse: AgentDetailsDesResponse
-  ): Future[Either[InvitationLinkFailureResponse, String]] = Future
-    .successful(Right(agentDetailsDesResponse.agencyDetails.agencyName))
+  ): Future[Either[InvitationLinkFailureResponse, String]] = Future.successful(
+    Right(agentDetailsDesResponse.agencyDetails.agencyName)
+  )
 
 }

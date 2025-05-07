@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class SimpleCbcSubscriptionSpec extends UnitSpec {
+class SimpleCbcSubscriptionSpec
+extends UnitSpec {
 
   "SimpleCbcSubscription" should {
 
@@ -62,8 +63,11 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
 
         val json = Json.obj(
           "displaySubscriptionForCBCResponse" -> Json.obj(
-            "responseDetail" -> Json
-              .obj("isGBUser" -> true, "primaryContact" -> Json.arr(), "secondaryContact" -> Json.arr())
+            "responseDetail" -> Json.obj(
+              "isGBUser"         -> true,
+              "primaryContact"   -> Json.arr(),
+              "secondaryContact" -> Json.arr()
+            )
           )
         )
 

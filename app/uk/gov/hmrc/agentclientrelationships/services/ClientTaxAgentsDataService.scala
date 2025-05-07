@@ -198,14 +198,16 @@ class ClientTaxAgentsDataService @Inject() (
       case Nino(_) =>
         for {
           irvActiveRelationship <- EitherT(
-                                     agentFiRelationshipConnector
-                                       .findIrvActiveRelationshipForClient(taxIdentifier.value)
+                                     agentFiRelationshipConnector.findIrvActiveRelationshipForClient(
+                                       taxIdentifier.value
+                                     )
                                    ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
           irvInactiveRelationship <- EitherT(agentFiRelationshipConnector.findIrvInactiveRelationshipForClient)
                                        .leftFlatMap(recoverNotFoundRelationship)
           irvAllRelationship = irvActiveRelationship ++ irvInactiveRelationship
-        } yield irvAllRelationship
-          .map(r => ClientAuthorisationForTaxId(r.arn, service, taxIdentifier.value, r.dateTo, r.dateFrom, r.isActive))
+        } yield irvAllRelationship.map(r =>
+          ClientAuthorisationForTaxId(r.arn, service, taxIdentifier.value, r.dateTo, r.dateFrom, r.isActive)
+        )
 
       case _ =>
         for {
@@ -309,7 +311,7 @@ class ClientTaxAgentsDataService @Inject() (
           agentReference <- EitherT.right[RelationshipFailureResponse](
                               invitationLinkService.getAgentReferenceRecordByArn(Arn(arn), normalizedName)
                             )
-        } yield (AgentInvitations(agentReference.uid, agentDetails.agencyDetails.agencyName, invitations))
+        } yield AgentInvitations(agentReference.uid, agentDetails.agencyDetails.agencyName, invitations)
       }
       .toSeq
       .map(x => filterOutSuspendedAgent(x))

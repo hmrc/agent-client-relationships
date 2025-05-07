@@ -24,9 +24,12 @@ import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
 
 sealed trait RelationshipSource
 object RelationshipSource {
-  case object HipOrIfApi extends RelationshipSource
-  case object AfrRelationshipRepo extends RelationshipSource
-  case object AcrPartialAuthRepo extends RelationshipSource
+  case object HipOrIfApi
+  extends RelationshipSource
+  case object AfrRelationshipRepo
+  extends RelationshipSource
+  case object AcrPartialAuthRepo
+  extends RelationshipSource
 
   implicit val writes: Writes[RelationshipSource] = Writes {
     case HipOrIfApi          => JsString("HipOrIfApi")
@@ -107,6 +110,6 @@ object ClientRelationship {
 case class ClientRelationshipResponse(relationship: Seq[ClientRelationship])
 
 object ClientRelationshipResponse {
-  implicit val clientRelationshipResponseFormat: OFormat[ClientRelationshipResponse] = Json
-    .format[ClientRelationshipResponse]
+  implicit val clientRelationshipResponseFormat
+    : OFormat[ClientRelationshipResponse] = Json.format[ClientRelationshipResponse]
 }

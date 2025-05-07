@@ -34,10 +34,14 @@ import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, Future}
 
-class FriendlyNameServiceSpec extends UnitSpec with MockitoSugar with BeforeAndAfterEach {
+class FriendlyNameServiceSpec
+extends UnitSpec
+with MockitoSugar
+with BeforeAndAfterEach {
   val mockEsp: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
 
-  object testService extends FriendlyNameService(mockEsp)
+  object testService
+  extends FriendlyNameService(mockEsp)
 
   implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -65,56 +69,74 @@ class FriendlyNameServiceSpec extends UnitSpec with MockitoSugar with BeforeAndA
   "updateFriendlyName" should {
     "succeed when there group id is found and ES19 call succeeds" in {
       when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(Future.successful(testGroupId))
-      when(mockEsp.updateEnrolmentFriendlyName(any[String], any[String], any[String])(any[RequestHeader]))
-        .thenReturn(Future.successful(()))
+      when(mockEsp.updateEnrolmentFriendlyName(any[String], any[String], any[String])(any[RequestHeader])).thenReturn(
+        Future.successful(())
+      )
 
       await(testService.updateFriendlyName(testInvitation, testEnrolment)) shouldBe ()
 
-      verify(mockEsp, times(1))
-        .updateEnrolmentFriendlyName(eqs(testGroupId), eqs(testEnrolment.toString), eqs(encodedName))(
-          any[RequestHeader]
-        )
+      verify(mockEsp, times(1)).updateEnrolmentFriendlyName(
+        eqs(testGroupId),
+        eqs(testEnrolment.toString),
+        eqs(encodedName)
+      )(
+        any[RequestHeader]
+      )
     }
     "not fail in case of an ES19 error" in {
       when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(Future.successful(testGroupId))
-      when(mockEsp.updateEnrolmentFriendlyName(any[String], any[String], any[String])(any[RequestHeader]))
-        .thenReturn(Future.failed(UpstreamErrorResponse("error", 503)))
+      when(mockEsp.updateEnrolmentFriendlyName(any[String], any[String], any[String])(any[RequestHeader])).thenReturn(
+        Future.failed(UpstreamErrorResponse("error", 503))
+      )
 
       await(testService.updateFriendlyName(testInvitation, testEnrolment)) shouldBe ()
 
-      verify(mockEsp, times(1))
-        .updateEnrolmentFriendlyName(eqs(testGroupId), eqs(testEnrolment.toString), eqs(encodedName))(
-          any[RequestHeader]
-        )
+      verify(mockEsp, times(1)).updateEnrolmentFriendlyName(
+        eqs(testGroupId),
+        eqs(testEnrolment.toString),
+        eqs(encodedName)
+      )(
+        any[RequestHeader]
+      )
     }
     "not fail if the agent's group id cannot be retrieved" in {
-      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader]))
-        .thenReturn(Future.failed(UpstreamErrorResponse("error", 503)))
+      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(
+        Future.failed(UpstreamErrorResponse("error", 503))
+      )
 
       await(testService.updateFriendlyName(testInvitation, testEnrolment)) shouldBe ()
 
-      verify(mockEsp, times(0))
-        .updateEnrolmentFriendlyName(eqs(testGroupId), eqs(testEnrolment.toString), eqs(encodedName))(
-          any[RequestHeader]
-        )
+      verify(mockEsp, times(0)).updateEnrolmentFriendlyName(
+        eqs(testGroupId),
+        eqs(testEnrolment.toString),
+        eqs(encodedName)
+      )(
+        any[RequestHeader]
+      )
     }
     "ignore PIR clients" in {
       await(
         testService.updateFriendlyName(testInvitation.copy(service = PersonalIncomeRecord.id), testEnrolment)
       ) shouldBe ()
-      verify(mockEsp, times(0))
-        .updateEnrolmentFriendlyName(eqs(testGroupId), eqs(testEnrolment.toString), eqs(encodedName))(
-          any[RequestHeader]
-        )
+      verify(mockEsp, times(0)).updateEnrolmentFriendlyName(
+        eqs(testGroupId),
+        eqs(testEnrolment.toString),
+        eqs(encodedName)
+      )(
+        any[RequestHeader]
+      )
     }
     "ignore Alt ITSA clients" in {
       await(
         testService.updateFriendlyName(testInvitation.copy(clientId = testInvitation.suppliedClientId), testEnrolment)
       ) shouldBe ()
-      verify(mockEsp, times(0))
-        .updateEnrolmentFriendlyName(eqs(testGroupId), eqs(testEnrolment.toString), eqs(encodedName))(
-          any[RequestHeader]
-        )
+      verify(mockEsp, times(0)).updateEnrolmentFriendlyName(
+        eqs(testGroupId),
+        eqs(testEnrolment.toString),
+        eqs(encodedName)
+      )(
+        any[RequestHeader]
+      )
     }
     "ignore Alt ITSA SUPP clients" in {
       await(
@@ -123,10 +145,13 @@ class FriendlyNameServiceSpec extends UnitSpec with MockitoSugar with BeforeAndA
           testEnrolment
         )
       ) shouldBe ()
-      verify(mockEsp, times(0))
-        .updateEnrolmentFriendlyName(eqs(testGroupId), eqs(testEnrolment.toString), eqs(encodedName))(
-          any[RequestHeader]
-        )
+      verify(mockEsp, times(0)).updateEnrolmentFriendlyName(
+        eqs(testGroupId),
+        eqs(testEnrolment.toString),
+        eqs(encodedName)
+      )(
+        any[RequestHeader]
+      )
     }
   }
 }

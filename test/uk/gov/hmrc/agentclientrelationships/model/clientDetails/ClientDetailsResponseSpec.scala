@@ -21,7 +21,8 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Ins
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.Email
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ClientDetailsResponseSpec extends UnitSpec {
+class ClientDetailsResponseSpec
+extends UnitSpec {
 
   "ClientDetailsResponse" should {
 

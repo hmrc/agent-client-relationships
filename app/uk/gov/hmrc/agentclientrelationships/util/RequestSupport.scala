@@ -41,7 +41,8 @@ object RequestSupport {
   /** This is because we want to give responsibility of creation of HeaderCarrier to the platform code. If they refactor
     * how hc is created our code will pick it up automatically.
     */
-  private object HcProvider extends BackendHeaderCarrierProvider {
+  private object HcProvider
+  extends BackendHeaderCarrierProvider {
     def headerCarrier(implicit request: RequestHeader): HeaderCarrier = hc(request)
   }
 

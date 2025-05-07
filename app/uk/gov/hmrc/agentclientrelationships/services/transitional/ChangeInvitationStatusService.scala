@@ -49,8 +49,10 @@ extends Logging {
 
   def validateClientId(service: Service, clientIdStr: String): Either[InvitationFailureResponse, ClientId] =
     for {
-      suppliedClientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id))
-                            .fold(_ => Left(InvalidClientId), Right(_))
+      suppliedClientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id)).fold(
+                            _ => Left(InvalidClientId),
+                            Right(_)
+                          )
     } yield suppliedClientId
 
   private def findPartialAuthInvitation(

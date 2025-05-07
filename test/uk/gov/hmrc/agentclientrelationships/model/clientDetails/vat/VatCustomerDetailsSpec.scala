@@ -21,7 +21,8 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.LocalDate
 
-class VatCustomerDetailsSpec extends UnitSpec {
+class VatCustomerDetailsSpec
+extends UnitSpec {
 
   "VatCustomerDetails" should {
 
@@ -33,8 +34,12 @@ class VatCustomerDetailsSpec extends UnitSpec {
             "customerDetails" -> Json.obj(
               "organisationName" -> "CFG",
               "tradingName"      -> "CFG Solutions",
-              "individual" -> Json
-                .obj("title" -> "0001", "firstName" -> "Ilkay", "middleName" -> "Silky", "lastName" -> "Gundo"),
+              "individual" -> Json.obj(
+                "title"      -> "0001",
+                "firstName"  -> "Ilkay",
+                "middleName" -> "Silky",
+                "lastName"   -> "Gundo"
+              ),
               "effectiveRegistrationDate" -> "2020-01-01",
               "isInsolvent"               -> false
             )

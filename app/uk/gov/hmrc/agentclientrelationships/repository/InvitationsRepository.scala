@@ -58,7 +58,8 @@ object FieldKeys {
 @Singleton
 class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig: AppConfig)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter with Decrypter
+  @Named("aes") crypto: Encrypter
+    with Decrypter
 )
 extends PlayMongoRepository[Invitation](
   mongoComponent = mongoComponent,
@@ -259,11 +260,11 @@ with Logging {
     .findOneAndUpdate(
       and(equal(invitationIdKey, invitationId), equal("status", Codecs.toBson[InvitationStatus](fromStatus))),
       combine(
-        (Seq(
+        Seq(
           Some(set("status", Codecs.toBson(toStatus))),
           Some(set("lastUpdated", lastUpdated.getOrElse(Instant.now()))),
           relationshipEndedBy.map(set("relationshipEndedBy", _))
-        ).flatten): _*
+        ).flatten: _*
       ),
       FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
     )

@@ -36,7 +36,8 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-object AgentClientRelationshipEvent extends Enumeration {
+object AgentClientRelationshipEvent
+extends Enumeration {
   val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES,
     TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned = Value
   type AgentClientRelationshipEvent = Value
@@ -56,7 +57,8 @@ class AuditData {
 }
 
 @Singleton
-class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Logging {
+class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext)
+extends Logging {
 
   private def collectDetails(data: Map[String, Any], fields: Seq[String]): Seq[(String, Any)] =
     for {

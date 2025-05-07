@@ -23,7 +23,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeLockService extends MongoLockService {
+class FakeLockService
+extends MongoLockService {
   val locked: mutable.Set[(Arn, EnrolmentKey)] = mutable.Set.empty[(Arn, EnrolmentKey)]
 
   override def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(

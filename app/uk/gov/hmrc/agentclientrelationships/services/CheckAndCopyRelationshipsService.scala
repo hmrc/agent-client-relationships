@@ -43,43 +43,53 @@ sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
 }
 
-case object CheckAndCopyNotImplemented extends CheckAndCopyResult {
+case object CheckAndCopyNotImplemented
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object AlreadyCopiedDidNotCheck extends CheckAndCopyResult {
+case object AlreadyCopiedDidNotCheck
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object FoundAndCopied extends CheckAndCopyResult {
+case object FoundAndCopied
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object FoundButLockedCouldNotCopy extends CheckAndCopyResult {
+case object FoundButLockedCouldNotCopy
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object FoundAndFailedToCopy extends CheckAndCopyResult {
+case object FoundAndFailedToCopy
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object NotFound extends CheckAndCopyResult {
+case object NotFound
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
+case object CopyRelationshipNotEnabled
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case class AltItsaCreateRelationshipSuccess(service: String) extends CheckAndCopyResult {
+case class AltItsaCreateRelationshipSuccess(service: String)
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object AltItsaNotFoundOrFailed extends CheckAndCopyResult {
+case object AltItsaNotFoundOrFailed
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object VrnNotFoundInEtmp extends CheckAndCopyResult {
+case object VrnNotFoundInEtmp
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
@@ -146,8 +156,9 @@ with Logging {
         case maybeRelationshipCopyRecord @ _ =>
           for {
             references <-
-              nino
-                .fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(lookupCesaForOldRelationship(arn, _))
+              nino.fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(
+                lookupCesaForOldRelationship(arn, _)
+              )
             result <-
               if (references.nonEmpty)
                 findOrCreateRelationshipCopyRecordAndCopy(
@@ -160,8 +171,12 @@ with Logging {
                       for {
                         _ <-
                           nino.fold[Future[Boolean]](Future.failed(new RuntimeException("nino not found")))(ni =>
-                            itsaDeauthAndCleanupService
-                              .deleteSameAgentRelationship(HMRCMTDIT, arn.value, Some(mtdItId.value), ni.value)
+                            itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+                              HMRCMTDIT,
+                              arn.value,
+                              Some(mtdItId.value),
+                              ni.value
+                            )
                           )
                         _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
                       } yield FoundAndCopied
@@ -431,9 +446,9 @@ with Logging {
         logger.info(
           s"The CESA SA references have been found, " +
             s"${if (intersected.isEmpty)
-              "but no previous relationship exists"
-            else
-              "and will attempt to copy existing relationship"}"
+                "but no previous relationship exists"
+              else
+                "and will attempt to copy existing relationship"}"
         )
         intersected
       }

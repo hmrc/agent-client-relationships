@@ -68,8 +68,10 @@ trait AuthRedirects {
     Map("continue_url" -> Seq(continueUrl), "origin" -> Seq(origin))
   )
 
-  def toVerifyLogin(continueUrl: String): Result = Redirect(verifyLoginUrl)
-    .withSession(SessionKeys.redirect -> continueUrl, SessionKeys.loginOrigin -> origin)
+  def toVerifyLogin(continueUrl: String): Result = Redirect(verifyLoginUrl).withSession(
+    SessionKeys.redirect    -> continueUrl,
+    SessionKeys.loginOrigin -> origin
+  )
 
   def toStrideLogin(successUrl: String, failureUrl: Option[String] = None): Result = Redirect(
     strideLoginUrl,

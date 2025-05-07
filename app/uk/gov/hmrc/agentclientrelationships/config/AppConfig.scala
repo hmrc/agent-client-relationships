@@ -26,15 +26,18 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 
-case class ConfigNotFoundException(message: String) extends RuntimeException(message)
+case class ConfigNotFoundException(message: String)
+extends RuntimeException(message)
 
 @Singleton
 class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
 
   val appName = servicesConfig.getString("appName")
 
-  private def getConfigString(key: String) = servicesConfig
-    .getConfString(key, throw ConfigNotFoundException(s"Could not find config key: '$key'"))
+  private def getConfigString(key: String) = servicesConfig.getConfString(
+    key,
+    throw ConfigNotFoundException(s"Could not find config key: '$key'")
+  )
 
   def expectedAuth: BasicAuthentication = {
     val username = config
@@ -115,8 +118,9 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val terminationStrideRole = servicesConfig.getString("termination.stride.role")
 
-  val inactiveRelationshipsClientRecordStartDate = servicesConfig
-    .getString("inactive-relationships-client.record-start-date")
+  val inactiveRelationshipsClientRecordStartDate = servicesConfig.getString(
+    "inactive-relationships-client.record-start-date"
+  )
 
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
   val supportedServicesWithoutPir: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)

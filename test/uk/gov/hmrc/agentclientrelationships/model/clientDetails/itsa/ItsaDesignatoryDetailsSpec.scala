@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ItsaDesignatoryDetailsSpec extends UnitSpec {
+class ItsaDesignatoryDetailsSpec
+extends UnitSpec {
 
   "ItsaDesignatoryDetails" should {
 

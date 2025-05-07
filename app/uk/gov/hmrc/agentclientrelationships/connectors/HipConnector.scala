@@ -268,7 +268,7 @@ with Logging {
 
     getWithHipHeaders(s"ConsumedAPI-IF-GetBusinessDetails-GET", url, headers.subscriptionBusinessDetailsHeaders).map {
       case Right(response) =>
-        Try((response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData"))
+        Try(response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData")
           .map(_(0))
           .map(_.as[ItsaBusinessDetails])
           .toOption

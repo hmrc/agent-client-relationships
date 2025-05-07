@@ -26,7 +26,9 @@ import uk.gov.hmrc.http.client.HttpClientV2
 
 import scala.concurrent.ExecutionContext
 
-class DesConnectorSpec extends UnitSpec with MockitoSugar {
+class DesConnectorSpec
+extends UnitSpec
+with MockitoSugar {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   val appConfig: AppConfig = mock[AppConfig]
   val httpClient: HttpClientV2 = mock[HttpClientV2]

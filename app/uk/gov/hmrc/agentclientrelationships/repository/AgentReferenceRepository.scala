@@ -34,7 +34,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter with Decrypter
+  @Named("aes") crypto: Encrypter
+    with Decrypter
 )
 extends PlayMongoRepository[AgentReferenceRecord](
   mongoComponent = mongo,

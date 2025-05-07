@@ -137,7 +137,7 @@ with Logging {
         val taxIdentifier = enrolmentKey.oneTaxIdentifier()
         logger.warn(
           s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier
-            .value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
+              .value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
         )
         CheckRelationshipNotFound(errorCode)
     }
@@ -213,6 +213,9 @@ with Logging {
 }
 
 sealed trait CheckRelationshipResult
-case object CheckRelationshipFound extends CheckRelationshipResult
-case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND") extends CheckRelationshipResult
-case object CheckRelationshipInvalidRequest extends CheckRelationshipResult
+case object CheckRelationshipFound
+extends CheckRelationshipResult
+case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND")
+extends CheckRelationshipResult
+case object CheckRelationshipInvalidRequest
+extends CheckRelationshipResult

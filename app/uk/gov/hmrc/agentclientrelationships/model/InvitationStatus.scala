@@ -21,21 +21,29 @@ import play.api.libs.json._
 
 sealed trait InvitationStatus
 
-case object Pending extends InvitationStatus
+case object Pending
+extends InvitationStatus
 
-case object Expired extends InvitationStatus
+case object Expired
+extends InvitationStatus
 
-case object Rejected extends InvitationStatus
+case object Rejected
+extends InvitationStatus
 
-case object Accepted extends InvitationStatus
+case object Accepted
+extends InvitationStatus
 
-case object Cancelled extends InvitationStatus
+case object Cancelled
+extends InvitationStatus
 
-case object DeAuthorised extends InvitationStatus
+case object DeAuthorised
+extends InvitationStatus
 
-case object PartialAuth extends InvitationStatus
+case object PartialAuth
+extends InvitationStatus
 
-object InvitationStatus extends Logging {
+object InvitationStatus
+extends Logging {
 
   def apply(status: String): InvitationStatus =
     status.toLowerCase match {

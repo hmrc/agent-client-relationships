@@ -98,9 +98,8 @@ with Logging {
     request: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
-    val updateEtmpSyncStatus = relationshipCopyRepository
-      .updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus)
-      .map(convertDbUpdateStatus)
+    val updateEtmpSyncStatus =
+      relationshipCopyRepository.updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus).map(convertDbUpdateStatus)
 
     val recoverFromException =
       (origExc: Throwable, replacementExc: Throwable) => {
@@ -260,7 +259,8 @@ with Logging {
       (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
         case (true, true) =>
           logger.warn(
-            s"Relationship copy record found: ETMP and ES had failed status. Record dateTime: ${relationshipCopyRecord.dateTime}"
+            s"Relationship copy record found: ETMP and ES had failed status. Record dateTime: ${relationshipCopyRecord
+                .dateTime}"
           )
           for {
             agentUser  <- retrieveAgentUser(arn)
@@ -271,7 +271,8 @@ with Logging {
           } yield esStatus
         case (false, true) =>
           logger.warn(
-            s"Relationship copy record found: ETMP had succeeded and ES had failed. Record dateTime: ${relationshipCopyRecord.dateTime}"
+            s"Relationship copy record found: ETMP had succeeded and ES had failed. Record dateTime: ${relationshipCopyRecord
+                .dateTime}"
           )
           for {
             agentUser <- retrieveAgentUser(arn)
@@ -281,7 +282,8 @@ with Logging {
         case (true, false) =>
           logger.warn(
             s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
-              s"This should not happen because we always create the ETMP relationship first. Record dateTime: ${relationshipCopyRecord.dateTime}"
+              s"This should not happen because we always create the ETMP relationship first. Record dateTime: ${relationshipCopyRecord
+                  .dateTime}"
           )
           createEtmpRecord(arn, enrolmentKey).map { result =>
             auditService.sendCreateRelationshipAuditEvent()

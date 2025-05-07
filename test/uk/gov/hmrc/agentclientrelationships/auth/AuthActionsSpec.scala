@@ -34,7 +34,10 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
+class AuthActionsSpec
+extends UnitSpec
+with ResettingMockitoSugar
+with Results {
 
   lazy val mockAuthConnector = mock[AuthConnector]
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -70,7 +73,9 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     delegatedAuthRule = None
   )
 
-  class TestAuth() extends AuthActions with Results {
+  class TestAuth()
+  extends AuthActions
+  with Results {
     implicit val request: RequestHeader = NoRequest
 
     def testAuthActions(arn: Arn, identifier: TaxIdentifier, strideRoles: Seq[String]) =
@@ -94,11 +99,13 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
   ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] = when(
-    mockAuthConnector
-      .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
-        any[HeaderCarrier](),
-        any[ExecutionContext]()
-      )
+    mockAuthConnector.authorise(
+      any[Predicate](),
+      any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]()
+    )(
+      any[HeaderCarrier](),
+      any[ExecutionContext]()
+    )
   ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockClientAuth(
@@ -106,22 +113,26 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
   ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] = when(
-    mockAuthConnector
-      .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
-        any[HeaderCarrier](),
-        any[ExecutionContext]()
-      )
+    mockAuthConnector.authorise(
+      any[Predicate](),
+      any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]()
+    )(
+      any[HeaderCarrier](),
+      any[ExecutionContext]()
+    )
   ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockStrideAuth(
     strideRole: String,
     credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication")
   ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] = when(
-    mockAuthConnector
-      .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
-        any[HeaderCarrier](),
-        any[ExecutionContext]()
-      )
+    mockAuthConnector.authorise(
+      any[Predicate](),
+      any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]()
+    )(
+      any[HeaderCarrier](),
+      any[ExecutionContext]()
+    )
   ).thenReturn(
     Future successful new ~(
       new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),

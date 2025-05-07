@@ -231,8 +231,12 @@ with MockAuditService {
 
           // Verifying non blocking side effects actually happen
           verifySideEffectsOccur { _ =>
-            verify(mockInvitationsRepository, times(1))
-              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+            verify(mockInvitationsRepository, times(1)).findAllBy(
+              any[Option[String]],
+              any[Seq[String]],
+              any[Seq[String]],
+              any[Option[InvitationStatus]]
+            )
             verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
             verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
           }
@@ -259,8 +263,12 @@ with MockAuditService {
 
           // Verifying non blocking side effects actually happen
           verifySideEffectsOccur { _ =>
-            verify(mockInvitationsRepository, times(1))
-              .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
+            verify(mockInvitationsRepository, times(1)).findAllBy(
+              any[Option[String]],
+              any[Seq[String]],
+              any[Seq[String]],
+              any[Option[InvitationStatus]]
+            )
             verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
             verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
           }
@@ -299,10 +307,17 @@ with MockAuditService {
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockInvitationsRepository, times(2))
-                .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-              verify(mockInvitationsRepository, times(2))
-                .deauthInvitation(any[String], any[String], any[Option[Instant]])
+              verify(mockInvitationsRepository, times(2)).findAllBy(
+                any[Option[String]],
+                any[Seq[String]],
+                any[Seq[String]],
+                any[Option[InvitationStatus]]
+              )
+              verify(mockInvitationsRepository, times(2)).deauthInvitation(
+                any[String],
+                any[String],
+                any[Option[Instant]]
+              )
               verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
@@ -323,8 +338,9 @@ with MockAuditService {
             )
             mockSendAcceptedEmail(itsaSuppInvitation)()
 
-            await(TestService.accept(itsaSuppInvitation, itsaEnrolment)) shouldBe itsaSuppInvitation
-              .copy(status = Accepted)
+            await(TestService.accept(itsaSuppInvitation, itsaEnrolment)) shouldBe itsaSuppInvitation.copy(status =
+              Accepted
+            )
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
@@ -354,15 +370,23 @@ with MockAuditService {
             )
             mockSendAcceptedEmail(altItsaInvitation)()
 
-            await(TestService.accept(altItsaInvitation, itsaEnrolment)) shouldBe altItsaInvitation
-              .copy(status = PartialAuth)
+            await(TestService.accept(altItsaInvitation, itsaEnrolment)) shouldBe altItsaInvitation.copy(status =
+              PartialAuth
+            )
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockInvitationsRepository, times(1))
-                .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-              verify(mockInvitationsRepository, times(1))
-                .deauthInvitation(any[String], any[String], any[Option[Instant]])
+              verify(mockInvitationsRepository, times(1)).findAllBy(
+                any[Option[String]],
+                any[Seq[String]],
+                any[Seq[String]],
+                any[Option[InvitationStatus]]
+              )
+              verify(mockInvitationsRepository, times(1)).deauthInvitation(
+                any[String],
+                any[String],
+                any[Option[Instant]]
+              )
               verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
@@ -381,8 +405,9 @@ with MockAuditService {
             )
             mockSendAcceptedEmail(altItsaSuppInvitation)()
 
-            await(TestService.accept(altItsaSuppInvitation, itsaEnrolment)) shouldBe altItsaSuppInvitation
-              .copy(status = PartialAuth)
+            await(TestService.accept(altItsaSuppInvitation, itsaEnrolment)) shouldBe altItsaSuppInvitation.copy(status =
+              PartialAuth
+            )
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>

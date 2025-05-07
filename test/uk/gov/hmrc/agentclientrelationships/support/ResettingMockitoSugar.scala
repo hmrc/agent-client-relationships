@@ -22,7 +22,9 @@ import org.scalatest.{BeforeAndAfterEach, Suite}
 
 import scala.reflect.Manifest
 
-trait ResettingMockitoSugar extends MockitoSugar with BeforeAndAfterEach {
+trait ResettingMockitoSugar
+extends MockitoSugar
+with BeforeAndAfterEach {
   this: Suite =>
 
   var mocksToReset = Seq.empty[Any]

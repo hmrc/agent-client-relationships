@@ -56,7 +56,7 @@ extends Logging {
         case GroupIdError =>
           logger.warn(
             s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${invitation
-              .clientId}, agent ${invitation.arn}"
+                .clientId}, agent ${invitation.arn}"
           )
         case exception =>
           logger.warn(
@@ -66,5 +66,7 @@ extends Logging {
   }
 }
 
-sealed trait FriendlyNameUpdateError extends Exception
-case object GroupIdError extends FriendlyNameUpdateError
+sealed trait FriendlyNameUpdateError
+extends Exception
+case object GroupIdError
+extends FriendlyNameUpdateError

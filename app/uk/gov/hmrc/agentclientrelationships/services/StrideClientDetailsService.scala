@@ -122,8 +122,9 @@ class StrideClientDetailsService @Inject() (
                                      )
 
           irvActiveRelationship <- EitherT(
-                                     agentFiRelationshipConnector
-                                       .findIrvActiveRelationshipForClient(taxIdentifier.value)
+                                     agentFiRelationshipConnector.findIrvActiveRelationshipForClient(
+                                       taxIdentifier.value
+                                     )
                                    ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
 
           partialAuthAuthorisations <- EitherT.right[RelationshipFailureResponse](
@@ -178,8 +179,12 @@ class StrideClientDetailsService @Inject() (
         for {
           agentDetails <- findAgentDetailsByArn(ar.arn)
           service <- EitherT(
-                       validationService
-                         .validateAuthProfileToService(taxIdentifier, ar.authProfile, ar.relationshipSource, ar.service)
+                       validationService.validateAuthProfileToService(
+                         taxIdentifier,
+                         ar.authProfile,
+                         ar.relationshipSource,
+                         ar.service
+                       )
                      )
         } yield ClientRelationshipWithAgentName(
           ar.arn,

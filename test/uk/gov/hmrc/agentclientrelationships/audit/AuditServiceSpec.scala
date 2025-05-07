@@ -35,7 +35,10 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
+class AuditServiceSpec
+extends UnitSpec
+with MockitoSugar
+with Eventually {
 
   implicit val patience: PatienceConfig = PatienceConfig(
     timeout = scaled(Span(500, Millis)),

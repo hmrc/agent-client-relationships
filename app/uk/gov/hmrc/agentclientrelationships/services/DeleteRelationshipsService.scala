@@ -121,9 +121,8 @@ with Logging {
     rh: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
-    val updateEtmpSyncStatus = deleteRecordRepository
-      .updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus)
-      .map(convertDbUpdateStatus)
+    val updateEtmpSyncStatus =
+      deleteRecordRepository.updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus).map(convertDbUpdateStatus)
 
     val recoverFromException =
       (origExc: Throwable, replacementExc: Throwable) => {
@@ -161,9 +160,8 @@ with Logging {
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
 
-    val updateEsSyncStatus = deleteRecordRepository
-      .updateEsSyncStatus(arn, enrolmentKey, _: SyncStatus)
-      .map(convertDbUpdateStatus)
+    val updateEsSyncStatus =
+      deleteRecordRepository.updateEsSyncStatus(arn, enrolmentKey, _: SyncStatus).map(convertDbUpdateStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
       logger.warn(s"De-allocating ES record failed for ${arn.value}, ${enrolmentKey.tag}: ${origExc.getMessage}")
@@ -287,7 +285,7 @@ with Logging {
       .recoveryLock(arn, enrolmentKey) {
         logger.info(
           s"Resuming unfinished removal of the relationship between ${arn
-            .value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}"
+              .value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}"
         )
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
