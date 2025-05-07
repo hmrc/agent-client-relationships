@@ -52,28 +52,21 @@ class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
   override lazy val requiresTtlIndex: Boolean = false
 
   def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] =
-    collection
-      .insertOne(agentReferenceRecord)
-      .toFuture()
-      .map(_ => ())
+    collection.insertOne(agentReferenceRecord).toFuture().map(_ => ())
 
-  def findBy(uid: String): Future[Option[AgentReferenceRecord]] =
-    collection
-      .find(equal("uid", uid))
-      .headOption()
+  def findBy(uid: String): Future[Option[AgentReferenceRecord]] = collection.find(equal("uid", uid)).headOption()
 
-  def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]] =
-    collection
-      .find(equal("arn", arn.value))
-      .headOption()
+  def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]] = collection.find(equal("arn", arn.value)).headOption()
 
   def updateAgentName(uid: String, newAgentName: String): Future[Unit] =
     collection
       .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", encryptedString(newAgentName)))
       .toFuture()
       .map { updateOneResult =>
-        if (updateOneResult.getModifiedCount == 1) ()
-        else throw new RuntimeException("could not update agent reference name, no matching uid found.")
+        if (updateOneResult.getModifiedCount == 1)
+          ()
+        else
+          throw new RuntimeException("could not update agent reference name, no matching uid found.")
       }
 
   def delete(arn: Arn): Future[Unit] =

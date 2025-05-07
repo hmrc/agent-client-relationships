@@ -57,8 +57,10 @@ class ItsaDeauthAndCleanupServiceSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
   implicit val auditData: AuditData = new AuditData
-  implicit val currentUser: CurrentUser =
-    CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+  implicit val currentUser: CurrentUser = CurrentUser(
+    credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+    affinityGroup = None
+  )
 
   val testArn: Arn = Arn("ARN1234567890")
   val testName = "testClientName"
@@ -72,34 +74,32 @@ class ItsaDeauthAndCleanupServiceSpec
   val itsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, testMtdItId)
   val itsaSuppEnrolment: EnrolmentKey = EnrolmentKey(MtdItSupp, testMtdItId)
 
-  val oldItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdIt,
-        testMtdItId,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-      .copy(status = Accepted)
-  val oldAltItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdIt,
-        testNino,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-      .copy(status = PartialAuth)
+  val oldItsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn.value,
+      MtdIt,
+      testMtdItId,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(status = Accepted)
+  val oldAltItsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn.value,
+      MtdIt,
+      testNino,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(status = PartialAuth)
 
   "deleteSameAgentRelationship" when {
     "called with non ITSA service" should {
@@ -122,8 +122,7 @@ class ItsaDeauthAndCleanupServiceSpec
           TestService.deleteSameAgentRelationship(MtdIt.id, testArn.value, Some(testMtdItId.value), testNino.nino)
         ) shouldBe true
 
-        verify(mockPartialAuthRepository, times(1))
-          .deauthorise(any[String], any[Nino], any[Arn], any[Instant])
+        verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
         verify(mockCheckRelationshipsService, times(1))
           .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
         verify(mockDeleteRelationshipsService, times(0))
@@ -134,8 +133,7 @@ class ItsaDeauthAndCleanupServiceSpec
           )
         verify(mockInvitationsRepository, times(1))
           .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-        verify(mockInvitationsRepository, times(1))
-          .deauthInvitation(any[String], any[String], any[Option[Instant]])
+        verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
     }
     "called for a user with an existing relationship" should {
@@ -154,8 +152,7 @@ class ItsaDeauthAndCleanupServiceSpec
           TestService.deleteSameAgentRelationship(MtdIt.id, testArn.value, Some(testMtdItId.value), testNino.nino)
         ) shouldBe true
 
-        verify(mockPartialAuthRepository, times(1))
-          .deauthorise(any[String], any[Nino], any[Arn], any[Instant])
+        verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
         verify(mockCheckRelationshipsService, times(1))
           .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
         verify(mockDeleteRelationshipsService, times(1))
@@ -166,8 +163,7 @@ class ItsaDeauthAndCleanupServiceSpec
           )
         verify(mockInvitationsRepository, times(1))
           .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-        verify(mockInvitationsRepository, times(1))
-          .deauthInvitation(any[String], any[String], any[Option[Instant]])
+        verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
     }
     "called for a user without an mtd id" should {
@@ -176,8 +172,7 @@ class ItsaDeauthAndCleanupServiceSpec
 
         await(TestService.deleteSameAgentRelationship(MtdItSupp.id, testArn.value, None, testNino.nino)) shouldBe false
 
-        verify(mockPartialAuthRepository, times(1))
-          .deauthorise(any[String], any[Nino], any[Arn], any[Instant])
+        verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
         verify(mockCheckRelationshipsService, times(0))
           .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
         verify(mockDeleteRelationshipsService, times(0))
@@ -188,8 +183,7 @@ class ItsaDeauthAndCleanupServiceSpec
           )
         verify(mockInvitationsRepository, times(0))
           .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-        verify(mockInvitationsRepository, times(0))
-          .deauthInvitation(any[String], any[String], any[Option[Instant]])
+        verify(mockInvitationsRepository, times(0)).deauthInvitation(any[String], any[String], any[Option[Instant]])
       }
     }
   }

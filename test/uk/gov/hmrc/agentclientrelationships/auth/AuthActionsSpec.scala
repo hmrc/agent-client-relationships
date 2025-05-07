@@ -49,14 +49,26 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   private val strideRoles = Seq(oldRequiredStrideRole, newRequiredStrideRole)
 
-  private val mtdItIdEnrolment =
-    Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)), state = "", delegatedAuthRule = None)
+  private val mtdItIdEnrolment = Enrolment(
+    "HMRC-MTD-IT",
+    Seq(EnrolmentIdentifier("MTDITID", mtdItId)),
+    state = "",
+    delegatedAuthRule = None
+  )
 
-  private val mtdVatIdEnrolment =
-    Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)), state = "", delegatedAuthRule = None)
+  private val mtdVatIdEnrolment = Enrolment(
+    "HMRC-MTD-VAT",
+    Seq(EnrolmentIdentifier("VRN", vrn)),
+    state = "",
+    delegatedAuthRule = None
+  )
 
-  private val trustEnrolment =
-    Enrolment("HMRC-TERS-ORG", Seq(EnrolmentIdentifier("SAUTR", utr)), state = "", delegatedAuthRule = None)
+  private val trustEnrolment = Enrolment(
+    "HMRC-TERS-ORG",
+    Seq(EnrolmentIdentifier("SAUTR", utr)),
+    state = "",
+    delegatedAuthRule = None
+  )
 
   class TestAuth() extends AuthActions with Results {
     implicit val request: RequestHeader = NoRequest
@@ -66,9 +78,10 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
         Future.successful(Ok)
       }
 
-    def testAuthorisedAsClient(service: String) = authorisedAsClient(service) { _ =>
-      Future.successful(Ok)
-    }
+    def testAuthorisedAsClient(service: String) =
+      authorisedAsClient(service) { _ =>
+        Future.successful(Ok)
+      }
 
     override def authConnector: AuthConnector = mockAuthConnector
 
@@ -87,8 +100,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
           any[HeaderCarrier](),
           any[ExecutionContext]()
         )
-    )
-      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
+    ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockClientAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
@@ -101,8 +113,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
           any[HeaderCarrier](),
           any[ExecutionContext]()
         )
-    )
-      .thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
+    ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockStrideAuth(
     strideRole: String,
@@ -114,13 +125,12 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
           any[HeaderCarrier](),
           any[ExecutionContext]()
         )
-    )
-      .thenReturn(
-        Future successful new ~(
-          new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
-          Some(credentials)
-        )
+    ).thenReturn(
+      Future successful new ~(
+        new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
+        Some(credentials)
       )
+    )
 
   def mockClientAuthWithoutCredRetrieval(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
@@ -131,8 +141,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
         any[HeaderCarrier](),
         any[ExecutionContext]()
       )
-    )
-      .thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
+    ).thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")
 
@@ -143,36 +152,31 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     "auth provider is GovernmentGateway and if the user is a client (not stride)" should {
       "return Ok if Client has matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return Ok if Client has matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn(vrn), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return NoPermissionToPerformOperation if Client has a non-matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING"), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId("NON_MATCHING"), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
 
       "return NoPermissionToPerformOperation if Client has a non-matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING"), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), Vrn("NON_MATCHING"), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
 
       "return NoPermissionToPerformOperation if Client has only an enrolment with a different identifier type" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
 
@@ -186,22 +190,19 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     "auth provider is PrivilegedApplication" should {
       "return Ok if Stride user has required role" in {
         mockStrideAuth(oldRequiredStrideRole)
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return Ok if Stride user has new required role" in {
         mockStrideAuth(newRequiredStrideRole)
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe Ok
       }
 
       "return NoPermissionToPerformOperation if Stride user has unsupported role" in {
         mockStrideAuth("foo")
-        val result: Future[Result] =
-          testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
+        val result: Future[Result] = testAuthImpl.testAuthActions(Arn(arn), MtdItId(mtdItId), strideRoles)
         await(result) shouldBe NoPermissionToPerformOperation
       }
     }
@@ -223,11 +224,10 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   "hasRequiredStrideRole" should {
     "return true if enrolments contains required stride role" in {
-      testAuthImpl
-        .hasRequiredStrideRole(
-          Enrolments(Set(new Enrolment("FOO", Seq.empty, "", None))),
-          Seq("FOO", "BAR")
-        ) shouldBe true
+      testAuthImpl.hasRequiredStrideRole(
+        Enrolments(Set(new Enrolment("FOO", Seq.empty, "", None))),
+        Seq("FOO", "BAR")
+      ) shouldBe true
       testAuthImpl.hasRequiredStrideRole(
         Enrolments(
           Set(

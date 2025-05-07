@@ -44,10 +44,10 @@ class ChangeInvitationStatusByIdService @Inject() (
     InvitationStatusAction.Cancel -> Set(Pending)
   )
 
-  def validateAction(action: String): Either[InvitationFailureResponse, InvitationStatusAction] = for {
-    invitationStatusAction <- Try(InvitationStatusAction(action))
-                                .fold(_ => Left(UnsupportedStatusChange), Right(_))
-  } yield invitationStatusAction
+  def validateAction(action: String): Either[InvitationFailureResponse, InvitationStatusAction] =
+    for {
+      invitationStatusAction <- Try(InvitationStatusAction(action)).fold(_ => Left(UnsupportedStatusChange), Right(_))
+    } yield invitationStatusAction
 
   def changeStatusById(
     invitationId: String,
@@ -55,14 +55,17 @@ class ChangeInvitationStatusByIdService @Inject() (
   ): Future[Either[InvitationFailureResponse, Unit]] =
     for {
 
-      invitationStoreResults <-
-        findMatchingInvitationById(invitationId)
-          .map(_.find(x => validInvitationStatusActionsFrom(invitationStatusAction).contains(x.status)))
-          .flatMap {
-            case Some(invitation) => updateStatus(invitation, invitationStatusAction)
+      invitationStoreResults <- findMatchingInvitationById(invitationId)
+                                  .map(
+                                    _.find(x =>
+                                      validInvitationStatusActionsFrom(invitationStatusAction).contains(x.status)
+                                    )
+                                  )
+                                  .flatMap {
+                                    case Some(invitation) => updateStatus(invitation, invitationStatusAction)
 
-            case None => Future.successful(Left(InvitationNotFound))
-          }
+                                    case None => Future.successful(Left(InvitationNotFound))
+                                  }
     } yield invitationStoreResults
 
   private def updateStatus(
@@ -74,26 +77,29 @@ class ChangeInvitationStatusByIdService @Inject() (
              updateInvitationStore(
                invitationId = invitation.invitationId,
                fromStatus = invitation.status,
-               toStatus = invitationStatusAction match {
-                 case InvitationStatusAction.Accept if invitation.isAltItsa => PartialAuth
-                 case InvitationStatusAction.Accept                         => Accepted
-                 case InvitationStatusAction.Cancel                         => Cancelled
-                 case InvitationStatusAction.Reject                         => Rejected
-               },
+               toStatus =
+                 invitationStatusAction match {
+                   case InvitationStatusAction.Accept if invitation.isAltItsa => PartialAuth
+                   case InvitationStatusAction.Accept                         => Accepted
+                   case InvitationStatusAction.Cancel                         => Cancelled
+                   case InvitationStatusAction.Reject                         => Rejected
+                 },
                endedBy = None,
                lastUpdated = None
              )
            )
-      _ <- if (invitation.isAltItsa)
-             EitherT(
-               createPartialAuthRecord(
-                 created = invitation.created,
-                 arn = Arn(invitation.arn),
-                 service = invitation.service,
-                 nino = Nino(invitation.suppliedClientId)
-               )
-             )
-           else EitherT.rightT[Future, InvitationFailureResponse](())
+      _ <-
+        if (invitation.isAltItsa)
+          EitherT(
+            createPartialAuthRecord(
+              created = invitation.created,
+              arn = Arn(invitation.arn),
+              service = invitation.service,
+              nino = Nino(invitation.suppliedClientId)
+            )
+          )
+        else
+          EitherT.rightT[Future, InvitationFailureResponse](())
     } yield ()).value
 
   private def updateInvitationStore(
@@ -123,12 +129,9 @@ class ChangeInvitationStatusByIdService @Inject() (
     service: String,
     nino: Nino
   ): Future[Either[InvitationFailureResponse, Unit]] =
-    partialAuthRepository
-      .create(created = created, arn = arn, service = service, nino = nino)
-      .map(Right(_))
+    partialAuthRepository.create(created = created, arn = arn, service = service, nino = nino).map(Right(_))
 
   private def findMatchingInvitationById(invitationId: String): Future[Option[Invitation]] =
-    invitationsRepository
-      .findOneById(invitationId = invitationId)
+    invitationsRepository.findOneById(invitationId = invitationId)
 
 }

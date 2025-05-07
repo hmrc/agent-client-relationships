@@ -43,17 +43,14 @@ trait MockInvitationsRepository {
     clientIds: Seq[String],
     status: Option[InvitationStatus]
   )(response: Future[Seq[Invitation]]): OngoingStubbing[Future[Seq[Invitation]]] =
-    when(mockInvitationsRepository.findAllBy(eqs(arn), eqs(services), eqs(clientIds), eqs(status)))
-      .thenReturn(response)
+    when(mockInvitationsRepository.findAllBy(eqs(arn), eqs(services), eqs(clientIds), eqs(status))).thenReturn(response)
 
   def mockDeauthInvitation(invitationId: String, endedBy: String)(
     response: Future[Option[Invitation]]
   ): OngoingStubbing[Future[Option[Invitation]]] =
     when(
-      mockInvitationsRepository
-        .deauthInvitation(eqs(invitationId), eqs("Client"), any[Option[Instant]])
-    )
-      .thenReturn(response)
+      mockInvitationsRepository.deauthInvitation(eqs(invitationId), eqs("Client"), any[Option[Instant]])
+    ).thenReturn(response)
 
   def mockFindAllPendingForClient(clientId: String, services: Seq[String])(
     response: Seq[Invitation]

@@ -124,8 +124,7 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
           )
 
           service.sendExpiredEmail(invitation.copy(service = serviceKey))
-          verify(mockEmailConnector)
-            .sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
+          verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
         }
       }
     }

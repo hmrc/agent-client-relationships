@@ -59,25 +59,26 @@ class InvitationService @Inject() (
   def createInvitation(arn: Arn, createInvitationInputData: CreateInvitationRequest)(implicit
     request: RequestHeader
   ): Future[Either[InvitationFailureResponse, Invitation]] = {
-    val invitationT = for {
+    val invitationT =
+      for {
 
-      suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
-      service          <- EitherT.fromEither[Future](createInvitationInputData.getService)
-      clientType       <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
-      agentRecord      <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
-      clientId         <- EitherT(getClientId(suppliedClientId, service))
-      invitation <- EitherT(
-                      create(
-                        arn,
-                        service,
-                        clientId,
-                        suppliedClientId,
-                        createInvitationInputData.clientName,
-                        clientType,
-                        agentRecord.agencyDetails
+        suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
+        service          <- EitherT.fromEither[Future](createInvitationInputData.getService)
+        clientType       <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
+        agentRecord      <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
+        clientId         <- EitherT(getClientId(suppliedClientId, service))
+        invitation <- EitherT(
+                        create(
+                          arn,
+                          service,
+                          clientId,
+                          suppliedClientId,
+                          createInvitationInputData.clientName,
+                          clientType,
+                          agentRecord.agencyDetails
+                        )
                       )
-                    )
-    } yield invitation
+      } yield invitation
 
     invitationT.value
   }
@@ -85,8 +86,7 @@ class InvitationService @Inject() (
   def findInvitationForAgent(arn: String, invitationId: String): Future[Option[Invitation]] =
     invitationsRepository.findOneByIdForAgent(arn, invitationId)
 
-  def findInvitation(invitationId: String): Future[Option[Invitation]] =
-    invitationsRepository.findOneById(invitationId)
+  def findInvitation(invitationId: String): Future[Option[Invitation]] = invitationsRepository.findOneById(invitationId)
 
   def rejectInvitation(
     invitationId: String
@@ -117,7 +117,12 @@ class InvitationService @Inject() (
         .sequence(arns.map { arn =>
           agentAssuranceConnector
             .getAgentRecordWithChecks(Arn(arn))
-            .map(record => if (record.suspensionDetails.exists(_.suspensionStatus)) Some(arn) else None)
+            .map(record =>
+              if (record.suspensionDetails.exists(_.suspensionStatus))
+                Some(arn)
+              else
+                None
+            )
         })
         .map(_.flatten)
 
@@ -132,8 +137,7 @@ class InvitationService @Inject() (
     services: Set[String],
     clientIds: Seq[String],
     isSuppliedClientId: Boolean = false
-  ): Future[Seq[Invitation]] =
-    invitationsRepository.findAllForAgent(arn, services.toSeq, clientIds, isSuppliedClientId)
+  ): Future[Seq[Invitation]] = invitationsRepository.findAllForAgent(arn, services.toSeq, clientIds, isSuppliedClientId)
 
   def updateInvitation(
     service: String,
@@ -147,17 +151,18 @@ class InvitationService @Inject() (
 
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
     request: RequestHeader
-  ): Future[Either[InvitationFailureResponse, ClientId]] = (service, suppliedClientId.typeId) match {
-    case (MtdIt | MtdItSupp, NinoType.id) =>
-      ifOrHipConnector
-        .getMtdIdFor(Nino(suppliedClientId.value))
-        .map(
-          _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>
-            Right(ClientIdentifier(mdtId))
+  ): Future[Either[InvitationFailureResponse, ClientId]] =
+    (service, suppliedClientId.typeId) match {
+      case (MtdIt | MtdItSupp, NinoType.id) =>
+        ifOrHipConnector
+          .getMtdIdFor(Nino(suppliedClientId.value))
+          .map(
+            _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>
+              Right(ClientIdentifier(mdtId))
+            )
           )
-        )
-    case _ => Future successful Right(suppliedClientId)
-  }
+      case _ => Future successful Right(suppliedClientId)
+    }
 
   private def create(
     arn: Arn,
@@ -185,8 +190,7 @@ class InvitationService @Inject() (
       logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
       Right(invitation)
     }).recover {
-      case e: MongoException if e.getMessage.contains("E11000 duplicate key error") =>
-        Left(DuplicateInvitationError)
+      case e: MongoException if e.getMessage.contains("E11000 duplicate key error") => Left(DuplicateInvitationError)
     }
   }
 
@@ -194,9 +198,11 @@ class InvitationService @Inject() (
     for {
       _ <- partialAuthRepository
              .create(invitation.created, Arn(invitation.arn), invitation.service, Nino(invitation.clientId))
-      _ <- if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
-             invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
-           } else Future.unit
+      _ <-
+        if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
+          invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
+        } else
+          Future.unit
     } yield ()
 
   private def currentTime() = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime

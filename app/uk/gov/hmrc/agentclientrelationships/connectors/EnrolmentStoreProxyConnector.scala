@@ -84,8 +84,7 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
             // - NO_CONTENT suggest NotFound case
             // - OK with empty groupIds throws exception, this could be represented as None or handled by error handler if this is not expected
             // - OK with more then 1 groupId also is problematic, if there expectation is to have only one groupId
-            case Status.NO_CONTENT =>
-              throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(arn)}")
+            case Status.NO_CONTENT => throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(arn)}")
             case Status.OK =>
               val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
               if (groupIds.isEmpty)
@@ -95,8 +94,7 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
                   logger.warn(s"Multiple groupIds found for ${enrolmentKey.service}")
                 groupIds.head
               }
-            case other =>
-              throw UpstreamErrorResponse(response.body, other, other)
+            case other => throw UpstreamErrorResponse(response.body, other, other)
           }
         }
     }
@@ -113,8 +111,7 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
             // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
             case Status.OK         => (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
             case Status.NO_CONTENT => Set.empty
-            case other =>
-              throw UpstreamErrorResponse(response.body, other, other)
+            case other             => throw UpstreamErrorResponse(response.body, other, other)
           }
         }
     }
@@ -127,10 +124,11 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
     request: RequestHeader
   ): Future[Seq[Enrolment]] = {
 
-    val url: URL = uri"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated"
-      .withParam("service", service)
-      .toJavaUri
-      .toURL
+    val url: URL =
+      uri"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated"
+        .withParam("service", service)
+        .toJavaUri
+        .toURL
 
     monitor(s"ConsumedAPI-ES-getEnrolmentsAssignedToUser-GET") {
       httpClient
@@ -140,7 +138,8 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
           response.status match {
             // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
             case Status.OK =>
-              response.json
+              response
+                .json
                 .as[ES2Response]
                 .enrolments
                 .filter(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
@@ -171,8 +170,7 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
                 .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
                 .map(Arn.apply)
             case Status.NO_CONTENT => None
-            case other =>
-              throw UpstreamErrorResponse(response.body, other, other)
+            case other             => throw UpstreamErrorResponse(response.body, other, other)
           }
         }
     }
@@ -198,8 +196,7 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
                 s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one."
               )
               ()
-            case other =>
-              throw UpstreamErrorResponse(response.body, other, other)
+            case other => throw UpstreamErrorResponse(response.body, other, other)
           }
         }
     }
@@ -258,14 +255,11 @@ class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metr
         .map { response =>
           response.status match {
             case Status.OK =>
-              (response.json \ "enrolments")
-                .as[Seq[JsObject]]
-                .headOption
-                .map(obj => (obj \ "identifiers").as[Seq[Identifier]])
+              (response
+                .json \ "enrolments").as[Seq[JsObject]].headOption.map(obj => (obj \ "identifiers").as[Seq[Identifier]])
             // TODO: The endpoint shoulud return OK with empty list for that case
             case Status.NO_CONTENT => None
-            case other =>
-              throw UpstreamErrorResponse(response.body, other, other)
+            case other             => throw UpstreamErrorResponse(response.body, other, other)
           }
         }
     }

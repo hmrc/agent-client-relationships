@@ -29,15 +29,16 @@ object NoRequest extends Request[Any] {
 
   override def connection: RemoteConnection = RemoteConnection("", false, None)
 
-  override def target: RequestTarget = new RequestTarget {
-    override def uri: URI = URI.create("")
+  override def target: RequestTarget =
+    new RequestTarget {
+      override def uri: URI = URI.create("")
 
-    override def uriString: String = ""
+      override def uriString: String = ""
 
-    override def path: String = ""
+      override def path: String = ""
 
-    override def queryMap: Map[String, Seq[String]] = Map.empty
-  }
+      override def queryMap: Map[String, Seq[String]] = Map.empty
+    }
 
   override def attrs: TypedMap = TypedMap.empty
 }

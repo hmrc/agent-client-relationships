@@ -37,11 +37,9 @@ object PathBinders {
         .get(key)
         .flatMap(_.headOption)
         .map { value =>
-          try
-            Right(Arn.apply(value))
+          try Right(Arn.apply(value))
           catch {
-            case err: Throwable =>
-              Left(s"Cannot parse parameter as Arn: [$value] is not a valid Arn")
+            case err: Throwable => Left(s"Cannot parse parameter as Arn: [$value] is not a valid Arn")
           }
         }
 
@@ -53,8 +51,7 @@ object PathBinders {
         .get(key)
         .flatMap(_.headOption)
         .map { value =>
-          try
-            Right(InvitationStatus.apply(value))
+          try Right(InvitationStatus.apply(value))
           catch {
             case err: Throwable =>
               Left(

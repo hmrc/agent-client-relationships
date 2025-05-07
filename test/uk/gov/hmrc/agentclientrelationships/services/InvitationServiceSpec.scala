@@ -57,19 +57,20 @@ class InvitationServiceSpec
   val testArn1 = "ARN1234567891"
   val testArn2 = "ARN1234567892"
   val testArn3 = "ARN1234567893"
-  val invitation1: Invitation =
-    Invitation.createNew(testArn1, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
-  val invitation2: Invitation =
-    Invitation.createNew(testArn2, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
-  val invitation3: Invitation =
-    Invitation.createNew(testArn3, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
-  val testAgentDetailsDesResponse: AgentDetailsDesResponse =
-    AgentDetailsDesResponse(agencyDetails = AgencyDetails("ABC Ltd", ""), suspensionDetails = None)
-  val testSuspendedAgentDetailsDesResponse: AgentDetailsDesResponse =
-    AgentDetailsDesResponse(
-      agencyDetails = AgencyDetails("ABC Ltd", ""),
-      suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, None))
-    )
+  val invitation1: Invitation = Invitation
+    .createNew(testArn1, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
+  val invitation2: Invitation = Invitation
+    .createNew(testArn2, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
+  val invitation3: Invitation = Invitation
+    .createNew(testArn3, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
+  val testAgentDetailsDesResponse: AgentDetailsDesResponse = AgentDetailsDesResponse(
+    agencyDetails = AgencyDetails("ABC Ltd", ""),
+    suspensionDetails = None
+  )
+  val testSuspendedAgentDetailsDesResponse: AgentDetailsDesResponse = AgentDetailsDesResponse(
+    agencyDetails = AgencyDetails("ABC Ltd", ""),
+    suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, None))
+  )
 
   "findNonSuspendedClientInvitations" should {
     "retrieve invitations from the repository and return ones from non suspended agents" in {

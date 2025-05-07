@@ -68,18 +68,17 @@ object DeleteRecord {
   implicit val dateReads: Reads[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeReads
   implicit val dateWrites: Writes[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeWrites
 
-  implicit val hcWrites: OWrites[HeaderCarrier] = new OWrites[HeaderCarrier] {
-    override def writes(hc: HeaderCarrier): JsObject =
-      JsObject(
-        Seq(
-          "authorization" -> hc.authorization.map(_.value),
-          "sessionId"     -> hc.sessionId.map(_.value),
-          "gaToken"       -> hc.gaToken
-        ).collect { case (key, Some(value)) =>
-          (key, JsString(value))
-        }
-      )
-  }
+  implicit val hcWrites: OWrites[HeaderCarrier] =
+    new OWrites[HeaderCarrier] {
+      override def writes(hc: HeaderCarrier): JsObject =
+        JsObject(
+          Seq(
+            "authorization" -> hc.authorization.map(_.value),
+            "sessionId"     -> hc.sessionId.map(_.value),
+            "gaToken"       -> hc.gaToken
+          ).collect { case (key, Some(value)) => (key, JsString(value)) }
+        )
+    }
 
   import play.api.libs.functional.syntax._
 
@@ -142,7 +141,8 @@ class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(imp
       .insertOne(record)
       .toFuture()
       .map(insertResult =>
-        if (insertResult.wasAcknowledged()) 1
+        if (insertResult.wasAcknowledged())
+          1
         else {
           logger.warn("Creating DeleteRecord failed.")
           INDICATE_ERROR_DURING_DB_UPDATE
@@ -157,7 +157,8 @@ class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(imp
       .updateOne(filter(arn, enrolmentKey), set("syncToETMPStatus", status.toString), UpdateOptions().upsert(false))
       .toFuture()
       .map { updateResult =>
-        if (updateResult.getModifiedCount != 1L) logger.warn(s"Updating ETMP sync status ($status) failed")
+        if (updateResult.getModifiedCount != 1L)
+          logger.warn(s"Updating ETMP sync status ($status) failed")
         updateResult.getModifiedCount.toInt
       }
 
@@ -166,7 +167,8 @@ class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(imp
       .updateOne(filter(arn, enrolmentKey), set("syncToESStatus", status.toString), UpdateOptions().upsert(false))
       .toFuture()
       .map { updateResult =>
-        if (updateResult.getModifiedCount != 1L) logger.warn(s"Updating ES sync status ($status) failed")
+        if (updateResult.getModifiedCount != 1L)
+          logger.warn(s"Updating ES sync status ($status) failed")
         updateResult.getModifiedCount.toInt
       }
 
@@ -183,25 +185,17 @@ class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(imp
       .map(_ => ())
 
   override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] =
-    collection
-      .deleteOne(filter(arn, enrolmentKey))
-      .toFuture()
-      .map(deleteResult => deleteResult.getDeletedCount.toInt)
+    collection.deleteOne(filter(arn, enrolmentKey)).toFuture().map(deleteResult => deleteResult.getDeletedCount.toInt)
 
   override def selectNextToRecover(): Future[Option[DeleteRecord]] =
-    collection
-      .find()
-      .sort(Sorts.ascending("lastRecoveryAttempt"))
-      .headOption()
+    collection.find().sort(Sorts.ascending("lastRecoveryAttempt")).headOption()
 
   override def terminateAgent(arn: Arn): Future[Either[String, Int]] =
     collection
       .deleteMany(equal("arn", arn.value))
       .toFuture()
       .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
-      .recover { case e: MongoWriteException =>
-        Left(e.getMessage)
-      }
+      .recover { case e: MongoWriteException => Left(e.getMessage) }
 
   private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
     val identifierType: String = enrolmentKey.identifiers.head.key

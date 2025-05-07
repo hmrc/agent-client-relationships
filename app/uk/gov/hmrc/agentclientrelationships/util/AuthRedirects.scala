@@ -31,11 +31,10 @@ trait AuthRedirects {
   def env: Environment
 
   private lazy val envPrefix =
-    if (env.mode.equals(Mode.Test)) "Test"
+    if (env.mode.equals(Mode.Test))
+      "Test"
     else
-      config
-        .getOptional[String]("run.mode")
-        .getOrElse("Dev")
+      config.getOptional[String]("run.mode").getOrElse("Dev")
 
   private val hostDefaults: Map[String, String] = Map(
     "Dev.external-url.bas-gateway-frontend.host"           -> "http://localhost:9553",
@@ -57,11 +56,10 @@ trait AuthRedirects {
 
   def strideLoginUrl: String = host("stride-auth-frontend") + "/stride/sign-in"
 
-  final lazy val defaultOrigin: String =
-    config
-      .getOptional[String]("sosOrigin")
-      .orElse(config.getOptional[String]("appName"))
-      .getOrElse("undefined")
+  final lazy val defaultOrigin: String = config
+    .getOptional[String]("sosOrigin")
+    .orElse(config.getOptional[String]("appName"))
+    .getOrElse("undefined")
 
   def origin: String = defaultOrigin
 

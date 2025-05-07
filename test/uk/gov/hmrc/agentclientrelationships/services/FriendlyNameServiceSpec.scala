@@ -64,8 +64,7 @@ class FriendlyNameServiceSpec extends UnitSpec with MockitoSugar with BeforeAndA
 
   "updateFriendlyName" should {
     "succeed when there group id is found and ES19 call succeeds" in {
-      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader]))
-        .thenReturn(Future.successful(testGroupId))
+      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(Future.successful(testGroupId))
       when(mockEsp.updateEnrolmentFriendlyName(any[String], any[String], any[String])(any[RequestHeader]))
         .thenReturn(Future.successful(()))
 
@@ -77,8 +76,7 @@ class FriendlyNameServiceSpec extends UnitSpec with MockitoSugar with BeforeAndA
         )
     }
     "not fail in case of an ES19 error" in {
-      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader]))
-        .thenReturn(Future.successful(testGroupId))
+      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(Future.successful(testGroupId))
       when(mockEsp.updateEnrolmentFriendlyName(any[String], any[String], any[String])(any[RequestHeader]))
         .thenReturn(Future.failed(UpstreamErrorResponse("error", 503)))
 

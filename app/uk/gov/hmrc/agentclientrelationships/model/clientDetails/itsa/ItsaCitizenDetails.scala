@@ -29,7 +29,10 @@ case class ItsaCitizenDetails(
 ) {
   lazy val name: Option[String] = {
     val n = Seq(firstName, lastName).collect { case Some(x) => x }.mkString(" ")
-    if (n.isEmpty) None else Some(n)
+    if (n.isEmpty)
+      None
+    else
+      Some(n)
   }
 }
 
@@ -37,11 +40,13 @@ object ItsaCitizenDetails {
 
   val citizenDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy")
 
-  implicit val reads: Reads[ItsaCitizenDetails] = for {
-    firstName <- (JsPath \ "name" \ "current" \ "firstName").readNullable[String]
-    lastName  <- (JsPath \ "name" \ "current" \ "lastName").readNullable[String]
-    dateOfBirth <-
-      (JsPath \ "dateOfBirth").readNullable[String].map(_.map(date => LocalDate.parse(date, citizenDateFormatter)))
-    saUtr <- (JsPath \ "ids" \ "sautr").readNullable[String]
-  } yield ItsaCitizenDetails(firstName, lastName, dateOfBirth, saUtr)
+  implicit val reads: Reads[ItsaCitizenDetails] =
+    for {
+      firstName <- (JsPath \ "name" \ "current" \ "firstName").readNullable[String]
+      lastName  <- (JsPath \ "name" \ "current" \ "lastName").readNullable[String]
+      dateOfBirth <- (JsPath \ "dateOfBirth")
+                       .readNullable[String]
+                       .map(_.map(date => LocalDate.parse(date, citizenDateFormatter)))
+      saUtr <- (JsPath \ "ids" \ "sautr").readNullable[String]
+    } yield ItsaCitizenDetails(firstName, lastName, dateOfBirth, saUtr)
 }

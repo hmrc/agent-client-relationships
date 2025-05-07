@@ -56,18 +56,28 @@ class AuthorisationAcceptService @Inject() (
     val timestamp = Instant.now
     val isAltItsa = invitation.isAltItsa
     val isItsa = Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)
-    val nextStatus = if (isAltItsa) PartialAuth else Accepted
+    val nextStatus =
+      if (isAltItsa)
+        PartialAuth
+      else
+        Accepted
     for {
       // Remove existing main/supp relationship for arn when changing between main/supp
-      _ <- if (isItsa)
-             itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-               service = invitation.service,
-               arn = invitation.arn,
-               optMtdItId = if (isAltItsa) None else Some(invitation.clientId),
-               nino = invitation.suppliedClientId,
-               timestamp = timestamp
-             )
-           else Future.unit
+      _ <-
+        if (isItsa)
+          itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+            service = invitation.service,
+            arn = invitation.arn,
+            optMtdItId =
+              if (isAltItsa)
+                None
+              else
+                Some(invitation.clientId),
+            nino = invitation.suppliedClientId,
+            timestamp = timestamp
+          )
+        else
+          Future.unit
       // Create relationship
       _ <- createRelationship(invitation, enrolment, isAltItsa, timestamp)
       // Update invitation
@@ -83,7 +93,8 @@ class AuthorisationAcceptService @Inject() (
                  isAltItsa = isAltItsa,
                  timestamp = timestamp
                )
-             else Future.unit
+             else
+               Future.unit
            )
       // Deauth previously accepted alt itsa invitations in case the client is mtd itsa (non blocking)
       _ <- Future.successful(
@@ -96,7 +107,8 @@ class AuthorisationAcceptService @Inject() (
                  isAltItsa = true,
                  timestamp = timestamp
                )
-             else Future.unit
+             else
+               Future.unit
            )
       // Accept confirmation email (non blocking)
       _ <- Future.successful(emailService.sendAcceptedEmail(invitation))
@@ -110,8 +122,16 @@ class AuthorisationAcceptService @Inject() (
     timestamp: Instant
   )(implicit request: RequestHeader, currentUser: CurrentUser, auditData: AuditData) = {
     auditData.set(
-      key = if (isAltItsa) howPartialAuthCreatedKey else howRelationshipCreatedKey,
-      value = if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
+      key =
+        if (isAltItsa)
+          howPartialAuthCreatedKey
+        else
+          howRelationshipCreatedKey,
+      value =
+        if (currentUser.isStride)
+          hmrcAcceptedInvitation
+        else
+          clientAcceptedInvitation
     )
 
     invitation.service match {
@@ -170,23 +190,26 @@ class AuthorisationAcceptService @Inject() (
   }
 
   private def deauthPartialAuth(nino: String, timestamp: Instant)(implicit request: RequestHeader): Future[Boolean] =
-    partialAuthRepository.findMainAgent(nino).flatMap {
-      case Some(mainAuth) =>
-        partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp).map {
-          result =>
-            if (result) {
-              implicit val auditData: AuditData = new AuditData()
-              auditData.set(howPartialAuthTerminatedKey, agentReplacement)
-              auditService.sendTerminatePartialAuthAuditEvent(
-                arn = mainAuth.arn,
-                service = mainAuth.service,
-                nino = mainAuth.nino
-              )
+    partialAuthRepository
+      .findMainAgent(nino)
+      .flatMap {
+        case Some(mainAuth) =>
+          partialAuthRepository
+            .deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp)
+            .map { result =>
+              if (result) {
+                implicit val auditData: AuditData = new AuditData()
+                auditData.set(howPartialAuthTerminatedKey, agentReplacement)
+                auditService.sendTerminatePartialAuthAuditEvent(
+                  arn = mainAuth.arn,
+                  service = mainAuth.service,
+                  nino = mainAuth.nino
+                )
+              }
+              result
             }
-            result
-        }
-      case None => Future.successful(false)
-    }
+        case None => Future.successful(false)
+      }
 
   private def deauthAcceptedInvitations(
     service: String,
@@ -196,7 +219,11 @@ class AuthorisationAcceptService @Inject() (
     isAltItsa: Boolean,
     timestamp: Instant
   ) = {
-    val acceptedStatus = if (isAltItsa) PartialAuth else Accepted
+    val acceptedStatus =
+      if (isAltItsa)
+        PartialAuth
+      else
+        Accepted
     invitationsRepository
       .findAllBy(arn = optArn, services = Seq(service), clientIds = Seq(clientId), status = Some(acceptedStatus))
       .fallbackTo(Future.successful(Nil))

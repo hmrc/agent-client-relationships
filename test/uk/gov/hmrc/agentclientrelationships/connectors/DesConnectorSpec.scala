@@ -33,8 +33,7 @@ class DesConnectorSpec extends UnitSpec with MockitoSugar {
   val correlationIdGenerator: CorrelationIdGenerator = mock[CorrelationIdGenerator]
   val metrics: Metrics = mock[Metrics]
 
-  val underTest =
-    new DesConnector(httpClient, correlationIdGenerator, appConfig)(metrics, ec)
+  val underTest = new DesConnector(httpClient, correlationIdGenerator, appConfig)(metrics, ec)
 
   "desHeaders" should {
     "contain correct headers" in {

@@ -40,23 +40,22 @@ class InvitationLinkService @Inject() (
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
 
   def migrateAgentReferenceRecord(record: AgentReferenceRecord): Future[Unit] =
-    agentReferenceRepository
-      .create(record)
-      .map(_ => ())
+    agentReferenceRepository.create(record).map(_ => ())
 
   def validateLink(uid: String, normalizedAgentName: String)(implicit
     request: RequestHeader
   ): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
 
-    val agencyNameT = for {
-      agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
-      _ <- EitherT.fromEither[Future](
-             validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
-           )
-      agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-      _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
-      agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
-    } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
+    val agencyNameT =
+      for {
+        agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
+        _ <- EitherT.fromEither[Future](
+               validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
+             )
+        agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
+        _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
+      } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
     agencyNameT.value
 
@@ -69,20 +68,24 @@ class InvitationLinkService @Inject() (
 
       agentReferenceRecord <- getAgentReferenceRecordByArn(arn, newNormaliseAgentName)
 
-      _ <- if (agentReferenceRecord.normalisedAgentNames.contains(newNormaliseAgentName)) Future.successful(())
-           else updateAgentReferenceRecord(agentReferenceRecord.uid, newNormaliseAgentName)
+      _ <-
+        if (agentReferenceRecord.normalisedAgentNames.contains(newNormaliseAgentName))
+          Future.successful(())
+        else
+          updateAgentReferenceRecord(agentReferenceRecord.uid, newNormaliseAgentName)
 
     } yield CreateLinkResponse(agentReferenceRecord.uid, newNormaliseAgentName)
 
   def validateInvitationRequest(
     uid: String
   )(implicit request: RequestHeader): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
-    val responseT = for {
-      agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
-      agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-      _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
-      agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
-    } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
+    val responseT =
+      for {
+        agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
+        agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
+        _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
+      } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
     responseT.value
   }
@@ -90,21 +93,18 @@ class InvitationLinkService @Inject() (
   private def getAgentReferenceRecord(
     uid: String
   ): Future[Either[InvitationLinkFailureResponse, AgentReferenceRecord]] =
-    agentReferenceRepository
-      .findBy(uid)
-      .map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
+    agentReferenceRepository.findBy(uid).map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
 
   def getAgentReferenceRecordByArn(arn: Arn, newNormaliseAgentName: String): Future[AgentReferenceRecord] =
-    agentReferenceRepository.findByArn(arn).flatMap {
-      case Some(value) =>
-        Future.successful(value)
-      case None =>
-        createAgentReferenceRecord(arn, newNormaliseAgentName)
-    }
+    agentReferenceRepository
+      .findByArn(arn)
+      .flatMap {
+        case Some(value) => Future.successful(value)
+        case None        => createAgentReferenceRecord(arn, newNormaliseAgentName)
+      }
 
   private def updateAgentReferenceRecord(uid: String, normalisedAgentNames: String): Future[Unit] =
-    agentReferenceRepository
-      .updateAgentName(uid, normalisedAgentNames)
+    agentReferenceRepository.updateAgentName(uid, normalisedAgentNames)
 
   def createAgentReferenceRecord(arn: Arn, normalisedAgentNames: String): Future[AgentReferenceRecord] = {
     val agentReferenceRecord = AgentReferenceRecord(
@@ -112,9 +112,7 @@ class InvitationLinkService @Inject() (
       arn = arn,
       normalisedAgentNames = Seq(normalisedAgentNames)
     )
-    agentReferenceRepository
-      .create(agentReferenceRecord)
-      .map(_ => agentReferenceRecord)
+    agentReferenceRepository.create(agentReferenceRecord).map(_ => agentReferenceRecord)
   }
 
   def normaliseAgentName(agentName: String) =
@@ -124,8 +122,10 @@ class InvitationLinkService @Inject() (
     normalisedAgentNames: Seq[String],
     normalizedAgentName: String
   ): Either[InvitationLinkFailureResponse, Boolean] =
-    if (normalisedAgentNames.contains(normalizedAgentName)) Right(true)
-    else Left(InvitationLinkFailureResponse.NormalizedAgentNameNotMatched)
+    if (normalisedAgentNames.contains(normalizedAgentName))
+      Right(true)
+    else
+      Left(InvitationLinkFailureResponse.NormalizedAgentNameNotMatched)
 
   private def getAgentDetails(arn: Arn)(implicit request: RequestHeader): Future[AgentDetailsDesResponse] =
     agentAssuranceConnector.getAgentRecordWithChecks(arn)
@@ -135,7 +135,8 @@ class InvitationLinkService @Inject() (
   ): Either[InvitationLinkFailureResponse, Boolean] =
     if (agentDetailsDesResponse.suspensionDetails.exists(_.suspensionStatus))
       Left(InvitationLinkFailureResponse.AgentSuspended)
-    else Right(false)
+    else
+      Right(false)
 
   private def getAgencyName(
     agentDetailsDesResponse: AgentDetailsDesResponse

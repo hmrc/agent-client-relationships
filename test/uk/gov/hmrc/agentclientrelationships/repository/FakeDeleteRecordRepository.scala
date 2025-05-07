@@ -75,16 +75,19 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
 
   override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] = {
     val maybeRemove = data.remove((arn, enrolmentKey))
-    if (maybeRemove.isDefined) Future.successful(1)
-    else Future.successful(0)
+    if (maybeRemove.isDefined)
+      Future.successful(1)
+    else
+      Future.successful(0)
   }
 
   override def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined)
-        data((arn, enrolmentKey)) =
-          maybeValue.get.copy(lastRecoveryAttempt = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
+        data((arn, enrolmentKey)) = maybeValue
+          .get
+          .copy(lastRecoveryAttempt = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
     )
@@ -92,18 +95,16 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
 
   override def selectNextToRecover(): Future[Option[DeleteRecord]] =
     Future.successful(
-      data.toSeq
+      data
+        .toSeq
         .map(_._2)
         .sortBy(
-          _.lastRecoveryAttempt
-            .map(_.toEpochSecond(ZoneOffset.UTC))
-            .getOrElse(0L)
+          _.lastRecoveryAttempt.map(_.toEpochSecond(ZoneOffset.UTC)).getOrElse(0L)
         )
         .headOption
     )
 
-  def reset() =
-    data.clear()
+  def reset() = data.clear()
 
   override def terminateAgent(arn: Arn): Future[Either[String, Int]] = {
     val keysToRemove: Seq[(Arn, EnrolmentKey)] = data.keys.filter(_._1 == arn).toSeq

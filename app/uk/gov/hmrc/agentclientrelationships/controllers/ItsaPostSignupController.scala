@@ -47,34 +47,38 @@ class ItsaPostSignupController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
-  def itsaPostSignupCreateRelationship(nino: Nino): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsAgent { arn =>
-      ifOrHipConnector.getMtdIdFor(nino).flatMap {
-        case Some(mtdItId) =>
-          implicit val auditData: AuditData = new AuditData()
-          checkAndCopyRelationshipsService
-            .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, mService = None, mNino = Some(nino))
-            .map {
-              case AltItsaCreateRelationshipSuccess(service) => Created(Json.parse(s"""{"service": "$service"}"""))
-              case FoundAndCopied                            => Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
-              case AltItsaNotFoundOrFailed =>
-                val msg = s"itsa-post-signup create relationship failed: no partial auth"
-                logger.warn(msg)
-                NotFound(msg)
-              case CheckAndCopyNotFound =>
-                val msg = "itsa-post-signup create relationship failed: no partial-auth and no legacy SA relationship"
-                logger.warn(msg)
-                NotFound(msg)
-              case other =>
-                val msg = s"itsa-post-signup create relationship failed: $other"
-                logger.warn(msg)
-                InternalServerError(msg)
-            }
-        case None =>
-          val msg = "itsa-post-signup create relationship failed: no MTDITID found for nino"
-          logger.warn(msg)
-          Future.successful(NotFound(msg))
+  def itsaPostSignupCreateRelationship(nino: Nino): Action[AnyContent] =
+    Action.async { implicit request =>
+      withAuthorisedAsAgent { arn =>
+        ifOrHipConnector
+          .getMtdIdFor(nino)
+          .flatMap {
+            case Some(mtdItId) =>
+              implicit val auditData: AuditData = new AuditData()
+              checkAndCopyRelationshipsService
+                .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, mService = None, mNino = Some(nino))
+                .map {
+                  case AltItsaCreateRelationshipSuccess(service) => Created(Json.parse(s"""{"service": "$service"}"""))
+                  case FoundAndCopied => Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
+                  case AltItsaNotFoundOrFailed =>
+                    val msg = s"itsa-post-signup create relationship failed: no partial auth"
+                    logger.warn(msg)
+                    NotFound(msg)
+                  case CheckAndCopyNotFound =>
+                    val msg =
+                      "itsa-post-signup create relationship failed: no partial-auth and no legacy SA relationship"
+                    logger.warn(msg)
+                    NotFound(msg)
+                  case other =>
+                    val msg = s"itsa-post-signup create relationship failed: $other"
+                    logger.warn(msg)
+                    InternalServerError(msg)
+                }
+            case None =>
+              val msg = "itsa-post-signup create relationship failed: no MTDITID found for nino"
+              logger.warn(msg)
+              Future.successful(NotFound(msg))
+          }
       }
     }
-  }
 }

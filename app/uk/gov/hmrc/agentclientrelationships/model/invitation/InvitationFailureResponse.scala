@@ -29,9 +29,10 @@ object InvitationFailureResponse {
 
   case class ErrorBody(code: String, message: String)
 
-  implicit val errorBodyWrites: Writes[ErrorBody] = new Writes[ErrorBody] {
-    override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
-  }
+  implicit val errorBodyWrites: Writes[ErrorBody] =
+    new Writes[ErrorBody] {
+      override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
+    }
 
   case object UnsupportedService extends InvitationFailureResponse {
     def getResult(message: String): Result = NotImplemented(toJson(ErrorBody("UNSUPPORTED_SERVICE", message)))
@@ -50,31 +51,34 @@ object InvitationFailureResponse {
   }
 
   case object ClientRegistrationNotFound extends InvitationFailureResponse {
-    def getResult(message: String): Result = Forbidden(
-      toJson(
-        ErrorBody(
-          "CLIENT_REGISTRATION_NOT_FOUND",
-          "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
+    def getResult(message: String): Result =
+      Forbidden(
+        toJson(
+          ErrorBody(
+            "CLIENT_REGISTRATION_NOT_FOUND",
+            "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
+          )
         )
       )
-    )
   }
 
   case object DuplicateInvitationError extends InvitationFailureResponse {
-    def getResult(message: String): Result = Forbidden(
-      toJson(
-        ErrorBody(
-          "DUPLICATE_AUTHORISATION_REQUEST",
-          "An authorisation request for this service has already been created and is awaiting the client’s response."
+    def getResult(message: String): Result =
+      Forbidden(
+        toJson(
+          ErrorBody(
+            "DUPLICATE_AUTHORISATION_REQUEST",
+            "An authorisation request for this service has already been created and is awaiting the client’s response."
+          )
         )
       )
-    )
   }
 
   case object RelationshipNotFound extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound(
-      toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
-    )
+    def getResult(message: String): Result =
+      NotFound(
+        toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
+      )
   }
 
   case object EnrolmentKeyNotFound extends InvitationFailureResponse {
@@ -90,9 +94,10 @@ object InvitationFailureResponse {
   }
 
   case object UnsupportedStatusChange extends InvitationFailureResponse {
-    def getResult(message: String): Result = BadRequest(
-      toJson(ErrorBody("UNSUPPORTED_STATUS_CHANGE", "Not supported invitation status change"))
-    )
+    def getResult(message: String): Result =
+      BadRequest(
+        toJson(ErrorBody("UNSUPPORTED_STATUS_CHANGE", "Not supported invitation status change"))
+      )
   }
 
   case class UpdateStatusFailed(msg: String) extends InvitationFailureResponse {

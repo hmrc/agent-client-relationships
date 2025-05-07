@@ -72,12 +72,13 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
 
   override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] = {
     val maybeRemove = data.remove((arn, enrolmentKey))
-    if (maybeRemove.isDefined) Future.successful(1)
-    else Future.successful(0)
+    if (maybeRemove.isDefined)
+      Future.successful(1)
+    else
+      Future.successful(0)
   }
 
-  def reset() =
-    data.clear()
+  def reset() = data.clear()
 
   override def terminateAgent(arn: Arn): Future[Either[String, Int]] = {
     val keysToRemove: Seq[(Arn, EnrolmentKey)] = data.keys.filter(_._1 == arn).toSeq

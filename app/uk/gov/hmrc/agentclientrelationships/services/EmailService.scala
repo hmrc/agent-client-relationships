@@ -38,7 +38,10 @@ class EmailService @Inject() (emailConnector: EmailConnector, messagesApi: Messa
   def sendWarningEmail(invitations: Seq[Invitation])(implicit request: RequestHeader): Future[Boolean] = {
     val numberOfInvitations = invitations.size
     val templateId =
-      if (invitations.size > 1) "agent_invitations_about_to_expire" else "agent_invitation_about_to_expire_single"
+      if (invitations.size > 1)
+        "agent_invitations_about_to_expire"
+      else
+        "agent_invitation_about_to_expire_single"
     emailConnector.sendEmail(
       EmailInformation(
         to = Seq(invitations.head.agencyEmail),
@@ -66,7 +69,8 @@ class EmailService @Inject() (emailConnector: EmailConnector, messagesApi: Messa
     val altItsaParam =
       if (invitation.isAltItsa)
         Map("additionalInfo" -> s"You must now sign ${invitation.clientName} up to Making Tax Digital for Income Tax.")
-      else Map()
+      else
+        Map()
 
     EmailInformation(
       Seq(invitation.agencyEmail),

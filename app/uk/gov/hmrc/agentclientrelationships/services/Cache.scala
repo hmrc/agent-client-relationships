@@ -79,17 +79,19 @@ class MongoCache[T] @Inject() (
   def apply(cacheId: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
     val dataKey: DataKey[T] = DataKey[T](cacheId)
 
-    cacheRepository.get(cacheId)(dataKey).flatMap {
-      case Some(cachedValue) =>
-        record(s"Count-$collectionName-from-cache")
-        Future.successful(cachedValue)
-      case None =>
-        body.andThen { case Success(newValue) =>
-          logger.info(s"Missing $collectionName cache hit, storing new value.")
-          record(s"Count-$collectionName-from-source")
-          cacheRepository.put(cacheId)(dataKey, newValue).map(_ => newValue)
-        }
-    }
+    cacheRepository
+      .get(cacheId)(dataKey)
+      .flatMap {
+        case Some(cachedValue) =>
+          record(s"Count-$collectionName-from-cache")
+          Future.successful(cachedValue)
+        case None =>
+          body.andThen { case Success(newValue) =>
+            logger.info(s"Missing $collectionName cache hit, storing new value.")
+            record(s"Count-$collectionName-from-source")
+            cacheRepository.put(cacheId)(dataKey, newValue).map(_ => newValue)
+          }
+      }
   }
 }
 
@@ -108,22 +110,32 @@ class AgentCacheProvider @Inject() (configuration: Configuration, cacheRepositor
     reads: Reads[T],
     writes: Writes[T]
   ): Cache[T] =
-    if (enabled) new MongoCache[T](cacheRepositoryFactory, collectionName, ttlConfigKey)
-    else new DoNotCache[T]
+    if (enabled)
+      new MongoCache[T](cacheRepositoryFactory, collectionName, ttlConfigKey)
+    else
+      new DoNotCache[T]
 
-  val esPrincipalGroupIdCache: Cache[String] =
-    createCache[String](cacheEnabled, "es-principalGroupId-cache", "agent.cache.expires")
+  val esPrincipalGroupIdCache: Cache[String] = createCache[String](
+    cacheEnabled,
+    "es-principalGroupId-cache",
+    "agent.cache.expires"
+  )
 
-  val ugsFirstGroupAdminCache: Cache[Option[UserDetails]] =
-    createCache[Option[UserDetails]](cacheEnabled, "ugs-firstGroupAdmin-cache", "agent.cache.expires")
+  val ugsFirstGroupAdminCache: Cache[Option[UserDetails]] = createCache[Option[UserDetails]](
+    cacheEnabled,
+    "ugs-firstGroupAdmin-cache",
+    "agent.cache.expires"
+  )
 
-  val ugsGroupInfoCache: Cache[Option[GroupInfo]] =
-    createCache[Option[GroupInfo]](cacheEnabled, "ugs-groupInfo-cache", "agent.cache.expires")
+  val ugsGroupInfoCache: Cache[Option[GroupInfo]] = createCache[Option[GroupInfo]](
+    cacheEnabled,
+    "ugs-groupInfo-cache",
+    "agent.cache.expires"
+  )
 
-  val agentTrackPageCache: Cache[Seq[InactiveRelationship]] =
-    createCache[Seq[InactiveRelationship]](
-      agentTrackPageCacheEnabled,
-      "agent-trackPage-cache",
-      "agent.trackPage.cache.expires"
-    )
+  val agentTrackPageCache: Cache[Seq[InactiveRelationship]] = createCache[Seq[InactiveRelationship]](
+    agentTrackPageCacheEnabled,
+    "agent-trackPage-cache",
+    "agent.trackPage.cache.expires"
+  )
 }

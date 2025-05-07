@@ -28,16 +28,15 @@ class ValidateInvitationResponseSpec extends UnitSpec {
 
     "write to JSON" in {
 
-      val model =
-        ValidateInvitationResponse(
-          "ABC123",
-          "HMRC-MTD-IT",
-          "ABC Accountants",
-          Pending,
-          Instant.parse("2020-01-01T00:00:00Z"),
-          Some(ExistingMainAgent("XYZ Accountants", sameAgent = true)),
-          Some("personal")
-        )
+      val model = ValidateInvitationResponse(
+        "ABC123",
+        "HMRC-MTD-IT",
+        "ABC Accountants",
+        Pending,
+        Instant.parse("2020-01-01T00:00:00Z"),
+        Some(ExistingMainAgent("XYZ Accountants", sameAgent = true)),
+        Some("personal")
+      )
 
       val json = Json.obj(
         "invitationId"      -> "ABC123",

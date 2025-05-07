@@ -41,22 +41,24 @@ class ChangeInvitationStatusController @Inject() (
 
   def changeInvitationStatus(arn: Arn, serviceStr: String, clientIdStr: String): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request.body
+      request
+        .body
         .validate[ChangeInvitationStatusRequest]
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
           changeRequest => {
-            val responseT = for {
+            val responseT =
+              for {
 
-              service <- EitherT.fromEither[Future](changeInvitationStatusService.validateService(serviceStr))
-              suppliedClientId <-
-                EitherT.fromEither[Future](changeInvitationStatusService.validateClientId(service, clientIdStr))
+                service <- EitherT.fromEither[Future](changeInvitationStatusService.validateService(serviceStr))
+                suppliedClientId <- EitherT.fromEither[Future](
+                                      changeInvitationStatusService.validateClientId(service, clientIdStr)
+                                    )
 
-              result <- EitherT(navigateToStatusAction(arn, service, suppliedClientId, changeRequest))
-            } yield result
+                result <- EitherT(navigateToStatusAction(arn, service, suppliedClientId, changeRequest))
+              } yield result
 
-            responseT.value
-              .map(_.fold(err => invitationErrorHandler(err, serviceStr, clientIdStr), _ => NoContent))
+            responseT.value.map(_.fold(err => invitationErrorHandler(err, serviceStr, clientIdStr), _ => NoContent))
           }
         )
     }
@@ -90,19 +92,15 @@ class ChangeInvitationStatusController @Inject() (
         UnsupportedService.getResult(msg)
 
       case InvalidClientId =>
-        val msg =
-          s"""Invalid clientId "$clientId", for service type "$service""""
+        val msg = s"""Invalid clientId "$clientId", for service type "$service""""
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
-      case UnsupportedStatusChange =>
-        UnsupportedStatusChange.getResult("")
+      case UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
 
-      case InvitationNotFound =>
-        InvitationNotFound.getResult("")
+      case InvitationNotFound => InvitationNotFound.getResult("")
 
-      case updateStatusFailed @ UpdateStatusFailed(_) =>
-        updateStatusFailed.getResult("")
+      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
 
       case _ => BadRequest
     }

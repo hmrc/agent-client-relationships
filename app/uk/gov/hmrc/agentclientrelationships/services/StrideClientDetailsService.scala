@@ -50,7 +50,11 @@ class StrideClientDetailsService @Inject() (
   )(implicit request: RequestHeader): Future[Option[ClientDetailsStrideResponse]] = {
 
     val clientId: String = ek.oneTaxIdentifier().value
-    val services = if (ek.service == HMRCMTDIT) Seq(ek.service, HMRCMTDITSUPP) else Seq(ek.service)
+    val services =
+      if (ek.service == HMRCMTDIT)
+        Seq(ek.service, HMRCMTDITSUPP)
+      else
+        Seq(ek.service)
 
     for {
       invitations <- getNonSuspendedInvitations(clientId, services)
@@ -64,14 +68,17 @@ class StrideClientDetailsService @Inject() (
   def findAllActiveRelationship(
     clientsRelationshipsRequest: ClientsRelationshipsRequest
   )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ActiveClientRelationship]]] =
-    clientsRelationshipsRequest.clientRelationshipRequest
+    clientsRelationshipsRequest
+      .clientRelationshipRequest
       .map { crr =>
         for {
-          taxIdentifier <-
-            EitherT.fromEither[Future](validationService.validateForTaxIdentifier(crr.clientIdType, crr.clientId))
+          taxIdentifier <- EitherT.fromEither[Future](
+                             validationService.validateForTaxIdentifier(crr.clientIdType, crr.clientId)
+                           )
           activeRelationships <- EitherT(findAllActiveRelationshipForTaxId(taxIdentifier))
           clientAgentsData    <- findAgentClientDataForRelationships(taxIdentifier, activeRelationships)
-        } yield clientAgentsData._2
+        } yield clientAgentsData
+          ._2
           .map(r =>
             ActiveClientRelationship(
               clientId = crr.clientId,
@@ -93,8 +100,10 @@ class StrideClientDetailsService @Inject() (
     request: RequestHeader
   ): EitherT[Future, RelationshipFailureResponse, (ClientDetailsResponse, Seq[ClientRelationshipWithAgentName])] =
     for {
-      activeRelationshipsWithAgentName <-
-        findAgentNameForActiveRelationships(activeRelationships, taxIdentifier: TaxIdentifier)
+      activeRelationshipsWithAgentName <- findAgentNameForActiveRelationships(
+                                            activeRelationships,
+                                            taxIdentifier: TaxIdentifier
+                                          )
       clientDetails <- EitherT(findClientDetailsByTaxIdentifier(taxIdentifier))
 
     } yield (clientDetails, activeRelationshipsWithAgentName)
@@ -105,19 +114,21 @@ class StrideClientDetailsService @Inject() (
     (taxIdentifier match {
       case Nino(_) =>
         (for {
-          itsaActiveRelationships <-
-            EitherT(
-              findRelationshipsService
-                .getAllActiveItsaRelationshipForClient(nino = Nino(taxIdentifier.value), activeOnly = true)
-            )
+          itsaActiveRelationships <- EitherT(
+                                       findRelationshipsService.getAllActiveItsaRelationshipForClient(
+                                         nino = Nino(taxIdentifier.value),
+                                         activeOnly = true
+                                       )
+                                     )
 
-          irvActiveRelationship <-
-            EitherT(agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value))
-              .map(Seq(_))
-              .leftFlatMap(recoverNotFoundRelationship)
+          irvActiveRelationship <- EitherT(
+                                     agentFiRelationshipConnector
+                                       .findIrvActiveRelationshipForClient(taxIdentifier.value)
+                                   ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
 
-          partialAuthAuthorisations <-
-            EitherT.right[RelationshipFailureResponse](getPartialAuthAuthorisations(taxIdentifier))
+          partialAuthAuthorisations <- EitherT.right[RelationshipFailureResponse](
+                                         getPartialAuthAuthorisations(taxIdentifier)
+                                       )
 
         } yield itsaActiveRelationships ++ irvActiveRelationship ++ partialAuthAuthorisations).value
 
@@ -131,8 +142,7 @@ class StrideClientDetailsService @Inject() (
     relationshipFailureResponse match {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
-      case otherError =>
-        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+      case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
 
     }
 
@@ -163,41 +173,44 @@ class StrideClientDetailsService @Inject() (
   )(implicit
     request: RequestHeader
   ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationshipWithAgentName]] =
-    activeRelationships.map { ar =>
-      for {
-        agentDetails <- findAgentDetailsByArn(ar.arn)
-        service <- EitherT(
-                     validationService
-                       .validateAuthProfileToService(taxIdentifier, ar.authProfile, ar.relationshipSource, ar.service)
-                   )
-      } yield ClientRelationshipWithAgentName(
-        ar.arn,
-        agentDetails.agencyDetails.agencyName,
-        service.id,
-        ar.dateTo,
-        ar.dateFrom
-      )
-    }.sequence
+    activeRelationships
+      .map { ar =>
+        for {
+          agentDetails <- findAgentDetailsByArn(ar.arn)
+          service <- EitherT(
+                       validationService
+                         .validateAuthProfileToService(taxIdentifier, ar.authProfile, ar.relationshipSource, ar.service)
+                     )
+        } yield ClientRelationshipWithAgentName(
+          ar.arn,
+          agentDetails.agencyDetails.agencyName,
+          service.id,
+          ar.dateTo,
+          ar.dateFrom
+        )
+      }
+      .sequence
 
   private def findAgentDetailsByArn(
     arn: Arn
   )(implicit request: RequestHeader): EitherT[Future, RelationshipFailureResponse, AgentDetailsDesResponse] =
     EitherT(
-      Try(agentAssuranceConnector.getAgentRecordWithChecks(arn)).toEither
-        .pure[Future]
-    ).semiflatMap(identity)
-      .leftMap(er => RelationshipFailureResponse.ErrorRetrievingAgentDetails(er.getMessage))
+      Try(agentAssuranceConnector.getAgentRecordWithChecks(arn)).toEither.pure[Future]
+    ).semiflatMap(identity).leftMap(er => RelationshipFailureResponse.ErrorRetrievingAgentDetails(er.getMessage))
 
   private def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier
   )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, ClientDetailsResponse]] =
     clientDetailsService
       .findClientDetailsByTaxIdentifier(taxIdentifier)
-      .map(_.left.map {
-        case ClientDetailsNotFound => RelationshipFailureResponse.ClientDetailsNotFound
-        case ErrorRetrievingClientDetails(status, msg) =>
-          RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg)
-      })
+      .map(
+        _.left
+          .map {
+            case ClientDetailsNotFound => RelationshipFailureResponse.ClientDetailsNotFound
+            case ErrorRetrievingClientDetails(status, msg) =>
+              RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg)
+          }
+      )
 
   private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean =
     agentRecord.suspensionDetails.exists(_.suspensionStatus)
@@ -212,8 +225,10 @@ class StrideClientDetailsService @Inject() (
                           agentAssuranceConnector
                             .getAgentRecordWithChecks(Arn(i.arn))
                             .map(agentRecord =>
-                              if (agentIsSuspended(agentRecord)) None
-                              else Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
+                              if (agentIsSuspended(agentRecord))
+                                None
+                              else
+                                Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
                             )
                         )
                       )
@@ -226,9 +241,11 @@ class StrideClientDetailsService @Inject() (
       case (_: Nino, MtdIt) =>
         for {
           partialAuth <- partialAuthRepository.findMainAgent(taxIdentifier.value)
-          mRel <- if (partialAuth.isEmpty) {
-                    findRelationshipsService.getItsaRelationshipForClient(Nino(taxIdentifier.value), service)
-                  } else Future.successful(partialAuth.map(pa => ActiveRelationship(Arn(pa.arn), None, None)))
+          mRel <-
+            if (partialAuth.isEmpty) {
+              findRelationshipsService.getItsaRelationshipForClient(Nino(taxIdentifier.value), service)
+            } else
+              Future.successful(partialAuth.map(pa => ActiveRelationship(Arn(pa.arn), None, None)))
           result = mRel.map(r => ActiveMainAgentRelationship(r.arn.value, service.id))
         } yield result
 
@@ -261,9 +278,11 @@ class StrideClientDetailsService @Inject() (
   ): Future[Option[String]] =
     for {
       fromInv <- Future.successful(invitations.headOption.map(i => i.clientName))
-      result <- if (fromInv.isEmpty)
-                  clientDetailsService.findClientDetails(service, clientId).map(_.toOption).map(_.map(_.name))
-                else Future.successful(fromInv)
+      result <-
+        if (fromInv.isEmpty)
+          clientDetailsService.findClientDetails(service, clientId).map(_.toOption).map(_.map(_.name))
+        else
+          Future.successful(fromInv)
     } yield result
 
   case class ActiveMainAgentRelationship(arn: String, service: String)

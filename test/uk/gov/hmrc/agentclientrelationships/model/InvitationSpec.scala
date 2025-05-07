@@ -27,8 +27,8 @@ import java.time.{Instant, LocalDate}
 
 class InvitationSpec extends UnitSpec {
 
-  implicit val crypto: Encrypter with Decrypter =
-    SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  implicit val crypto: Encrypter with Decrypter = SymmetricCryptoFactory
+    .aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val fullModel: Invitation = Invitation(
     "123",

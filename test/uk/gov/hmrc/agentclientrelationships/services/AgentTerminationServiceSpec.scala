@@ -54,10 +54,7 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
   }
 
   it should "handle error from DeleteRecordRepository" in {
-    (drrMock
-      .terminateAgent(_: Arn))
-      .expects(arn)
-      .returning(Future.successful(Left("some error")))
+    (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Left("some error")))
     (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")
@@ -65,10 +62,7 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
 
   it should "handle error from RelationshipCopyRecordRepository" in {
     (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
-    (rcrrMock
-      .terminateAgent(_: Arn))
-      .expects(arn)
-      .returning(Future.successful(Left("some error")))
+    (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Left("some error")))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")
   }

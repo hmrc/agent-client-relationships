@@ -24,14 +24,15 @@ import java.time.{Instant, LocalDateTime, ZoneOffset}
 case class StatusChangeEvent(time: LocalDateTime, status: InvitationStatus)
 
 object StatusChangeEvent {
-  implicit val statusChangeEventFormat: Format[StatusChangeEvent] = new Format[StatusChangeEvent] {
-    override def reads(json: JsValue): JsResult[StatusChangeEvent] = {
-      val time = Instant.ofEpochMilli((json \ "time").as[Long]).atZone(ZoneOffset.UTC).toLocalDateTime
-      val status = InvitationStatus((json \ "status").as[String])
-      JsSuccess(StatusChangeEvent(time, status))
-    }
+  implicit val statusChangeEventFormat: Format[StatusChangeEvent] =
+    new Format[StatusChangeEvent] {
+      override def reads(json: JsValue): JsResult[StatusChangeEvent] = {
+        val time = Instant.ofEpochMilli((json \ "time").as[Long]).atZone(ZoneOffset.UTC).toLocalDateTime
+        val status = InvitationStatus((json \ "status").as[String])
+        JsSuccess(StatusChangeEvent(time, status))
+      }
 
-    override def writes(o: StatusChangeEvent): JsValue =
-      Json.obj("time" -> o.time.toInstant(ZoneOffset.UTC).toEpochMilli, "status" -> o.status.toString)
-  }
+      override def writes(o: StatusChangeEvent): JsValue =
+        Json.obj("time" -> o.time.toInstant(ZoneOffset.UTC).toEpochMilli, "status" -> o.status.toString)
+    }
 }

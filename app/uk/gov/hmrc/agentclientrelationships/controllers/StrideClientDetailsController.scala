@@ -44,19 +44,23 @@ class StrideClientDetailsController @Inject() (
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
   val strideRole: String = appConfig.newAuthStrideRole
 
-  def get(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      validationService.validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
-        case Left(error) => Future.successful(BadRequest(error))
-        case Right(validKey) =>
-          authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
-            strideClientDetailsService.getClientDetailsWithChecks(validKey).map {
-              case Some(clientDetails) => Ok(Json.toJson(clientDetails))
-              case None                => NotFound
+  def get(service: String, clientIdType: String, clientId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      validationService
+        .validateForEnrolmentKey(service, clientIdType, clientId)
+        .flatMap {
+          case Left(error) => Future.successful(BadRequest(error))
+          case Right(validKey) =>
+            authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
+              strideClientDetailsService
+                .getClientDetailsWithChecks(validKey)
+                .map {
+                  case Some(clientDetails) => Ok(Json.toJson(clientDetails))
+                  case None                => NotFound
+                }
             }
-          }
-      }
-  }
+        }
+    }
 
   def getActiveRelationships: Action[ClientsRelationshipsRequest] =
     Action.async(parse.json[ClientsRelationshipsRequest]) { implicit request =>
@@ -64,8 +68,7 @@ class StrideClientDetailsController @Inject() (
         strideClientDetailsService
           .findAllActiveRelationship(request.body)
           .map {
-            case Right(activeRelationships) =>
-              Ok(Json.toJson(ActiveClientsRelationshipResponse(activeRelationships)))
+            case Right(activeRelationships) => Ok(Json.toJson(ActiveClientsRelationshipResponse(activeRelationships)))
 
             case Left(error) =>
               error match {
@@ -74,11 +77,9 @@ class StrideClientDetailsController @Inject() (
                 case RelationshipFailureResponse.ClientDetailsNotFound  => NotFound
                 case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) =>
                   InternalServerError(message)
-                case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) =>
-                  InternalServerError(message)
-                case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) =>
-                  InternalServerError(message)
-                case _ => InternalServerError
+                case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message)    => InternalServerError(message)
+                case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) => InternalServerError(message)
+                case _                                                                   => InternalServerError
               }
 
           }

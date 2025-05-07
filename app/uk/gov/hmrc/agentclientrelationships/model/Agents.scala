@@ -25,8 +25,7 @@ case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeas
 object Agents {
   implicit val agentReads: Reads[Agent] = Json.reads[Agent]
 
-  implicit val readClientRelationship: Reads[Agents] =
-    (JsPath \ "agents")
-      .readNullable[Seq[Agent]]
-      .map(optionalAgents => Agents(optionalAgents.getOrElse(Seq.empty)))
+  implicit val readClientRelationship: Reads[Agents] = (JsPath \ "agents")
+    .readNullable[Seq[Agent]]
+    .map(optionalAgents => Agents(optionalAgents.getOrElse(Seq.empty)))
 }

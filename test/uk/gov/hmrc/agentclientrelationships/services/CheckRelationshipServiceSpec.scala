@@ -44,8 +44,12 @@ class CheckRelationshipServiceSpec
 
   val arn: Arn = Arn("AARN0000002")
   private val taxIdentifier: TaxIdentifier = Vrn("101747641")
-  private val enrolment: Enrolment =
-    Enrolment("HMRC-MTD-VAT", "activated", "Edward Stone", Seq(Identifier("VRN", taxIdentifier.value)))
+  private val enrolment: Enrolment = Enrolment(
+    "HMRC-MTD-VAT",
+    "activated",
+    "Edward Stone",
+    Seq(Identifier("VRN", taxIdentifier.value))
+  )
   private val enrolmentKeyStr: String = "HMRC-MTD-VAT~VRN~101747641"
   private val enrolmentKey: EnrolmentKey = EnrolmentKey(enrolmentKeyStr)
   val userId = UserId("testUserId")
@@ -68,25 +72,24 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Set(groupId)))
         when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq.empty))
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader]))
-          .thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader]))
-          .thenReturn(Future.successful(true))
+        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader])).thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(
-          es,
-          ap,
-          mockAgentAssuranceConnector,
-          mockIfOrHipConnector,
-          gs,
-          mockPartialAuthRepo,
-          mockAgentFiConnector,
-          metrics
-        )
+        val crs =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentAssuranceConnector,
+            mockIfOrHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector,
+            metrics
+          )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
       "should return 404 if the client is in at least an access groups but the user has not been assigned the client" in {
@@ -95,8 +98,7 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Set(groupId)))
         when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq.empty))
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader]))
-          .thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
         when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader]))
           .thenReturn(Future.successful(false))
@@ -104,16 +106,17 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(
-          es,
-          ap,
-          mockAgentAssuranceConnector,
-          mockIfOrHipConnector,
-          gs,
-          mockPartialAuthRepo,
-          mockAgentFiConnector,
-          metrics
-        )
+        val crs =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentAssuranceConnector,
+            mockIfOrHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector,
+            metrics
+          )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
       "should return 200 if the client is in at least an access groups and the user has been assigned the client" in {
@@ -122,8 +125,7 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Set(groupId)))
         when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(enrolment)))
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader]))
-          .thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
         when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader]))
           .thenReturn(Future.successful(false))
@@ -131,16 +133,17 @@ class CheckRelationshipServiceSpec
         when(gs.getGroupUsers(any[String])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(
-          es,
-          ap,
-          mockAgentAssuranceConnector,
-          mockIfOrHipConnector,
-          gs,
-          mockPartialAuthRepo,
-          mockAgentFiConnector,
-          metrics
-        )
+        val crs =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentAssuranceConnector,
+            mockIfOrHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector,
+            metrics
+          )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
       }
     }
@@ -149,23 +152,23 @@ class CheckRelationshipServiceSpec
         val es = mock[EnrolmentStoreProxyConnector]
         when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader]))
           .thenReturn(Future.successful(Set.empty[String]))
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader]))
-          .thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = mock[AgentPermissionsConnector]
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val relationshipsService = new CheckRelationshipsService(
-          es,
-          ap,
-          mockAgentAssuranceConnector,
-          mockIfOrHipConnector,
-          gs,
-          mockPartialAuthRepo,
-          mockAgentFiConnector,
-          metrics
-        )
+        val relationshipsService =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentAssuranceConnector,
+            mockIfOrHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector,
+            metrics
+          )
         relationshipsService.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
@@ -176,25 +179,24 @@ class CheckRelationshipServiceSpec
           .thenReturn(Future.successful(Set(groupId)))
         when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq.empty))
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader]))
-          .thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader]))
-          .thenReturn(Future.successful(true))
+        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader])).thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some("someOtherUserId")))))
 
-        val crs = new CheckRelationshipsService(
-          es,
-          ap,
-          mockAgentAssuranceConnector,
-          mockIfOrHipConnector,
-          gs,
-          mockPartialAuthRepo,
-          mockAgentFiConnector,
-          metrics
-        )
+        val crs =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentAssuranceConnector,
+            mockIfOrHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector,
+            metrics
+          )
         crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
       }
     }
@@ -206,23 +208,23 @@ class CheckRelationshipServiceSpec
         val es = mock[EnrolmentStoreProxyConnector]
         when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader]))
           .thenReturn(Future.successful(Set(groupId)))
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader]))
-          .thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val crs = new CheckRelationshipsService(
-          es,
-          ap,
-          mockAgentAssuranceConnector,
-          mockIfOrHipConnector,
-          gs,
-          mockPartialAuthRepo,
-          mockAgentFiConnector,
-          metrics
-        )
+        val crs =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentAssuranceConnector,
+            mockIfOrHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector,
+            metrics
+          )
         crs.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe true
       }
     }
@@ -231,23 +233,23 @@ class CheckRelationshipServiceSpec
         val es = mock[EnrolmentStoreProxyConnector]
         when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader]))
           .thenReturn(Future.successful(Set.empty[String]))
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader]))
-          .thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = mock[AgentPermissionsConnector]
         val gs = mock[UsersGroupsSearchConnector]
         when(gs.getGroupUsers(any[String])(any[RequestHeader]))
           .thenReturn(Future.successful(Seq(UserDetails(userId = Some(userId.value)))))
 
-        val relationshipsService = new CheckRelationshipsService(
-          es,
-          ap,
-          mockAgentAssuranceConnector,
-          mockIfOrHipConnector,
-          gs,
-          mockPartialAuthRepo,
-          mockAgentFiConnector,
-          metrics
-        )
+        val relationshipsService =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentAssuranceConnector,
+            mockIfOrHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector,
+            metrics
+          )
         relationshipsService.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe false
       }
     }

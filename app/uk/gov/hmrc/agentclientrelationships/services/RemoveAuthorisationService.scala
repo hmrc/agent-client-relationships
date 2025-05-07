@@ -44,14 +44,14 @@ class RemoveAuthorisationService @Inject() (
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  def validateRequest(serviceStr: String, clientIdStr: String): Either[InvitationFailureResponse, ValidRequest] = for {
-    service <- Try(Service.forId(serviceStr))
-                 .fold(_ => Left(UnsupportedService), Right(_))
-    clientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id))
-                  // Client requests can come with an MTDITID instead of nino so we need to check that too
-                  .orElse(Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)))
-                  .fold(_ => Left(InvalidClientId), Right(_))
-  } yield ValidRequest(clientId, service)
+  def validateRequest(serviceStr: String, clientIdStr: String): Either[InvitationFailureResponse, ValidRequest] =
+    for {
+      service <- Try(Service.forId(serviceStr)).fold(_ => Left(UnsupportedService), Right(_))
+      clientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id))
+                    // Client requests can come with an MTDITID instead of nino so we need to check that too
+                    .orElse(Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)))
+                    .fold(_ => Left(InvalidClientId), Right(_))
+    } yield ValidRequest(clientId, service)
 
   def findPartialAuthInvitation(
     arn: Arn,
@@ -59,18 +59,14 @@ class RemoveAuthorisationService @Inject() (
     service: Service
   ): Future[Option[PartialAuthRelationship]] =
     clientId.typeId match {
-      case NinoType.id =>
-        partialAuthRepository
-          .findActive(service.id, Nino(clientId.value), arn)
-      case _ => Future.successful(None)
+      case NinoType.id => partialAuthRepository.findActive(service.id, Nino(clientId.value), arn)
+      case _           => Future.successful(None)
     }
 
   def deauthPartialAuth(arn: Arn, clientId: ClientId, service: Service): Future[Boolean] =
     clientId.typeId match {
-      case NinoType.id =>
-        partialAuthRepository
-          .deauthorise(service.id, Nino(clientId.value), arn, Instant.now)
-      case _ => Future.successful(false)
+      case NinoType.id => partialAuthRepository.deauthorise(service.id, Nino(clientId.value), arn, Instant.now)
+      case _           => Future.successful(false)
     }
 
   def deauthAltItsaInvitation(
@@ -103,9 +99,7 @@ class RemoveAuthorisationService @Inject() (
             case Some(mtdItId) => Right(EnrolmentKey(service, mtdItId))
             case None          => Right(suppliedEnrolmentKey)
           }
-          .recover { case NonFatal(_) =>
-            Left(ClientRegistrationNotFound)
-          }
+          .recover { case NonFatal(_) => Left(ClientRegistrationNotFound) }
       case _ => Future successful Right(suppliedEnrolmentKey)
     }
 

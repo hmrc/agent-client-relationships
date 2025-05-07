@@ -21,10 +21,11 @@ import play.api.libs.json.{Reads, __}
 case class Pillar2Record(organisationName: String, registrationDate: String, countryCode: String, inactive: Boolean)
 
 object Pillar2Record {
-  implicit val reads: Reads[Pillar2Record] = for {
-    orgName     <- (__ \ "success" \ "upeDetails" \ "organisationName").read[String]
-    regDate     <- (__ \ "success" \ "upeDetails" \ "registrationDate").read[String]
-    countryCode <- (__ \ "success" \ "upeCorrespAddressDetails" \ "countryCode").read[String]
-    inactive    <- (__ \ "success" \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
-  } yield Pillar2Record(orgName, regDate, countryCode, inactive)
+  implicit val reads: Reads[Pillar2Record] =
+    for {
+      orgName     <- (__ \ "success" \ "upeDetails" \ "organisationName").read[String]
+      regDate     <- (__ \ "success" \ "upeDetails" \ "registrationDate").read[String]
+      countryCode <- (__ \ "success" \ "upeCorrespAddressDetails" \ "countryCode").read[String]
+      inactive    <- (__ \ "success" \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
+    } yield Pillar2Record(orgName, regDate, countryCode, inactive)
 }

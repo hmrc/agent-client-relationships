@@ -138,19 +138,14 @@ class MongoRelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComp
       }
 
   override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] =
-    collection
-      .deleteMany(filter(arn, enrolmentKey))
-      .toFuture()
-      .map(res => res.getDeletedCount.toInt)
+    collection.deleteMany(filter(arn, enrolmentKey)).toFuture().map(res => res.getDeletedCount.toInt)
 
   override def terminateAgent(arn: Arn): Future[Either[String, Int]] =
     collection
       .deleteMany(Filters.equal("arn", arn.value))
       .toFuture()
       .map(res => Right(res.getDeletedCount.toInt))
-      .recover { case ex: MongoWriteException =>
-        Left(ex.getMessage)
-      }
+      .recover { case ex: MongoWriteException => Left(ex.getMessage) }
 
   private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
     val identifierType: String = enrolmentKey.identifiers.head.key

@@ -35,21 +35,21 @@ case class VatIndividual(
   middleName: Option[String],
   lastName: Option[String]
 ) {
-  def name: String =
-    Seq(title, firstName, middleName, lastName).flatten.map(_.trim).filter(_.nonEmpty).mkString(" ")
+  def name: String = Seq(title, firstName, middleName, lastName).flatten.map(_.trim).filter(_.nonEmpty).mkString(" ")
 }
 
 object VatCustomerDetails {
 
   val pathPrefix: JsPath = JsPath \ "approvedInformation" \ "customerDetails"
 
-  implicit val reads: Reads[VatCustomerDetails] = for {
-    orgName     <- (pathPrefix \ "organisationName").readNullable[String]
-    individual  <- (pathPrefix \ "individual").readNullable[VatIndividual]
-    tradingName <- (pathPrefix \ "tradingName").readNullable[String]
-    regDate     <- (pathPrefix \ "effectiveRegistrationDate").readNullable[String].map(_.map(LocalDate.parse))
-    isInsolvent <- (pathPrefix \ "isInsolvent").read[Boolean]
-  } yield VatCustomerDetails(orgName, individual, tradingName, regDate, isInsolvent)
+  implicit val reads: Reads[VatCustomerDetails] =
+    for {
+      orgName     <- (pathPrefix \ "organisationName").readNullable[String]
+      individual  <- (pathPrefix \ "individual").readNullable[VatIndividual]
+      tradingName <- (pathPrefix \ "tradingName").readNullable[String]
+      regDate     <- (pathPrefix \ "effectiveRegistrationDate").readNullable[String].map(_.map(LocalDate.parse))
+      isInsolvent <- (pathPrefix \ "isInsolvent").read[Boolean]
+    } yield VatCustomerDetails(orgName, individual, tradingName, regDate, isInsolvent)
 }
 
 object VatIndividual {

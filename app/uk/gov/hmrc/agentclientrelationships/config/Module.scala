@@ -30,13 +30,9 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     val internalAuthTokenEnabled: Boolean = configuration.get[Boolean]("internal-auth-token-enabled-on-start")
 
     if (internalAuthTokenEnabled) {
-      bind(classOf[InternalAuthTokenInitialiser])
-        .to(classOf[InternalAuthTokenInitialiserImpl])
-        .asEagerSingleton()
+      bind(classOf[InternalAuthTokenInitialiser]).to(classOf[InternalAuthTokenInitialiserImpl]).asEagerSingleton()
     } else {
-      bind(classOf[InternalAuthTokenInitialiser])
-        .to(classOf[NoOpInternalAuthTokenInitialiser])
-        .asEagerSingleton()
+      bind(classOf[InternalAuthTokenInitialiser]).to(classOf[NoOpInternalAuthTokenInitialiser]).asEagerSingleton()
     }
 
     bind(classOf[EmailScheduler]).asEagerSingleton()

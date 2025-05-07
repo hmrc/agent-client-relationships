@@ -34,12 +34,16 @@ class IfOrHipConnector @Inject() (hipConnector: HipConnector, ifConnector: IfCon
   private val hipBusinessDetailsEnabled: Boolean = appConfig.hipBusinessDetailsEnabled
 
   def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] =
-    if (hipBusinessDetailsEnabled) hipConnector.getNinoFor(mtdId)
-    else ifConnector.getNinoFor(mtdId)
+    if (hipBusinessDetailsEnabled)
+      hipConnector.getNinoFor(mtdId)
+    else
+      ifConnector.getNinoFor(mtdId)
 
   def getMtdIdFor(nino: Nino)(implicit request: RequestHeader): Future[Option[MtdItId]] =
-    if (hipBusinessDetailsEnabled) hipConnector.getMtdIdFor(nino)
-    else ifConnector.getMtdIdFor(nino)
+    if (hipBusinessDetailsEnabled)
+      hipConnector.getMtdIdFor(nino)
+    else
+      ifConnector.getMtdIdFor(nino)
 
   def getItsaBusinessDetails(
     nino: String

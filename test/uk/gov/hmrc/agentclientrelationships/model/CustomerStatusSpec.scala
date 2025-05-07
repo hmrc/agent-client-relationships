@@ -24,10 +24,13 @@ class CustomerStatusSpec extends UnitSpec {
   "CustomerStatus" should {
 
     "write to JSON" in {
-      val model =
-        CustomerStatus(hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = true)
-      val json =
-        Json.obj("hasPendingInvitations" -> true, "hasInvitationsHistory" -> true, "hasExistingRelationships" -> true)
+      val model = CustomerStatus(
+        hasPendingInvitations = true,
+        hasInvitationsHistory = true,
+        hasExistingRelationships = true
+      )
+      val json = Json
+        .obj("hasPendingInvitations" -> true, "hasInvitationsHistory" -> true, "hasExistingRelationships" -> true)
 
       Json.toJson(model) shouldBe json
     }

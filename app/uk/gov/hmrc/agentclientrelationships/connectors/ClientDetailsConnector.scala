@@ -49,19 +49,21 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, httpClient: HttpCl
 ) extends HttpApiMonitor
     with Logging {
 
-  private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
-    "Environment" -> appConfig.desEnv,
-    // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId"           -> UUID.randomUUID().toString,
-    HeaderNames.authorisation -> s"Bearer $authToken"
-  )
+  private def desHeaders(authToken: String): Seq[(String, String)] =
+    Seq(
+      "Environment" -> appConfig.desEnv,
+      // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
+      "CorrelationId"           -> UUID.randomUUID().toString,
+      HeaderNames.authorisation -> s"Bearer $authToken"
+    )
 
-  private def ifHeaders(authToken: String): Seq[(String, String)] = Seq(
-    "Environment" -> appConfig.ifEnvironment,
-    // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId"           -> UUID.randomUUID().toString,
-    HeaderNames.authorisation -> s"Bearer $authToken"
-  )
+  private def ifHeaders(authToken: String): Seq[(String, String)] =
+    Seq(
+      "Environment" -> appConfig.ifEnvironment,
+      // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
+      "CorrelationId"           -> UUID.randomUUID().toString,
+      HeaderNames.authorisation -> s"Bearer $authToken"
+    )
 
   def getItsaDesignatoryDetails(
     nino: String
@@ -133,7 +135,11 @@ class ClientDetailsConnector @Inject() (appConfig: AppConfig, httpClient: HttpCl
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, String]] = {
 
     val utrPattern = "^\\d{10}$"
-    val identifierType = if (trustTaxIdentifier.matches(utrPattern)) "UTR" else "URN"
+    val identifierType =
+      if (trustTaxIdentifier.matches(utrPattern))
+        "UTR"
+      else
+        "URN"
     monitor("ConsumedAPI-IF-GetTrustName-GET") {
       httpClient
         .get(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")

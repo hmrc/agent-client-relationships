@@ -35,10 +35,10 @@ object SimpleCbcSubscription {
   implicit val reads: Reads[SimpleCbcSubscription] = { json =>
     val isGBUser = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "isGBUser").as[Boolean]
     val tradingName = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "tradingName").asOpt[String]
-    val primaryContact =
-      (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "primaryContact").as[Seq[CbcContact]]
-    val secondaryContact =
-      (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "secondaryContact").as[Seq[CbcContact]]
+    val primaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "primaryContact")
+      .as[Seq[CbcContact]]
+    val secondaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "secondaryContact")
+      .as[Seq[CbcContact]]
     val contacts = primaryContact ++ secondaryContact
 
     val otherNames: Seq[String] = contacts.collect {

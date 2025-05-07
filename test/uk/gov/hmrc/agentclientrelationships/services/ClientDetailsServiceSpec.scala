@@ -55,23 +55,24 @@ class ClientDetailsServiceSpec extends UnitSpec {
 
         "return a ClientDetailsResponse if expected data is returned" in {
           when(
-            mockIfOrHipConnector
-              .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
-          )
-            .thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", Some("AA1 1AA"), "GB"))))
+            mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+          ).thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", Some("AA1 1AA"), "GB"))))
 
-          val resultModel =
-            ClientDetailsResponse("John Rocks", None, isOverseas = Some(false), Seq("AA11AA"), Some(PostalCode))
+          val resultModel = ClientDetailsResponse(
+            "John Rocks",
+            None,
+            isOverseas = Some(false),
+            Seq("AA11AA"),
+            Some(PostalCode)
+          )
 
           await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
         }
 
         "return a ClientDetailsNotFound error if no postcode was returned" in {
           when(
-            mockIfOrHipConnector
-              .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
-          )
-            .thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", None, "GB"))))
+            mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+          ).thenReturn(Future.successful(Right(ItsaBusinessDetails("John Rocks", None, "GB"))))
 
           await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
         }
@@ -83,33 +84,32 @@ class ClientDetailsServiceSpec extends UnitSpec {
 
           "return a ClientDetailsResponse if expected data is returned" in {
             when(
-              mockIfOrHipConnector
-                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+              mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+            ).thenReturn(Future.successful(Left(ClientDetailsNotFound)))
+            when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+              Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, Some("11223344"))))
             )
-              .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
-            when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
-              .thenReturn(
-                Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, Some("11223344"))))
-              )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
               .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA")))))
 
-            val resultModel =
-              ClientDetailsResponse("John Rocks", None, isOverseas = None, Seq("AA11AA"), Some(PostalCode))
+            val resultModel = ClientDetailsResponse(
+              "John Rocks",
+              None,
+              isOverseas = None,
+              Seq("AA11AA"),
+              Some(PostalCode)
+            )
 
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
           }
 
           "return a ClientDetailsNotFound error if no postcode was returned" in {
             when(
-              mockIfOrHipConnector
-                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+              mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+            ).thenReturn(Future.successful(Left(ClientDetailsNotFound)))
+            when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+              Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, Some("11223344"))))
             )
-              .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
-            when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
-              .thenReturn(
-                Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, Some("11223344"))))
-              )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
               .thenReturn(Future.successful(Right(ItsaDesignatoryDetails(None))))
 
@@ -118,10 +118,8 @@ class ClientDetailsServiceSpec extends UnitSpec {
 
           "return a ClientDetailsNotFound error if no name was returned" in {
             when(
-              mockIfOrHipConnector
-                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
-            )
-              .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
+              mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+            ).thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
               .thenReturn(Future.successful(Right(ItsaCitizenDetails(None, None, None, Some("11223344")))))
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
@@ -132,10 +130,8 @@ class ClientDetailsServiceSpec extends UnitSpec {
 
           "return a ClientDetailsNotFound error if no SA UTR was returned" in {
             when(
-              mockIfOrHipConnector
-                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
-            )
-              .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
+              mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+            ).thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
               .thenReturn(Future.successful(Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), None, None))))
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
@@ -149,10 +145,8 @@ class ClientDetailsServiceSpec extends UnitSpec {
 
           "return a ClientDetailsNotFound error" in {
             when(
-              mockIfOrHipConnector
-                .getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
-            )
-              .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
+              mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])
+            ).thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
               .thenReturn(Future.successful(Left(ClientDetailsNotFound)))
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
@@ -180,8 +174,13 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getVatCustomerInfo(eqTo[String]("123456789"))(any[RequestHeader]))
             .thenReturn(Future.successful(Right(responseModel)))
 
-          val resultModel =
-            ClientDetailsResponse("CFG Solutions", Some(Insolvent), isOverseas = None, Seq("2020-01-01"), Some(Date))
+          val resultModel = ClientDetailsResponse(
+            "CFG Solutions",
+            Some(Insolvent),
+            isOverseas = None,
+            Seq("2020-01-01"),
+            Some(Date)
+          )
 
           await(service.findClientDetails("HMRC-MTD-VAT", "123456789")) shouldBe Right(resultModel)
         }
@@ -246,15 +245,13 @@ class ClientDetailsServiceSpec extends UnitSpec {
       "the Citizen Details API returns a successful response" should {
 
         "return a ClientDetailsResponse if expected data is returned" in {
-          when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
-            .thenReturn(
-              Future.successful(
-                Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), Some(LocalDate.parse("2000-01-01")), None))
-              )
+          when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+            Future.successful(
+              Right(ItsaCitizenDetails(Some("John"), Some("Rocks"), Some(LocalDate.parse("2000-01-01")), None))
             )
+          )
 
-          val resultModel =
-            ClientDetailsResponse("John Rocks", None, isOverseas = None, Seq("2000-01-01"), Some(Date))
+          val resultModel = ClientDetailsResponse("John Rocks", None, isOverseas = None, Seq("2000-01-01"), Some(Date))
 
           await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Right(resultModel)
         }
@@ -267,10 +264,9 @@ class ClientDetailsServiceSpec extends UnitSpec {
         }
 
         "return a ClientDetailsNotFound error if no name was returned" in {
-          when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader]))
-            .thenReturn(
-              Future.successful(Right(ItsaCitizenDetails(None, None, Some(LocalDate.parse("2000-01-01")), None)))
-            )
+          when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+            Future.successful(Right(ItsaCitizenDetails(None, None, Some(LocalDate.parse("2000-01-01")), None)))
+          )
 
           await(service.findClientDetails("PERSONAL-INCOME-RECORD", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
         }
@@ -295,8 +291,13 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getCgtSubscriptionDetails(eqTo[String]("XACGTP123456789"))(any[RequestHeader]))
             .thenReturn(Future.successful(Right(CgtSubscriptionDetails("Erling Haal", Some("AA11AA"), "GB"))))
 
-          val resultModel =
-            ClientDetailsResponse("Erling Haal", None, isOverseas = Some(false), Seq("AA11AA"), Some(PostalCode))
+          val resultModel = ClientDetailsResponse(
+            "Erling Haal",
+            None,
+            isOverseas = Some(false),
+            Seq("AA11AA"),
+            Some(PostalCode)
+          )
 
           await(service.findClientDetails("HMRC-CGT-PD", "XACGTP123456789")) shouldBe Right(resultModel)
         }
@@ -305,8 +306,13 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getCgtSubscriptionDetails(eqTo[String]("XACGTP123456789"))(any[RequestHeader]))
             .thenReturn(Future.successful(Right(CgtSubscriptionDetails("Erling Haal", None, "NO"))))
 
-          val resultModel =
-            ClientDetailsResponse("Erling Haal", None, isOverseas = Some(true), Seq("NO"), Some(CountryCode))
+          val resultModel = ClientDetailsResponse(
+            "Erling Haal",
+            None,
+            isOverseas = Some(true),
+            Seq("NO"),
+            Some(CountryCode)
+          )
 
           await(service.findClientDetails("HMRC-CGT-PD", "XACGTP123456789")) shouldBe Right(resultModel)
         }
@@ -328,33 +334,35 @@ class ClientDetailsServiceSpec extends UnitSpec {
       "the PPT subscription API returns a successful response" should {
 
         "return a ClientDetailsResponse if expected data is returned" in {
-          when(mockConnector.getPptSubscriptionDetails(eqTo[String]("XAPPT0004567890"))(any[RequestHeader]))
-            .thenReturn(
-              Future.successful(Right(PptSubscriptionDetails("Erling Haal", LocalDate.parse("2020-01-01"), None)))
-            )
+          when(mockConnector.getPptSubscriptionDetails(eqTo[String]("XAPPT0004567890"))(any[RequestHeader])).thenReturn(
+            Future.successful(Right(PptSubscriptionDetails("Erling Haal", LocalDate.parse("2020-01-01"), None)))
+          )
 
-          val resultModel =
-            ClientDetailsResponse("Erling Haal", None, isOverseas = None, Seq("2020-01-01"), Some(Date))
+          val resultModel = ClientDetailsResponse("Erling Haal", None, isOverseas = None, Seq("2020-01-01"), Some(Date))
 
           await(service.findClientDetails("HMRC-PPT-ORG", "XAPPT0004567890")) shouldBe Right(resultModel)
         }
 
         "return a ClientDetailsResponse if expected data is returned including a deregistered date" in {
-          when(mockConnector.getPptSubscriptionDetails(eqTo[String]("XAPPT0004567890"))(any[RequestHeader]))
-            .thenReturn(
-              Future.successful(
-                Right(
-                  PptSubscriptionDetails(
-                    "Erling Haal",
-                    LocalDate.parse("2020-01-01"),
-                    Some(LocalDate.parse("2021-01-01"))
-                  )
+          when(mockConnector.getPptSubscriptionDetails(eqTo[String]("XAPPT0004567890"))(any[RequestHeader])).thenReturn(
+            Future.successful(
+              Right(
+                PptSubscriptionDetails(
+                  "Erling Haal",
+                  LocalDate.parse("2020-01-01"),
+                  Some(LocalDate.parse("2021-01-01"))
                 )
               )
             )
+          )
 
-          val resultModel =
-            ClientDetailsResponse("Erling Haal", Some(Deregistered), isOverseas = None, Seq("2020-01-01"), Some(Date))
+          val resultModel = ClientDetailsResponse(
+            "Erling Haal",
+            Some(Deregistered),
+            isOverseas = None,
+            Seq("2020-01-01"),
+            Some(Date)
+          )
 
           await(service.findClientDetails("HMRC-PPT-ORG", "XAPPT0004567890")) shouldBe Right(resultModel)
         }
@@ -376,46 +384,42 @@ class ClientDetailsServiceSpec extends UnitSpec {
       "the CBC subscription API returns a successful response" should {
 
         "return a ClientDetailsResponse if expected data is returned" in {
-          when(mockConnector.getCbcSubscriptionDetails(eqTo[String]("XACBC1234567890"))(any[RequestHeader]))
-            .thenReturn(
-              Future.successful(
-                Right(
-                  SimpleCbcSubscription(
-                    Some("CFG Solutions"),
-                    Seq(),
-                    isGBUser = true,
-                    Seq("test@email.com", "test2@email.com")
-                  )
+          when(mockConnector.getCbcSubscriptionDetails(eqTo[String]("XACBC1234567890"))(any[RequestHeader])).thenReturn(
+            Future.successful(
+              Right(
+                SimpleCbcSubscription(
+                  Some("CFG Solutions"),
+                  Seq(),
+                  isGBUser = true,
+                  Seq("test@email.com", "test2@email.com")
                 )
               )
             )
+          )
 
-          val resultModel =
-            ClientDetailsResponse(
-              "CFG Solutions",
-              None,
-              isOverseas = Some(false),
-              Seq("test@email.com", "test2@email.com"),
-              Some(Email)
-            )
+          val resultModel = ClientDetailsResponse(
+            "CFG Solutions",
+            None,
+            isOverseas = Some(false),
+            Seq("test@email.com", "test2@email.com"),
+            Some(Email)
+          )
 
           await(service.findClientDetails("HMRC-CBC-ORG", "XACBC1234567890")) shouldBe Right(resultModel)
         }
 
         "return a ClientDetailsNotFound error if no name is returned" in {
-          when(mockConnector.getCbcSubscriptionDetails(eqTo[String]("XACBC1234567890"))(any[RequestHeader]))
-            .thenReturn(
-              Future.successful(Right(SimpleCbcSubscription(None, Seq(), isGBUser = true, Seq("test@email.com"))))
-            )
+          when(mockConnector.getCbcSubscriptionDetails(eqTo[String]("XACBC1234567890"))(any[RequestHeader])).thenReturn(
+            Future.successful(Right(SimpleCbcSubscription(None, Seq(), isGBUser = true, Seq("test@email.com"))))
+          )
 
           await(service.findClientDetails("HMRC-CBC-ORG", "XACBC1234567890")) shouldBe Left(ClientDetailsNotFound)
         }
 
         "return a ClientDetailsNotFound error if no emails are returned" in {
-          when(mockConnector.getCbcSubscriptionDetails(eqTo[String]("XACBC1234567890"))(any[RequestHeader]))
-            .thenReturn(
-              Future.successful(Right(SimpleCbcSubscription(Some("CFG Solutions"), Seq(), isGBUser = true, Seq())))
-            )
+          when(mockConnector.getCbcSubscriptionDetails(eqTo[String]("XACBC1234567890"))(any[RequestHeader])).thenReturn(
+            Future.successful(Right(SimpleCbcSubscription(Some("CFG Solutions"), Seq(), isGBUser = true, Seq())))
+          )
 
           await(service.findClientDetails("HMRC-CBC-ORG", "XACBC1234567890")) shouldBe Left(ClientDetailsNotFound)
         }
@@ -440,14 +444,13 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getPillar2SubscriptionDetails(eqTo[String]("XAPLR2222222222"))(any[RequestHeader]))
             .thenReturn(Future.successful(Right(Pillar2Record("CFG Solutions", "2020-01-01", "GB", inactive = true))))
 
-          val resultModel =
-            ClientDetailsResponse(
-              "CFG Solutions",
-              Some(Inactive),
-              isOverseas = Some(false),
-              Seq("2020-01-01"),
-              Some(Date)
-            )
+          val resultModel = ClientDetailsResponse(
+            "CFG Solutions",
+            Some(Inactive),
+            isOverseas = Some(false),
+            Seq("2020-01-01"),
+            Some(Date)
+          )
 
           await(service.findClientDetails("HMRC-PILLAR2-ORG", "XAPLR2222222222")) shouldBe Right(resultModel)
         }
@@ -456,8 +459,13 @@ class ClientDetailsServiceSpec extends UnitSpec {
           when(mockConnector.getPillar2SubscriptionDetails(eqTo[String]("XAPLR2222222222"))(any[RequestHeader]))
             .thenReturn(Future.successful(Right(Pillar2Record("CFG Solutions", "2020-01-01", "DE", inactive = false))))
 
-          val resultModel =
-            ClientDetailsResponse("CFG Solutions", None, isOverseas = Some(true), Seq("2020-01-01"), Some(Date))
+          val resultModel = ClientDetailsResponse(
+            "CFG Solutions",
+            None,
+            isOverseas = Some(true),
+            Seq("2020-01-01"),
+            Some(Date)
+          )
 
           await(service.findClientDetails("HMRC-PILLAR2-ORG", "XAPLR2222222222")) shouldBe Right(resultModel)
         }

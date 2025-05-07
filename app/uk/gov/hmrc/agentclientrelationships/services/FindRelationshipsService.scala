@@ -47,9 +47,10 @@ class FindRelationshipsService @Inject() (
   ): Future[Option[ActiveRelationship]] =
     for {
       mtdItId <- ifOrHipConnector.getMtdIdFor(nino)
-      relationships <- mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
-                         hipConnector.getActiveClientRelationships(_, service)
-                       )
+      relationships <-
+        mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
+          hipConnector.getActiveClientRelationships(_, service)
+        )
     } yield relationships
 
   def getAllActiveItsaRelationshipForClient(nino: Nino, activeOnly: Boolean)(implicit
@@ -58,16 +59,15 @@ class FindRelationshipsService @Inject() (
     (for {
       mtdItId <- EitherT.fromOptionF(ifOrHipConnector.getMtdIdFor(nino), RelationshipFailureResponse.TaxIdentifierError)
       relationships <- EitherT(hipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
-    } yield relationships.filter(_.isActive))
-      .leftFlatMap(recoverGetRelationships)
-      .value
+    } yield relationships.filter(_.isActive)).leftFlatMap(recoverGetRelationships).value
 
   def getActiveRelationshipsForClient(taxIdentifier: TaxIdentifier, service: Service)(implicit
     request: RequestHeader
   ): Future[Option[ActiveRelationship]] =
     // If the tax id type is among one of the supported ones...
     if (
-      appConfig.supportedServicesWithoutPir
+      appConfig
+        .supportedServicesWithoutPir
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     )
@@ -82,7 +82,8 @@ class FindRelationshipsService @Inject() (
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     // If the tax id type is among one of the supported ones...
     if (
-      appConfig.supportedServicesWithoutPir
+      appConfig
+        .supportedServicesWithoutPir
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     ) {
@@ -102,8 +103,7 @@ class FindRelationshipsService @Inject() (
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended |
           RelationshipFailureResponse.TaxIdentifierError =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
-      case otherError =>
-        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+      case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
     }
 
   def getInactiveRelationshipsForAgent(arn: Arn)(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] =
@@ -115,9 +115,8 @@ class FindRelationshipsService @Inject() (
     Future
       .traverse(appConfig.supportedServicesWithoutPir) { service =>
         identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
-          case Some(taxId) =>
-            getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
-          case None => Future.successful(None)
+          case Some(taxId) => getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
+          case None        => Future.successful(None)
         }
       }
       .map(_.collect { case Some(x) => x }.groupBy(_._1).map { case (k, v) => (k, v.map(_._2)) })
@@ -139,9 +138,11 @@ class FindRelationshipsService @Inject() (
   ): Future[Seq[InactiveRelationship]] =
     // if it is one of the tax ids that we support...
     if (
-      appConfig.supportedServicesWithoutPir.exists(
-        _.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId
-      )
+      appConfig
+        .supportedServicesWithoutPir
+        .exists(
+          _.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId
+        )
     ) {
       hipConnector.getInactiveClientRelationships(taxIdentifier, service)
     } else { // otherwise...

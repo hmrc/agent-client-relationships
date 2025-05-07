@@ -42,8 +42,11 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
           )
         )
 
-        val expectedModel =
-          PptSubscriptionDetails("Bernard Silver", LocalDate.parse("2020-01-01"), Some(LocalDate.parse("2030-01-01")))
+        val expectedModel = PptSubscriptionDetails(
+          "Bernard Silver",
+          LocalDate.parse("2020-01-01"),
+          Some(LocalDate.parse("2030-01-01"))
+        )
 
         json.as[PptSubscriptionDetails] shouldBe expectedModel
       }
@@ -63,8 +66,11 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
           )
         )
 
-        val expectedModel =
-          PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), Some(LocalDate.parse("2030-01-01")))
+        val expectedModel = PptSubscriptionDetails(
+          "CFG Solutions",
+          LocalDate.parse("2020-01-01"),
+          Some(LocalDate.parse("2030-01-01"))
+        )
 
         json.as[PptSubscriptionDetails] shouldBe expectedModel
       }
@@ -81,8 +87,7 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
           )
         )
 
-        val expectedModel =
-          PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), None)
+        val expectedModel = PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), None)
 
         json.as[PptSubscriptionDetails] shouldBe expectedModel
       }

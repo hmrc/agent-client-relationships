@@ -97,21 +97,24 @@ class DeleteRelationshipsService @Inject() (
 
     for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
-      _ <- recordOpt match {
-             case Some(record) =>
-               for {
-                 isDone <- resumeRelationshipRemoval(record)
-                 _ <- if (isDone) {
-                        auditService.sendTerminateRelationshipAuditEvent()
-                        removeDeleteRecord(arn, enrolmentKey)
-                      } else Future.unit
-               } yield isDone
-             case None =>
-               for {
-                 result <- delete
-                 _ = auditService.sendTerminateRelationshipAuditEvent()
-               } yield result
-           }
+      _ <-
+        recordOpt match {
+          case Some(record) =>
+            for {
+              isDone <- resumeRelationshipRemoval(record)
+              _ <-
+                if (isDone) {
+                  auditService.sendTerminateRelationshipAuditEvent()
+                  removeDeleteRecord(arn, enrolmentKey)
+                } else
+                  Future.unit
+            } yield isDone
+          case None =>
+            for {
+              result <- delete
+              _ = auditService.sendTerminateRelationshipAuditEvent()
+            } yield result
+        }
     } yield ()
   }
 
@@ -123,31 +126,33 @@ class DeleteRelationshipsService @Inject() (
       .updateEtmpSyncStatus(arn, enrolmentKey, _: SyncStatus)
       .map(convertDbUpdateStatus)
 
-    val recoverFromException = (origExc: Throwable, replacementExc: Throwable) => {
-      logger.warn(s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: ${origExc.getMessage}")
-      updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
-    }
+    val recoverFromException =
+      (origExc: Throwable, replacementExc: Throwable) => {
+        logger.warn(s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: ${origExc.getMessage}")
+        updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
+      }
 
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <-
-        hipConnector
-          .deleteAgentRelationship(enrolmentKey, arn) // TODO DG oneTaxIdentifier may not return what we want for CBC!
-      _ = if (maybeResponse.nonEmpty) auditData.set(etmpRelationshipRemovedKey, true)
+      maybeResponse <- hipConnector.deleteAgentRelationship(
+                         enrolmentKey,
+                         arn
+                       ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
+      _ =
+        if (maybeResponse.nonEmpty)
+          auditData.set(etmpRelationshipRemovedKey, true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
-    } yield etmpSyncStatusSuccess)
-      .recoverWith {
-        case e @ UpstreamErrorResponse(_, _, _, _) if e.getMessage().contains("No active relationship found") =>
-          logger.warn(
-            s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: No active relationship found"
-          )
-          updateEtmpSyncStatus(Success).flatMap(_ => Future.failed(RelationshipNotFound("RELATIONSHIP_NOT_FOUND")))
-        case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, _) =>
-          recoverFromException(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_ETMP", upstreamCode, reportAs))
-        case NonFatal(ex) =>
-          recoverFromException(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ETMP"))
-      }
+    } yield etmpSyncStatusSuccess).recoverWith {
+      case e @ UpstreamErrorResponse(_, _, _, _) if e.getMessage().contains("No active relationship found") =>
+        logger.warn(
+          s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: No active relationship found"
+        )
+        updateEtmpSyncStatus(Success).flatMap(_ => Future.failed(RelationshipNotFound("RELATIONSHIP_NOT_FOUND")))
+      case e @ UpstreamErrorResponse(_, upstreamCode, reportAs, _) =>
+        recoverFromException(e, UpstreamErrorResponse("RELATIONSHIP_DELETE_FAILED_ETMP", upstreamCode, reportAs))
+      case NonFatal(ex) => recoverFromException(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ETMP"))
+    }
 
   }
 
@@ -182,8 +187,7 @@ class DeleteRelationshipsService @Inject() (
     }
 
     lazy val recoverUnauthorized: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case ex: UpstreamErrorResponse if ex.statusCode == 401 =>
-        logAndMaybeFail(ex, ex)
+      case ex: UpstreamErrorResponse if ex.statusCode == 401 => logAndMaybeFail(ex, ex)
     }
 
     lazy val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = { case NonFatal(ex) =>
@@ -222,15 +226,17 @@ class DeleteRelationshipsService @Inject() (
       }
 
   def tryToResume(implicit auditData: AuditData): Future[Boolean] =
-    deleteRecordRepository.selectNextToRecover().flatMap {
-      case Some(record) =>
-        val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
-        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
+    deleteRecordRepository
+      .selectNextToRecover()
+      .flatMap {
+        case Some(record) =>
+          val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
+          checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
 
-      case None =>
-        logger.info("No Delete Record Found")
-        Future.successful(true)
-    }
+        case None =>
+          logger.info("No Delete Record Found")
+          Future.successful(true)
+      }
 
   def checkDeleteRecordAndEventuallyResume(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
     request: RequestHeader,
@@ -238,42 +244,42 @@ class DeleteRelationshipsService @Inject() (
   ): Future[Boolean] =
     (for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
-      isComplete <- recordOpt match {
-                      case Some(record) =>
-                        auditData.set("initialDeleteDateTime", record.dateTime)
-                        auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
-                        if (
-                          record.dateTime
-                            .plusSeconds(recoveryTimeout)
-                            .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
-                        ) {
-                          for {
-                            isDone <- resumeRelationshipRemoval(record)
-                            _ <- if (isDone) removeDeleteRecord(arn, enrolmentKey)
-                                 else Future.successful(())
-                          } yield isDone
-                        } else {
-                          logger.error(
-                            s"Terminating recovery of failed de-authorisation $record because timeout has passed."
-                          )
-                          auditData.set("abandonmentReason", "timeout")
-                          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
-                          removeDeleteRecord(arn, enrolmentKey).map(_ => true)
-                        }
-                      case None => Future.successful(true)
-                    }
-    } yield isComplete)
-      .recoverWith {
-        case e: UpstreamErrorResponse if e.statusCode == 401 =>
-          logger.error(
-            s"Terminating recovery of failed de-authorisation ($arn, $enrolmentKey) because auth token is invalid"
-          )
-          auditData.set("abandonmentReason", "unauthorised")
-          auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
-          removeDeleteRecord(arn, enrolmentKey).map(_ => true)
-        case NonFatal(_) =>
-          Future.successful(false)
-      }
+      isComplete <-
+        recordOpt match {
+          case Some(record) =>
+            auditData.set("initialDeleteDateTime", record.dateTime)
+            auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
+            if (
+              record.dateTime.plusSeconds(recoveryTimeout).isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
+            ) {
+              for {
+                isDone <- resumeRelationshipRemoval(record)
+                _ <-
+                  if (isDone)
+                    removeDeleteRecord(arn, enrolmentKey)
+                  else
+                    Future.successful(())
+              } yield isDone
+            } else {
+              logger.error(
+                s"Terminating recovery of failed de-authorisation $record because timeout has passed."
+              )
+              auditData.set("abandonmentReason", "timeout")
+              auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
+              removeDeleteRecord(arn, enrolmentKey).map(_ => true)
+            }
+          case None => Future.successful(true)
+        }
+    } yield isComplete).recoverWith {
+      case e: UpstreamErrorResponse if e.statusCode == 401 =>
+        logger.error(
+          s"Terminating recovery of failed de-authorisation ($arn, $enrolmentKey) because auth token is invalid"
+        )
+        auditData.set("abandonmentReason", "unauthorised")
+        auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
+        removeDeleteRecord(arn, enrolmentKey).map(_ => true)
+      case NonFatal(_) => Future.successful(false)
+    }
 
   def resumeRelationshipRemoval(
     deleteRecord: DeleteRecord
@@ -283,7 +289,8 @@ class DeleteRelationshipsService @Inject() (
     lockService
       .recoveryLock(arn, enrolmentKey) {
         logger.info(
-          s"Resuming unfinished removal of the relationship between ${arn.value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}"
+          s"Resuming unfinished removal of the relationship between ${arn
+            .value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}"
         )
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
@@ -344,7 +351,8 @@ class DeleteRelationshipsService @Inject() (
     invitationService
       .deauthoriseInvitation(arn, enrolmentKey, endedBy)
       .map(success =>
-        if (success) Done
+        if (success)
+          Done
         else {
           logger.warn("setRelationshipEnded failed")
           Done

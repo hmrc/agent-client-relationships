@@ -38,8 +38,7 @@ import scala.util.Try
 
 object AgentClientRelationshipEvent extends Enumeration {
   val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES,
-    TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned =
-    Value
+    TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned = Value
   type AgentClientRelationshipEvent = Value
 }
 
@@ -52,8 +51,7 @@ class AuditData {
     ()
   }
 
-  def getDetails: Map[String, Any] =
-    details.toMap
+  def getDetails: Map[String, Any] = details.toMap
 
 }
 
@@ -82,8 +80,14 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     invitationIdKey
   )
 
-  private val createPartialAuthDetailsFields: Seq[String] =
-    Seq(arnKey, serviceKey, clientIdKey, clientIdTypeKey, howPartialAuthCreatedKey, invitationIdKey)
+  private val createPartialAuthDetailsFields: Seq[String] = Seq(
+    arnKey,
+    serviceKey,
+    clientIdKey,
+    clientIdTypeKey,
+    howPartialAuthCreatedKey,
+    invitationIdKey
+  )
 
   // TODO Needs removing when we get the green light to remove legacy VAT code
   private val createRelationshipDetailsFieldsForMtdVat: Seq[String] = Seq(
@@ -100,11 +104,24 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     "vrnExistsInEtmp"
   )
 
-  private val checkCesaDetailsAndPartialAuthFields: Seq[String] =
-    Seq(agentCodeKey, credIdKey, arnKey, saAgentRefKey, cesaRelationshipKey, ninoKey, "partialAuth")
+  private val checkCesaDetailsAndPartialAuthFields: Seq[String] = Seq(
+    agentCodeKey,
+    credIdKey,
+    arnKey,
+    saAgentRefKey,
+    cesaRelationshipKey,
+    ninoKey,
+    "partialAuth"
+  )
 
-  private val checkEsDetailsFields: Seq[String] =
-    Seq(agentCodeKey, credIdKey, "oldAgentCodes", "vrn", arnKey, "ESRelationship")
+  private val checkEsDetailsFields: Seq[String] = Seq(
+    agentCodeKey,
+    credIdKey,
+    "oldAgentCodes",
+    "vrn",
+    arnKey,
+    "ESRelationship"
+  )
 
   private val terminateRelationshipFields: Seq[String] = Seq(
     agentCodeKey,
@@ -118,8 +135,13 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     howRelationshipTerminatedKey
   )
 
-  private val terminatePartialAuthFields: Seq[String] =
-    Seq(arnKey, serviceKey, clientIdKey, clientIdTypeKey, howPartialAuthTerminatedKey)
+  private val terminatePartialAuthFields: Seq[String] = Seq(
+    arnKey,
+    serviceKey,
+    clientIdKey,
+    clientIdTypeKey,
+    howPartialAuthTerminatedKey
+  )
 
   private val recoveryOfDeleteRelationshipDetailsFields: Seq[String] = Seq(
     "agentReferenceNumber",
@@ -161,8 +183,14 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
         clientIdTypeKey     -> invitation.clientIdType,
         invitationIdKey     -> invitation.invitationId,
         suppliedClientIdKey -> invitation.suppliedClientId,
-        responseKey         -> (if (accepted) acceptedInvitation else rejectedInvitation),
-        respondedByKey      -> (if (isStride) respondedByHmrc else respondedByClient)
+        responseKey -> (if (accepted)
+                          acceptedInvitation
+                        else
+                          rejectedInvitation),
+        respondedByKey -> (if (isStride)
+                             respondedByHmrc
+                           else
+                             respondedByClient)
       )
     )
 
@@ -305,17 +333,17 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: Seq[(String, Any)] = Seq.empty
-  )(implicit request: RequestHeader): Future[Unit] =
-    send(createEvent(event, transactionName, details: _*))
+  )(implicit request: RequestHeader): Future[Unit] = send(createEvent(event, transactionName, details: _*))
 
   private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, details: (String, Any)*)(
     implicit request: RequestHeader
   ): DataEvent = {
 
-    def toString(x: Any): String = x match {
-      case t: TaxIdentifier => t.value
-      case _                => x.toString
-    }
+    def toString(x: Any): String =
+      x match {
+        case t: TaxIdentifier => t.value
+        case _                => x.toString
+      }
     val hc = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
     val tags = hc.toAuditTags(transactionName, request.path)

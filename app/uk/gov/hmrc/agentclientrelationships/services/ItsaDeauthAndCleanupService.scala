@@ -51,42 +51,52 @@ class ItsaDeauthAndCleanupService @Inject() (
   )(implicit request: RequestHeader, currentUser: CurrentUser): Future[Boolean] =
     service match {
       case `HMRCMTDIT` | `HMRCMTDITSUPP` =>
-        val serviceToCheck = Service.forId(if (service == HMRCMTDIT) HMRCMTDITSUPP else HMRCMTDIT)
+        val serviceToCheck = Service.forId(
+          if (service == HMRCMTDIT)
+            HMRCMTDITSUPP
+          else
+            HMRCMTDIT
+        )
         for {
           // Attempt to remove existing alt itsa partial auth
           altItsa <- partialAuthRepository.deauthorise(serviceToCheck.id, Nino(nino), Arn(arn), timestamp)
-          _ = if (altItsa) {
-                implicit val auditData: AuditData = new AuditData()
-                auditData.set(howPartialAuthTerminatedKey, agentRoleChange)
-                auditService.sendTerminatePartialAuthAuditEvent(arn, serviceToCheck.id, nino)
-              }
+          _ =
+            if (altItsa) {
+              implicit val auditData: AuditData = new AuditData()
+              auditData.set(howPartialAuthTerminatedKey, agentRoleChange)
+              auditService.sendTerminatePartialAuthAuditEvent(arn, serviceToCheck.id, nino)
+            }
           // Attempt to remove existing itsa relationship
-          itsa <- optMtdItId.fold(Future.successful(false)) { mtdItId =>
-                    checkRelationshipsService
-                      .checkForRelationshipAgencyLevel(Arn(arn), EnrolmentKey(serviceToCheck, MtdItId(mtdItId)))
-                      .flatMap {
-                        case (true, _) =>
-                          implicit val auditData: AuditData = new AuditData()
-                          auditData.set(howRelationshipTerminatedKey, agentRoleChange)
-                          deleteRelationshipsService
-                            .deleteRelationship(
-                              Arn(arn),
-                              EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
-                              currentUser.affinityGroup
-                            )
-                            .map(_ => true)
-                        case _ => Future.successful(false)
-                      }
-                  }
+          itsa <-
+            optMtdItId.fold(Future.successful(false)) { mtdItId =>
+              checkRelationshipsService
+                .checkForRelationshipAgencyLevel(Arn(arn), EnrolmentKey(serviceToCheck, MtdItId(mtdItId)))
+                .flatMap {
+                  case (true, _) =>
+                    implicit val auditData: AuditData = new AuditData()
+                    auditData.set(howRelationshipTerminatedKey, agentRoleChange)
+                    deleteRelationshipsService
+                      .deleteRelationship(
+                        Arn(arn),
+                        EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
+                        currentUser.affinityGroup
+                      )
+                      .map(_ => true)
+                  case _ => Future.successful(false)
+                }
+            }
           // Clean up accepted invitations
           _ <- Future.successful(
-                 if (altItsa) deauthAcceptedInvitations(serviceToCheck.id, Some(arn), nino, isAltItsa = true, timestamp)
-                 else Future.unit
+                 if (altItsa)
+                   deauthAcceptedInvitations(serviceToCheck.id, Some(arn), nino, isAltItsa = true, timestamp)
+                 else
+                   Future.unit
                )
           _ <- Future.successful(optMtdItId.fold(Future.unit) { mtdItId =>
                  if (itsa)
                    deauthAcceptedInvitations(serviceToCheck.id, Some(arn), mtdItId, isAltItsa = false, timestamp)
-                 else Future.unit
+                 else
+                   Future.unit
                })
         } yield altItsa || itsa
       case _ => Future.successful(false)
@@ -99,15 +109,18 @@ class ItsaDeauthAndCleanupService @Inject() (
     isAltItsa: Boolean,
     timestamp: Instant
   ) = {
-    val acceptedStatus = if (isAltItsa) PartialAuth else Accepted
+    val acceptedStatus =
+      if (isAltItsa)
+        PartialAuth
+      else
+        Accepted
     invitationsRepository
       .findAllBy(arn = optArn, services = Seq(service), clientIds = Seq(clientId), status = Some(acceptedStatus))
       .fallbackTo(Future.successful(Nil))
       .map { acceptedInvitations: Seq[Invitation] =>
-        acceptedInvitations
-          .foreach(acceptedInvitation =>
-            invitationsRepository.deauthInvitation(acceptedInvitation.invitationId, endedByClient, Some(timestamp))
-          )
+        acceptedInvitations.foreach(acceptedInvitation =>
+          invitationsRepository.deauthInvitation(acceptedInvitation.invitationId, endedByClient, Some(timestamp))
+        )
       }
   }
 

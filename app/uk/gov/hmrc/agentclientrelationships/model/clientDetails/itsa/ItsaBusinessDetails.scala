@@ -24,9 +24,10 @@ case class ItsaBusinessDetails(name: String, postcode: Option[String], countryCo
 
 object ItsaBusinessDetails {
 
-  implicit val reads: Reads[ItsaBusinessDetails] = for {
-    name        <- (JsPath \ "tradingName").read[String]
-    postcode    <- (JsPath \ "businessAddressDetails" \ "postalCode").readNullable[String]
-    countryCode <- (JsPath \ "businessAddressDetails" \ "countryCode").read[String]
-  } yield ItsaBusinessDetails(name, postcode, countryCode)
+  implicit val reads: Reads[ItsaBusinessDetails] =
+    for {
+      name        <- (JsPath \ "tradingName").read[String]
+      postcode    <- (JsPath \ "businessAddressDetails" \ "postalCode").readNullable[String]
+      countryCode <- (JsPath \ "businessAddressDetails" \ "countryCode").read[String]
+    } yield ItsaBusinessDetails(name, postcode, countryCode)
 }

@@ -100,13 +100,17 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         requiredIdentifier match {
           // need to handle Arn separately as it is not one of our managed services
           case Arn(arn) =>
-            enrolments.enrolments.exists(enrolment =>
-              enrolment.key == "HMRC-AS-AGENT" && enrolment.identifiers
-                .contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
-            )
+            enrolments
+              .enrolments
+              .exists(enrolment =>
+                enrolment.key == "HMRC-AS-AGENT" && enrolment
+                  .identifiers
+                  .contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
+              )
           case taxId: TaxIdentifier =>
             val requiredTaxIdType = ClientIdentifier(taxId).enrolmentId
-            enrolments.enrolments
+            enrolments
+              .enrolments
               .flatMap(_.identifiers)
               .filter(_.key == requiredTaxIdType)
               .exists(
@@ -115,8 +119,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         }
       }
 
-  private def isAgent(affinity: Option[AffinityGroup]): Boolean =
-    affinity.contains(AffinityGroup.Agent)
+  private def isAgent(affinity: Option[AffinityGroup]): Boolean = affinity.contains(AffinityGroup.Agent)
 
   def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean =
     strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
@@ -134,9 +137,11 @@ trait AuthActions extends AuthorisedFunctions with Logging {
       .retrieve(authorisedEnrolments and affinityGroup) { case enrolments ~ affinityG =>
         affinityG match {
           case Some(Individual) | Some(Organisation) =>
-            val id = if (supportedServices.exists(_.id == serviceKey)) {
-              enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
-            } else None
+            val id =
+              if (supportedServices.exists(_.id == serviceKey)) {
+                enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
+              } else
+                None
 
             id match {
               case Some(i) => body(i)
@@ -150,43 +155,44 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   def withAuthorisedClientForServiceKeys[A, T](
     serviceKeys: Seq[String]
   )(body: Seq[LocalEnrolmentKey] => Future[Result])(implicit request: RequestHeader): Future[Result] =
-    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
-      .retrieve(allEnrolments) { enrolments =>
-        val requiredEnrolments = for {
-          serviceKey <- serviceKeys
-          enrolment  <- enrolments.getEnrolment(serviceKey)
-        } yield (LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value))))
+    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
+      enrolments =>
+        val requiredEnrolments =
+          for {
+            serviceKey <- serviceKeys
+            enrolment  <- enrolments.getEnrolment(serviceKey)
+          } yield (LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value))))
 
         requiredEnrolments match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
           case _              => body(requiredEnrolments)
         }
-      }
+    }
 
   def withAuthorisedAsClient[A, T](
     body: Map[Service, TaxIdentifier] => Future[Result]
   )(implicit request: RequestHeader): Future[Result] =
-    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
-      .retrieve(allEnrolments) { enrolments =>
-        val identifiers = for {
-          supportedService <- supportedServices
-          enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
-          clientId         <- enrolment.identifiers.headOption
-        } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
+    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
+      enrolments =>
+        val identifiers =
+          for {
+            supportedService <- supportedServices
+            enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
+            clientId         <- enrolment.identifiers.headOption
+          } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
         identifiers match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
           case _              => body(identifiers.toMap)
         }
-      }
+    }
 
   def withAuthorisedAsClientWithNino(
     body: EnrolmentsWithNino => Future[Result]
   )(implicit request: RequestHeader): Future[Result] =
-    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
-      .retrieve(allEnrolments and nino) { case enrolments ~ nino =>
-        body(new EnrolmentsWithNino(enrolments, nino))
-      }
+    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments and nino) {
+      case enrolments ~ nino => body(new EnrolmentsWithNino(enrolments, nino))
+    }
 
   protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
     body: String => Future[Result]
@@ -201,8 +207,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   val decodedAuth: Regex = "(.+):(.+)".r
 
   private def decodeFromBase64(encodedString: String): String =
-    try
-      new String(Base64.getDecoder.decode(encodedString), UTF_8)
+    try new String(Base64.getDecoder.decode(encodedString), UTF_8)
     catch {
       case _: Throwable => ""
     }
@@ -233,9 +238,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
       case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
-    } recoverWith { case _: InsufficientEnrolments =>
-      Future.failed(InsufficientEnrolments())
-    }
+    } recoverWith { case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments()) }
 
   protected def withEnrolledAsAgent[A](
     body: Option[String] => Future[Result]
@@ -243,11 +246,10 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     authorised(
       Enrolment("HMRC-AS-AGENT")
         and AuthProviders(GovernmentGateway)
-    )
-      .retrieve(authorisedEnrolments) { enrolments =>
-        val id = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
-        body(id)
-      }
+    ).retrieve(authorisedEnrolments) { enrolments =>
+      val id = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
+      body(id)
+    }
 
   private def getEnrolmentValue(enrolments: Enrolments, serviceName: String, identifierKey: String) =
     for {

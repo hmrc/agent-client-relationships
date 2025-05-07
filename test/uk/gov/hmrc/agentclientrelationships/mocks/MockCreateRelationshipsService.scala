@@ -44,7 +44,6 @@ trait MockCreateRelationshipsService {
           any[RequestHeader],
           any[AuditData]
         )
-    )
-      .thenReturn(response)
+    ).thenReturn(response)
 
 }

@@ -43,9 +43,10 @@ class InternalAuthTokenInitialiserImpl @Inject() (appConfig: AppConfig, httpClie
 ) extends InternalAuthTokenInitialiser
     with Logging {
 
-  override val initialised: Future[Done] = for {
-    _ <- ensureAuthToken()
-  } yield Done
+  override val initialised: Future[Done] =
+    for {
+      _ <- ensureAuthToken()
+    } yield Done
 
   Await.result(initialised, 30.seconds)
 

@@ -61,7 +61,8 @@ class DesConnector @Inject() (
     getWithDesHeaders("GetStatusAgentRelationship", url).map { response =>
       response.status match {
         case Status.OK =>
-          response.json
+          response
+            .json
             .as[Agents]
             .agents
             .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
@@ -76,8 +77,7 @@ class DesConnector @Inject() (
   def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] =
     getWithDesHeaders("GetAgentRecord", new URL(getAgentRecordUrl(agentId))).map { response =>
       response.status match {
-        case Status.OK =>
-          Option(response.json.as[AgentRecord])
+        case Status.OK => Option(response.json.as[AgentRecord])
         case status =>
           logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
           None
@@ -92,8 +92,7 @@ class DesConnector @Inject() (
       case Utr(utr) =>
         val encodedUtr = UriEncoding.encodePathSegment(utr, "UTF-8")
         s"$desBaseUrl/registration/personal-details/utr/$encodedUtr"
-      case _ =>
-        throw new Exception(s"The client identifier $agentId is not supported.")
+      case _ => throw new Exception(s"The client identifier $agentId is not supported.")
     }
 
   // DES API #1363  Get Vat Customer Information
@@ -111,11 +110,12 @@ class DesConnector @Inject() (
     }
   }
 
-  def desHeaders(authToken: String, env: String): Seq[(String, String)] = Seq(
-    Environment               -> env,
-    HeaderNames.authorisation -> s"Bearer $authToken",
-    CorrelationId             -> randomUuidGenerator.makeCorrelationId()
-  )
+  def desHeaders(authToken: String, env: String): Seq[(String, String)] =
+    Seq(
+      Environment               -> env,
+      HeaderNames.authorisation -> s"Bearer $authToken",
+      CorrelationId             -> randomUuidGenerator.makeCorrelationId()
+    )
 
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
     implicit request: RequestHeader
@@ -124,10 +124,7 @@ class DesConnector @Inject() (
     val isInternalHost = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
 
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient
-        .get(url = url)
-        .setHeader(desHeaders(authToken, env): _*)
-        .execute[HttpResponse]
+      httpClient.get(url = url).setHeader(desHeaders(authToken, env): _*).execute[HttpResponse]
 
     }
   }

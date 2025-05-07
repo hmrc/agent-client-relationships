@@ -27,12 +27,13 @@ object InvitationStatusAction extends Logging {
 
   case object Reject extends InvitationStatusAction
 
-  def apply(status: String): InvitationStatusAction = status.toLowerCase match {
-    case "accept" => Accept
-    case "cancel" => Cancel
-    case "reject" => Reject
-    case value =>
-      logger.warn(s"Action of [$value] is not a valid status change action")
-      throw new IllegalArgumentException
-  }
+  def apply(status: String): InvitationStatusAction =
+    status.toLowerCase match {
+      case "accept" => Accept
+      case "cancel" => Cancel
+      case "reject" => Reject
+      case value =>
+        logger.warn(s"Action of [$value] is not a valid status change action")
+        throw new IllegalArgumentException
+    }
 }

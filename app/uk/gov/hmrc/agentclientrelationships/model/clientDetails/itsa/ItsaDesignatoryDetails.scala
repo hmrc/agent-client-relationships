@@ -21,7 +21,8 @@ import play.api.libs.json.{JsPath, Reads}
 case class ItsaDesignatoryDetails(postCode: Option[String])
 
 object ItsaDesignatoryDetails {
-  implicit val reads: Reads[ItsaDesignatoryDetails] = for {
-    postCode <- (JsPath \ "address" \ "postcode").readNullable[String]
-  } yield ItsaDesignatoryDetails(postCode)
+  implicit val reads: Reads[ItsaDesignatoryDetails] =
+    for {
+      postCode <- (JsPath \ "address" \ "postcode").readNullable[String]
+    } yield ItsaDesignatoryDetails(postCode)
 }

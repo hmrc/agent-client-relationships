@@ -44,16 +44,22 @@ class MongoLockServiceImpl @Inject() (lockRepository: MongoLockRepository) exten
   def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
     body: => Future[T]
   )(implicit ec: ExecutionContext): Future[Option[T]] = {
-    val recoveryLock =
-      LockService(lockRepository, lockId = s"recovery-${arn.value}-${enrolmentKey.tag}", ttl = 5.minutes)
+    val recoveryLock = LockService(
+      lockRepository,
+      lockId = s"recovery-${arn.value}-${enrolmentKey.tag}",
+      ttl = 5.minutes
+    )
     recoveryLock.withLock(body)
   }
 
   def schedulerLock[T](
     jobName: String
   )(body: => Future[T])(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]] = {
-    val lockService =
-      LockService(lockRepository, lockId = s"scheduler-lock-$jobName", ttl = appConfig.emailSchedulerLockTTL.seconds)
+    val lockService = LockService(
+      lockRepository,
+      lockId = s"scheduler-lock-$jobName",
+      ttl = appConfig.emailSchedulerLockTTL.seconds
+    )
     lockService.withLock(body)
   }
 }

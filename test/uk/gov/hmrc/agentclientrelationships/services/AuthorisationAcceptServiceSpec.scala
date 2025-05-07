@@ -62,8 +62,10 @@ class AuthorisationAcceptServiceSpec
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
   implicit val auditData: AuditData = new AuditData
-  implicit val currentUser: CurrentUser =
-    CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+  implicit val currentUser: CurrentUser = CurrentUser(
+    credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+    affinityGroup = None
+  )
 
   val testArn: Arn = Arn("ARN1234567890")
   val testArn2: Arn = Arn("ARN1234567899")
@@ -77,146 +79,136 @@ class AuthorisationAcceptServiceSpec
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
 
   val vatEnrolment: EnrolmentKey = EnrolmentKey(Vat, testVrn)
-  val vatInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        Vat,
-        testVrn,
-        testVrn,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("business")
-      )
-  val oltVatInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn2.value,
-        Vat,
-        testVrn,
-        testVrn,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("business")
-      )
-      .copy(status = Accepted)
+  val vatInvitation: Invitation = Invitation.createNew(
+    testArn.value,
+    Vat,
+    testVrn,
+    testVrn,
+    testName,
+    testAgentName,
+    testAgentEmail,
+    LocalDate.now(),
+    Some("business")
+  )
+  val oltVatInvitation: Invitation = Invitation
+    .createNew(
+      testArn2.value,
+      Vat,
+      testVrn,
+      testVrn,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("business")
+    )
+    .copy(status = Accepted)
 
   val pirEnrolment: EnrolmentKey = EnrolmentKey(PersonalIncomeRecord, testNino)
-  val pirInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        PersonalIncomeRecord,
-        testNino,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-  val oldPirInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn2.value,
-        PersonalIncomeRecord,
-        testNino,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-      .copy(status = Accepted)
+  val pirInvitation: Invitation = Invitation.createNew(
+    testArn.value,
+    PersonalIncomeRecord,
+    testNino,
+    testNino,
+    testName,
+    testAgentName,
+    testAgentEmail,
+    LocalDate.now(),
+    Some("personal")
+  )
+  val oldPirInvitation: Invitation = Invitation
+    .createNew(
+      testArn2.value,
+      PersonalIncomeRecord,
+      testNino,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(status = Accepted)
 
   val itsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, testMtdItId)
-  val itsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdIt,
-        testMtdItId,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-  val altItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdIt,
-        testNino,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-  val oldItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn2.value,
-        MtdIt,
-        testMtdItId,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-      .copy(status = Accepted)
-  val oldAltItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn3.value,
-        MtdIt,
-        testNino,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-      .copy(status = PartialAuth)
-  val oldAltItsaPartialAuth: PartialAuthRelationship =
-    PartialAuthRelationship(Instant.now(), testArn3.value, MtdIt.id, testNino.nino, active = true, Instant.now())
-  val itsaSuppInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdItSupp,
-        testMtdItId,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
-  val altItsaSuppInvitation: Invitation =
-    Invitation
-      .createNew(
-        testArn.value,
-        MtdItSupp,
-        testNino,
-        testNino,
-        testName,
-        testAgentName,
-        testAgentEmail,
-        LocalDate.now(),
-        Some("personal")
-      )
+  val itsaInvitation: Invitation = Invitation.createNew(
+    testArn.value,
+    MtdIt,
+    testMtdItId,
+    testNino,
+    testName,
+    testAgentName,
+    testAgentEmail,
+    LocalDate.now(),
+    Some("personal")
+  )
+  val altItsaInvitation: Invitation = Invitation.createNew(
+    testArn.value,
+    MtdIt,
+    testNino,
+    testNino,
+    testName,
+    testAgentName,
+    testAgentEmail,
+    LocalDate.now(),
+    Some("personal")
+  )
+  val oldItsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn2.value,
+      MtdIt,
+      testMtdItId,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(status = Accepted)
+  val oldAltItsaInvitation: Invitation = Invitation
+    .createNew(
+      testArn3.value,
+      MtdIt,
+      testNino,
+      testNino,
+      testName,
+      testAgentName,
+      testAgentEmail,
+      LocalDate.now(),
+      Some("personal")
+    )
+    .copy(status = PartialAuth)
+  val oldAltItsaPartialAuth: PartialAuthRelationship = PartialAuthRelationship(
+    Instant.now(),
+    testArn3.value,
+    MtdIt.id,
+    testNino.nino,
+    active = true,
+    Instant.now()
+  )
+  val itsaSuppInvitation: Invitation = Invitation.createNew(
+    testArn.value,
+    MtdItSupp,
+    testMtdItId,
+    testNino,
+    testName,
+    testAgentName,
+    testAgentEmail,
+    LocalDate.now(),
+    Some("personal")
+  )
+  val altItsaSuppInvitation: Invitation = Invitation.createNew(
+    testArn.value,
+    MtdItSupp,
+    testNino,
+    testNino,
+    testName,
+    testAgentName,
+    testAgentEmail,
+    LocalDate.now(),
+    Some("personal")
+  )
 
   "accept" when {
     // GENERIC CASES
@@ -241,10 +233,8 @@ class AuthorisationAcceptServiceSpec
           verifySideEffectsOccur { _ =>
             verify(mockInvitationsRepository, times(1))
               .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-            verify(mockInvitationsRepository, times(1))
-              .deauthInvitation(any[String], any[String], any[Option[Instant]])
-            verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+            verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
+            verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
           }
         }
       }
@@ -271,10 +261,8 @@ class AuthorisationAcceptServiceSpec
           verifySideEffectsOccur { _ =>
             verify(mockInvitationsRepository, times(1))
               .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
-            verify(mockInvitationsRepository, times(1))
-              .deauthInvitation(any[String], any[String], any[Option[Instant]])
-            verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+            verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
+            verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
           }
         }
       }
@@ -315,8 +303,7 @@ class AuthorisationAcceptServiceSpec
                 .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
               verify(mockInvitationsRepository, times(2))
                 .deauthInvitation(any[String], any[String], any[Option[Instant]])
-              verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }
@@ -336,14 +323,12 @@ class AuthorisationAcceptServiceSpec
             )
             mockSendAcceptedEmail(itsaSuppInvitation)()
 
-            await(TestService.accept(itsaSuppInvitation, itsaEnrolment)) shouldBe itsaSuppInvitation.copy(status =
-              Accepted
-            )
+            await(TestService.accept(itsaSuppInvitation, itsaEnrolment)) shouldBe itsaSuppInvitation
+              .copy(status = Accepted)
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }
@@ -369,9 +354,8 @@ class AuthorisationAcceptServiceSpec
             )
             mockSendAcceptedEmail(altItsaInvitation)()
 
-            await(TestService.accept(altItsaInvitation, itsaEnrolment)) shouldBe altItsaInvitation.copy(status =
-              PartialAuth
-            )
+            await(TestService.accept(altItsaInvitation, itsaEnrolment)) shouldBe altItsaInvitation
+              .copy(status = PartialAuth)
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
@@ -379,8 +363,7 @@ class AuthorisationAcceptServiceSpec
                 .findAllBy(any[Option[String]], any[Seq[String]], any[Seq[String]], any[Option[InvitationStatus]])
               verify(mockInvitationsRepository, times(1))
                 .deauthInvitation(any[String], any[String], any[Option[Instant]])
-              verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }
@@ -398,14 +381,12 @@ class AuthorisationAcceptServiceSpec
             )
             mockSendAcceptedEmail(altItsaSuppInvitation)()
 
-            await(TestService.accept(altItsaSuppInvitation, itsaEnrolment)) shouldBe altItsaSuppInvitation.copy(status =
-              PartialAuth
-            )
+            await(TestService.accept(altItsaSuppInvitation, itsaEnrolment)) shouldBe altItsaSuppInvitation
+              .copy(status = PartialAuth)
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }

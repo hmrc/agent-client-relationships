@@ -67,17 +67,15 @@ class HipConnector @Inject() (
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
     val requestBody = createAgentRelationshipHipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
-    postWithHipHeaders("CreateAgentRelationship", url, requestBody, headers.subscriptionHeaders)
-      .map {
-        case Right(response) =>
-          Option(response.json.as[RegistrationRelationshipResponse])
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case _ =>
-              logger.error(s"Error in HIP 'CreateAgentRelationship' with error: ${errorResponse.getMessage}")
-              None
-          }
-      }
+    postWithHipHeaders("CreateAgentRelationship", url, requestBody, headers.subscriptionHeaders).map {
+      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
+      case Left(errorResponse) =>
+        errorResponse.statusCode match {
+          case _ =>
+            logger.error(s"Error in HIP 'CreateAgentRelationship' with error: ${errorResponse.getMessage}")
+            None
+        }
+    }
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
@@ -89,14 +87,12 @@ class HipConnector @Inject() (
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
     val requestBody = deleteAgentRelationshipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
 
-    postWithHipHeaders("DeleteAgentRelationship", url, requestBody, headers.subscriptionHeaders)
-      .map {
-        case Right(response) =>
-          Option(response.json.as[RegistrationRelationshipResponse])
-        case Left(errorResponse) =>
-          logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
-          throw errorResponse
-      }
+    postWithHipHeaders("DeleteAgentRelationship", url, requestBody, headers.subscriptionHeaders).map {
+      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
+      case Left(errorResponse) =>
+        logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
+        throw errorResponse
+    }
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
@@ -104,26 +100,27 @@ class HipConnector @Inject() (
     request: RequestHeader
   ): Future[Option[ActiveRelationship]] = {
     val authProfile = getAuthProfile(service.id)
-    val url =
-      relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+    val url = relationshipHipUrl(
+      taxIdentifier = taxIdentifier,
+      authProfileOption = Some(authProfile),
+      activeOnly = true
+    )
 
     implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
 
-    getWithHipHeaders(s"GetActiveClientRelationships", url, headers.subscriptionHeaders)
-      .map {
-        case Right(response) =>
-          (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND                                         => None
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => None
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => None
-            case _ =>
-              logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
-              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
-              None
-          }
-      }
+    getWithHipHeaders(s"GetActiveClientRelationships", url, headers.subscriptionHeaders).map {
+      case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
+      case Left(errorResponse) =>
+        errorResponse.statusCode match {
+          case Status.BAD_REQUEST | Status.NOT_FOUND                                         => None
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => None
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => None
+          case _ =>
+            logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
+            // TODO WG - check - that looks so wrong to rerun any value, should be an exception
+            None
+        }
+    }
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship //url and error handling is different to getActiveClientRelationships
@@ -163,26 +160,28 @@ class HipConnector @Inject() (
   ): Future[Seq[InactiveRelationship]] = {
 
     val authProfile = getAuthProfile(service.id)
-    val url =
-      relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = false)
+    val url = relationshipHipUrl(
+      taxIdentifier = taxIdentifier,
+      authProfileOption = Some(authProfile),
+      activeOnly = false
+    )
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
-    getWithHipHeaders(s"GetInactiveClientRelationships", url, headers.subscriptionHeaders)
-      .map {
-        case Right(response) =>
-          (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
-            case _ =>
-              logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
-              Seq.empty[InactiveRelationship]
-              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
-              Nil
-          }
-      }
+    getWithHipHeaders(s"GetInactiveClientRelationships", url, headers.subscriptionHeaders).map {
+      case Right(response) =>
+        (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
+      case Left(errorResponse) =>
+        errorResponse.statusCode match {
+          case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
+          case _ =>
+            logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
+            Seq.empty[InactiveRelationship]
+            // TODO WG - check - that looks so wrong to rerun any value, should be an exception
+            Nil
+        }
+    }
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship (agent)
@@ -193,28 +192,28 @@ class HipConnector @Inject() (
     val regime = "AGSV"
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
-    val url = new URL(
-      s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?arn=$encodedAgentId&isAnAgent=true&activeOnly=false&regime=$regime&dateFrom=$from&dateTo=$now"
-    )
+    val url =
+      new URL(
+        s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?arn=$encodedAgentId&isAnAgent=true&activeOnly=false&regime=$regime&dateFrom=$from&dateTo=$now"
+      )
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
-      getWithHipHeaders(s"GetInactiveRelationships", url, headers.subscriptionHeaders)
-        .map {
-          case Right(response) =>
-            (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
-          case Left(errorResponse) =>
-            errorResponse.statusCode match {
-              case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
-              case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-              case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
-              case _ =>
-                logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
-                Seq.empty[InactiveRelationship]
-                // TODO WG - check - that looks so wrong to rerun any value, should be an exception
-                Nil
-            }
-        }
+      getWithHipHeaders(s"GetInactiveRelationships", url, headers.subscriptionHeaders).map {
+        case Right(response) =>
+          (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
+        case Left(errorResponse) =>
+          errorResponse.statusCode match {
+            case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
+            case _ =>
+              logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
+              Seq.empty[InactiveRelationship]
+              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
+              Nil
+          }
+      }
     }
   }
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
@@ -222,21 +221,20 @@ class HipConnector @Inject() (
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
 
-    getWithHipHeaders(s"GetBusinessDetailsByMtdId", url, headers.subscriptionBusinessDetailsHeaders)
-      .map {
-        case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case Status.NOT_FOUND => None
-            case Status.UNPROCESSABLE_ENTITY
-                if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
-              None
-            case _ =>
-              val msg = s"Error in HIP API#5266 'GetBusinessDetailsByMtdId ${errorResponse.getMessage()}"
-              logger.error(message = msg, error = throw new RuntimeException(msg))
-              None
-          }
-      }
+    getWithHipHeaders(s"GetBusinessDetailsByMtdId", url, headers.subscriptionBusinessDetailsHeaders).map {
+      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+      case Left(errorResponse) =>
+        errorResponse.statusCode match {
+          case Status.NOT_FOUND => None
+          case Status.UNPROCESSABLE_ENTITY
+              if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
+            None
+          case _ =>
+            val msg = s"Error in HIP API#5266 'GetBusinessDetailsByMtdId ${errorResponse.getMessage()}"
+            logger.error(message = msg, error = throw new RuntimeException(msg))
+            None
+        }
+    }
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
@@ -244,21 +242,20 @@ class HipConnector @Inject() (
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
-    getWithHipHeaders(s"GetBusinessDetailsByNino", url, headers.subscriptionBusinessDetailsHeaders)
-      .map {
-        case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case Status.NOT_FOUND => None
-            case Status.UNPROCESSABLE_ENTITY
-                if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
-              None
-            case _ =>
-              val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
-              logger.error(message = msg, error = throw new RuntimeException(msg))
-              None
-          }
-      }
+    getWithHipHeaders(s"GetBusinessDetailsByNino", url, headers.subscriptionBusinessDetailsHeaders).map {
+      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+      case Left(errorResponse) =>
+        errorResponse.statusCode match {
+          case Status.NOT_FOUND => None
+          case Status.UNPROCESSABLE_ENTITY
+              if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
+            None
+          case _ =>
+            val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
+            logger.error(message = msg, error = throw new RuntimeException(msg))
+            None
+        }
+    }
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
@@ -269,45 +266,41 @@ class HipConnector @Inject() (
     val encodedNino = UriEncoding.encodePathSegment(nino, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
-    getWithHipHeaders(s"ConsumedAPI-IF-GetBusinessDetails-GET", url, headers.subscriptionBusinessDetailsHeaders)
-      .map {
-        case Right(response) =>
-          Try((response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData"))
-            .map(_(0))
-            .map(_.as[ItsaBusinessDetails])
-            .toOption
-            .toRight {
-              logger.warn("Unable to retrieve relevant details as the businessData array was empty")
-              ClientDetailsNotFound
-            }
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case Status.NOT_FOUND => Left(ClientDetailsNotFound)
-            case Status.UNPROCESSABLE_ENTITY
-                if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
-              Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(
-                s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}"
-              )
-              Left(
-                ErrorRetrievingClientDetails(
-                  status,
-                  s"Unexpected error during 'getItsaBusinessDetails' message:${errorResponse.getMessage}"
-                )
-              )
+    getWithHipHeaders(s"ConsumedAPI-IF-GetBusinessDetails-GET", url, headers.subscriptionBusinessDetailsHeaders).map {
+      case Right(response) =>
+        Try((response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData"))
+          .map(_(0))
+          .map(_.as[ItsaBusinessDetails])
+          .toOption
+          .toRight {
+            logger.warn("Unable to retrieve relevant details as the businessData array was empty")
+            ClientDetailsNotFound
           }
-      }
+      case Left(errorResponse) =>
+        errorResponse.statusCode match {
+          case Status.NOT_FOUND => Left(ClientDetailsNotFound)
+          case Status.UNPROCESSABLE_ENTITY
+              if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
+            Left(ClientDetailsNotFound)
+          case status =>
+            logger.warn(
+              s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}"
+            )
+            Left(
+              ErrorRetrievingClientDetails(
+                status,
+                s"Unexpected error during 'getItsaBusinessDetails' message:${errorResponse.getMessage}"
+              )
+            )
+        }
+    }
   }
 
   private def getWithHipHeaders(apiName: String, url: URL, getHeaders: () => Seq[(String, String)])(implicit
     request: RequestHeader
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-GET") {
-      httpClient
-        .get(url)
-        .setHeader(getHeaders(): _*)
-        .execute[Either[UpstreamErrorResponse, HttpResponse]]
+      httpClient.get(url).setHeader(getHeaders(): _*).execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
 
   private def postWithHipHeaders(apiName: String, url: URL, body: JsValue, getHeaders: () => Seq[(String, String)])(
@@ -323,18 +316,20 @@ class HipConnector @Inject() (
         .execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
 
-  private[connectors] def isActive(r: ActiveRelationship): Boolean = r.dateTo match {
-    case None    => true
-    case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
-  }
+  private[connectors] def isActive(r: ActiveRelationship): Boolean =
+    r.dateTo match {
+      case None    => true
+      case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
+    }
 
-  private[connectors] def isNotActive(r: InactiveRelationship): Boolean = r.dateTo match {
-    case None => false
-    case Some(d) =>
-      d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) || d.equals(
-        Instant.now().atZone(ZoneOffset.UTC).toLocalDate
-      )
-  }
+  private[connectors] def isNotActive(r: InactiveRelationship): Boolean =
+    r.dateTo match {
+      case None => false
+      case Some(d) =>
+        d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) || d.equals(
+          Instant.now().atZone(ZoneOffset.UTC).toLocalDate
+        )
+    }
 
   private def relationshipHipUrl(
     taxIdentifier: TaxIdentifier,
@@ -343,7 +338,8 @@ class HipConnector @Inject() (
   ) = {
 
     val dateRangeParams =
-      if (activeOnly) ""
+      if (activeOnly)
+        ""
       else {
         val fromDateString = appConfig.inactiveRelationshipsClientRecordStartDate
         val from = LocalDate.parse(fromDateString).toString
@@ -431,62 +427,64 @@ class HipConnector @Inject() (
         .as[JsObject]
     )
 
-  private def getAuthProfile(service: String): String = service match {
-    case HMRCMTDITSUPP => "ITSAS001"
-    case _             => "ALL00001"
-  }
-
-  private def getIsExclusiveAgent(service: String): Boolean = service match {
-    case HMRCMTDITSUPP => false
-    case _             => true
-  }
-
-  private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject = (enrolmentKey: EnrolmentKey) => { request =>
-    val idType = "idType"
-    val authProfile = "authProfile"
-    val relationshipType = "relationshipType"
-
-    val clientId = enrolmentKey.oneTaxIdentifier()
-    val authProfileForService = getAuthProfile(enrolmentKey.service)
-
-    (request \ "regime").asOpt[String] match {
-      case Some("VATC") =>
-        request +
-          ((idType, JsString("VRN"))) +
-          ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString(authProfileForService)))
-      case Some("TRS") =>
-        clientId match {
-          case Utr(_) => request + ((idType, JsString("UTR")))
-          case Urn(_) => request + ((idType, JsString("URN")))
-          case e      => throw new Exception(s"unsupported tax identifier $e for regime TRS")
-        }
-      case Some("CGT") =>
-        request +
-          ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString(authProfileForService))) +
-          ((idType, JsString("ZCGT")))
-      case Some("PPT") =>
-        request +
-          ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString(authProfileForService))) +
-          ((idType, JsString("ZPPT")))
-      case Some("ITSA") =>
-        request +
-          ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString(authProfileForService))) +
-          ((idType, JsString("MTDBSA")))
-      case Some("CBC") =>
-        request +
-          ((idType, JsString("CBC")))
-      case Some("PLR") =>
-        request +
-          ((relationshipType, JsString("ZA01"))) +
-          ((authProfile, JsString(authProfileForService))) +
-          ((idType, JsString("ZPLR")))
-      case _ =>
-        request
+  private def getAuthProfile(service: String): String =
+    service match {
+      case HMRCMTDITSUPP => "ITSAS001"
+      case _             => "ALL00001"
     }
-  }
+
+  private def getIsExclusiveAgent(service: String): Boolean =
+    service match {
+      case HMRCMTDITSUPP => false
+      case _             => true
+    }
+
+  private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject =
+    (enrolmentKey: EnrolmentKey) => { request =>
+      val idType = "idType"
+      val authProfile = "authProfile"
+      val relationshipType = "relationshipType"
+
+      val clientId = enrolmentKey.oneTaxIdentifier()
+      val authProfileForService = getAuthProfile(enrolmentKey.service)
+
+      (request \ "regime").asOpt[String] match {
+        case Some("VATC") =>
+          request +
+            ((idType, JsString("VRN"))) +
+            ((relationshipType, JsString("ZA01"))) +
+            ((authProfile, JsString(authProfileForService)))
+        case Some("TRS") =>
+          clientId match {
+            case Utr(_) => request + ((idType, JsString("UTR")))
+            case Urn(_) => request + ((idType, JsString("URN")))
+            case e      => throw new Exception(s"unsupported tax identifier $e for regime TRS")
+          }
+        case Some("CGT") =>
+          request +
+            ((relationshipType, JsString("ZA01"))) +
+            ((authProfile, JsString(authProfileForService))) +
+            ((idType, JsString("ZCGT")))
+        case Some("PPT") =>
+          request +
+            ((relationshipType, JsString("ZA01"))) +
+            ((authProfile, JsString(authProfileForService))) +
+            ((idType, JsString("ZPPT")))
+        case Some("ITSA") =>
+          request +
+            ((relationshipType, JsString("ZA01"))) +
+            ((authProfile, JsString(authProfileForService))) +
+            ((idType, JsString("MTDBSA")))
+        case Some("CBC") =>
+          request +
+            ((idType, JsString("CBC")))
+        case Some("PLR") =>
+          request +
+            ((relationshipType, JsString("ZA01"))) +
+            ((authProfile, JsString(authProfileForService))) +
+            ((idType, JsString("ZPLR")))
+        case _ => request
+      }
+    }
 
 }

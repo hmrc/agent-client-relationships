@@ -36,9 +36,7 @@ trait MockCheckRelationshipsService {
     response: Future[(Boolean, String)]
   ): OngoingStubbing[Future[(Boolean, String)]] =
     when(
-      mockCheckRelationshipsService
-        .checkForRelationshipAgencyLevel(eqs(arn), eqs(enrolment))(any[RequestHeader])
-    )
-      .thenReturn(response)
+      mockCheckRelationshipsService.checkForRelationshipAgencyLevel(eqs(arn), eqs(enrolment))(any[RequestHeader])
+    ).thenReturn(response)
 
 }

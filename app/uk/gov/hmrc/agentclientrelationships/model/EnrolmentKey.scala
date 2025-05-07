@@ -42,7 +42,8 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
         i.key == key.getOrElse(
           if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
             Service.forId(service).supportedClientIdType.enrolmentId
-          } else identifiers.head.key // fallback to old behaviour
+          } else
+            identifiers.head.key // fallback to old behaviour
         )
       )
       .getOrElse(throw new IllegalArgumentException(s"No identifier for $key with $service"))
@@ -60,8 +61,7 @@ object EnrolmentKey {
   def apply(s: String): EnrolmentKey =
     parse(s).getOrElse(throw new IllegalArgumentException("Invalid enrolment key: " + s))
 
-  def apply(service: Service, taxIdentifier: TaxIdentifier): EnrolmentKey =
-    EnrolmentKey(service.id, taxIdentifier)
+  def apply(service: Service, taxIdentifier: TaxIdentifier): EnrolmentKey = EnrolmentKey(service.id, taxIdentifier)
 
   def apply(serviceKey: String, taxIdentifier: TaxIdentifier): EnrolmentKey =
     EnrolmentKey(serviceKey, Seq(Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value)))
@@ -72,17 +72,22 @@ object EnrolmentKey {
       val service = parts.head
       val identifiers = parts.tail.sliding(2, 2).map(a => Identifier(a(0), a(1))).toSeq
       Some(EnrolmentKey(service, identifiers))
-    } else None
+    } else
+      None
   }
 
-  implicit val writes: Writes[EnrolmentKey] = new Writes[EnrolmentKey] {
-    override def writes(ek: EnrolmentKey): JsValue = JsString(ek.toString)
-  }
-
-  implicit val reads: Reads[EnrolmentKey] = new Reads[EnrolmentKey] {
-    override def reads(json: JsValue): JsResult[EnrolmentKey] = json match {
-      case JsString(value) => parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
-      case _               => JsError("STRING_VALUE_EXPECTED")
+  implicit val writes: Writes[EnrolmentKey] =
+    new Writes[EnrolmentKey] {
+      override def writes(ek: EnrolmentKey): JsValue = JsString(ek.toString)
     }
-  }
+
+  implicit val reads: Reads[EnrolmentKey] =
+    new Reads[EnrolmentKey] {
+      override def reads(json: JsValue): JsResult[EnrolmentKey] =
+        json match {
+          case JsString(value) =>
+            parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
+          case _ => JsError("STRING_VALUE_EXPECTED")
+        }
+    }
 }

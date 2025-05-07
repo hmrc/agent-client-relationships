@@ -29,16 +29,15 @@ class ClientDetailsResponseSpec extends UnitSpec {
 
       "optional fields are present" in {
 
-        val model =
-          ClientDetailsResponse(
-            "Ilkay Gundo",
-            Some(Insolvent),
-            isOverseas = Some(true),
-            Seq("test@email.com"),
-            Some(Email),
-            hasPendingInvitation = true,
-            Some("HMRC-MTD-VAT")
-          )
+        val model = ClientDetailsResponse(
+          "Ilkay Gundo",
+          Some(Insolvent),
+          isOverseas = Some(true),
+          Seq("test@email.com"),
+          Some(Email),
+          hasPendingInvitation = true,
+          Some("HMRC-MTD-VAT")
+        )
 
         val expectedJson = Json.obj(
           "name"                       -> "Ilkay Gundo",

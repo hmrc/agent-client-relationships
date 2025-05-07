@@ -30,31 +30,33 @@ case class CreateInvitationRequest(
   service: String,
   clientType: Option[String]
 ) {
-  def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(service))
-    .fold(_ => Left(UnsupportedService), Right(_))
+  def getService: Either[InvitationFailureResponse, Service] =
+    Try(Service.forId(service)).fold(_ => Left(UnsupportedService), Right(_))
 
-  def getSuppliedClientId: Either[InvitationFailureResponse, ClientId] = for {
-    service <- getService
-    _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.isValid(clientId),
-           clientId,
-           InvalidClientId
-         )
-    _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.id == suppliedClientIdType,
-           suppliedClientIdType,
-           UnsupportedClientIdType
-         )
-    clientId <- Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
-  } yield clientId
+  def getSuppliedClientId: Either[InvitationFailureResponse, ClientId] =
+    for {
+      service <- getService
+      _ <- Either.cond[InvitationFailureResponse, String](
+             service.supportedSuppliedClientIdType.isValid(clientId),
+             clientId,
+             InvalidClientId
+           )
+      _ <- Either.cond[InvitationFailureResponse, String](
+             service.supportedSuppliedClientIdType.id == suppliedClientIdType,
+             suppliedClientIdType,
+             UnsupportedClientIdType
+           )
+      clientId <- Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
+    } yield clientId
 
   private val validClientTypes = Seq("personal", "business", "trust")
 
-  def getClientType: Either[InvitationFailureResponse, Option[String]] = clientType match {
-    case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
-    case Some(_)                                             => Left(UnsupportedClientType)
-    case None                                                => Right(None)
-  }
+  def getClientType: Either[InvitationFailureResponse, Option[String]] =
+    clientType match {
+      case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
+      case Some(_)                                             => Left(UnsupportedClientType)
+      case None                                                => Right(None)
+    }
 }
 
 object CreateInvitationRequest {

@@ -25,11 +25,9 @@ object DateTimeHelper {
   def formatISOInstantSeconds(now: Instant): String =
     DateTimeFormatter.ISO_INSTANT.format(now.truncatedTo(ChronoUnit.SECONDS))
 
-  private val dateFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
+  private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
 
-  def displayDate(localDate: LocalDate): String =
-    localDate.format(dateFormatter)
+  def displayDate(localDate: LocalDate): String = localDate.format(dateFormatter)
 
   def displayDate(instant: Instant): String =
     instant.atZone(ZoneId.of("Europe/London")).toLocalDate.format(dateFormatter)

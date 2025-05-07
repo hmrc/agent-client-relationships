@@ -44,7 +44,6 @@ trait MockItsaDeauthAndCleanupService {
         eqs(nino),
         any[Instant]
       )(any[RequestHeader], any[CurrentUser])
-    )
-      .thenReturn(response)
+    ).thenReturn(response)
 
 }

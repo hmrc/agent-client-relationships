@@ -48,10 +48,11 @@ class CheckRelationshipsService @Inject() (
 
   def checkForRelationship(arn: Arn, userId: Option[UserId], enrolmentKey: LocalEnrolmentKey)(implicit
     request: RequestHeader
-  ): Future[Boolean] = userId match {
-    case None         => checkForRelationshipAgencyLevel(arn, enrolmentKey).map(_._1)
-    case Some(userId) => checkForRelationshipUserLevel(arn, userId, enrolmentKey)
-  }
+  ): Future[Boolean] =
+    userId match {
+      case None         => checkForRelationshipAgencyLevel(arn, enrolmentKey).map(_._1)
+      case Some(userId) => checkForRelationshipUserLevel(arn, userId, enrolmentKey)
+    }
 
   def checkForRelationshipAgencyLevel(arn: Arn, enrolmentKey: LocalEnrolmentKey)(implicit
     request: RequestHeader
@@ -72,27 +73,28 @@ class CheckRelationshipsService @Inject() (
         Future.successful(false)
       case (true, groupId) =>
         // 2. Check that the user belongs to the Arn's group.
-        groupSearch.getGroupUsers(groupId).flatMap { groupUsers =>
-          val userBelongsToGroup = groupUsers.exists(_.userId.contains(userId.value))
-          if (!userBelongsToGroup) {
-            logger.info(s"User ${userId.value} does not belong to group of Arn $arn (groupId $groupId)")
-            Future.successful(false)
-          } else {
-            // 3. Check that the client is assigned to the agent user.
-            val serviceId = enrolmentKey.service
-            for {
-              // if the client is unassigned (not yet put into any access groups), behave as if granular permissions were disabled for that client
-              isClientUnassigned <- ap.isClientUnassigned(arn, enrolmentKey)
-              isEnrolmentAssignedToUser <-
-                es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId)).map { usersAssignedEnrolments =>
-                  usersAssignedEnrolments.exists(enrolment =>
-                    enrolmentKeys(enrolment)
-                      .contains(enrolmentKey.tag)
-                  )
-                }
-            } yield isClientUnassigned || isEnrolmentAssignedToUser
+        groupSearch
+          .getGroupUsers(groupId)
+          .flatMap { groupUsers =>
+            val userBelongsToGroup = groupUsers.exists(_.userId.contains(userId.value))
+            if (!userBelongsToGroup) {
+              logger.info(s"User ${userId.value} does not belong to group of Arn $arn (groupId $groupId)")
+              Future.successful(false)
+            } else {
+              // 3. Check that the client is assigned to the agent user.
+              val serviceId = enrolmentKey.service
+              for {
+                // if the client is unassigned (not yet put into any access groups), behave as if granular permissions were disabled for that client
+                isClientUnassigned <- ap.isClientUnassigned(arn, enrolmentKey)
+                isEnrolmentAssignedToUser <- es.getEnrolmentsAssignedToUser(userId.value, Some(serviceId))
+                                               .map { usersAssignedEnrolments =>
+                                                 usersAssignedEnrolments.exists(enrolment =>
+                                                   enrolmentKeys(enrolment).contains(enrolmentKey.tag)
+                                                 )
+                                               }
+              } yield isClientUnassigned || isEnrolmentAssignedToUser
+            }
           }
-        }
     }
 
   private def enrolmentKeys(enrolment: Enrolment): Seq[String] =
@@ -103,32 +105,37 @@ class CheckRelationshipsService @Inject() (
   )(implicit request: RequestHeader): Future[Option[Arn]] =
     for {
       maybeGroupId <- es.getDelegatedGroupIdsFor(enrolKey)
-      maybeArn <- maybeGroupId.headOption match {
-                    case Some(groupId) => es.getAgentReferenceNumberFor(groupId)
-                    case None          => Future.successful(None)
-                  }
+      maybeArn <-
+        maybeGroupId.headOption match {
+          case Some(groupId) => es.getAgentReferenceNumberFor(groupId)
+          case None          => Future.successful(None)
+        }
     } yield maybeArn
 
   private def findMainAgentForNino(
     invitation: Invitation
   )(implicit request: RequestHeader): Future[Option[ExistingMainAgent]] =
-    partialAuthRepository.findMainAgent(invitation.clientId).flatMap {
-      case Some(p) =>
-        agentAssuranceConnector
-          .getAgentRecordWithChecks(Arn(p.arn))
-          .map(agent =>
-            Some(ExistingMainAgent(agencyName = agent.agencyDetails.agencyName, sameAgent = p.arn == invitation.arn))
-          )
-      case None =>
-        ifOrHipConnector.getMtdIdFor(Nino(invitation.clientId)).flatMap {
-          case Some(mtdItId) =>
-            getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
-              case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
-              case None    => Future.successful(None)
+    partialAuthRepository
+      .findMainAgent(invitation.clientId)
+      .flatMap {
+        case Some(p) =>
+          agentAssuranceConnector
+            .getAgentRecordWithChecks(Arn(p.arn))
+            .map(agent =>
+              Some(ExistingMainAgent(agencyName = agent.agencyDetails.agencyName, sameAgent = p.arn == invitation.arn))
+            )
+        case None =>
+          ifOrHipConnector
+            .getMtdIdFor(Nino(invitation.clientId))
+            .flatMap {
+              case Some(mtdItId) =>
+                getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
+                  case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+                  case None    => Future.successful(None)
+                }
+              case _ => Future.successful(None)
             }
-          case _ => Future.successful(None)
-        }
-    }
+      }
 
   private def returnExistingMainAgentFromArn(arn: String, sameAgent: Boolean)(implicit
     request: RequestHeader
@@ -143,10 +150,12 @@ class CheckRelationshipsService @Inject() (
     invitation.service match {
       case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
       case HMRCPIR =>
-        agentFiRelationshipConnector.findIrvRelationshipForClient(invitation.clientId).flatMap {
-          case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
-          case None    => Future.successful(None)
-        }
+        agentFiRelationshipConnector
+          .findIrvRelationshipForClient(invitation.clientId)
+          .flatMap {
+            case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
+            case None    => Future.successful(None)
+          }
       case HMRCCBCORG if enrolment.isDefined =>
         getArnForDelegatedEnrolmentKey(enrolment.get).flatMap {
           case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
@@ -156,7 +165,10 @@ class CheckRelationshipsService @Inject() (
         getArnForDelegatedEnrolmentKey(
           LocalEnrolmentKey(
             enrolmentKey(
-              if (invitation.service == HMRCMTDITSUPP) HMRCMTDIT else invitation.service,
+              if (invitation.service == HMRCMTDITSUPP)
+                HMRCMTDIT
+              else
+                invitation.service,
               invitation.clientId
             )
           )

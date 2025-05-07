@@ -38,26 +38,30 @@ class CleanUpInvitationStatusController @Inject() (
 
   def deauthoriseInvitation: Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request.body
+      request
+        .body
         .validate[CleanUpInvitationStatusRequest]
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
           payload => {
-            val responseT = for {
-              service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
-              clientId <-
-                EitherT.fromEither[Future](setRelationshipEndedService.validateClientId(service, payload.clientId))
-              result <- EitherT(
-                          setRelationshipEndedService.deauthoriseInvitation(
-                            arn = payload.arn,
-                            clientId = clientId.value,
-                            service = service.id,
-                            relationshipEndedBy = "HMRC"
+            val responseT =
+              for {
+                service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
+                clientId <- EitherT.fromEither[Future](
+                              setRelationshipEndedService.validateClientId(service, payload.clientId)
+                            )
+                result <- EitherT(
+                            setRelationshipEndedService.deauthoriseInvitation(
+                              arn = payload.arn,
+                              clientId = clientId.value,
+                              service = service.id,
+                              relationshipEndedBy = "HMRC"
+                            )
                           )
-                        )
-            } yield result
+              } yield result
 
-            responseT.value
+            responseT
+              .value
               .map(
                 _.fold(
                   failureResponse =>
@@ -85,16 +89,13 @@ class CleanUpInvitationStatusController @Inject() (
         UnsupportedService.getResult(msg)
 
       case InvalidClientId =>
-        val msg =
-          s"""Invalid clientId "$clientId", for service type "$service""""
+        val msg = s"""Invalid clientId "$clientId", for service type "$service""""
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
-      case InvitationNotFound =>
-        InvitationNotFound.getResult("")
+      case InvitationNotFound => InvitationNotFound.getResult("")
 
-      case updateStatusFailed @ UpdateStatusFailed(_) =>
-        updateStatusFailed.getResult("")
+      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
 
       case _ => BadRequest
     }

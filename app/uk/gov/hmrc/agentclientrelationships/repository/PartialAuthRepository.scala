@@ -62,8 +62,14 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
 
   def create(created: Instant, arn: Arn, service: String, nino: Nino): Future[Unit] = {
     require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
-    val partialAuth =
-      PartialAuthRelationship(created, arn.value, service, nino.value, active = true, lastUpdated = created)
+    val partialAuth = PartialAuthRelationship(
+      created,
+      arn.value,
+      service,
+      nino.value,
+      active = true,
+      lastUpdated = created
+    )
     collection.insertOne(partialAuth).toFuture().map(_ => ())
   }
 
@@ -80,14 +86,10 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
       .headOption()
 
   def findAllByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
-    collection
-      .find(and(equal("nino", encryptedString(nino.value))))
-      .toFuture()
+    collection.find(and(equal("nino", encryptedString(nino.value)))).toFuture()
 
   def findActiveByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
-    collection
-      .find(and(equal("nino", encryptedString(nino.value)), equal("active", true)))
-      .toFuture()
+    collection.find(and(equal("nino", encryptedString(nino.value)), equal("active", true))).toFuture()
 
   def findActive(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
     collection
@@ -150,7 +152,10 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
         and(
           Seq(
             arn.map(equal("arn", _)),
-            if (services.nonEmpty) Some(in("service", services: _*)) else None,
+            if (services.nonEmpty)
+              Some(in("service", services: _*))
+            else
+              None,
             nino.map(str => equal("nino", encryptedString(str))),
             isActive.map(equal("active", _))
           ).flatten: _*

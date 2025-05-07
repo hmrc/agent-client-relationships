@@ -24,13 +24,12 @@ class EmailInformationSpec extends UnitSpec {
   val emails = Seq("someone@something.go.global")
   val templateId = "client_accepted_email"
   val parametersAccept = Map("agentName" -> "Agent 1", "clientName" -> "Client 2", "service" -> "Accept ITSA")
-  val parametersExpired =
-    Map(
-      "agentName"  -> "Agent 1",
-      "clientName" -> "Client 2",
-      "service"    -> "Expired ITSA",
-      "expiryDate" -> "1 October 2020"
-    )
+  val parametersExpired = Map(
+    "agentName"  -> "Agent 1",
+    "clientName" -> "Client 2",
+    "service"    -> "Expired ITSA",
+    "expiryDate" -> "1 October 2020"
+  )
 
   "EmailInformation" should {
     "return accept email info" in {

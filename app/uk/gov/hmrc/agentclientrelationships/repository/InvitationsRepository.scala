@@ -121,9 +121,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection.insertOne(invitation).toFuture()
 
   def findOneByIdForAgent(arn: String, invitationId: String): Future[Option[Invitation]] =
-    collection
-      .find(combine(equal(arnKey, arn), equal(invitationIdKey, invitationId)))
-      .headOption()
+    collection.find(combine(equal(arnKey, arn), equal(invitationIdKey, invitationId))).headOption()
 
   def cancelByIdForAgent(arn: String, invitationId: String): Future[Unit] =
     collection
@@ -139,9 +137,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .map(_ => ())
 
   def findOneById(invitationId: String): Future[Option[Invitation]] =
-    collection
-      .find(equal(invitationIdKey, invitationId))
-      .headOption()
+    collection.find(equal(invitationIdKey, invitationId)).headOption()
 
   def findAllBy(
     arn: Option[String] = None,
@@ -149,15 +145,22 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     clientIds: Seq[String] = Nil,
     status: Option[InvitationStatus] = None
   ): Future[Seq[Invitation]] =
-    if (arn.isEmpty && clientIds.isEmpty) Future.successful(Nil) // no user-specific identifiers were provided
+    if (arn.isEmpty && clientIds.isEmpty)
+      Future.successful(Nil) // no user-specific identifiers were provided
     else
       collection
         .find(
           and(
             Seq(
               arn.map(equal(arnKey, _)),
-              if (services.nonEmpty) Some(in(serviceKey, services: _*)) else None,
-              if (clientIds.nonEmpty) Some(in(clientIdKey, clientIds.map(encryptedString): _*)) else None,
+              if (services.nonEmpty)
+                Some(in(serviceKey, services: _*))
+              else
+                None,
+              if (clientIds.nonEmpty)
+                Some(in(clientIdKey, clientIds.map(encryptedString): _*))
+              else
+                None,
               status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
             ).flatten: _*
           )
@@ -165,12 +168,9 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         .toFuture()
 
   def findOneByIdForClient(invitationId: String): Future[Option[Invitation]] =
-    collection
-      .find(equal(invitationIdKey, invitationId))
-      .headOption()
+    collection.find(equal(invitationIdKey, invitationId)).headOption()
 
-  def findAllForAgent(arn: String): Future[Seq[Invitation]] =
-    collection.find(equal(arnKey, arn)).toFuture()
+  def findAllForAgent(arn: String): Future[Seq[Invitation]] = collection.find(equal(arnKey, arn)).toFuture()
 
   def findAllForAgent(
     arn: String,
@@ -184,7 +184,10 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           equal(arnKey, arn),
           in(serviceKey, services: _*),
           in(
-            if (isSuppliedClientId) "suppliedClientId" else "clientId",
+            if (isSuppliedClientId)
+              "suppliedClientId"
+            else
+              "clientId",
             clientIds.map(_.replaceAll(" ", "")).map(encryptedString): _*
           )
         )
@@ -350,9 +353,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .toFuture()
 
   def findAllForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
-    collection
-      .find(and(equal(clientIdKey, encryptedString(clientId)), in(serviceKey, services: _*)))
-      .toFuture()
+    collection.find(and(equal(clientIdKey, encryptedString(clientId)), in(serviceKey, services: _*))).toFuture()
 
   def updatePartialAuthToDeAuthorisedStatus(
     arn: Arn,
@@ -382,8 +383,10 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       and(
         statusFilter
           .map(status =>
-            if (status == "Accepted") or(equal(statusKey, status), equal(statusKey, PartialAuth.toString))
-            else equal(statusKey, status)
+            if (status == "Accepted")
+              or(equal(statusKey, status), equal(statusKey, PartialAuth.toString))
+            else
+              equal(statusKey, status)
           )
           .getOrElse(Filters.exists(statusKey)),
         clientName
@@ -426,12 +429,13 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       availableFilters = results.availableFiltersFacet.headOption.map(_.availableFilters.sorted).getOrElse(Nil),
       totalResults = results.totalResultsFacet.headOption.map(_.count).getOrElse(0),
       pageNumber = pageNumber,
-      filtersApplied = (statusFilter, clientName) match {
-        case (Some(f), Some(c)) => Some(Map("statusFilter" -> f, "clientFilter" -> c))
-        case (Some(f), None)    => Some(Map("statusFilter" -> f))
-        case (None, Some(c))    => Some(Map("clientFilter" -> c))
-        case _                  => None
-      }
+      filtersApplied =
+        (statusFilter, clientName) match {
+          case (Some(f), Some(c)) => Some(Map("statusFilter" -> f, "clientFilter" -> c))
+          case (Some(f), None)    => Some(Map("statusFilter" -> f))
+          case (None, Some(c))    => Some(Map("clientFilter" -> c))
+          case _                  => None
+        }
     )
   }
 
@@ -449,20 +453,17 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       Aggregates.group("$arn", addToSet("invitations", "$$ROOT"))
     )
 
-    collection
-      .aggregate[BsonValue](aggregatePipeline)
-      .map(Codecs.fromBson[WarningEmailAggregationResult])
+    collection.aggregate[BsonValue](aggregatePipeline).map(Codecs.fromBson[WarningEmailAggregationResult])
   }
 
   def findAllForExpiredEmail: Observable[Invitation] =
-    collection
-      .find(
-        and(
-          equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
-          equal(expiredEmailSentKey, false),
-          lte(expiryDateKey, LocalDate.now())
-        )
+    collection.find(
+      and(
+        equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
+        equal(expiredEmailSentKey, false),
+        lte(expiryDateKey, LocalDate.now())
       )
+    )
 
   def updateWarningEmailSent(invitationId: String): Future[Boolean] =
     collection

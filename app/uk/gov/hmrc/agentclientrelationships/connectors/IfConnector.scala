@@ -128,10 +128,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     ec: ExecutionContext
   ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient
-        .get(url)
-        .setHeader(ifHeaders(authToken, env): _*)
-        .execute[HttpResponse]
+      httpClient.get(url).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
     }
 
   private[connectors] def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
@@ -140,11 +137,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     ec: ExecutionContext
   ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-POST") {
-      httpClient
-        .post(url)
-        .withBody(body)
-        .setHeader(ifHeaders(authToken, env): _*)
-        .execute[HttpResponse]
+      httpClient.post(url).withBody(body).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
     }
 
   def ifHeaders(authToken: String, env: String): Seq[(String, String)] =

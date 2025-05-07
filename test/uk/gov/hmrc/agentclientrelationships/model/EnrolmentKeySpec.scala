@@ -22,17 +22,20 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
 class EnrolmentKeySpec extends AnyFlatSpec with Matchers {
 
   "EnrolmentKey" should "toString with mixed case" in {
-    val enrolmentKeyStr = EnrolmentKey(
-      "HMRC-CBC-ORG",
-      Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890"))
-    ).toString
+    val enrolmentKeyStr =
+      EnrolmentKey(
+        "HMRC-CBC-ORG",
+        Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890"))
+      ).toString
 
     enrolmentKeyStr shouldBe "HMRC-CBC-ORG~UTR~1234567890~cbcId~XCBCX1234567890"
   }
 
   it should "return correct 'default' service identifier" in {
-    val cbcKey =
-      EnrolmentKey("HMRC-CBC-ORG", Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890")))
+    val cbcKey = EnrolmentKey(
+      "HMRC-CBC-ORG",
+      Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890"))
+    )
     val cbcNonUKKey = EnrolmentKey("HMRC-CBC-NONUK-ORG", Seq(Identifier("cbcId", "XCBCX1234567891")))
     // vrn is case sensitive
     val mtdVatKey = EnrolmentKey("HMRC-MTD-VAT", Seq(Identifier("VRN", "123456789")))
@@ -43,8 +46,10 @@ class EnrolmentKeySpec extends AnyFlatSpec with Matchers {
   }
 
   it should "return correct identifier with supplied key" in {
-    val cbcKey =
-      EnrolmentKey("HMRC-CBC-ORG", Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890")))
+    val cbcKey = EnrolmentKey(
+      "HMRC-CBC-ORG",
+      Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890"))
+    )
 
     cbcKey.oneIdentifier(Some("UTR")) shouldBe Identifier("UTR", "1234567890")
   }

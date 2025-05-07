@@ -37,15 +37,16 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
-  implicit val patience: PatienceConfig =
-    PatienceConfig(timeout = scaled(Span(500, Millis)), interval = scaled(Span(200, Millis)))
+  implicit val patience: PatienceConfig = PatienceConfig(
+    timeout = scaled(Span(500, Millis)),
+    interval = scaled(Span(200, Millis))
+  )
 
-  val request: RequestHeader = FakeRequest("GET", "/path")
-    .withHeaders(
-      HeaderNames.xSessionId    -> "dummy session id",
-      HeaderNames.xRequestId    -> "dummy request id",
-      HeaderNames.authorisation -> "dummy auth"
-    )
+  val request: RequestHeader = FakeRequest("GET", "/path").withHeaders(
+    HeaderNames.xSessionId    -> "dummy session id",
+    HeaderNames.xRequestId    -> "dummy request id",
+    HeaderNames.authorisation -> "dummy auth"
+  )
 
   "auditEvent" should {
     "send an CreateRelationship event with the correct fields" in {
@@ -67,8 +68,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("howRelationshipCreated", "CopyExistingCESARelationship")
 
       await(
-        service
-          .sendCreateRelationshipAuditEvent()(request, auditData)
+        service.sendCreateRelationshipAuditEvent()(request, auditData)
       )
 
       eventually {

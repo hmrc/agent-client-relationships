@@ -46,13 +46,14 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, httpClient: 
 
   def getRelationship(arn: Arn, service: String, clientId: String)(implicit
     rh: RequestHeader
-  ): Future[Option[ActiveRelationship]] = monitor(s"ConsumedAPI-AgentFiRelationship-$service-GET") {
-    implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
-    httpClient
-      .get(afiRelationshipUrl(arn, service, clientId))
-      .execute[Option[Seq[ActiveRelationship]]]
-      .map(_.flatMap(_.headOption))
-  }
+  ): Future[Option[ActiveRelationship]] =
+    monitor(s"ConsumedAPI-AgentFiRelationship-$service-GET") {
+      implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
+      httpClient
+        .get(afiRelationshipUrl(arn, service, clientId))
+        .execute[Option[Seq[ActiveRelationship]]]
+        .map(_.flatMap(_.headOption))
+    }
 
   def getInactiveRelationships(implicit rh: RequestHeader): Future[Seq[InactiveRelationship]] =
     monitor(s"ConsumedAPI-AgentFiRelationship-PERSONAL-INCOME-RECORD-GET") {
@@ -60,8 +61,7 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, httpClient: 
       httpClient
         .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
         // TODO: it would be easier if the underlying endpoint could return emtpy list instead of NOT_FOUND. Easier to implement and no problem when to distinguish between URL not found and records are not there
-        .execute[Option[Seq[InactiveRelationship]]]
-        .map(_.fold(Seq[InactiveRelationship]())(identity))
+        .execute[Option[Seq[InactiveRelationship]]].map(_.fold(Seq[InactiveRelationship]())(identity))
     }
 
   def createRelationship(arn: Arn, service: String, clientId: String, acceptedDate: LocalDateTime)(implicit
@@ -69,10 +69,7 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, httpClient: 
   ): Future[Unit] = {
     val body = Json.obj("startDate" -> acceptedDate.toString)
     monitor(s"ConsumedAPI-AgentFiRelationship-$service-PUT") {
-      httpClient
-        .put(afiRelationshipUrl(arn, service, clientId))
-        .withBody(body)
-        .execute[Unit]
+      httpClient.put(afiRelationshipUrl(arn, service, clientId)).withBody(body).execute[Unit]
     }
   }
 
@@ -130,11 +127,10 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, httpClient: 
             case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
             case status =>
               Left(
-                RelationshipFailureResponse
-                  .ErrorRetrievingRelationship(
-                    status = status,
-                    message = s"Unexpected status $status received from AFI get active relationship for client"
-                  )
+                RelationshipFailureResponse.ErrorRetrievingRelationship(
+                  status = status,
+                  message = s"Unexpected status $status received from AFI get active relationship for client"
+                )
               )
           }
         }

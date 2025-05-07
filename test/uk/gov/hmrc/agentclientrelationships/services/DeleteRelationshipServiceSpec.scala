@@ -69,8 +69,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAucdCacheRefresh
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-      implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+      implicit val currentUser: CurrentUser = CurrentUser(
+        credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+        affinityGroup = None
+      )
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
       verifyESDeAllocateHasBeenPerformed
@@ -85,8 +87,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenESDeAllocationFails
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-      implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+      implicit val currentUser: CurrentUser = CurrentUser(
+        credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+        affinityGroup = None
+      )
 
       val exceptionMessage: String =
         intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
@@ -108,8 +112,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAucdCacheRefresh
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-      implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+      implicit val currentUser: CurrentUser = CurrentUser(
+        credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+        affinityGroup = None
+      )
 
       val exceptionMessage: String =
         intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
@@ -129,8 +135,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAgentExists
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-      implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+      implicit val currentUser: CurrentUser = CurrentUser(
+        credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+        affinityGroup = None
+      )
 
       val exceptionMessage: String =
         intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
@@ -149,8 +157,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAucdCacheRefresh
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-      implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+      implicit val currentUser: CurrentUser = CurrentUser(
+        credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+        affinityGroup = None
+      )
 
       val exceptionMessage: String =
         intercept[Exception](await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))).getMessage
@@ -163,8 +173,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     "resume failed ES de-allocation when matching deleteRecord found and remove record afterwards if recovery succeeds" in new TestFixture {
       await(repo.remove(arn, mtdItEnrolmentKey))
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(arn.value, Some(mtdItEnrolmentKey), syncToETMPStatus = None, syncToESStatus = Some(Failed))
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = None,
+        syncToESStatus = Some(Failed)
+      )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -174,8 +188,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAucdCacheRefresh
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-      implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+      implicit val currentUser: CurrentUser = CurrentUser(
+        credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+        affinityGroup = None
+      )
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
       verifyESDeAllocateHasBeenPerformed
@@ -193,8 +209,10 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenAucdCacheRefresh
 
       implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-      implicit val currentUser: CurrentUser =
-        CurrentUser(credentials = Some(Credentials("GG-00001", "GovernmentGateway")), affinityGroup = None)
+      implicit val currentUser: CurrentUser = CurrentUser(
+        credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+        affinityGroup = None
+      )
       await(underTest.deleteRelationship(arn, mtdItEnrolmentKey, None))
 
       verifyESDeAllocateHasBeenPerformed
@@ -209,17 +227,15 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     // HAPPY PATHS :-)
 
     "Do nothing if ETMP and ES are in successful states" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Success)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Success)
+      )
       await(repo.create(deleteRecord))
 
-      val result: Boolean =
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
+      val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
       verifyESDeAllocateHasNOTBeenPerformed
@@ -227,19 +243,17 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry ETMP de-authorisation when only ETMP requires action" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Failed),
-          syncToESStatus = Some(Success)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Failed),
+        syncToESStatus = Some(Success)
+      )
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
       givenSetRelationshipEndedSucceeds
 
-      val result: Boolean =
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
+      val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
       verifyESDeAllocateHasNOTBeenPerformed
@@ -251,18 +265,16 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Do not retry ETMP de-authorisation when ETMP state is InProgress" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(InProgress),
-          syncToESStatus = Some(Success)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(InProgress),
+        syncToESStatus = Some(Success)
+      )
       await(repo.create(deleteRecord))
       givenETMPDeAuthSucceeds
 
-      val result: Boolean =
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
+      val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
       verifyESDeAllocateHasNOTBeenPerformed
@@ -274,13 +286,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry ES de-allocation when only ES requires action (impossible state since ES goes first)" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed)
+      )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -288,8 +299,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result: Boolean =
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
+      val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
       verifyESDeAllocateHasBeenPerformed
@@ -301,20 +311,18 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Do not retry ES de-allocation when ES state is InProgress" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(InProgress)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(InProgress)
+      )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
       givenESDeAllocationSucceeds
 
-      val result: Boolean =
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
+      val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
       verifyESDeAllocateHasNOTBeenPerformed
@@ -326,8 +334,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "Retry both ETMP and ES de-allocation when both require action" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(arn.value, Some(mtdItEnrolmentKey), syncToETMPStatus = Some(Failed), syncToESStatus = Some(Failed))
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Failed),
+        syncToESStatus = Some(Failed)
+      )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -336,8 +348,7 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       givenSetRelationshipEndedSucceeds
       givenAucdCacheRefresh
 
-      val result: Boolean =
-        await(underTest.resumeRelationshipRemoval(deleteRecord))
+      val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
       result shouldBe true
 
       verifyESDeAllocateHasBeenPerformed
@@ -351,13 +362,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     // FAILURE SCENARIOS
 
     "keep ETMP sync status Failed when ETMP de-authorisation fails" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Failed),
-          syncToESStatus = Some(Success)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Failed),
+        syncToESStatus = Some(Success)
+      )
       await(repo.create(deleteRecord))
       givenETMPDeAuthFails
 
@@ -374,18 +384,16 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
     }
 
     "keep ES sync status Failed when ES de-allocation fails" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed)
+      )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
-      when(es.deallocateEnrolmentFromAgent("group0001", mtdItEnrolmentKey))
-        .thenReturn(Future.failed(new Exception()))
+      when(es.deallocateEnrolmentFromAgent("group0001", mtdItEnrolmentKey)).thenReturn(Future.failed(new Exception()))
 
       val exceptionMessage: String =
         intercept[Exception](await(underTest.resumeRelationshipRemoval(deleteRecord))).getMessage
@@ -408,13 +416,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       result shouldBe true
     }
     "return true if delete record found and resumption succeeded" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed)
+      )
       await(repo.create(deleteRecord))
       givenRelationshipBetweenAgentAndClientExists
       givenAgentExists
@@ -428,13 +435,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
     }
     "return false if delete record found but resumption failed" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Success),
-          syncToESStatus = Some(Failed)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed)
+      )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -448,13 +454,12 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       }
     }
     "return true if delete record found but authorisation missing and only need ETMP de-auth" in new TestFixture {
-      val deleteRecord: DeleteRecord =
-        DeleteRecord(
-          arn.value,
-          Some(mtdItEnrolmentKey),
-          syncToETMPStatus = Some(Failed),
-          syncToESStatus = Some(Success)
-        )
+      val deleteRecord: DeleteRecord = DeleteRecord(
+        arn.value,
+        Some(mtdItEnrolmentKey),
+        syncToETMPStatus = Some(Failed),
+        syncToESStatus = Some(Success)
+      )
       await(repo.create(deleteRecord))
       givenAgentExists
       givenRelationshipBetweenAgentAndClientExists
@@ -575,64 +580,53 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
       .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
     val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
-    val underTest = new DeleteRelationshipsService(
-      es,
-      hipConnector,
-      repo,
-      aucdConnector,
-      lockService,
-      checkService,
-      agentUserService,
-      auditService,
-      metrics,
-      invitationService,
-      appConfig
-    )(ec)
+    val underTest =
+      new DeleteRelationshipsService(
+        es,
+        hipConnector,
+        repo,
+        aucdConnector,
+        lockService,
+        checkService,
+        agentUserService,
+        auditService,
+        metrics,
+        invitationService,
+        appConfig
+      )(ec)
 
     def givenAgentExists: OngoingStubbing[Future[Either[String, AgentUser]]] =
       when(
-        agentUserService
-          .getAgentAdminAndSetAuditData(eqs[Arn](arn))(any[RequestHeader], any[AuditData])
-      )
-        .thenReturn(Future.successful(Right(agentUser)))
+        agentUserService.getAgentAdminAndSetAuditData(eqs[Arn](arn))(any[RequestHeader], any[AuditData])
+      ).thenReturn(Future.successful(Right(agentUser)))
 
     def givenRelationshipBetweenAgentAndClientExists: OngoingStubbing[Future[Boolean]] =
       when(
-        checkService
-          .checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
-      )
-        .thenReturn(Future.successful(true))
+        checkService.checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
+      ).thenReturn(Future.successful(true))
 
     def givenRelationshipBetweenAgentAndClientDoesNotExist: OngoingStubbing[Future[Boolean]] =
       when(
-        checkService
-          .checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
-      )
-        .thenReturn(Future.successful(false))
+        checkService.checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
+      ).thenReturn(Future.successful(false))
 
     def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        hipConnector
-          .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
-      )
-        .thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
+        hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+      ).thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
 
     def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        hipConnector
-          .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
-      )
-        .thenReturn(Future.failed(new Exception))
+        hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+      ).thenReturn(Future.failed(new Exception))
 
     val noRelationshipFoundErrorMessage =
       """{"errors":{"processingDate":"2020-01-01T11:11:11Z","code":"014","text":"No active relationship found"}}"""
 
     def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
       when(
-        hipConnector
-          .deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
-      )
-        .thenReturn(Future.failed(UpstreamErrorResponse.apply(noRelationshipFoundErrorMessage, 422)))
+        hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+      ).thenReturn(Future.failed(UpstreamErrorResponse.apply(noRelationshipFoundErrorMessage, 422)))
 
     def givenESDeAllocationSucceeds: OngoingStubbing[Future[Unit]] =
       when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader]))
@@ -648,37 +642,28 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
 
     def givenSetRelationshipEndedSucceeds: OngoingStubbing[Future[Boolean]] =
       when(
-        invitationService
-          .deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
-      )
-        .thenReturn(Future.successful(true))
+        invitationService.deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
+      ).thenReturn(Future.successful(true))
 
     def givenSetRelationshipEndedFails: OngoingStubbing[Future[Boolean]] =
       when(
-        invitationService
-          .deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
-      )
-        .thenReturn(Future.successful(false))
+        invitationService.deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
+      ).thenReturn(Future.successful(false))
 
     def givenAucdCacheRefresh: OngoingStubbing[Future[Unit]] =
-      when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]))
-        .thenReturn(Future.successful(()))
+      when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader])).thenReturn(Future.successful(()))
 
     def verifyESDeAllocateHasBeenPerformed: Future[Unit] =
-      verify(es, times(1))
-        .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+      verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
 
     def verifyESDeAllocateHasNOTBeenPerformed: Future[Unit] =
-      verify(es, never)
-        .deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
 
     def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(hipConnector, times(1))
-        .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])
+      verify(hipConnector, times(1)).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])
 
     def verifyETMPDeAuthorisationHasNOTBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(hipConnector, never)
-        .deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])
+      verify(hipConnector, never).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])
 
   }
 

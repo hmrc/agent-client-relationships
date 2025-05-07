@@ -48,16 +48,14 @@ class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStor
     (for {
       groupId <- enrolmentStoreProxyConnector
                    .getPrincipalGroupIdFor(Arn(invitation.arn))
-                   .recover { case _ =>
-                     throw GroupIdError
-                   }
-      _ <- enrolmentStoreProxyConnector
-             .updateEnrolmentFriendlyName(groupId, enrolment.toString, clientName)
+                   .recover { case _ => throw GroupIdError }
+      _ <- enrolmentStoreProxyConnector.updateEnrolmentFriendlyName(groupId, enrolment.toString, clientName)
     } yield logger.info(s"updateFriendlyName succeeded for client ${invitation.clientId}, agent ${invitation.arn}"))
       .recover {
         case GroupIdError =>
           logger.warn(
-            s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${invitation.clientId}, agent ${invitation.arn}"
+            s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${invitation
+              .clientId}, agent ${invitation.arn}"
           )
         case exception =>
           logger.warn(

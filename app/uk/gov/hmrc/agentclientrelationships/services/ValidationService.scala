@@ -51,8 +51,7 @@ class ValidationService @Inject() (esConnector: EnrolmentStoreProxyConnector, ap
         Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
       case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
-      case (Service.Cbc.id, CbcIdType.enrolmentId) =>
-        makeSanitisedCbcEnrolmentKey(CbcId(clientId))
+      case (Service.Cbc.id, CbcIdType.enrolmentId) => makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>
         if (appConfig.supportedServicesWithoutPir.exists(_.id == serviceKey))
@@ -68,24 +67,30 @@ class ValidationService @Inject() (esConnector: EnrolmentStoreProxyConnector, ap
     */
   def makeSanitisedCbcEnrolmentKey(cbcId: CbcId)(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     // Try as HMRC-CBC-ORG (UK version)
-    esConnector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))).flatMap {
-      case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
-        logger.info(s"CbcId ${cbcId.value} not found as as HMRC-CBC-ORG. Trying as HMRC-CBC-NONUK-ORG.")
-        esConnector.queryKnownFacts(Service.CbcNonUk, Seq(Identifier("cbcId", cbcId.value))).map {
-          case Some(_) => Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
-          case None    => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
-        }
-      case Some(identifiers) =>
-        Future.successful(Right(EnrolmentKey(Service.Cbc.id, identifiers)))
-    }
+    esConnector
+      .queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))
+      .flatMap {
+        case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
+          logger.info(s"CbcId ${cbcId.value} not found as as HMRC-CBC-ORG. Trying as HMRC-CBC-NONUK-ORG.")
+          esConnector
+            .queryKnownFacts(Service.CbcNonUk, Seq(Identifier("cbcId", cbcId.value)))
+            .map {
+              case Some(_) =>
+                Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
+              case None => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
+            }
+        case Some(identifiers) => Future.successful(Right(EnrolmentKey(Service.Cbc.id, identifiers)))
+      }
 
   def validateForTaxIdentifier(
     clientIdTypeStr: String,
     clientIdStr: String
   ): Either[RelationshipFailureResponse, TaxIdentifier] = {
     val clientIdType = ClientIdType.forId(clientIdTypeStr)
-    if (clientIdType.isValid(clientIdStr)) Right(clientIdType.createUnderlying(clientIdStr))
-    else Left(RelationshipFailureResponse.TaxIdentifierError)
+    if (clientIdType.isValid(clientIdStr))
+      Right(clientIdType.createUnderlying(clientIdStr))
+    else
+      Left(RelationshipFailureResponse.TaxIdentifierError)
   }
 
   def validateAuthProfileToService(

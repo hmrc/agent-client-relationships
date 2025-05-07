@@ -57,36 +57,42 @@ class ClientDetailsController @Inject() (
 
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
-  def findClientDetails(service: String, clientId: String): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsAgent { arn =>
-      clientDetailsService.findClientDetails(service, clientId).flatMap {
-        case Right(clientDetails) =>
-          val refinedService = refineService(clientDetails, service)
-          val clientIdType = Service(refinedService).supportedSuppliedClientIdType.enrolmentId
-          for {
-            pendingInvitationMain <- pendingInvitation(arn, refinedService, clientId)
-            pendingInvitationSupp <- if (multiAgentServices.contains(refinedService))
-                                       pendingInvitation(arn, multiAgentServices(refinedService), clientId)
-                                     else Future.successful(false)
-            currentRelationshipMain <- existingRelationship(arn, refinedService, clientIdType, clientId)
-            currentRelationshipSupp <-
-              if (multiAgentServices.contains(refinedService))
-                existingRelationship(arn, multiAgentServices(refinedService), clientIdType, clientId)
-              else Future.successful(None)
-          } yield Ok(
-            Json.toJson(
-              clientDetails.copy(
-                hasPendingInvitation = pendingInvitationMain || pendingInvitationSupp,
-                hasExistingRelationshipFor = currentRelationshipMain.orElse(currentRelationshipSupp)
+  def findClientDetails(service: String, clientId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      withAuthorisedAsAgent { arn =>
+        clientDetailsService
+          .findClientDetails(service, clientId)
+          .flatMap {
+            case Right(clientDetails) =>
+              val refinedService = refineService(clientDetails, service)
+              val clientIdType = Service(refinedService).supportedSuppliedClientIdType.enrolmentId
+              for {
+                pendingInvitationMain <- pendingInvitation(arn, refinedService, clientId)
+                pendingInvitationSupp <-
+                  if (multiAgentServices.contains(refinedService))
+                    pendingInvitation(arn, multiAgentServices(refinedService), clientId)
+                  else
+                    Future.successful(false)
+                currentRelationshipMain <- existingRelationship(arn, refinedService, clientIdType, clientId)
+                currentRelationshipSupp <-
+                  if (multiAgentServices.contains(refinedService))
+                    existingRelationship(arn, multiAgentServices(refinedService), clientIdType, clientId)
+                  else
+                    Future.successful(None)
+              } yield Ok(
+                Json.toJson(
+                  clientDetails.copy(
+                    hasPendingInvitation = pendingInvitationMain || pendingInvitationSupp,
+                    hasExistingRelationshipFor = currentRelationshipMain.orElse(currentRelationshipSupp)
+                  )
+                )
               )
-            )
-          )
-        case Left(ClientDetailsNotFound) => Future.successful(NotFound)
-        case Left(ErrorRetrievingClientDetails(status, message)) =>
-          throw new RuntimeException(s"Client details lookup failed - status: '$status', error: '$message''")
+            case Left(ClientDetailsNotFound) => Future.successful(NotFound)
+            case Left(ErrorRetrievingClientDetails(status, message)) =>
+              throw new RuntimeException(s"Client details lookup failed - status: '$status', error: '$message''")
+          }
       }
     }
-  }
 
   private def existingRelationship(arn: Arn, service: String, clientIdType: String, clientId: String)(implicit
     request: RequestHeader

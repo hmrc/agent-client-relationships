@@ -32,26 +32,35 @@ case class PartialAuthRelationship(
   active: Boolean,
   lastUpdated: Instant
 ) {
-  def asInvitation: Invitation = Invitation(
-    invitationId = "",
-    arn = this.arn,
-    service = this.service,
-    clientId = this.nino,
-    clientIdType = "ni",
-    suppliedClientId = this.nino,
-    suppliedClientIdType = "ni",
-    clientName = "",
-    agencyName = "",
-    agencyEmail = "",
-    warningEmailSent = false,
-    expiredEmailSent = false,
-    status = if (this.active) PartialAuth else DeAuthorised,
-    relationshipEndedBy = if (this.active) None else Some(""),
-    clientType = None,
-    expiryDate = LocalDate.now(),
-    created = this.created,
-    lastUpdated = this.lastUpdated
-  )
+  def asInvitation: Invitation =
+    Invitation(
+      invitationId = "",
+      arn = this.arn,
+      service = this.service,
+      clientId = this.nino,
+      clientIdType = "ni",
+      suppliedClientId = this.nino,
+      suppliedClientIdType = "ni",
+      clientName = "",
+      agencyName = "",
+      agencyEmail = "",
+      warningEmailSent = false,
+      expiredEmailSent = false,
+      status =
+        if (this.active)
+          PartialAuth
+        else
+          DeAuthorised,
+      relationshipEndedBy =
+        if (this.active)
+          None
+        else
+          Some(""),
+      clientType = None,
+      expiryDate = LocalDate.now(),
+      created = this.created,
+      lastUpdated = this.lastUpdated
+    )
 }
 
 object PartialAuthRelationship {

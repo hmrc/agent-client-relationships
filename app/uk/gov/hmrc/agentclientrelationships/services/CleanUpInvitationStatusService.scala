@@ -32,15 +32,16 @@ class CleanUpInvitationStatusService @Inject() (invitationsRepository: Invitatio
   ec: ExecutionContext
 ) extends Logging {
 
-  def validateService(serviceStr: String): Either[InvitationFailureResponse, Service] = for {
-    service <- Try(Service.forId(serviceStr))
-                 .fold(_ => Left(UnsupportedService), Right(_))
-  } yield service
+  def validateService(serviceStr: String): Either[InvitationFailureResponse, Service] =
+    for {
+      service <- Try(Service.forId(serviceStr)).fold(_ => Left(UnsupportedService), Right(_))
+    } yield service
 
-  def validateClientId(service: Service, clientIdStr: String): Either[InvitationFailureResponse, ClientId] = for {
-    clientId <- Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id))
-                  .fold(_ => Left(InvalidClientId), Right(_))
-  } yield clientId
+  def validateClientId(service: Service, clientIdStr: String): Either[InvitationFailureResponse, ClientId] =
+    for {
+      clientId <- Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id))
+                    .fold(_ => Left(InvalidClientId), Right(_))
+    } yield clientId
 
   def deauthoriseInvitation(
     arn: String,

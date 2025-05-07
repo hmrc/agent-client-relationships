@@ -29,19 +29,24 @@ class FakeLockService extends MongoLockService {
   override def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
     body: => Future[T]
   )(implicit ec: ExecutionContext): Future[Option[T]] =
-    if (locked.contains((arn, enrolmentKey))) Future.successful(None)
+    if (locked.contains((arn, enrolmentKey)))
+      Future.successful(None)
     else {
       locked.add((arn, enrolmentKey))
-      body.map(Some.apply).map { result =>
-        locked.remove((arn, enrolmentKey))
-        result
-      }
+      body
+        .map(Some.apply)
+        .map { result =>
+          locked.remove((arn, enrolmentKey))
+          result
+        }
     }
 
   override def schedulerLock[T](
     jobName: String
   )(body: => Future[T])(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]] =
-    body.map(Some.apply).map { result =>
-      result
-    }
+    body
+      .map(Some.apply)
+      .map { result =>
+        result
+      }
 }

@@ -58,26 +58,30 @@ class RemoveAuthorisationController @Inject() (
 
   def removeAuthorisation(arn: Arn): Action[RemoveAuthorisationRequest] =
     Action.async(parse.json[RemoveAuthorisationRequest]) { implicit request =>
-      val responseT = for {
-        validRequest <- EitherT.fromEither[Future](
-                          deauthorisationService.validateRequest(request.body.service, request.body.clientId)
+      val responseT =
+        for {
+          validRequest <- EitherT.fromEither[Future](
+                            deauthorisationService.validateRequest(request.body.service, request.body.clientId)
+                          )
+          enrolmentKey <- EitherT(getEnrolmentKey(validRequest))
+          result <- EitherT.right[InvitationFailureResponse](
+                      authorisedUser(
+                        arn = Some(arn),
+                        clientId = enrolmentKey.oneTaxIdentifier(),
+                        strideRoles = strideRoles
+                      ) { implicit currentUser =>
+                        removeAuthorisationForValidRequest(arn, validRequest, enrolmentKey).map(
+                          _.fold(
+                            err => invitationErrorHandler(err, request.body.service, request.body.clientId),
+                            _ => NoContent
+                          )
                         )
-        enrolmentKey <- EitherT(getEnrolmentKey(validRequest))
-        result <-
-          EitherT.right[InvitationFailureResponse](
-            authorisedUser(arn = Some(arn), clientId = enrolmentKey.oneTaxIdentifier(), strideRoles = strideRoles) {
-              implicit currentUser =>
-                removeAuthorisationForValidRequest(arn, validRequest, enrolmentKey).map(
-                  _.fold(
-                    err => invitationErrorHandler(err, request.body.service, request.body.clientId),
-                    _ => NoContent
-                  )
-                )
-            }
-          )
-      } yield result
+                      }
+                    )
+        } yield result
 
-      responseT.value
+      responseT
+        .value
         .map(_.fold(err => invitationErrorHandler(err, request.body.service, request.body.clientId), result => result))
     }
 
@@ -97,11 +101,10 @@ class RemoveAuthorisationController @Inject() (
               deleteService.setRelationshipEnded(arn, enrolmentKey, userType)
               auditService.auditForPirTermination(arn, enrolmentKey)
               Right(true)
-            } else Left(RelationshipNotFound)
+            } else
+              Left(RelationshipNotFound)
           }
-          .recover { case error: UpstreamErrorResponse =>
-            Left(RelationshipDeleteFailed(error.getMessage))
-          }
+          .recover { case error: UpstreamErrorResponse => Left(RelationshipDeleteFailed(error.getMessage)) }
       case (Service.MtdIt | Service.MtdItSupp, Nino(_)) => // Alt ITSA
         (for {
           deauthResult <- EitherT(
@@ -115,7 +118,8 @@ class RemoveAuthorisationController @Inject() (
                                     enrolmentKey.oneIdentifier().value
                                   )
                                   Right(result)
-                                } else Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
+                                } else
+                                  Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
                               }
                           )
           _ <- EitherT.right[InvitationFailureResponse](
@@ -129,29 +133,31 @@ class RemoveAuthorisationController @Inject() (
                    .map(_ => true)
                )
         } yield deauthResult).value
-      case _ =>
-        deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
+      case _ => deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
     }
   // scalastyle:on method.length
 
   private def getEnrolmentKey(
     validRequest: ValidRequest
   )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, EnrolmentKey]] = {
-    val resultT = for {
-      suppliedEnrolmentKey <- EitherT(
-                                validationService.validateForEnrolmentKey(
-                                  validRequest.service.id,
-                                  validRequest.suppliedClientId.enrolmentId,
-                                  validRequest.suppliedClientId.value
-                                )
-                              ).leftMap(_ => InvalidClientId)
-      enrolmentKey <-
-        EitherT(
-          deauthorisationService
-            .replaceEnrolmentKeyForItsa(validRequest.suppliedClientId, suppliedEnrolmentKey, validRequest.service)
-        )
+    val resultT =
+      for {
+        suppliedEnrolmentKey <- EitherT(
+                                  validationService.validateForEnrolmentKey(
+                                    validRequest.service.id,
+                                    validRequest.suppliedClientId.enrolmentId,
+                                    validRequest.suppliedClientId.value
+                                  )
+                                ).leftMap(_ => InvalidClientId)
+        enrolmentKey <- EitherT(
+                          deauthorisationService.replaceEnrolmentKeyForItsa(
+                            validRequest.suppliedClientId,
+                            suppliedEnrolmentKey,
+                            validRequest.service
+                          )
+                        )
 
-    } yield enrolmentKey
+      } yield enrolmentKey
     resultT.value
   }
 
@@ -163,12 +169,9 @@ class RemoveAuthorisationController @Inject() (
       .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
       .map(_ => Right(true))
       .recover {
-        case RelationshipNotFoundEx(_) =>
-          Left(RelationshipNotFound)
-        case upS: UpstreamErrorResponse =>
-          Left(RelationshipDeleteFailed(upS.getMessage))
-        case NonFatal(ex) =>
-          Left(RelationshipDeleteFailed(ex.getMessage))
+        case RelationshipNotFoundEx(_)  => Left(RelationshipNotFound)
+        case upS: UpstreamErrorResponse => Left(RelationshipDeleteFailed(upS.getMessage))
+        case NonFatal(ex)               => Left(RelationshipDeleteFailed(ex.getMessage))
       }
 
   private def invitationErrorHandler(
@@ -183,8 +186,7 @@ class RemoveAuthorisationController @Inject() (
         UnsupportedService.getResult(msg)
 
       case InvalidClientId =>
-        val msg =
-          s"""Invalid clientId "$clientId", for service type "$service""""
+        val msg = s"""Invalid clientId "$clientId", for service type "$service""""
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
@@ -200,8 +202,7 @@ class RemoveAuthorisationController @Inject() (
         Logger(getClass).warn(s"Could not delete relationship: $msg")
         relationshipDeleteFailed.getResult("")
 
-      case RelationshipNotFound =>
-        RelationshipNotFound.getResult("")
+      case RelationshipNotFound => RelationshipNotFound.getResult("")
 
       case _ => BadRequest
     }

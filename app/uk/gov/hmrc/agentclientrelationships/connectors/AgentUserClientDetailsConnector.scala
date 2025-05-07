@@ -50,8 +50,7 @@ class AgentUserClientDetailsConnector @Inject() (httpClient: HttpClientV2, val m
           response.status match {
             case NOT_FOUND | NO_CONTENT =>
               () // TODO endpoint should not return NotFound because it's not obvious what is not found
-            case other =>
-              throw new RuntimeException(s"cache refresh returned status $other")
+            case other => throw new RuntimeException(s"cache refresh returned status $other")
           }
         )
     }

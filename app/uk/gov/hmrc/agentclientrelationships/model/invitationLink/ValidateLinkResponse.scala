@@ -22,10 +22,11 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 case class ValidateLinkResponse(arn: Arn, name: String)
 
 object ValidateLinkResponse {
-  implicit val arnFormat: Format[Arn] = new Format[Arn] {
-    def writes(arn: Arn): JsValue = JsString(arn.value)
-    def reads(json: JsValue): JsResult[Arn] = json.validate[String].map(Arn.apply)
-  }
+  implicit val arnFormat: Format[Arn] =
+    new Format[Arn] {
+      def writes(arn: Arn): JsValue = JsString(arn.value)
+      def reads(json: JsValue): JsResult[Arn] = json.validate[String].map(Arn.apply)
+    }
 
   implicit val format: OFormat[ValidateLinkResponse] = Json.format[ValidateLinkResponse]
 }

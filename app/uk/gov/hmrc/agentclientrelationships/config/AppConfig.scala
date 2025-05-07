@@ -115,8 +115,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val terminationStrideRole = servicesConfig.getString("termination.stride.role")
 
-  val inactiveRelationshipsClientRecordStartDate =
-    servicesConfig.getString("inactive-relationships-client.record-start-date")
+  val inactiveRelationshipsClientRecordStartDate = servicesConfig
+    .getString("inactive-relationships-client.record-start-date")
 
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
   val supportedServicesWithoutPir: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
