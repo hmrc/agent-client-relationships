@@ -38,13 +38,12 @@ trait MockDeleteRelationshipsService {
 
   def mockDeleteRelationship(arn: Arn, enrolment: EnrolmentKey, affinityGroup: Option[AffinityGroup])(
     response: Future[Unit] = Future.unit
-  ): OngoingStubbing[Future[Unit]] =
-    when(
-      mockDeleteRelationshipsService.deleteRelationship(eqs(arn), eqs(enrolment), eqs(affinityGroup))(
-        any[RequestHeader],
-        any[CurrentUser],
-        any[AuditData]
-      )
-    ).thenReturn(response)
+  ): OngoingStubbing[Future[Unit]] = when(
+    mockDeleteRelationshipsService.deleteRelationship(eqs(arn), eqs(enrolment), eqs(affinityGroup))(
+      any[RequestHeader],
+      any[CurrentUser],
+      any[AuditData]
+    )
+  ).thenReturn(response)
 
 }

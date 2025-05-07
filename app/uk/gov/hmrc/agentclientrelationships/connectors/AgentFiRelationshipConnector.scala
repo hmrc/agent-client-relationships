@@ -93,13 +93,12 @@ class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, httpClient: 
 
   def findIrvActiveRelationshipForClient(
     nino: String
-  )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, ClientRelationship]] =
-    EitherT
-      .fromOptionF(fopt = findIrvRelationshipForClient(nino), ifNone = RelationshipFailureResponse.RelationshipNotFound)
-      .value
-      .recover { case ex: UpstreamErrorResponse =>
-        Left(RelationshipFailureResponse.ErrorRetrievingRelationship(ex.statusCode, ex.getMessage))
-      }
+  )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, ClientRelationship]] = EitherT
+    .fromOptionF(fopt = findIrvRelationshipForClient(nino), ifNone = RelationshipFailureResponse.RelationshipNotFound)
+    .value
+    .recover { case ex: UpstreamErrorResponse =>
+      Left(RelationshipFailureResponse.ErrorRetrievingRelationship(ex.statusCode, ex.getMessage))
+    }
 
   def findIrvRelationshipForClient(clientId: String)(implicit rh: RequestHeader): Future[Option[ClientRelationship]] = {
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = true)

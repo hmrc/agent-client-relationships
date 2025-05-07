@@ -56,14 +56,14 @@ class EmailService @Inject() (emailConnector: EmailConnector, messagesApi: Messa
     )
   }
 
-  def sendExpiredEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] =
-    emailConnector.sendEmail(emailInformation("client_expired_authorisation_request", invitation))
+  def sendExpiredEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+    .sendEmail(emailInformation("client_expired_authorisation_request", invitation))
 
-  def sendAcceptedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] =
-    emailConnector.sendEmail(emailInformation("client_accepted_authorisation_request", invitation))
+  def sendAcceptedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+    .sendEmail(emailInformation("client_accepted_authorisation_request", invitation))
 
-  def sendRejectedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] =
-    emailConnector.sendEmail(emailInformation("client_rejected_authorisation_request", invitation))
+  def sendRejectedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+    .sendEmail(emailInformation("client_rejected_authorisation_request", invitation))
 
   private def emailInformation(templateId: String, invitation: Invitation) = {
     val altItsaParam =

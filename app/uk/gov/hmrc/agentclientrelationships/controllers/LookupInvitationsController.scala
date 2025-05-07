@@ -44,37 +44,35 @@ class LookupInvitationsController @Inject() (
     services: Seq[String],
     clientIds: Seq[String],
     status: Option[InvitationStatus]
-  ): Action[AnyContent] =
-    Action.async { implicit request =>
-      authorised() {
-        if (arn.isEmpty && services.isEmpty && clientIds.isEmpty && status.isEmpty) {
-          Future.successful(BadRequest)
-        } else {
-          for {
-            invitations  <- invitationsRepository.findAllBy(arn.map(_.value), services, clientIds, status)
-            partialAuths <- lookupPartialAuths(arn, services, clientIds, status, invitations)
-            combined = (invitations ++ partialAuths.map(_.asInvitation)).sortBy(_.created)
-            result =
-              combined match {
-                case Nil => NotFound
-                case _   => Ok(Json.toJson(combined))
-              }
-          } yield result
-        }
+  ): Action[AnyContent] = Action.async { implicit request =>
+    authorised() {
+      if (arn.isEmpty && services.isEmpty && clientIds.isEmpty && status.isEmpty) {
+        Future.successful(BadRequest)
+      } else {
+        for {
+          invitations  <- invitationsRepository.findAllBy(arn.map(_.value), services, clientIds, status)
+          partialAuths <- lookupPartialAuths(arn, services, clientIds, status, invitations)
+          combined = (invitations ++ partialAuths.map(_.asInvitation)).sortBy(_.created)
+          result =
+            combined match {
+              case Nil => NotFound
+              case _   => Ok(Json.toJson(combined))
+            }
+        } yield result
       }
     }
+  }
 
-  def lookupInvitation(invitationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      authorised() {
-        invitationsRepository
-          .findOneById(invitationId)
-          .map {
-            case None             => NotFound
-            case Some(invitation) => Ok(Json.toJson(invitation))
-          }
-      }
+  def lookupInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+    authorised() {
+      invitationsRepository
+        .findOneById(invitationId)
+        .map {
+          case None             => NotFound
+          case Some(invitation) => Ok(Json.toJson(invitation))
+        }
     }
+  }
 
   private def arePartialAuthsNeeded(services: Seq[String], clientIds: Seq[String], status: Option[InvitationStatus]) =
     (status.contains(PartialAuth) || status.contains(DeAuthorised) || status.isEmpty) &&

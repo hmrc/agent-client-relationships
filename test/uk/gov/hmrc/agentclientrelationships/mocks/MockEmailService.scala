@@ -31,8 +31,8 @@ trait MockEmailService {
 
   val mockEmailService: EmailService = resettingMock[EmailService]
 
-  def mockSendAcceptedEmail(invitation: Invitation)(response: Boolean = true): OngoingStubbing[Future[Boolean]] =
-    when(mockEmailService.sendAcceptedEmail(eqs(invitation))(any[RequestHeader]))
-      .thenReturn(Future.successful(response))
+  def mockSendAcceptedEmail(invitation: Invitation)(response: Boolean = true): OngoingStubbing[Future[Boolean]] = when(
+    mockEmailService.sendAcceptedEmail(eqs(invitation))(any[RequestHeader])
+  ).thenReturn(Future.successful(response))
 
 }

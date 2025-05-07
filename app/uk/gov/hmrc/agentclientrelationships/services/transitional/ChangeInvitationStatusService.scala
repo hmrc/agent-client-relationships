@@ -67,13 +67,12 @@ class ChangeInvitationStatusService @Inject() (
     arn: Arn,
     clientId: ClientId,
     service: Service
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    partialAuthRepository
-      .deauthorise(service.id, Nino(clientId.value), arn, Instant.now)
-      .map {
-        case true  => Right(())
-        case false => Left(UpdateStatusFailed("Update status for PartialAuth invitation failed."))
-      }
+  ): Future[Either[InvitationFailureResponse, Unit]] = partialAuthRepository
+    .deauthorise(service.id, Nino(clientId.value), arn, Instant.now)
+    .map {
+      case true  => Right(())
+      case false => Left(UpdateStatusFailed("Update status for PartialAuth invitation failed."))
+    }
 
   private def updateInvitationStore(
     invitationId: String,
@@ -81,32 +80,30 @@ class ChangeInvitationStatusService @Inject() (
     toStatus: InvitationStatus,
     endedBy: Option[String],
     lastUpdated: Option[Instant]
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    invitationsRepository
-      .updateStatusFromTo(
-        invitationId = invitationId,
-        fromStatus = fromStatus,
-        toStatus = toStatus,
-        relationshipEndedBy = endedBy,
-        lastUpdated = lastUpdated
-      )
-      .map(
-        _.fold[Either[InvitationFailureResponse, Unit]](
-          Left(UpdateStatusFailed("Update status for invitation failed."))
-        )(_ => Right(()))
-      )
+  ): Future[Either[InvitationFailureResponse, Unit]] = invitationsRepository
+    .updateStatusFromTo(
+      invitationId = invitationId,
+      fromStatus = fromStatus,
+      toStatus = toStatus,
+      relationshipEndedBy = endedBy,
+      lastUpdated = lastUpdated
+    )
+    .map(
+      _.fold[Either[InvitationFailureResponse, Unit]](
+        Left(UpdateStatusFailed("Update status for invitation failed."))
+      )(_ => Right(()))
+    )
 
   private def findAllMatchingInvitations(
     arn: Arn,
     service: Service,
     suppliedClientId: ClientId
-  ): Future[Seq[Invitation]] =
-    invitationsRepository.findAllForAgent(
-      arn = arn.value,
-      services = Seq(service.id),
-      clientIds = Seq(suppliedClientId.value),
-      isSuppliedClientId = true
-    )
+  ): Future[Seq[Invitation]] = invitationsRepository.findAllForAgent(
+    arn = arn.value,
+    services = Seq(service.id),
+    clientIds = Seq(suppliedClientId.value),
+    isSuppliedClientId = true
+  )
 
   def changeStatusInStore(
     arn: Arn,

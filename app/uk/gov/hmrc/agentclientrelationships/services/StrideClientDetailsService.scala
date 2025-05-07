@@ -193,10 +193,9 @@ class StrideClientDetailsService @Inject() (
 
   private def findAgentDetailsByArn(
     arn: Arn
-  )(implicit request: RequestHeader): EitherT[Future, RelationshipFailureResponse, AgentDetailsDesResponse] =
-    EitherT(
-      Try(agentAssuranceConnector.getAgentRecordWithChecks(arn)).toEither.pure[Future]
-    ).semiflatMap(identity).leftMap(er => RelationshipFailureResponse.ErrorRetrievingAgentDetails(er.getMessage))
+  )(implicit request: RequestHeader): EitherT[Future, RelationshipFailureResponse, AgentDetailsDesResponse] = EitherT(
+    Try(agentAssuranceConnector.getAgentRecordWithChecks(arn)).toEither.pure[Future]
+  ).semiflatMap(identity).leftMap(er => RelationshipFailureResponse.ErrorRetrievingAgentDetails(er.getMessage))
 
   private def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier
@@ -212,8 +211,9 @@ class StrideClientDetailsService @Inject() (
           }
       )
 
-  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean =
-    agentRecord.suspensionDetails.exists(_.suspensionStatus)
+  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord
+    .suspensionDetails
+    .exists(_.suspensionStatus)
 
   private def getNonSuspendedInvitations(clientId: String, services: Seq[String])(implicit
     request: RequestHeader

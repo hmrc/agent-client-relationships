@@ -51,57 +51,56 @@ class AuthorisationAcceptController @Inject() (
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
-  def accept(invitationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      invitationService
-        .findInvitation(invitationId)
-        .flatMap {
-          case Some(invitation) if invitation.status == Pending =>
-            implicit val auditData: AuditData = prepareAuditData(invitation)
+  def accept(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+    invitationService
+      .findInvitation(invitationId)
+      .flatMap {
+        case Some(invitation) if invitation.status == Pending =>
+          implicit val auditData: AuditData = prepareAuditData(invitation)
 
-            for {
-              enrolment <- validationService
-                             .validateForEnrolmentKey(
-                               invitation.service,
-                               ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                               invitation.clientId
-                             )
-                             .map(either =>
-                               either.getOrElse(
-                                 throw new RuntimeException(
-                                   s"Could not parse invitation details into enrolment reason: ${either.left}"
-                                 )
+          for {
+            enrolment <- validationService
+                           .validateForEnrolmentKey(
+                             invitation.service,
+                             ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                             invitation.clientId
+                           )
+                           .map(either =>
+                             either.getOrElse(
+                               throw new RuntimeException(
+                                 s"Could not parse invitation details into enrolment reason: ${either.left}"
                                )
                              )
-              result <-
-                authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { implicit currentUser =>
-                  authorisationAcceptService
-                    .accept(invitation, enrolment)
-                    .map { _ =>
-                      auditService.sendRespondToInvitationAuditEvent(
-                        invitation,
-                        accepted = true,
-                        isStride = currentUser.isStride
-                      )
-                      NoContent
-                    }
-                    .recoverWith {
-                      case CreateRelationshipLocked => Future.successful(Locked)
-                      case err                      => throw err
-                    }
-                }
-              _ <-
-                if (result == NoContent)
-                  friendlyNameService.updateFriendlyName(invitation, enrolment)
-                else
-                  Future.unit
-            } yield result
-          case _ =>
-            val msg = s"Pending Invitation not found for invitationId '$invitationId'"
-            Logger(getClass).warn(msg)
-            Future.successful(NoPendingInvitation.getResult(msg))
-        }
-    }
+                           )
+            result <-
+              authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { implicit currentUser =>
+                authorisationAcceptService
+                  .accept(invitation, enrolment)
+                  .map { _ =>
+                    auditService.sendRespondToInvitationAuditEvent(
+                      invitation,
+                      accepted = true,
+                      isStride = currentUser.isStride
+                    )
+                    NoContent
+                  }
+                  .recoverWith {
+                    case CreateRelationshipLocked => Future.successful(Locked)
+                    case err                      => throw err
+                  }
+              }
+            _ <-
+              if (result == NoContent)
+                friendlyNameService.updateFriendlyName(invitation, enrolment)
+              else
+                Future.unit
+          } yield result
+        case _ =>
+          val msg = s"Pending Invitation not found for invitationId '$invitationId'"
+          Logger(getClass).warn(msg)
+          Future.successful(NoPendingInvitation.getResult(msg))
+      }
+  }
 
   private def prepareAuditData(invitation: Invitation): AuditData = {
     val auditData: AuditData = new AuditData()

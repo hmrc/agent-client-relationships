@@ -48,16 +48,15 @@ class CleanUpInvitationStatusService @Inject() (invitationsRepository: Invitatio
     clientId: String,
     service: String,
     relationshipEndedBy: String
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    invitationsRepository
-      .deauthAcceptedInvitation(
-        arn = arn,
-        clientId = clientId,
-        service = service,
-        relationshipEndedBy = relationshipEndedBy
-      )
-      .map {
-        case true  => Right(())
-        case false => Left(InvitationNotFound)
-      }
+  ): Future[Either[InvitationFailureResponse, Unit]] = invitationsRepository
+    .deauthAcceptedInvitation(
+      arn = arn,
+      clientId = clientId,
+      service = service,
+      relationshipEndedBy = relationshipEndedBy
+    )
+    .map {
+      case true  => Right(())
+      case false => Left(InvitationNotFound)
+    }
 }

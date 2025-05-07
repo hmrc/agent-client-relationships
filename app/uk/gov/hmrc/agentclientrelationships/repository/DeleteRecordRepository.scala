@@ -70,14 +70,13 @@ object DeleteRecord {
 
   implicit val hcWrites: OWrites[HeaderCarrier] =
     new OWrites[HeaderCarrier] {
-      override def writes(hc: HeaderCarrier): JsObject =
-        JsObject(
-          Seq(
-            "authorization" -> hc.authorization.map(_.value),
-            "sessionId"     -> hc.sessionId.map(_.value),
-            "gaToken"       -> hc.gaToken
-          ).collect { case (key, Some(value)) => (key, JsString(value)) }
-        )
+      override def writes(hc: HeaderCarrier): JsObject = JsObject(
+        Seq(
+          "authorization" -> hc.authorization.map(_.value),
+          "sessionId"     -> hc.sessionId.map(_.value),
+          "gaToken"       -> hc.gaToken
+        ).collect { case (key, Some(value)) => (key, JsString(value)) }
+      )
     }
 
   import play.api.libs.functional.syntax._
@@ -136,66 +135,66 @@ class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(imp
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
-  override def create(record: DeleteRecord): Future[Int] =
-    collection
-      .insertOne(record)
-      .toFuture()
-      .map(insertResult =>
-        if (insertResult.wasAcknowledged())
-          1
-        else {
-          logger.warn("Creating DeleteRecord failed.")
-          INDICATE_ERROR_DURING_DB_UPDATE
-        }
-      )
-
-  override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]] =
-    collection.find(filter(arn, enrolmentKey)).headOption()
-
-  override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
-    collection
-      .updateOne(filter(arn, enrolmentKey), set("syncToETMPStatus", status.toString), UpdateOptions().upsert(false))
-      .toFuture()
-      .map { updateResult =>
-        if (updateResult.getModifiedCount != 1L)
-          logger.warn(s"Updating ETMP sync status ($status) failed")
-        updateResult.getModifiedCount.toInt
+  override def create(record: DeleteRecord): Future[Int] = collection
+    .insertOne(record)
+    .toFuture()
+    .map(insertResult =>
+      if (insertResult.wasAcknowledged())
+        1
+      else {
+        logger.warn("Creating DeleteRecord failed.")
+        INDICATE_ERROR_DURING_DB_UPDATE
       }
+    )
 
-  override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] =
-    collection
-      .updateOne(filter(arn, enrolmentKey), set("syncToESStatus", status.toString), UpdateOptions().upsert(false))
-      .toFuture()
-      .map { updateResult =>
-        if (updateResult.getModifiedCount != 1L)
-          logger.warn(s"Updating ES sync status ($status) failed")
-        updateResult.getModifiedCount.toInt
-      }
+  override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]] = collection
+    .find(filter(arn, enrolmentKey))
+    .headOption()
 
-  override def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit] =
-    collection
-      .findOneAndUpdate(
-        filter(arn, enrolmentKey),
-        combine(
-          set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
-          inc("numberOfAttempts", 1)
-        )
+  override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = collection
+    .updateOne(filter(arn, enrolmentKey), set("syncToETMPStatus", status.toString), UpdateOptions().upsert(false))
+    .toFuture()
+    .map { updateResult =>
+      if (updateResult.getModifiedCount != 1L)
+        logger.warn(s"Updating ETMP sync status ($status) failed")
+      updateResult.getModifiedCount.toInt
+    }
+
+  override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = collection
+    .updateOne(filter(arn, enrolmentKey), set("syncToESStatus", status.toString), UpdateOptions().upsert(false))
+    .toFuture()
+    .map { updateResult =>
+      if (updateResult.getModifiedCount != 1L)
+        logger.warn(s"Updating ES sync status ($status) failed")
+      updateResult.getModifiedCount.toInt
+    }
+
+  override def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit] = collection
+    .findOneAndUpdate(
+      filter(arn, enrolmentKey),
+      combine(
+        set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
+        inc("numberOfAttempts", 1)
       )
-      .toFuture()
-      .map(_ => ())
+    )
+    .toFuture()
+    .map(_ => ())
 
-  override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] =
-    collection.deleteOne(filter(arn, enrolmentKey)).toFuture().map(deleteResult => deleteResult.getDeletedCount.toInt)
+  override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] = collection
+    .deleteOne(filter(arn, enrolmentKey))
+    .toFuture()
+    .map(deleteResult => deleteResult.getDeletedCount.toInt)
 
-  override def selectNextToRecover(): Future[Option[DeleteRecord]] =
-    collection.find().sort(Sorts.ascending("lastRecoveryAttempt")).headOption()
+  override def selectNextToRecover(): Future[Option[DeleteRecord]] = collection
+    .find()
+    .sort(Sorts.ascending("lastRecoveryAttempt"))
+    .headOption()
 
-  override def terminateAgent(arn: Arn): Future[Either[String, Int]] =
-    collection
-      .deleteMany(equal("arn", arn.value))
-      .toFuture()
-      .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
-      .recover { case e: MongoWriteException => Left(e.getMessage) }
+  override def terminateAgent(arn: Arn): Future[Either[String, Int]] = collection
+    .deleteMany(equal("arn", arn.value))
+    .toFuture()
+    .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
+    .recover { case e: MongoWriteException => Left(e.getMessage) }
 
   private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
     val identifierType: String = enrolmentKey.identifiers.head.key

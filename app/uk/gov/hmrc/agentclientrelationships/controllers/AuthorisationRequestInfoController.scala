@@ -44,20 +44,19 @@ class AuthorisationRequestInfoController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def get(arn: Arn, invitationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsAgent { _ =>
-        invitationService
-          .findInvitationForAgent(arn.value, invitationId)
-          .flatMap {
-            case Some(invitation) =>
-              for {
-                agentLink <- invitationLinkService.createLink(arn)
-              } yield Ok(Json.toJson(AuthorisationRequestInfo(invitation, agentLink)))
-            case _ => Future.successful(NotFound)
-          }
-      }
+  def get(arn: Arn, invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent { _ =>
+      invitationService
+        .findInvitationForAgent(arn.value, invitationId)
+        .flatMap {
+          case Some(invitation) =>
+            for {
+              agentLink <- invitationLinkService.createLink(arn)
+            } yield Ok(Json.toJson(AuthorisationRequestInfo(invitation, agentLink)))
+          case _ => Future.successful(NotFound)
+        }
     }
+  }
 
   def trackRequests(
     arn: Arn,
@@ -65,45 +64,43 @@ class AuthorisationRequestInfoController @Inject() (
     clientName: Option[String],
     pageNumber: Int,
     pageSize: Int
-  ): Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsAgent {
-        case agentArn: Arn if agentArn == arn =>
-          invitationService
-            .trackRequests(arn, statusFilter.filter(_.nonEmpty), clientName.filter(_.nonEmpty), pageNumber, pageSize)
-            .map { result =>
-              Ok(Json.toJson(result))
-            }
-        case _ => Future.successful(Forbidden)
-      }
+  ): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent {
+      case agentArn: Arn if agentArn == arn =>
+        invitationService
+          .trackRequests(arn, statusFilter.filter(_.nonEmpty), clientName.filter(_.nonEmpty), pageNumber, pageSize)
+          .map { result =>
+            Ok(Json.toJson(result))
+          }
+      case _ => Future.successful(Forbidden)
     }
+  }
 
-  def getForClient(invitationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      invitationService
-        .findInvitationForClient(invitationId)
-        .flatMap {
-          case Some(invitation) =>
-            authorisedUser(
-              arn = Some(Arn(invitation.arn)),
-              clientId = ClientIdentifier(invitation.clientId, invitation.clientIdType).underlying,
-              Seq.empty
-            ) { _ =>
-              val arn = Arn(invitation.arn)
-              for {
-                agentDetails <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
-              } yield Ok(
-                Json.toJson(
-                  AuthorisationRequestInfoForClient(
-                    agentName = agentDetails.agencyDetails.agencyName,
-                    service = invitation.service,
-                    status = invitation.status
-                  )
+  def getForClient(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+    invitationService
+      .findInvitationForClient(invitationId)
+      .flatMap {
+        case Some(invitation) =>
+          authorisedUser(
+            arn = Some(Arn(invitation.arn)),
+            clientId = ClientIdentifier(invitation.clientId, invitation.clientIdType).underlying,
+            Seq.empty
+          ) { _ =>
+            val arn = Arn(invitation.arn)
+            for {
+              agentDetails <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
+            } yield Ok(
+              Json.toJson(
+                AuthorisationRequestInfoForClient(
+                  agentName = agentDetails.agencyDetails.agencyName,
+                  service = invitation.service,
+                  status = invitation.status
                 )
               )
-            }
-          case _ => Future.successful(NotFound)
-        }
-    }
+            )
+          }
+        case _ => Future.successful(NotFound)
+      }
+  }
 
 }

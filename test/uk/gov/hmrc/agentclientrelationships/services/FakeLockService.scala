@@ -43,10 +43,9 @@ class FakeLockService extends MongoLockService {
 
   override def schedulerLock[T](
     jobName: String
-  )(body: => Future[T])(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]] =
-    body
-      .map(Some.apply)
-      .map { result =>
-        result
-      }
+  )(body: => Future[T])(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]] = body
+    .map(Some.apply)
+    .map { result =>
+      result
+    }
 }

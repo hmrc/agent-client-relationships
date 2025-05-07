@@ -77,15 +77,14 @@ class CheckRelationshipsOrchestratorService @Inject() (
 
   private def withValidEnrolment(service: String, clientIdType: String, clientId: String)(
     proceed: EnrolmentKey => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] =
-    validationService
-      .validateForEnrolmentKey(service, clientIdType, clientId)
-      .flatMap {
-        case Right(enrolmentKey) => proceed(enrolmentKey)
-        case Left(validationError) =>
-          logger.warn(s"Invalid parameters: $validationError")
-          Future.successful(CheckRelationshipInvalidRequest)
-      }
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = validationService
+    .validateForEnrolmentKey(service, clientIdType, clientId)
+    .flatMap {
+      case Right(enrolmentKey) => proceed(enrolmentKey)
+      case Left(validationError) =>
+        logger.warn(s"Invalid parameters: $validationError")
+        Future.successful(CheckRelationshipInvalidRequest)
+    }
 
   private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
     request: RequestHeader
@@ -121,28 +120,27 @@ class CheckRelationshipsOrchestratorService @Inject() (
   private def checkOldRelationship(arn: Arn, enrolmentKey: EnrolmentKey, errorCode: String)(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[CheckRelationshipResult] =
-    checkOldAndCopyService
-      .checkForOldRelationshipAndCopy(arn, enrolmentKey)
-      .map {
-        case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
-          CheckRelationshipNotFound(errorCode)
-        case cesaResult =>
-          if (cesaResult.grantAccess)
-            CheckRelationshipFound
-          else
-            CheckRelationshipNotFound()
-      }
-      .recover {
-        case upS: UpstreamErrorResponse => throw upS
-        case NonFatal(ex) =>
-          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
-          logger.warn(
-            s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier
-              .value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
-          )
-          CheckRelationshipNotFound(errorCode)
-      }
+  ): Future[CheckRelationshipResult] = checkOldAndCopyService
+    .checkForOldRelationshipAndCopy(arn, enrolmentKey)
+    .map {
+      case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
+        CheckRelationshipNotFound(errorCode)
+      case cesaResult =>
+        if (cesaResult.grantAccess)
+          CheckRelationshipFound
+        else
+          CheckRelationshipNotFound()
+    }
+    .recover {
+      case upS: UpstreamErrorResponse => throw upS
+      case NonFatal(ex) =>
+        val taxIdentifier = enrolmentKey.oneTaxIdentifier()
+        logger.warn(
+          s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier
+            .value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
+        )
+        CheckRelationshipNotFound(errorCode)
+    }
 
   private def checkAgentFiRelationship(arn: Arn, service: String, clientId: String)(implicit request: RequestHeader) =
     agentFiRelationshipConnector
@@ -153,13 +151,12 @@ class CheckRelationshipsOrchestratorService @Inject() (
       }
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] =
-    ifOrHipConnector
-      .getMtdIdFor(Nino(clientId))
-      .flatMap {
-        case Some(mtdItId) => proceed(mtdItId)
-        case None          => Future.successful(CheckRelationshipNotFound())
-      }
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = ifOrHipConnector
+    .getMtdIdFor(Nino(clientId))
+    .flatMap {
+      case Some(mtdItId) => proceed(mtdItId)
+      case None          => Future.successful(CheckRelationshipNotFound())
+    }
 
   private def withIrSaSuspensionCheck(
     arn: Arn

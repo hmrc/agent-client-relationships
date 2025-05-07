@@ -37,13 +37,11 @@ trait MockCreateRelationshipsService {
 
   def mockCreateRelationship(arn: Arn, enrolment: EnrolmentKey)(
     response: Future[Option[DbUpdateStatus]]
-  ): OngoingStubbing[Future[Option[DbUpdateStatus]]] =
-    when(
-      mockCreateRelationshipsService
-        .createRelationship(eqs(arn), eqs(enrolment), eqs(Set()), any[Boolean], any[Boolean])(
-          any[RequestHeader],
-          any[AuditData]
-        )
-    ).thenReturn(response)
+  ): OngoingStubbing[Future[Option[DbUpdateStatus]]] = when(
+    mockCreateRelationshipsService.createRelationship(eqs(arn), eqs(enrolment), eqs(Set()), any[Boolean], any[Boolean])(
+      any[RequestHeader],
+      any[AuditData]
+    )
+  ).thenReturn(response)
 
 }

@@ -51,31 +51,31 @@ class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
   // to support static link for agents there is no TTL
   override lazy val requiresTtlIndex: Boolean = false
 
-  def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] =
-    collection.insertOne(agentReferenceRecord).toFuture().map(_ => ())
+  def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] = collection
+    .insertOne(agentReferenceRecord)
+    .toFuture()
+    .map(_ => ())
 
   def findBy(uid: String): Future[Option[AgentReferenceRecord]] = collection.find(equal("uid", uid)).headOption()
 
   def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]] = collection.find(equal("arn", arn.value)).headOption()
 
-  def updateAgentName(uid: String, newAgentName: String): Future[Unit] =
-    collection
-      .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", encryptedString(newAgentName)))
-      .toFuture()
-      .map { updateOneResult =>
-        if (updateOneResult.getModifiedCount == 1)
-          ()
-        else
-          throw new RuntimeException("could not update agent reference name, no matching uid found.")
-      }
-
-  def delete(arn: Arn): Future[Unit] =
-    collection
-      .deleteOne(equal("arn", arn.value))
-      .toFuture()
-      .map { r =>
-        if (r.getDeletedCount == 0)
-          localLogger.error("could not delete agent reference record, no matching ARN found.")
+  def updateAgentName(uid: String, newAgentName: String): Future[Unit] = collection
+    .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", encryptedString(newAgentName)))
+    .toFuture()
+    .map { updateOneResult =>
+      if (updateOneResult.getModifiedCount == 1)
         ()
-      }
+      else
+        throw new RuntimeException("could not update agent reference name, no matching uid found.")
+    }
+
+  def delete(arn: Arn): Future[Unit] = collection
+    .deleteOne(equal("arn", arn.value))
+    .toFuture()
+    .map { r =>
+      if (r.getDeletedCount == 0)
+        localLogger.error("could not delete agent reference record, no matching ARN found.")
+      ()
+    }
 }

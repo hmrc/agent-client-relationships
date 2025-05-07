@@ -68,19 +68,18 @@ class RelationshipsController @Inject() (
     clientIdType: String,
     clientId: String,
     userId: Option[String]
-  ): Action[AnyContent] =
-    Action.async { implicit request =>
-      checkOrchestratorService
-        .checkForRelationship(arn, service, clientIdType, clientId, userId)
-        .map {
-          case CheckRelationshipFound             => Ok
-          case CheckRelationshipNotFound(message) => NotFound(toJson(message))
-          case CheckRelationshipInvalidRequest    => BadRequest
-        }
-    }
+  ): Action[AnyContent] = Action.async { implicit request =>
+    checkOrchestratorService
+      .checkForRelationship(arn, service, clientIdType, clientId, userId)
+      .map {
+        case CheckRelationshipFound             => Ok
+        case CheckRelationshipNotFound(message) => NotFound(toJson(message))
+        case CheckRelationshipInvalidRequest    => BadRequest
+      }
+  }
 
-  def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+    implicit request =>
       validationService
         .validateForEnrolmentKey(serviceId, clientIdType, clientId)
         .flatMap {
@@ -124,10 +123,10 @@ class RelationshipsController @Inject() (
 
           case Left(error) => Future.successful(BadRequest(error))
         }
-    }
+  }
 
-  def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+    implicit request =>
       validationService
         .validateForEnrolmentKey(serviceId, clientIdType, clientId)
         .flatMap {
@@ -158,40 +157,37 @@ class RelationshipsController @Inject() (
             }
           case Left(error) => Future.successful(BadRequest(error))
         }
-    }
+  }
 
-  def getActiveRelationshipsForClient: Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
-        findService
-          .getActiveRelationshipsForClient(identifiers)
-          .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.id, v) })))
-      }
+  def getActiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
+      findService
+        .getActiveRelationshipsForClient(identifiers)
+        .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.id, v) })))
     }
+  }
 
-  def getInactiveRelationshipsForClient: Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
-        findService
-          .getInactiveRelationshipsForClient(identifiers)
-          .map(inactiveRelationships => Ok(Json.toJson(inactiveRelationships)))
-      }
+  def getInactiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
+      findService
+        .getInactiveRelationshipsForClient(identifiers)
+        .map(inactiveRelationships => Ok(Json.toJson(inactiveRelationships)))
     }
+  }
 
-  def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      authorisedAsClient(service) { implicit clientId =>
-        findService
-          .getActiveRelationshipsForClient(clientId, Service(service))
-          .map {
-            case Some(relationship) => Ok(Json.toJson(relationship))
-            case None               => NotFound
-          }
-      }
+  def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = Action.async { implicit request =>
+    authorisedAsClient(service) { implicit clientId =>
+      findService
+        .getActiveRelationshipsForClient(clientId, Service(service))
+        .map {
+          case Some(relationship) => Ok(Json.toJson(relationship))
+          case None               => NotFound
+        }
     }
+  }
 
-  def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+    implicit request =>
       validationService
         .validateForEnrolmentKey(service, clientIdType, clientId)
         .flatMap {
@@ -211,36 +207,34 @@ class RelationshipsController @Inject() (
             }
           case Left(error) => Future.successful(BadRequest(error))
         }
-    }
+  }
 
-  def getInactiveRelationshipsAgent: Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsAgent { arn =>
-        findService
-          .getInactiveRelationshipsForAgent(arn)
-          .map { relationships =>
-            if (relationships.nonEmpty)
-              Ok(Json.toJson(relationships))
-            else
-              NotFound
-          }
-      }
+  def getInactiveRelationshipsAgent: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent { arn =>
+      findService
+        .getInactiveRelationshipsForAgent(arn)
+        .map { relationships =>
+          if (relationships.nonEmpty)
+            Ok(Json.toJson(relationships))
+          else
+            NotFound
+        }
     }
+  }
 
-  def terminateAgent(arn: Arn): Action[AnyContent] =
-    Action.async { implicit request =>
-      withBasicAuth(appConfig.expectedAuth) {
-        agentTerminationService
-          .terminateAgent(arn)
-          .fold(
-            error => {
-              logger.warn(s"unexpected error during agent termination: $arn, error = $error")
-              InternalServerError
-            },
-            result => Ok(Json.toJson(result))
-          )
-      }
+  def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withBasicAuth(appConfig.expectedAuth) {
+      agentTerminationService
+        .terminateAgent(arn)
+        .fold(
+          error => {
+            logger.warn(s"unexpected error during agent termination: $arn, error = $error")
+            InternalServerError
+          },
+          result => Ok(Json.toJson(result))
+        )
     }
+  }
 
   /*
    * This endpoint is used by agent-invitations-frontend to determine if the client has a legacy SA relationship in CESA

@@ -31,11 +31,10 @@ class TestOnlyRelationshipsController @Inject() (
 )(implicit ec: ExecutionContext)
     extends BackendController(controllerComponents) {
 
-  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] =
-    Action.async { _ =>
-      checkOldAndCopyService
-        .cleanCopyStatusRecord(arn, mtdItId)
-        .map(_ => NoContent)
-        .recover { case ex: RelationshipNotFound => NotFound(ex.getMessage) }
-    }
+  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { _ =>
+    checkOldAndCopyService
+      .cleanCopyStatusRecord(arn, mtdItId)
+      .map(_ => NoContent)
+      .recover { case ex: RelationshipNotFound => NotFound(ex.getMessage) }
+  }
 }

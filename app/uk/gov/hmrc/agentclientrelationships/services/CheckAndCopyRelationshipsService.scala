@@ -378,19 +378,18 @@ class CheckAndCopyRelationshipsService @Inject() (
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Boolean] =
-    lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
-      if (matching.isEmpty) {
-        partialAuthRepo
-          .findActive(nino, arn)
-          .map { optPartialAuth =>
-            auditData.set("partialAuth", optPartialAuth.nonEmpty)
-            auditService.sendCheckCesaAndPartialAuthAuditEvent()
-            optPartialAuth.nonEmpty
-          }
-      } else
-        Future successful true
-    )
+  ): Future[Boolean] = lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
+    if (matching.isEmpty) {
+      partialAuthRepo
+        .findActive(nino, arn)
+        .map { optPartialAuth =>
+          auditData.set("partialAuth", optPartialAuth.nonEmpty)
+          auditService.sendCheckCesaAndPartialAuthAuditEvent()
+          optPartialAuth.nonEmpty
+        }
+    } else
+      Future successful true
+  )
 
   def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(implicit
     request: RequestHeader,
@@ -440,15 +439,14 @@ class CheckAndCopyRelationshipsService @Inject() (
       }
   }
 
-  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Future[Unit] =
-    relationshipCopyRepository
-      .remove(arn, EnrolmentKey(Service.MtdIt, mtdItId))
-      .flatMap { n =>
-        if (n == 0)
-          Future.failed(RelationshipNotFound("Nothing has been removed from db."))
-        else {
-          logger.warn(s"Copy status record(s) has been removed for ${arn.value}, ${mtdItId.value}: $n")
-          Future.successful(())
-        }
+  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Future[Unit] = relationshipCopyRepository
+    .remove(arn, EnrolmentKey(Service.MtdIt, mtdItId))
+    .flatMap { n =>
+      if (n == 0)
+        Future.failed(RelationshipNotFound("Nothing has been removed from db."))
+      else {
+        logger.warn(s"Copy status record(s) has been removed for ${arn.value}, ${mtdItId.value}: $n")
+        Future.successful(())
       }
+    }
 }

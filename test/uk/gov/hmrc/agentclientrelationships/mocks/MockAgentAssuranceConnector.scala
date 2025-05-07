@@ -34,8 +34,7 @@ trait MockAgentAssuranceConnector {
 
   def mockGetAgentRecordWithChecks(
     arn: Arn
-  )(response: AgentDetailsDesResponse): OngoingStubbing[Future[AgentDetailsDesResponse]] =
-    when(
-      mockAgentAssuranceConnector.getAgentRecordWithChecks(eqs(arn))(any[RequestHeader])
-    ).thenReturn(Future.successful(response))
+  )(response: AgentDetailsDesResponse): OngoingStubbing[Future[AgentDetailsDesResponse]] = when(
+    mockAgentAssuranceConnector.getAgentRecordWithChecks(eqs(arn))(any[RequestHeader])
+  ).thenReturn(Future.successful(response))
 }

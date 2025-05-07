@@ -29,11 +29,10 @@ class IfHeaders @Inject() (randomUuidGenerator: CorrelationIdGenerator, appConfi
   private val mdtp = "MDTP"
   private val hip = "HIP"
 
-  def makeHeaders(authToken: String): Seq[(String, String)] =
-    Seq(
-      Environment               -> appConfig.ifEnvironment,
-      CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
-      HeaderNames.AUTHORIZATION -> s"Bearer $authToken"
-    )
+  def makeHeaders(authToken: String): Seq[(String, String)] = Seq(
+    Environment               -> appConfig.ifEnvironment,
+    CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
+    HeaderNames.AUTHORIZATION -> s"Bearer $authToken"
+  )
 
 }

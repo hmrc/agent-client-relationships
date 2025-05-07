@@ -35,15 +35,14 @@ trait MockItsaDeauthAndCleanupService {
 
   def mockDeleteSameAgentRelationship(service: String, arn: String, mtdItId: Option[String], nino: String)(
     response: Future[Boolean]
-  ): OngoingStubbing[Future[Boolean]] =
-    when(
-      mockItsaDeauthAndCleanupService.deleteSameAgentRelationship(
-        eqs(service),
-        eqs(arn),
-        eqs(mtdItId),
-        eqs(nino),
-        any[Instant]
-      )(any[RequestHeader], any[CurrentUser])
-    ).thenReturn(response)
+  ): OngoingStubbing[Future[Boolean]] = when(
+    mockItsaDeauthAndCleanupService.deleteSameAgentRelationship(
+      eqs(service),
+      eqs(arn),
+      eqs(mtdItId),
+      eqs(nino),
+      any[Instant]
+    )(any[RequestHeader], any[CurrentUser])
+  ).thenReturn(response)
 
 }

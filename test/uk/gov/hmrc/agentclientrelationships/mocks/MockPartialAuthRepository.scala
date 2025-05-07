@@ -35,16 +35,19 @@ trait MockPartialAuthRepository {
 
   def mockFindMainAgent(
     nino: String
-  )(response: Future[Option[PartialAuthRelationship]]): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
-    when(mockPartialAuthRepository.findMainAgent(eqs(nino))).thenReturn(response)
+  )(response: Future[Option[PartialAuthRelationship]]): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
+    mockPartialAuthRepository.findMainAgent(eqs(nino))
+  ).thenReturn(response)
 
   def mockDeauthorisePartialAuth(service: String, nino: Nino, arn: Arn)(
     response: Future[Boolean]
-  ): OngoingStubbing[Future[Boolean]] =
-    when(mockPartialAuthRepository.deauthorise(eqs(service), eqs(nino), eqs(arn), any[Instant])).thenReturn(response)
+  ): OngoingStubbing[Future[Boolean]] = when(
+    mockPartialAuthRepository.deauthorise(eqs(service), eqs(nino), eqs(arn), any[Instant])
+  ).thenReturn(response)
 
   def mockCreatePartialAuth(arn: Arn, service: String, nino: Nino)(
     response: Future[Unit] = Future.unit
-  ): OngoingStubbing[Future[Unit]] =
-    when(mockPartialAuthRepository.create(any[Instant], eqs(arn), eqs(service), eqs(nino))).thenReturn(response)
+  ): OngoingStubbing[Future[Unit]] = when(
+    mockPartialAuthRepository.create(any[Instant], eqs(arn), eqs(service), eqs(nino))
+  ).thenReturn(response)
 }

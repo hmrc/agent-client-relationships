@@ -33,8 +33,8 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val appName = servicesConfig.getString("appName")
 
-  private def getConfigString(key: String) =
-    servicesConfig.getConfString(key, throw ConfigNotFoundException(s"Could not find config key: '$key'"))
+  private def getConfigString(key: String) = servicesConfig
+    .getConfString(key, throw ConfigNotFoundException(s"Could not find config key: '$key'"))
 
   def expectedAuth: BasicAuthentication = {
     val username = config

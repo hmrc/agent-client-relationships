@@ -68,16 +68,15 @@ class DeleteRelationshipsService @Inject() (
 
     auditService.setAuditDataForTermination(arn, enrolmentKey)
 
-    def createDeleteRecord(record: DeleteRecord): Future[DbUpdateStatus] =
-      deleteRecordRepository
-        .create(record)
-        .map { count =>
-          convertDbUpdateStatus(count)
-        }
-        .recoverWith { case NonFatal(ex) =>
-          logger.warn(s"Inserting delete record into mongo failed for ${arn.value}, $enrolmentKey: ${ex.getMessage}")
-          Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
-        }
+    def createDeleteRecord(record: DeleteRecord): Future[DbUpdateStatus] = deleteRecordRepository
+      .create(record)
+      .map { count =>
+        convertDbUpdateStatus(count)
+      }
+      .recoverWith { case NonFatal(ex) =>
+        logger.warn(s"Inserting delete record into mongo failed for ${arn.value}, $enrolmentKey: ${ex.getMessage}")
+        Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
+      }
 
     def delete: Future[Unit] = {
       val endedBy = determineUserTypeFromAG(affinityGroup)
@@ -216,27 +215,25 @@ class DeleteRelationshipsService @Inject() (
     )
   }
 
-  def removeDeleteRecord(arn: Arn, enrolmentKey: EnrolmentKey): Future[Boolean] =
-    deleteRecordRepository
-      .remove(arn, enrolmentKey)
-      .map(_ > 0)
-      .recoverWith { case NonFatal(ex) =>
-        logger.warn(s"Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")
-        Future.successful(false)
-      }
+  def removeDeleteRecord(arn: Arn, enrolmentKey: EnrolmentKey): Future[Boolean] = deleteRecordRepository
+    .remove(arn, enrolmentKey)
+    .map(_ > 0)
+    .recoverWith { case NonFatal(ex) =>
+      logger.warn(s"Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")
+      Future.successful(false)
+    }
 
-  def tryToResume(implicit auditData: AuditData): Future[Boolean] =
-    deleteRecordRepository
-      .selectNextToRecover()
-      .flatMap {
-        case Some(record) =>
-          val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
-          checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
+  def tryToResume(implicit auditData: AuditData): Future[Boolean] = deleteRecordRepository
+    .selectNextToRecover()
+    .flatMap {
+      case Some(record) =>
+        val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
+        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
 
-        case None =>
-          logger.info("No Delete Record Found")
-          Future.successful(true)
-      }
+      case None =>
+        logger.info("No Delete Record Found")
+        Future.successful(true)
+    }
 
   def checkDeleteRecordAndEventuallyResume(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
     request: RequestHeader,
@@ -347,16 +344,15 @@ class DeleteRelationshipsService @Inject() (
       case _                                                                 => Some("HMRC")
     }
 
-  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String): Future[Done] =
-    invitationService
-      .deauthoriseInvitation(arn, enrolmentKey, endedBy)
-      .map(success =>
-        if (success)
-          Done
-        else {
-          logger.warn("setRelationshipEnded failed")
-          Done
-        }
-      )
+  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String): Future[Done] = invitationService
+    .deauthoriseInvitation(arn, enrolmentKey, endedBy)
+    .map(success =>
+      if (success)
+        Done
+      else {
+        logger.warn("setRelationshipEnded failed")
+        Done
+      }
+    )
 
 }

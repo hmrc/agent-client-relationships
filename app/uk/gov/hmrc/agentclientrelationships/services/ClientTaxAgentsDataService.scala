@@ -325,31 +325,30 @@ class ClientTaxAgentsDataService @Inject() (
   private def findAgentDetailsByArn(arn: Arn)(implicit
     request: RequestHeader,
     ec: ExecutionContext
-  ): Future[Either[RelationshipFailureResponse, AgentDetailsDesResponse]] =
-    agentAssuranceConnector
-      .getAgentRecordWithChecks(arn)
-      .map { agentRecord =>
-        if (agentIsSuspended(agentRecord))
-          Left(RelationshipFailureResponse.AgentSuspended)
-        else
-          Right(agentRecord)
-      }
-      .recover { case ex: Throwable => Left(RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage)) }
+  ): Future[Either[RelationshipFailureResponse, AgentDetailsDesResponse]] = agentAssuranceConnector
+    .getAgentRecordWithChecks(arn)
+    .map { agentRecord =>
+      if (agentIsSuspended(agentRecord))
+        Left(RelationshipFailureResponse.AgentSuspended)
+      else
+        Right(agentRecord)
+    }
+    .recover { case ex: Throwable => Left(RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage)) }
 
-  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean =
-    agentRecord.suspensionDetails.exists(_.suspensionStatus)
+  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord
+    .suspensionDetails
+    .exists(_.suspensionStatus)
 
   private def filterOutSuspendedAgent[A](
     myEitherT: EitherT[Future, RelationshipFailureResponse, A]
-  ): Future[Option[Either[RelationshipFailureResponse, A]]] =
-    myEitherT
-      .value
-      .map {
-        case r @ Right(_)                                                           => Some(r)
-        case l @ Left(error) if error != RelationshipFailureResponse.AgentSuspended => Some(l)
-        case Left(_)                                                                => None
+  ): Future[Option[Either[RelationshipFailureResponse, A]]] = myEitherT
+    .value
+    .map {
+      case r @ Right(_)                                                           => Some(r)
+      case l @ Left(error) if error != RelationshipFailureResponse.AgentSuspended => Some(l)
+      case Left(_)                                                                => None
 
-      }
+    }
 
   private def partitionMap[A](
     seq: Seq[Either[RelationshipFailureResponse, A]]

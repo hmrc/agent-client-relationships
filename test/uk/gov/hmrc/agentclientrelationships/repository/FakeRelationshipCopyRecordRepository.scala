@@ -30,8 +30,8 @@ class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordReposit
   private val UPDATED_RECORD_COUNT = 1
 
   // the provided RelationshipCopyRecord must use an enrolment key
-  override def create(record: RelationshipCopyRecord): Future[Int] =
-    findBy(Arn(record.arn), record.enrolmentKey.get).map { result =>
+  override def create(record: RelationshipCopyRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get)
+    .map { result =>
       if (result.isDefined) {
         throw new MongoException("duplicate key error collection")
       } else {

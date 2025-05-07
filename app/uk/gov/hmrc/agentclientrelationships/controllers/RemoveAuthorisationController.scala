@@ -164,15 +164,14 @@ class RemoveAuthorisationController @Inject() (
   private def deleteRelationship(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
     request: RequestHeader,
     currentUser: CurrentUser
-  ): Future[Either[InvitationFailureResponse, Boolean]] =
-    deleteService
-      .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
-      .map(_ => Right(true))
-      .recover {
-        case RelationshipNotFoundEx(_)  => Left(RelationshipNotFound)
-        case upS: UpstreamErrorResponse => Left(RelationshipDeleteFailed(upS.getMessage))
-        case NonFatal(ex)               => Left(RelationshipDeleteFailed(ex.getMessage))
-      }
+  ): Future[Either[InvitationFailureResponse, Boolean]] = deleteService
+    .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
+    .map(_ => Right(true))
+    .recover {
+      case RelationshipNotFoundEx(_)  => Left(RelationshipNotFound)
+      case upS: UpstreamErrorResponse => Left(RelationshipDeleteFailed(upS.getMessage))
+      case NonFatal(ex)               => Left(RelationshipDeleteFailed(ex.getMessage))
+    }
 
   private def invitationErrorHandler(
     invitationFailureResponse: InvitationFailureResponse,

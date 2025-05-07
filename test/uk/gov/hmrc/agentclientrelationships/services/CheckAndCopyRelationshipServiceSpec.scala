@@ -1722,26 +1722,29 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
-  private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] =
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+  private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] = when(
+    ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
+  ).thenReturn(Future successful Some(nino))
 
-  private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
-    when(partialAuthRepository.findActive(eqs(nino), eqs(arn))).thenReturn(
-      Future.successful(
-        Some(PartialAuthRelationship(Instant.now(), arn.value, service, nino.value, active = true, Instant.now()))
-      )
+  private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
+    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+  ).thenReturn(
+    Future.successful(
+      Some(PartialAuthRelationship(Instant.now(), arn.value, service, nino.value, active = true, Instant.now()))
     )
+  )
 
-  private def partialAuthDeleted(service: String): OngoingStubbing[Future[Boolean]] =
-    when(partialAuthRepository.deleteActivePartialAuth(eqs(service), eqs(nino), eqs(arn)))
-      .thenReturn(Future.successful(true))
+  private def partialAuthDeleted(service: String): OngoingStubbing[Future[Boolean]] = when(
+    partialAuthRepository.deleteActivePartialAuth(eqs(service), eqs(nino), eqs(arn))
+  ).thenReturn(Future.successful(true))
 
-  private def partialAuthStatusUpdatedToAccepted(service: String): OngoingStubbing[Future[Boolean]] =
-    when(invitationsRepository.updatePartialAuthToAcceptedStatus(eqs(arn), eqs(service), eqs(nino), eqs(mtdItId)))
-      .thenReturn(Future.successful(true))
+  private def partialAuthStatusUpdatedToAccepted(service: String): OngoingStubbing[Future[Boolean]] = when(
+    invitationsRepository.updatePartialAuthToAcceptedStatus(eqs(arn), eqs(service), eqs(nino), eqs(mtdItId))
+  ).thenReturn(Future.successful(true))
 
-  private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
-    when(partialAuthRepository.findActive(eqs(nino), eqs(arn))).thenReturn(Future.successful(None))
+  private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
+    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+  ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
     when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
@@ -1765,9 +1768,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
 
-  private def adminUserExistsForArn(): OngoingStubbing[Future[Either[String, AgentUser]]] =
-    when(agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(any[RequestHeader](), any[AuditData]))
-      .thenReturn(Future.successful(agentUserForAsAgent))
+  private def adminUserExistsForArn(): OngoingStubbing[Future[Either[String, AgentUser]]] = when(
+    agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(any[RequestHeader](), any[AuditData])
+  ).thenReturn(Future.successful(agentUserForAsAgent))
 
   private def arnExistsForGroupId(): OngoingStubbing[Future[Option[Arn]]] = {
     when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]()))
@@ -1785,8 +1788,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       .thenReturn(Future.successful(()))
   }
 
-  private def vrnIsKnownInETMP(vrn: Vrn, isKnown: Boolean): OngoingStubbing[Future[Boolean]] =
-    when(des.vrnIsKnownInEtmp(eqs(vrn))(any[RequestHeader]())).thenReturn(Future successful isKnown)
+  private def vrnIsKnownInETMP(vrn: Vrn, isKnown: Boolean): OngoingStubbing[Future[Boolean]] = when(
+    des.vrnIsKnownInEtmp(eqs(vrn))(any[RequestHeader]())
+  ).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
     when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(any[RequestHeader]()))
@@ -1799,29 +1803,26 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful (()))
   }
 
-  private def metricsStub(): OngoingStubbing[MetricRegistry] =
-    when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
+  private def metricsStub(): OngoingStubbing[MetricRegistry] = when(metrics.defaultRegistry)
+    .thenReturn(new MetricRegistry)
 
-  private def auditStub(): OngoingStubbing[Future[Unit]] =
-    when(
-      auditService.sendCheckEsAuditEvent()(any[RequestHeader](), any[AuditData])
-    ).thenReturn(Future.successful(()))
+  private def auditStub(): OngoingStubbing[Future[Unit]] = when(
+    auditService.sendCheckEsAuditEvent()(any[RequestHeader](), any[AuditData])
+  ).thenReturn(Future.successful(()))
 
-  private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] =
-    when(
-      auditService.sendCreateRelationshipAuditEvent()(any[RequestHeader](), any[AuditData])
-    ).thenReturn(Future.successful(()))
+  private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] = when(
+    auditService.sendCreateRelationshipAuditEvent()(any[RequestHeader](), any[AuditData])
+  ).thenReturn(Future.successful(()))
 
-  private def deleteSameAgentOtherItsaService(): OngoingStubbing[Future[Boolean]] =
-    when(
-      itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-        any[String],
-        eqs(arn.value),
-        eqs(Some(mtdItId.value)),
-        eqs(nino.value),
-        any[Instant]
-      )(any[RequestHeader](), any[CurrentUser])
-    ).thenReturn(Future.successful(true))
+  private def deleteSameAgentOtherItsaService(): OngoingStubbing[Future[Boolean]] = when(
+    itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+      any[String],
+      eqs(arn.value),
+      eqs(Some(mtdItId.value)),
+      eqs(nino.value),
+      any[Instant]
+    )(any[RequestHeader](), any[CurrentUser])
+  ).thenReturn(Future.successful(true))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
     verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())

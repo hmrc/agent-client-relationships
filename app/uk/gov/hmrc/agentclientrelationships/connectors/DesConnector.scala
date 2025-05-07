@@ -110,12 +110,11 @@ class DesConnector @Inject() (
     }
   }
 
-  def desHeaders(authToken: String, env: String): Seq[(String, String)] =
-    Seq(
-      Environment               -> env,
-      HeaderNames.authorisation -> s"Bearer $authToken",
-      CorrelationId             -> randomUuidGenerator.makeCorrelationId()
-    )
+  def desHeaders(authToken: String, env: String): Seq[(String, String)] = Seq(
+    Environment               -> env,
+    HeaderNames.authorisation -> s"Bearer $authToken",
+    CorrelationId             -> randomUuidGenerator.makeCorrelationId()
+  )
 
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
     implicit request: RequestHeader

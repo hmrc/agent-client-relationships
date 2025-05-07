@@ -35,23 +35,21 @@ class HipHeaders @Inject() (correlationIdGenerator: CorrelationIdGenerator, appC
   private val hip = "HIP"
   private val itsa = "ITSA"
 
-  def subscriptionHeaders(): Seq[(String, String)] =
-    Seq(
-      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-      (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
-      (xOriginatingSystemHeader, mdtp),
-      (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
-      (xTransmittingSystemHeader, hip)
-    )
+  def subscriptionHeaders(): Seq[(String, String)] = Seq(
+    (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+    (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
+    (xOriginatingSystemHeader, mdtp),
+    (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
+    (xTransmittingSystemHeader, hip)
+  )
 
-  def subscriptionBusinessDetailsHeaders(): Seq[(String, String)] =
-    Seq(
-      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-      (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
-      (xOriginatingSystemHeader, mdtp),
-      (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
-      (xTransmittingSystemHeader, hip),
-      (xMessageType, "TaxpayerDisplay"),
-      (xRegimeType, itsa)
-    )
+  def subscriptionBusinessDetailsHeaders(): Seq[(String, String)] = Seq(
+    (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+    (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
+    (xOriginatingSystemHeader, mdtp),
+    (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
+    (xTransmittingSystemHeader, hip),
+    (xMessageType, "TaxpayerDisplay"),
+    (xRegimeType, itsa)
+  )
 }

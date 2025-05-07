@@ -172,27 +172,26 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
 
   def sendRespondToInvitationAuditEvent(invitation: Invitation, accepted: Boolean, isStride: Boolean)(implicit
     request: RequestHeader
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.RespondToInvitation,
-      "respond-to-invitation",
-      Seq(
-        arnKey              -> invitation.arn,
-        serviceKey          -> invitation.service,
-        clientIdKey         -> invitation.clientId,
-        clientIdTypeKey     -> invitation.clientIdType,
-        invitationIdKey     -> invitation.invitationId,
-        suppliedClientIdKey -> invitation.suppliedClientId,
-        responseKey -> (if (accepted)
-                          acceptedInvitation
-                        else
-                          rejectedInvitation),
-        respondedByKey -> (if (isStride)
-                             respondedByHmrc
-                           else
-                             respondedByClient)
-      )
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.RespondToInvitation,
+    "respond-to-invitation",
+    Seq(
+      arnKey              -> invitation.arn,
+      serviceKey          -> invitation.service,
+      clientIdKey         -> invitation.clientId,
+      clientIdTypeKey     -> invitation.clientIdType,
+      invitationIdKey     -> invitation.invitationId,
+      suppliedClientIdKey -> invitation.suppliedClientId,
+      responseKey -> (if (accepted)
+                        acceptedInvitation
+                      else
+                        rejectedInvitation),
+      respondedByKey -> (if (isStride)
+                           respondedByHmrc
+                         else
+                           respondedByClient)
     )
+  )
 
   def sendCreateRelationshipAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
@@ -223,12 +222,11 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
       collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
     )
 
-  def sendCheckEsAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CheckES,
-      "check-es",
-      collectDetails(auditData.getDetails, checkEsDetailsFields)
-    )
+  def sendCheckEsAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CheckES,
+    "check-es",
+    collectDetails(auditData.getDetails, checkEsDetailsFields)
+  )
 
   def sendTerminateRelationshipAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
@@ -322,12 +320,11 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
   def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
-      "recovery-of-delete-relationship-abandoned",
-      collectDetails(auditData.getDetails, recoveryOfDeleteRelationshipDetailsFields)
-    )
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
+    "recovery-of-delete-relationship-abandoned",
+    collectDetails(auditData.getDetails, recoveryOfDeleteRelationshipDetailsFields)
+  )
 
   private[audit] def auditEvent(
     event: AgentClientRelationshipEvent,
@@ -350,12 +347,11 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     DataEvent(auditSource = "agent-client-relationships", auditType = event.toString, tags = tags, detail = detail)
   }
 
-  private def send(events: DataEvent*)(implicit request: RequestHeader): Future[Unit] =
-    Future {
-      events.foreach { event =>
-        Try(auditConnector.sendEvent(event))
-      }
+  private def send(events: DataEvent*)(implicit request: RequestHeader): Future[Unit] = Future {
+    events.foreach { event =>
+      Try(auditConnector.sendEvent(event))
     }
+  }
 
 }
 

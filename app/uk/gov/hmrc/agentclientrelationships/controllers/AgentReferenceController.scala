@@ -71,14 +71,13 @@ class AgentReferenceController @Inject() (
       }
     }
 
-  def fetchRecordByUid(uid: String): Action[AnyContent] =
-    Action.async { _ =>
-      agentReferenceRepository
-        .findBy(uid)
-        .map {
-          case Some(record) => Ok(Json.toJson(record))
-          case None         => NotFound
-        }
-    }
+  def fetchRecordByUid(uid: String): Action[AnyContent] = Action.async { _ =>
+    agentReferenceRepository
+      .findBy(uid)
+      .map {
+        case Some(record) => Ok(Json.toJson(record))
+        case None         => NotFound
+      }
+  }
 
 }

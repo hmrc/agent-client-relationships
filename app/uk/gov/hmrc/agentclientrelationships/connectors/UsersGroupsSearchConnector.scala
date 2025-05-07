@@ -70,8 +70,9 @@ class UsersGroupsSearchConnector @Inject() (httpClient: HttpClientV2, appConfig:
     }
 
   // TODO: move this transformation to the Service Layer
-  def getFirstGroupAdminUser(groupId: String)(implicit rh: RequestHeader): Future[Option[UserDetails]] =
-    getGroupUsers(groupId).map(_.find(_.credentialRole.exists(_ == "Admin")))
+  def getFirstGroupAdminUser(groupId: String)(implicit rh: RequestHeader): Future[Option[UserDetails]] = getGroupUsers(
+    groupId
+  ).map(_.find(_.credentialRole.exists(_ == "Admin")))
 
   def getGroupInfo(groupId: String)(implicit rh: RequestHeader): Future[Option[GroupInfo]] =
     monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {

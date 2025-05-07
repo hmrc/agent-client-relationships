@@ -41,28 +41,27 @@ class ClientTaxAgentsDataController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def findClientTaxAgentsData: Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsClientWithNino { authResponse: EnrolmentsWithNino =>
-        carService
-          .getClientTaxAgentsData(authResponse)
-          .map {
-            case Right(clientTaxAgentsData) => Ok(Json.toJson(clientTaxAgentsData))
-            case Left(error)                =>
-              // TODO: It takes great effort to return 5xx, which is probably ignored and results in technical difficulties anyway in frontend anyway...
-              // Verify if this is really needed and if not then rely on standard JsonErrorHandlder and simplify that and other code
-              error match {
-                case RelationshipFailureResponse.RelationshipBadRequest                  => BadRequest
-                case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message)    => ServiceUnavailable(message)
-                case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) => ServiceUnavailable(message)
-                case e =>
-                  logger.error(s"Error retrieving client tax agents data: $e")
-                  InternalServerError(e.toString)
-              }
+  def findClientTaxAgentsData: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsClientWithNino { authResponse: EnrolmentsWithNino =>
+      carService
+        .getClientTaxAgentsData(authResponse)
+        .map {
+          case Right(clientTaxAgentsData) => Ok(Json.toJson(clientTaxAgentsData))
+          case Left(error)                =>
+            // TODO: It takes great effort to return 5xx, which is probably ignored and results in technical difficulties anyway in frontend anyway...
+            // Verify if this is really needed and if not then rely on standard JsonErrorHandlder and simplify that and other code
+            error match {
+              case RelationshipFailureResponse.RelationshipBadRequest                  => BadRequest
+              case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message)    => ServiceUnavailable(message)
+              case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) => ServiceUnavailable(message)
+              case e =>
+                logger.error(s"Error retrieving client tax agents data: $e")
+                InternalServerError(e.toString)
+            }
 
-          }
+        }
 
-      }
     }
+  }
 
 }

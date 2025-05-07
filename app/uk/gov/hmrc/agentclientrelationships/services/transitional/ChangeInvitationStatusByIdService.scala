@@ -108,30 +108,30 @@ class ChangeInvitationStatusByIdService @Inject() (
     toStatus: InvitationStatus,
     endedBy: Option[String],
     lastUpdated: Option[Instant]
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    invitationsRepository
-      .updateStatusFromTo(
-        invitationId = invitationId,
-        fromStatus = fromStatus,
-        toStatus = toStatus,
-        relationshipEndedBy = endedBy,
-        lastUpdated = lastUpdated
-      )
-      .map(
-        _.fold[Either[InvitationFailureResponse, Unit]](
-          Left(UpdateStatusFailed("Update status for invitation failed."))
-        )(_ => Right(()))
-      )
+  ): Future[Either[InvitationFailureResponse, Unit]] = invitationsRepository
+    .updateStatusFromTo(
+      invitationId = invitationId,
+      fromStatus = fromStatus,
+      toStatus = toStatus,
+      relationshipEndedBy = endedBy,
+      lastUpdated = lastUpdated
+    )
+    .map(
+      _.fold[Either[InvitationFailureResponse, Unit]](
+        Left(UpdateStatusFailed("Update status for invitation failed."))
+      )(_ => Right(()))
+    )
 
   private def createPartialAuthRecord(
     created: Instant,
     arn: Arn,
     service: String,
     nino: Nino
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    partialAuthRepository.create(created = created, arn = arn, service = service, nino = nino).map(Right(_))
+  ): Future[Either[InvitationFailureResponse, Unit]] = partialAuthRepository
+    .create(created = created, arn = arn, service = service, nino = nino)
+    .map(Right(_))
 
-  private def findMatchingInvitationById(invitationId: String): Future[Option[Invitation]] =
-    invitationsRepository.findOneById(invitationId = invitationId)
+  private def findMatchingInvitationById(invitationId: String): Future[Option[Invitation]] = invitationsRepository
+    .findOneById(invitationId = invitationId)
 
 }

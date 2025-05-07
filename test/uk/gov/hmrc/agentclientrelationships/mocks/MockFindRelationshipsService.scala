@@ -35,13 +35,13 @@ trait MockFindRelationshipsService {
 
   def mockGetItsaRelationshipsForClient(nino: Nino, service: Service)(
     response: Future[Option[ActiveRelationship]]
-  ): OngoingStubbing[Future[Option[ActiveRelationship]]] =
-    when(mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(any[RequestHeader]))
-      .thenReturn(response)
+  ): OngoingStubbing[Future[Option[ActiveRelationship]]] = when(
+    mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(any[RequestHeader])
+  ).thenReturn(response)
 
   def mockGetActiveRelationshipsForClient(taxId: TaxIdentifier, service: Service)(
     response: Future[Option[ActiveRelationship]]
-  ): OngoingStubbing[Future[Option[ActiveRelationship]]] =
-    when(mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(any[RequestHeader]))
-      .thenReturn(response)
+  ): OngoingStubbing[Future[Option[ActiveRelationship]]] = when(
+    mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(any[RequestHeader])
+  ).thenReturn(response)
 }

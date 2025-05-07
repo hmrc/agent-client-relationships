@@ -41,15 +41,14 @@ class AgentDetailsController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def getAgentDetails(arn: Arn): Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsAgent { _ =>
-        agentAssuranceConnector
-          .getAgentRecordWithChecks(arn)
-          .map { agent =>
-            Ok(Json.toJson[AgentDetailsDesResponse](agent))
-          }
-      }
+  def getAgentDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent { _ =>
+      agentAssuranceConnector
+        .getAgentRecordWithChecks(arn)
+        .map { agent =>
+          Ok(Json.toJson[AgentDetailsDesResponse](agent))
+        }
     }
+  }
 
 }

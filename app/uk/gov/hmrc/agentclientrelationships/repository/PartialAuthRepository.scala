@@ -73,72 +73,70 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
     collection.insertOne(partialAuth).toFuture().map(_ => ())
   }
 
-  def findActive(nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
-    collection
-      .find(
-        and(
-          in("service", HMRCMTDIT, HMRCMTDITSUPP),
-          equal("nino", encryptedString(nino.value)),
-          equal("arn", arn.value),
-          equal("active", true)
-        )
+  def findActive(nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] = collection
+    .find(
+      and(
+        in("service", HMRCMTDIT, HMRCMTDITSUPP),
+        equal("nino", encryptedString(nino.value)),
+        equal("arn", arn.value),
+        equal("active", true)
       )
-      .headOption()
+    )
+    .headOption()
 
-  def findAllByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
-    collection.find(and(equal("nino", encryptedString(nino.value)))).toFuture()
+  def findAllByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] = collection
+    .find(and(equal("nino", encryptedString(nino.value))))
+    .toFuture()
 
-  def findActiveByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
-    collection.find(and(equal("nino", encryptedString(nino.value)), equal("active", true))).toFuture()
+  def findActiveByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] = collection
+    .find(and(equal("nino", encryptedString(nino.value)), equal("active", true)))
+    .toFuture()
 
-  def findActive(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
-    collection
-      .find(
-        and(
-          equal("service", serviceId),
-          equal("nino", encryptedString(nino.value)),
-          equal("arn", arn.value),
-          equal("active", true)
-        )
+  def findActive(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] = collection
+    .find(
+      and(
+        equal("service", serviceId),
+        equal("nino", encryptedString(nino.value)),
+        equal("arn", arn.value),
+        equal("active", true)
       )
-      .headOption()
+    )
+    .headOption()
 
-  def findByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
-    collection.find(equal("nino", encryptedString(nino.value))).toFuture()
+  def findByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] = collection
+    .find(equal("nino", encryptedString(nino.value)))
+    .toFuture()
 
   /* this will only find partially authorised ITSA main agents for a given nino string */
-  def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] =
-    collection
-      .find(and(equal("service", HMRCMTDIT), equal("nino", encryptedString(nino)), equal("active", true)))
-      .headOption()
+  def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] = collection
+    .find(and(equal("service", HMRCMTDIT), equal("nino", encryptedString(nino)), equal("active", true)))
+    .headOption()
 
-  def deauthorise(serviceId: String, nino: Nino, arn: Arn, updated: Instant): Future[Boolean] =
-    collection
-      .updateOne(
-        and(
-          equal("service", serviceId),
-          equal("nino", encryptedString(nino.value)),
-          equal("arn", arn.value),
-          equal("active", true)
-        ),
-        combine(set("active", false), set("lastUpdated", updated))
-      )
-      .toFuture()
-      .map(_.getModifiedCount > 0)
+  def deauthorise(serviceId: String, nino: Nino, arn: Arn, updated: Instant): Future[Boolean] = collection
+    .updateOne(
+      and(
+        equal("service", serviceId),
+        equal("nino", encryptedString(nino.value)),
+        equal("arn", arn.value),
+        equal("active", true)
+      ),
+      combine(set("active", false), set("lastUpdated", updated))
+    )
+    .toFuture()
+    .map(_.getModifiedCount > 0)
 
   // for example when a partialAuth becomes a MTD relationship we want to delete the partialAuth
-  def deleteActivePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] =
-    collection
-      .deleteOne(
-        and(
-          equal("service", serviceId),
-          equal("nino", encryptedString(nino.value)),
-          equal("arn", arn.value),
-          equal("active", true)
-        )
+  def deleteActivePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] = collection
+    .deleteOne(
+      and(
+        equal("service", serviceId),
+        equal("nino", encryptedString(nino.value)),
+        equal("arn", arn.value),
+        equal("active", true)
       )
-      .toFuture()
-      .map(_.getDeletedCount == 1L)
+    )
+    .toFuture()
+    .map(_.getDeletedCount == 1L)
 
   // DO NOT USE, transitional code
   def findAllBy(
@@ -146,20 +144,19 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
     services: Seq[String],
     nino: Option[String],
     isActive: Option[Boolean]
-  ): Future[Seq[PartialAuthRelationship]] =
-    collection
-      .find(
-        and(
-          Seq(
-            arn.map(equal("arn", _)),
-            if (services.nonEmpty)
-              Some(in("service", services: _*))
-            else
-              None,
-            nino.map(str => equal("nino", encryptedString(str))),
-            isActive.map(equal("active", _))
-          ).flatten: _*
-        )
+  ): Future[Seq[PartialAuthRelationship]] = collection
+    .find(
+      and(
+        Seq(
+          arn.map(equal("arn", _)),
+          if (services.nonEmpty)
+            Some(in("service", services: _*))
+          else
+            None,
+          nino.map(str => equal("nino", encryptedString(str))),
+          isActive.map(equal("active", _))
+        ).flatten: _*
       )
-      .toFuture()
+    )
+    .toFuture()
 }

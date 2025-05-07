@@ -30,8 +30,8 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
   private val data: mutable.Map[(Arn, EnrolmentKey), DeleteRecord] = mutable.Map()
 
   // the provided DeleteCopyRecord must use an enrolment key
-  override def create(record: DeleteRecord): Future[Int] =
-    findBy(Arn(record.arn), record.enrolmentKey.get).map(result =>
+  override def create(record: DeleteRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get)
+    .map(result =>
       if (result.isDefined)
         throw new MongoException("duplicate key error collection")
       else {
@@ -93,16 +93,15 @@ class FakeDeleteRecordRepository extends DeleteRecordRepository {
     )
   }
 
-  override def selectNextToRecover(): Future[Option[DeleteRecord]] =
-    Future.successful(
-      data
-        .toSeq
-        .map(_._2)
-        .sortBy(
-          _.lastRecoveryAttempt.map(_.toEpochSecond(ZoneOffset.UTC)).getOrElse(0L)
-        )
-        .headOption
-    )
+  override def selectNextToRecover(): Future[Option[DeleteRecord]] = Future.successful(
+    data
+      .toSeq
+      .map(_._2)
+      .sortBy(
+        _.lastRecoveryAttempt.map(_.toEpochSecond(ZoneOffset.UTC)).getOrElse(0L)
+      )
+      .headOption
+  )
 
   def reset() = data.clear()
 

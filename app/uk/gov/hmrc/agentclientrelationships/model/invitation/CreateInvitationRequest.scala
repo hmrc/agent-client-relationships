@@ -30,8 +30,8 @@ case class CreateInvitationRequest(
   service: String,
   clientType: Option[String]
 ) {
-  def getService: Either[InvitationFailureResponse, Service] =
-    Try(Service.forId(service)).fold(_ => Left(UnsupportedService), Right(_))
+  def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(service))
+    .fold(_ => Left(UnsupportedService), Right(_))
 
   def getSuppliedClientId: Either[InvitationFailureResponse, ClientId] =
     for {

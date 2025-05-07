@@ -111,27 +111,25 @@ class FindRelationshipsService @Inject() (
 
   def getActiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
-  )(implicit request: RequestHeader): Future[Map[Service, Seq[Arn]]] =
-    Future
-      .traverse(appConfig.supportedServicesWithoutPir) { service =>
-        identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
-          case Some(taxId) => getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
-          case None        => Future.successful(None)
-        }
+  )(implicit request: RequestHeader): Future[Map[Service, Seq[Arn]]] = Future
+    .traverse(appConfig.supportedServicesWithoutPir) { service =>
+      identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
+        case Some(taxId) => getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
+        case None        => Future.successful(None)
       }
-      .map(_.collect { case Some(x) => x }.groupBy(_._1).map { case (k, v) => (k, v.map(_._2)) })
+    }
+    .map(_.collect { case Some(x) => x }.groupBy(_._1).map { case (k, v) => (k, v.map(_._2)) })
 
   def getInactiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
-  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] =
-    Future
-      .traverse(appConfig.supportedServicesWithoutPir) { service =>
-        identifiers.get(service) match {
-          case Some(taxId) => getInactiveRelationshipsForClient(taxId, service)
-          case None        => Future.successful(Seq.empty)
-        }
+  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = Future
+    .traverse(appConfig.supportedServicesWithoutPir) { service =>
+      identifiers.get(service) match {
+        case Some(taxId) => getInactiveRelationshipsForClient(taxId, service)
+        case None        => Future.successful(Seq.empty)
       }
-      .map(_.flatten)
+    }
+    .map(_.flatten)
 
   def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, service: Service)(implicit
     request: RequestHeader

@@ -39,8 +39,9 @@ class InvitationLinkService @Inject() (
 
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
 
-  def migrateAgentReferenceRecord(record: AgentReferenceRecord): Future[Unit] =
-    agentReferenceRepository.create(record).map(_ => ())
+  def migrateAgentReferenceRecord(record: AgentReferenceRecord): Future[Unit] = agentReferenceRepository
+    .create(record)
+    .map(_ => ())
 
   def validateLink(uid: String, normalizedAgentName: String)(implicit
     request: RequestHeader
@@ -92,8 +93,9 @@ class InvitationLinkService @Inject() (
 
   private def getAgentReferenceRecord(
     uid: String
-  ): Future[Either[InvitationLinkFailureResponse, AgentReferenceRecord]] =
-    agentReferenceRepository.findBy(uid).map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
+  ): Future[Either[InvitationLinkFailureResponse, AgentReferenceRecord]] = agentReferenceRepository
+    .findBy(uid)
+    .map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
 
   def getAgentReferenceRecordByArn(arn: Arn, newNormaliseAgentName: String): Future[AgentReferenceRecord] =
     agentReferenceRepository
@@ -115,8 +117,10 @@ class InvitationLinkService @Inject() (
     agentReferenceRepository.create(agentReferenceRecord).map(_ => agentReferenceRecord)
   }
 
-  def normaliseAgentName(agentName: String) =
-    agentName.toLowerCase().replaceAll("\\s+", "-").replaceAll("[^A-Za-z0-9-]", "")
+  def normaliseAgentName(agentName: String) = agentName
+    .toLowerCase()
+    .replaceAll("\\s+", "-")
+    .replaceAll("[^A-Za-z0-9-]", "")
 
   private def validateNormalizedAgentName(
     normalisedAgentNames: Seq[String],
@@ -140,7 +144,7 @@ class InvitationLinkService @Inject() (
 
   private def getAgencyName(
     agentDetailsDesResponse: AgentDetailsDesResponse
-  ): Future[Either[InvitationLinkFailureResponse, String]] =
-    Future.successful(Right(agentDetailsDesResponse.agencyDetails.agencyName))
+  ): Future[Either[InvitationLinkFailureResponse, String]] = Future
+    .successful(Right(agentDetailsDesResponse.agencyDetails.agencyName))
 
 }

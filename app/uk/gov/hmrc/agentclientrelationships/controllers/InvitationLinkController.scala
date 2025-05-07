@@ -49,31 +49,29 @@ class InvitationLinkController @Inject() (
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def validateLink(uid: String, normalizedAgentName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      agentReferenceService
-        .validateLink(uid, normalizedAgentName)
-        .map { response =>
-          response.fold(
-            {
-              case AgentReferenceDataNotFound | NormalizedAgentNameNotMatched =>
-                Logger(getClass).warn(s"Agent Reference Record not found for uid: $uid")
-                NotFound
-              case AgentSuspended =>
-                Logger(getClass).warn(s"Agent is suspended for uid: $uid")
-                Forbidden
-            },
-            validLinkResponse => Ok(Json.toJson(validLinkResponse))
-          )
-        }
-    }
-
-  def createLink: Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsAgent { arn =>
-        agentReferenceService.createLink(arn).map(createLinkResponse => Ok(Json.toJson(createLinkResponse)))
+  def validateLink(uid: String, normalizedAgentName: String): Action[AnyContent] = Action.async { implicit request =>
+    agentReferenceService
+      .validateLink(uid, normalizedAgentName)
+      .map { response =>
+        response.fold(
+          {
+            case AgentReferenceDataNotFound | NormalizedAgentNameNotMatched =>
+              Logger(getClass).warn(s"Agent Reference Record not found for uid: $uid")
+              NotFound
+            case AgentSuspended =>
+              Logger(getClass).warn(s"Agent is suspended for uid: $uid")
+              Forbidden
+          },
+          validLinkResponse => Ok(Json.toJson(validLinkResponse))
+        )
       }
+  }
+
+  def createLink: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent { arn =>
+      agentReferenceService.createLink(arn).map(createLinkResponse => Ok(Json.toJson(createLinkResponse)))
     }
+  }
   // TODO: this is a duplicate of what's used in the ClientDetailsController - we really want centralised config
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
@@ -143,20 +141,19 @@ class InvitationLinkController @Inject() (
       }
     }
 
-  def migrateRecord: Action[AnyContent] =
-    Action.async { implicit request =>
-      val record = request.body.asJson.get.as[AgentReferenceRecord]
-      agentReferenceService
-        .migrateAgentReferenceRecord(record)
-        .map(_ => NoContent)
-        .recoverWith {
-          case e: MongoWriteException if e.getError.getCode.equals(11000) =>
-            logger.warn(
-              s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion"
-            )
-            Future(NoContent)
-          case other => Future.failed(other)
-        }
-    }
+  def migrateRecord: Action[AnyContent] = Action.async { implicit request =>
+    val record = request.body.asJson.get.as[AgentReferenceRecord]
+    agentReferenceService
+      .migrateAgentReferenceRecord(record)
+      .map(_ => NoContent)
+      .recoverWith {
+        case e: MongoWriteException if e.getError.getCode.equals(11000) =>
+          logger.warn(
+            s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion"
+          )
+          Future(NoContent)
+        case other => Future.failed(other)
+      }
+  }
 
 }

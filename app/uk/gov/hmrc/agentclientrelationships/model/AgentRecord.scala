@@ -23,10 +23,9 @@ case class AgentRecord(suspensionDetails: Option[SuspensionDetails]) {
 
   def isSuspended: Boolean = suspensionDetails.exists(_.suspensionStatus)
 
-  def suspendedFor(regime: String): Boolean =
-    suspensionDetails
-      .flatMap(_.regimes)
-      .exists(regimes => regimes.contains(regime) || regimes.contains("ALL") || regimes.contains("AGSV"))
+  def suspendedFor(regime: String): Boolean = suspensionDetails
+    .flatMap(_.regimes)
+    .exists(regimes => regimes.contains(regime) || regimes.contains("ALL") || regimes.contains("AGSV"))
 }
 
 object AgentRecord {

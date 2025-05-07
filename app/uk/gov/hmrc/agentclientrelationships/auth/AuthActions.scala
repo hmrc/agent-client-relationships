@@ -89,40 +89,39 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     affinity: Option[AffinityGroup],
     arn: Option[Arn],
     clientId: TaxIdentifier
-  ): Boolean =
-    affinity
-      .flatMap {
-        case AffinityGroup.Agent => arn
-        case _                   => Some(clientId)
+  ): Boolean = affinity
+    .flatMap {
+      case AffinityGroup.Agent => arn
+      case _                   => Some(clientId)
+    }
+    .exists { requiredIdentifier =>
+      // check that among the identifiers that the user has, there is one that matches the clientId provided
+      requiredIdentifier match {
+        // need to handle Arn separately as it is not one of our managed services
+        case Arn(arn) =>
+          enrolments
+            .enrolments
+            .exists(enrolment =>
+              enrolment.key == "HMRC-AS-AGENT" && enrolment
+                .identifiers
+                .contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
+            )
+        case taxId: TaxIdentifier =>
+          val requiredTaxIdType = ClientIdentifier(taxId).enrolmentId
+          enrolments
+            .enrolments
+            .flatMap(_.identifiers)
+            .filter(_.key == requiredTaxIdType)
+            .exists(
+              _.value.replace(" ", "") == requiredIdentifier.value.replace(" ", "")
+            ) // In case NINO comes back without spaces
       }
-      .exists { requiredIdentifier =>
-        // check that among the identifiers that the user has, there is one that matches the clientId provided
-        requiredIdentifier match {
-          // need to handle Arn separately as it is not one of our managed services
-          case Arn(arn) =>
-            enrolments
-              .enrolments
-              .exists(enrolment =>
-                enrolment.key == "HMRC-AS-AGENT" && enrolment
-                  .identifiers
-                  .contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
-              )
-          case taxId: TaxIdentifier =>
-            val requiredTaxIdType = ClientIdentifier(taxId).enrolmentId
-            enrolments
-              .enrolments
-              .flatMap(_.identifiers)
-              .filter(_.key == requiredTaxIdType)
-              .exists(
-                _.value.replace(" ", "") == requiredIdentifier.value.replace(" ", "")
-              ) // In case NINO comes back without spaces
-        }
-      }
+    }
 
   private def isAgent(affinity: Option[AffinityGroup]): Boolean = affinity.contains(AffinityGroup.Agent)
 
-  def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean =
-    strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
+  def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean = strideRoles
+    .exists(s => enrolments.enrolments.exists(_.key == s))
 
   private def typedIdentifier(enrolment: Enrolment): Option[TaxIdentifier] = {
     val service = Service.forId(enrolment.key)

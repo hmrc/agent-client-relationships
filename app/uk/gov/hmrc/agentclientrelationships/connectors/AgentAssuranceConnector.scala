@@ -40,10 +40,9 @@ class AgentAssuranceConnector @Inject() (httpClient: HttpClientV2, val metrics: 
   // TODO: why agent-assurance uses internal-auth.token?
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
 
-  def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] =
-    httpClient
-      .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
-      .setHeader(aaHeaders)
-      .execute[AgentDetailsDesResponse]
+  def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = httpClient
+    .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
+    .setHeader(aaHeaders)
+    .execute[AgentDetailsDesResponse]
 
 }

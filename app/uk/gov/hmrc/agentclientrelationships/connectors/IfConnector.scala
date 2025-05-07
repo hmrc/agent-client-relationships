@@ -120,8 +120,9 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  private def isInternalHost(url: URL): Boolean =
-    appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+  private def isInternalHost(url: URL): Boolean = appConfig
+    .internalHostPatterns
+    .exists(_.pattern.matcher(url.getHost).matches())
 
   private[connectors] def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
     request: RequestHeader,
@@ -140,11 +141,10 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       httpClient.post(url).withBody(body).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
     }
 
-  def ifHeaders(authToken: String, env: String): Seq[(String, String)] =
-    Seq(
-      Environment               -> env,
-      CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
-      HeaderNames.authorisation -> s"Bearer $authToken"
-    )
+  def ifHeaders(authToken: String, env: String): Seq[(String, String)] = Seq(
+    Environment               -> env,
+    CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
+    HeaderNames.authorisation -> s"Bearer $authToken"
+  )
 
 }

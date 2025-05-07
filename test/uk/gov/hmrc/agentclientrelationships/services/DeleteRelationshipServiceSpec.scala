@@ -595,63 +595,56 @@ class DeleteRelationshipServiceSpec extends UnitSpec {
         appConfig
       )(ec)
 
-    def givenAgentExists: OngoingStubbing[Future[Either[String, AgentUser]]] =
-      when(
-        agentUserService.getAgentAdminAndSetAuditData(eqs[Arn](arn))(any[RequestHeader], any[AuditData])
-      ).thenReturn(Future.successful(Right(agentUser)))
+    def givenAgentExists: OngoingStubbing[Future[Either[String, AgentUser]]] = when(
+      agentUserService.getAgentAdminAndSetAuditData(eqs[Arn](arn))(any[RequestHeader], any[AuditData])
+    ).thenReturn(Future.successful(Right(agentUser)))
 
-    def givenRelationshipBetweenAgentAndClientExists: OngoingStubbing[Future[Boolean]] =
-      when(
-        checkService.checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
-      ).thenReturn(Future.successful(true))
+    def givenRelationshipBetweenAgentAndClientExists: OngoingStubbing[Future[Boolean]] = when(
+      checkService.checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
+    ).thenReturn(Future.successful(true))
 
-    def givenRelationshipBetweenAgentAndClientDoesNotExist: OngoingStubbing[Future[Boolean]] =
-      when(
-        checkService.checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
-      ).thenReturn(Future.successful(false))
+    def givenRelationshipBetweenAgentAndClientDoesNotExist: OngoingStubbing[Future[Boolean]] = when(
+      checkService.checkForRelationship(eqs(arn), any[Option[UserId]], eqs(mtdItEnrolmentKey))(any[RequestHeader])
+    ).thenReturn(Future.successful(false))
 
-    def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
-      when(
-        hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
-      ).thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
+    def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] = when(
+      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+    ).thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
 
-    def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
-      when(
-        hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
-      ).thenReturn(Future.failed(new Exception))
+    def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] = when(
+      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+    ).thenReturn(Future.failed(new Exception))
 
     val noRelationshipFoundErrorMessage =
       """{"errors":{"processingDate":"2020-01-01T11:11:11Z","code":"014","text":"No active relationship found"}}"""
 
-    def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] =
-      when(
-        hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
-      ).thenReturn(Future.failed(UpstreamErrorResponse.apply(noRelationshipFoundErrorMessage, 422)))
+    def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] = when(
+      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+    ).thenReturn(Future.failed(UpstreamErrorResponse.apply(noRelationshipFoundErrorMessage, 422)))
 
-    def givenESDeAllocationSucceeds: OngoingStubbing[Future[Unit]] =
-      when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader]))
-        .thenReturn(Future.successful(()))
+    def givenESDeAllocationSucceeds: OngoingStubbing[Future[Unit]] = when(
+      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
+    ).thenReturn(Future.successful(()))
 
-    def givenESDeAllocationFails: OngoingStubbing[Future[Unit]] =
-      when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader]))
-        .thenReturn(Future.failed(new Exception))
+    def givenESDeAllocationFails: OngoingStubbing[Future[Unit]] = when(
+      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
+    ).thenReturn(Future.failed(new Exception))
 
-    def givenESDeAllocationFailsWith(ex: Exception): OngoingStubbing[Future[Unit]] =
-      when(es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader]))
-        .thenReturn(Future.failed(ex))
+    def givenESDeAllocationFailsWith(ex: Exception): OngoingStubbing[Future[Unit]] = when(
+      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
+    ).thenReturn(Future.failed(ex))
 
-    def givenSetRelationshipEndedSucceeds: OngoingStubbing[Future[Boolean]] =
-      when(
-        invitationService.deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
-      ).thenReturn(Future.successful(true))
+    def givenSetRelationshipEndedSucceeds: OngoingStubbing[Future[Boolean]] = when(
+      invitationService.deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
+    ).thenReturn(Future.successful(true))
 
-    def givenSetRelationshipEndedFails: OngoingStubbing[Future[Boolean]] =
-      when(
-        invitationService.deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
-      ).thenReturn(Future.successful(false))
+    def givenSetRelationshipEndedFails: OngoingStubbing[Future[Boolean]] = when(
+      invitationService.deauthoriseInvitation(eqs(arn), eqs(mtdItEnrolmentKey), eqs("HMRC"))(any[ExecutionContext])
+    ).thenReturn(Future.successful(false))
 
-    def givenAucdCacheRefresh: OngoingStubbing[Future[Unit]] =
-      when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader])).thenReturn(Future.successful(()))
+    def givenAucdCacheRefresh: OngoingStubbing[Future[Unit]] = when(
+      aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader])
+    ).thenReturn(Future.successful(()))
 
     def verifyESDeAllocateHasBeenPerformed: Future[Unit] =
       verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])

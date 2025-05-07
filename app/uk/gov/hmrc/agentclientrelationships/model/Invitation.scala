@@ -91,27 +91,26 @@ object Invitation {
     agencyEmail: String,
     expiryDate: LocalDate,
     clientType: Option[String]
-  ): Invitation =
-    Invitation(
-      InvitationId.create(arn, clientId.value, service.id)(service.invitationIdPrefix).value,
-      arn,
-      service.id,
-      clientId.value,
-      clientId.typeId,
-      suppliedClientId.value,
-      suppliedClientId.typeId,
-      clientName,
-      agencyName,
-      agencyEmail,
-      warningEmailSent = false,
-      expiredEmailSent = false,
-      Pending,
-      None,
-      clientType,
-      expiryDate,
-      Instant.now(),
-      Instant.now()
-    )
+  ): Invitation = Invitation(
+    InvitationId.create(arn, clientId.value, service.id)(service.invitationIdPrefix).value,
+    arn,
+    service.id,
+    clientId.value,
+    clientId.typeId,
+    suppliedClientId.value,
+    suppliedClientId.typeId,
+    clientName,
+    agencyName,
+    agencyEmail,
+    warningEmailSent = false,
+    expiredEmailSent = false,
+    Pending,
+    None,
+    clientType,
+    expiryDate,
+    Instant.now(),
+    Instant.now()
+  )
 
   val acaReads: Reads[Invitation] =
     ((__ \ "invitationId").read[String] and

@@ -33,28 +33,28 @@ trait MockInvitationsRepository {
 
   def mockUpdateStatus(invitationId: String, status: InvitationStatus)(
     response: Future[Invitation]
-  ): OngoingStubbing[Future[Invitation]] =
-    when(mockInvitationsRepository.updateStatus(eqs(invitationId), eqs(status), any[Option[Instant]]))
-      .thenReturn(response)
+  ): OngoingStubbing[Future[Invitation]] = when(
+    mockInvitationsRepository.updateStatus(eqs(invitationId), eqs(status), any[Option[Instant]])
+  ).thenReturn(response)
 
   def mockFindAllBy(
     arn: Option[String],
     services: Seq[String],
     clientIds: Seq[String],
     status: Option[InvitationStatus]
-  )(response: Future[Seq[Invitation]]): OngoingStubbing[Future[Seq[Invitation]]] =
-    when(mockInvitationsRepository.findAllBy(eqs(arn), eqs(services), eqs(clientIds), eqs(status))).thenReturn(response)
+  )(response: Future[Seq[Invitation]]): OngoingStubbing[Future[Seq[Invitation]]] = when(
+    mockInvitationsRepository.findAllBy(eqs(arn), eqs(services), eqs(clientIds), eqs(status))
+  ).thenReturn(response)
 
   def mockDeauthInvitation(invitationId: String, endedBy: String)(
     response: Future[Option[Invitation]]
-  ): OngoingStubbing[Future[Option[Invitation]]] =
-    when(
-      mockInvitationsRepository.deauthInvitation(eqs(invitationId), eqs("Client"), any[Option[Instant]])
-    ).thenReturn(response)
+  ): OngoingStubbing[Future[Option[Invitation]]] = when(
+    mockInvitationsRepository.deauthInvitation(eqs(invitationId), eqs("Client"), any[Option[Instant]])
+  ).thenReturn(response)
 
   def mockFindAllPendingForClient(clientId: String, services: Seq[String])(
     response: Seq[Invitation]
-  ): OngoingStubbing[Future[Seq[Invitation]]] =
-    when(mockInvitationsRepository.findAllPendingForSuppliedClient(clientId, services))
-      .thenReturn(Future.successful(response))
+  ): OngoingStubbing[Future[Seq[Invitation]]] = when(
+    mockInvitationsRepository.findAllPendingForSuppliedClient(clientId, services)
+  ).thenReturn(Future.successful(response))
 }

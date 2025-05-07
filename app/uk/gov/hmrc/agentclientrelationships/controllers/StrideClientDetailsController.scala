@@ -44,8 +44,8 @@ class StrideClientDetailsController @Inject() (
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
   val strideRole: String = appConfig.newAuthStrideRole
 
-  def get(service: String, clientIdType: String, clientId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def get(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
+    implicit request =>
       validationService
         .validateForEnrolmentKey(service, clientIdType, clientId)
         .flatMap {
@@ -60,7 +60,7 @@ class StrideClientDetailsController @Inject() (
                 }
             }
         }
-    }
+  }
 
   def getActiveRelationships: Action[ClientsRelationshipsRequest] =
     Action.async(parse.json[ClientsRelationshipsRequest]) { implicit request =>

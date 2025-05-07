@@ -117,47 +117,46 @@ class InvitationController @Inject() (
         )
     }
 
-  def rejectInvitation(invitationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      invitationService
-        .findInvitation(invitationId)
-        .flatMap {
-          case Some(invitation) if invitation.status == Pending =>
-            for {
-              enrolment <- validationService
-                             .validateForEnrolmentKey(
-                               invitation.service,
-                               ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                               invitation.clientId
-                             )
-                             .map(either =>
-                               either.getOrElse(
-                                 throw new RuntimeException(
-                                   s"Could not parse invitation details into enrolment reason: ${either.left}"
-                                 )
+  def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+    invitationService
+      .findInvitation(invitationId)
+      .flatMap {
+        case Some(invitation) if invitation.status == Pending =>
+          for {
+            enrolment <- validationService
+                           .validateForEnrolmentKey(
+                             invitation.service,
+                             ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                             invitation.clientId
+                           )
+                           .map(either =>
+                             either.getOrElse(
+                               throw new RuntimeException(
+                                 s"Could not parse invitation details into enrolment reason: ${either.left}"
                                )
                              )
-              result <-
-                authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { currentUser =>
-                  invitationService
-                    .rejectInvitation(invitationId)
-                    .map { _ =>
-                      auditService.sendRespondToInvitationAuditEvent(
-                        invitation,
-                        accepted = false,
-                        isStride = currentUser.isStride
-                      )
-                      NoContent
-                    }
-                }
-            } yield result
+                           )
+            result <-
+              authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { currentUser =>
+                invitationService
+                  .rejectInvitation(invitationId)
+                  .map { _ =>
+                    auditService.sendRespondToInvitationAuditEvent(
+                      invitation,
+                      accepted = false,
+                      isStride = currentUser.isStride
+                    )
+                    NoContent
+                  }
+              }
+          } yield result
 
-          case _ =>
-            val msg = s"Pending Invitation not found for invitationId '$invitationId'"
-            Logger(getClass).warn(msg)
-            Future.successful(NoPendingInvitation.getResult(msg))
-        }
-    }
+        case _ =>
+          val msg = s"Pending Invitation not found for invitationId '$invitationId'"
+          Logger(getClass).warn(msg)
+          Future.successful(NoPendingInvitation.getResult(msg))
+      }
+  }
 
   def replaceUrnWithUtr(urn: String): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
@@ -170,11 +169,10 @@ class InvitationController @Inject() (
         }
     }
 
-  def cancelInvitation(invitationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAsAgent { authArn =>
-        invitationService.cancelInvitation(authArn, invitationId).map(_ => NoContent)
-      }
+  def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAsAgent { authArn =>
+      invitationService.cancelInvitation(authArn, invitationId).map(_ => NoContent)
     }
+  }
 
 }

@@ -53,8 +53,8 @@ class InvitationService @Inject() (
     clientName: Option[String],
     pageNumber: Int,
     pageSize: Int
-  ): Future[TrackRequestsResult] =
-    invitationsRepository.trackRequests(arn.value, statusFilter, clientName, pageNumber, pageSize)
+  ): Future[TrackRequestsResult] = invitationsRepository
+    .trackRequests(arn.value, statusFilter, clientName, pageNumber, pageSize)
 
   def createInvitation(arn: Arn, createInvitationInputData: CreateInvitationRequest)(implicit
     request: RequestHeader
@@ -83,8 +83,8 @@ class InvitationService @Inject() (
     invitationT.value
   }
 
-  def findInvitationForAgent(arn: String, invitationId: String): Future[Option[Invitation]] =
-    invitationsRepository.findOneByIdForAgent(arn, invitationId)
+  def findInvitationForAgent(arn: String, invitationId: String): Future[Option[Invitation]] = invitationsRepository
+    .findOneByIdForAgent(arn, invitationId)
 
   def findInvitation(invitationId: String): Future[Option[Invitation]] = invitationsRepository.findOneById(invitationId)
 
@@ -96,35 +96,33 @@ class InvitationService @Inject() (
       _          <- emailService.sendRejectedEmail(invitation)
     } yield invitation
 
-  def cancelInvitation(arn: Arn, invitationId: String): Future[Unit] =
-    invitationsRepository.cancelByIdForAgent(arn.value, invitationId)
+  def cancelInvitation(arn: Arn, invitationId: String): Future[Unit] = invitationsRepository
+    .cancelByIdForAgent(arn.value, invitationId)
 
   def deauthoriseInvitation(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     ec: ExecutionContext
-  ): Future[Boolean] =
-    invitationsRepository
-      .deauthorise(arn.value, enrolmentKey.oneIdentifier().value, enrolmentKey.service, endedBy)
-      .map(_.fold(false)(_ => true))
+  ): Future[Boolean] = invitationsRepository
+    .deauthorise(arn.value, enrolmentKey.oneIdentifier().value, enrolmentKey.service, endedBy)
+    .map(_.fold(false)(_ => true))
 
-  def findInvitationForClient(invitationId: String): Future[Option[Invitation]] =
-    invitationsRepository.findOneByIdForClient(invitationId)
+  def findInvitationForClient(invitationId: String): Future[Option[Invitation]] = invitationsRepository
+    .findOneByIdForClient(invitationId)
 
   def findNonSuspendedClientInvitations(services: Seq[String], clientIds: Seq[String])(implicit
     request: RequestHeader
   ): Future[Seq[Invitation]] = {
-    def getSuspendedArns(arns: Seq[String]) =
-      Future
-        .sequence(arns.map { arn =>
-          agentAssuranceConnector
-            .getAgentRecordWithChecks(Arn(arn))
-            .map(record =>
-              if (record.suspensionDetails.exists(_.suspensionStatus))
-                Some(arn)
-              else
-                None
-            )
-        })
-        .map(_.flatten)
+    def getSuspendedArns(arns: Seq[String]) = Future
+      .sequence(arns.map { arn =>
+        agentAssuranceConnector
+          .getAgentRecordWithChecks(Arn(arn))
+          .map(record =>
+            if (record.suspensionDetails.exists(_.suspensionStatus))
+              Some(arn)
+            else
+              None
+          )
+      })
+      .map(_.flatten)
 
     for {
       invitations   <- invitationsRepository.findAllBy(arn = None, services, clientIds, status = None)
@@ -146,8 +144,8 @@ class InvitationService @Inject() (
     newService: String,
     newClientId: String,
     newClientIdType: String
-  ): Future[Boolean] =
-    invitationsRepository.updateInvitation(service, clientId, clientIdType, newService, newClientId, newClientIdType)
+  ): Future[Boolean] = invitationsRepository
+    .updateInvitation(service, clientId, clientIdType, newService, newClientId, newClientIdType)
 
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
     request: RequestHeader

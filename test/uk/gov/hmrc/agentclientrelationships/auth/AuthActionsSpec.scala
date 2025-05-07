@@ -93,55 +93,51 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
-  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] =
-    when(
-      mockAuthConnector
-        .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
-          any[HeaderCarrier](),
-          any[ExecutionContext]()
-        )
-    ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] = when(
+    mockAuthConnector
+      .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
+        any[HeaderCarrier](),
+        any[ExecutionContext]()
+      )
+  ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockClientAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
-  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] =
-    when(
-      mockAuthConnector
-        .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
-          any[HeaderCarrier](),
-          any[ExecutionContext]()
-        )
-    ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] = when(
+    mockAuthConnector
+      .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
+        any[HeaderCarrier](),
+        any[ExecutionContext]()
+      )
+  ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockStrideAuth(
     strideRole: String,
     credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication")
-  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] =
-    when(
-      mockAuthConnector
-        .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
-          any[HeaderCarrier](),
-          any[ExecutionContext]()
-        )
-    ).thenReturn(
-      Future successful new ~(
-        new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
-        Some(credentials)
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] = when(
+    mockAuthConnector
+      .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
+        any[HeaderCarrier](),
+        any[ExecutionContext]()
       )
+  ).thenReturn(
+    Future successful new ~(
+      new ~(Enrolments(Set(Enrolment(strideRole, Seq.empty, "Activated"))), None),
+      Some(credentials)
     )
+  )
 
   def mockClientAuthWithoutCredRetrieval(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment]
-  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup]]] =
-    when(
-      mockAuthConnector.authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(
-        any[HeaderCarrier](),
-        any[ExecutionContext]()
-      )
-    ).thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup]]] = when(
+    mockAuthConnector.authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(
+      any[HeaderCarrier](),
+      any[ExecutionContext]()
+    )
+  ).thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")
 

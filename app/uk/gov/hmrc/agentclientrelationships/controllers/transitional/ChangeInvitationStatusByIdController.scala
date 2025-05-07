@@ -33,27 +33,26 @@ class ChangeInvitationStatusByIdController @Inject() (
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) {
 
-  def changeInvitationStatusById(invitationId: String, action: String): Action[AnyContent] =
-    Action.async { _ =>
-      val responseT =
-        for {
-          invitationStatusAction <- EitherT.fromEither[Future](changeInvitationStatusByIdService.validateAction(action))
-          result <- EitherT(changeInvitationStatusByIdService.changeStatusById(invitationId, invitationStatusAction))
-        } yield result
+  def changeInvitationStatusById(invitationId: String, action: String): Action[AnyContent] = Action.async { _ =>
+    val responseT =
+      for {
+        invitationStatusAction <- EitherT.fromEither[Future](changeInvitationStatusByIdService.validateAction(action))
+        result <- EitherT(changeInvitationStatusByIdService.changeStatusById(invitationId, invitationStatusAction))
+      } yield result
 
-      responseT
-        .value
-        .map(
-          _.fold(
-            {
-              case InvitationFailureResponse.UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
-              case updateStatusFailed @ UpdateStatusFailed(_)        => updateStatusFailed.getResult("")
-              case InvitationFailureResponse.InvitationNotFound      => InvitationNotFound.getResult("")
-              case _                                                 => BadRequest
-            },
-            _ => NoContent
-          )
+    responseT
+      .value
+      .map(
+        _.fold(
+          {
+            case InvitationFailureResponse.UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
+            case updateStatusFailed @ UpdateStatusFailed(_)        => updateStatusFailed.getResult("")
+            case InvitationFailureResponse.InvitationNotFound      => InvitationNotFound.getResult("")
+            case _                                                 => BadRequest
+          },
+          _ => NoContent
         )
-    }
+      )
+  }
 
 }

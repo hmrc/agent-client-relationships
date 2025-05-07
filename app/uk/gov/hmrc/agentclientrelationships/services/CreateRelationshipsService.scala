@@ -133,8 +133,9 @@ class CreateRelationshipsService @Inject() (
     failIfAllocateAgentInESFails: Boolean
   )(implicit request: RequestHeader, auditData: AuditData): Future[DbUpdateStatus] = {
 
-    def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
-      relationshipCopyRepository.updateEsSyncStatus(arn, enrolmentKey, status).map(convertDbUpdateStatus)
+    def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] = relationshipCopyRepository
+      .updateEsSyncStatus(arn, enrolmentKey, status)
+      .map(convertDbUpdateStatus)
 
     def logAndMaybeFail(origExc: Throwable, replacementExc: Throwable): Future[DbUpdateStatus] = {
       logger.warn(s"Creating ES record failed for ${arn.value}, ${enrolmentKey.tag}", origExc)
@@ -243,12 +244,11 @@ class CreateRelationshipsService @Inject() (
 
   private def retrieveAgentUser(
     arn: Arn
-  )(implicit ec: ExecutionContext, request: RequestHeader, auditData: AuditData): Future[AgentUser] =
-    agentUserService
-      .getAgentAdminAndSetAuditData(arn)
-      .map {
-        _.toOption.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
-      }
+  )(implicit ec: ExecutionContext, request: RequestHeader, auditData: AuditData): Future[AgentUser] = agentUserService
+    .getAgentAdminAndSetAuditData(arn)
+    .map {
+      _.toOption.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
+    }
 
   // This seems to only get triggered by the relationship check endpoint, as a result it doesn't seem to happen at all
   def resumeRelationshipCreation(

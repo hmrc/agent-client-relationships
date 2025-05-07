@@ -44,18 +44,17 @@ object InvitationWithAgentName {
   def fromInvitationAndAgentRecord(
     invitation: Invitation,
     agentRecord: AgentDetailsDesResponse
-  ): InvitationWithAgentName =
-    InvitationWithAgentName(
-      clientType = invitation.clientType.getOrElse("personal"),
-      arn = Arn(invitation.arn),
-      service = invitation.service,
-      status = invitation.status.toString,
-      expiryDate = invitation.expiryDate,
-      lastUpdated = LocalDateTime.ofInstant(invitation.lastUpdated, ZoneId.of("UTC")),
-      invitationId = invitation.invitationId,
-      agencyName = agentRecord.agencyDetails.agencyName,
-      clientName = invitation.clientName,
-      agentIsSuspended = agentRecord.suspensionDetails.exists(_.suspensionStatus),
-      isAltItsa = invitation.isAltItsa
-    )
+  ): InvitationWithAgentName = InvitationWithAgentName(
+    clientType = invitation.clientType.getOrElse("personal"),
+    arn = Arn(invitation.arn),
+    service = invitation.service,
+    status = invitation.status.toString,
+    expiryDate = invitation.expiryDate,
+    lastUpdated = LocalDateTime.ofInstant(invitation.lastUpdated, ZoneId.of("UTC")),
+    invitationId = invitation.invitationId,
+    agencyName = agentRecord.agencyDetails.agencyName,
+    clientName = invitation.clientName,
+    agentIsSuspended = agentRecord.suspensionDetails.exists(_.suspensionStatus),
+    isAltItsa = invitation.isAltItsa
+  )
 }

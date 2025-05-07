@@ -59,33 +59,31 @@ class MongoRecoveryScheduleRepository @Inject() (mongoComponent: MongoComponent)
     with RecoveryScheduleRepository
     with Logging {
 
-  override def read: Future[RecoveryRecord] =
-    collection
-      .find()
-      .headOption()
-      .flatMap {
-        case Some(record) => Future successful record
-        case None =>
-          {
-            val record = RecoveryRecord(
-              UUID.randomUUID().toString,
-              LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
-            )
-            collection.insertOne(record).toFuture().map(_ => record)
-          }.recoverWith { case NonFatal(error) =>
-            logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
-            Future.failed(error)
-          }
-      }
+  override def read: Future[RecoveryRecord] = collection
+    .find()
+    .headOption()
+    .flatMap {
+      case Some(record) => Future successful record
+      case None =>
+        {
+          val record = RecoveryRecord(
+            UUID.randomUUID().toString,
+            LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
+          )
+          collection.insertOne(record).toFuture().map(_ => record)
+        }.recoverWith { case NonFatal(error) =>
+          logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
+          Future.failed(error)
+        }
+    }
 
-  override def write(newUid: String, newRunAt: LocalDateTime): Future[Unit] =
-    collection
-      .findOneAndUpdate(
-        Filters.exists("uid"),
-        Updates.combine(set("uid", newUid), set("runAt", newRunAt)),
-        FindOneAndUpdateOptions().upsert(true)
-      )
-      .toFuture()
-      .map(_ => ())
+  override def write(newUid: String, newRunAt: LocalDateTime): Future[Unit] = collection
+    .findOneAndUpdate(
+      Filters.exists("uid"),
+      Updates.combine(set("uid", newUid), set("runAt", newRunAt)),
+      FindOneAndUpdateOptions().upsert(true)
+    )
+    .toFuture()
+    .map(_ => ())
 
 }
