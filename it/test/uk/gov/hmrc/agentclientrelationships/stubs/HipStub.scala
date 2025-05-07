@@ -859,7 +859,12 @@ trait HipStub {
     )
 
   // idType: String, id: String, foundId: String = "XAIT0000111122"
-  def givenNinoItsaBusinessDetailsExists(mtdId: MtdItId, nino: Nino): StubMapping =
+  def givenNinoItsaBusinessDetailsExists(
+    mtdId: MtdItId,
+    nino: Nino,
+    postCode: String = "AA1 1AA",
+    countryCode: String = "GB"
+  ): StubMapping =
     stubFor(
       get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdId.value}"))
         .willReturn(
@@ -872,8 +877,8 @@ trait HipStub {
                          |                {
                          |                    "tradingName": "Erling Haal",
                          |                    "businessAddressDetails": {
-                         |                        "postalCode": "AA1 1AA",
-                         |                        "countryCode": "GB"
+                         |                        "postalCode": "$postCode",
+                         |                        "countryCode": "$countryCode"
                          |                    }
                          |                }
                          |            ],
@@ -885,7 +890,12 @@ trait HipStub {
         )
     )
 
-  def givenMtdItsaBusinessDetailsExists(nino: Nino, mtdId: MtdItId): StubMapping =
+  def givenMtdItsaBusinessDetailsExists(
+    nino: Nino,
+    mtdId: MtdItId,
+    postCode: String = "AA1 1AA",
+    countryCode: String = "GB"
+  ): StubMapping =
     stubFor(
       get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
         .willReturn(
@@ -898,8 +908,8 @@ trait HipStub {
                          |                {
                          |                    "tradingName": "Erling Haal",
                          |                    "businessAddressDetails": {
-                         |                        "postalCode": "AA1 1AA",
-                         |                        "countryCode": "GB"
+                         |                        "postalCode": "$postCode",
+                         |                        "countryCode": "$countryCode"
                          |                    }
                          |                }
                          |            ],

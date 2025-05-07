@@ -42,6 +42,9 @@ GET           /relationships/service/:service/client/:clientIdType/:clientId @uk
 POST          /stride/active-relationships                                   @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getActiveRelationships
 GET           /stride/client-details/service/:service/client/:clientIdType/:clientId       @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.get(service: String, clientIdType: String, clientId: String)
 
+# API endpoints
+POST          /api/:arn/invitation                                            @uk.gov.hmrc.agentclientrelationships.controllers.ApiController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+
 # Transitional Routes
 # --------------------------------
 

@@ -70,7 +70,11 @@ trait ClientDetailsStub {
         .willReturn(aResponse().withStatus(status))
     )
 
-  def givenVatCustomerInfoExists(vrn: String): StubMapping =
+  def givenVatCustomerInfoExists(
+    vrn: String,
+    regDate: String = "2020-01-01",
+    isInsolvent: Boolean = false
+  ): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
         .willReturn(
@@ -87,8 +91,8 @@ trait ClientDetailsStub {
                          |        "middleName": "Silky",
                          |        "lastName": "Gundo"
                          |      },
-                         |      "effectiveRegistrationDate": "2020-01-01",
-                         |      "isInsolvent": false,
+                         |      "effectiveRegistrationDate": "$regDate",
+                         |      "isInsolvent": $isInsolvent,
                          |      "overseasIndicator": true
                          |    }
                          |  }
