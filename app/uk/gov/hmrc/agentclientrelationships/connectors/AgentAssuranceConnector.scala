@@ -46,9 +46,4 @@ class AgentAssuranceConnector @Inject() (httpClient: HttpClientV2, val metrics: 
       .setHeader(aaHeaders)
       .execute[AgentDetailsDesResponse]
 
-  def f()(implicit rh: RequestHeader): Future[Option[AgentDetailsDesResponse]] =
-    httpClient
-      .get(url"${appConfig.agentAssuranceBaseUrl}/whaver")
-      .execute[Option[AgentDetailsDesResponse]] // /status = 2xx body.asJson.as[AgentDetailsDesResponse]
-
 }

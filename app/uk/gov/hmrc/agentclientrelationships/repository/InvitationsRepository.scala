@@ -125,7 +125,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       .find(combine(equal(arnKey, arn), equal(invitationIdKey, invitationId)))
       .headOption()
 
-  def cancelByIdForAgent(arn: String, invitationId: String): Future[Boolean] =
+  def cancelByIdForAgent(arn: String, invitationId: String): Future[Unit] =
     collection
       .updateOne(
         and(
@@ -136,7 +136,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         combine(set("status", Codecs.toBson[InvitationStatus](Cancelled)), set("lastUpdated", Instant.now()))
       )
       .toFuture()
-      .map(_.getModifiedCount == 1L)
+      .map(_ => ())
 
   def findOneById(invitationId: String): Future[Option[Invitation]] =
     collection

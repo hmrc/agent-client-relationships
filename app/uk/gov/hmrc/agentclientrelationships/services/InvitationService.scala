@@ -96,13 +96,8 @@ class InvitationService @Inject() (
       _          <- emailService.sendRejectedEmail(invitation)
     } yield invitation
 
-  def cancelInvitation(arn: Arn, invitationId: String)(implicit
-    ec: ExecutionContext
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
-      case true => Right(())
-      case _    => Left(NoPendingInvitation)
-    }
+  def cancelInvitation(arn: Arn, invitationId: String): Future[Unit] =
+    invitationsRepository.cancelByIdForAgent(arn.value, invitationId)
 
   def deauthoriseInvitation(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
     ec: ExecutionContext

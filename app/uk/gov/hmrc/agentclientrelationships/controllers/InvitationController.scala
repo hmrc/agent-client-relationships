@@ -160,21 +160,9 @@ class InvitationController @Inject() (
 
   def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { authArn =>
-      invitationService.cancelInvitation(authArn, invitationId).map { response =>
-        response.fold(
-          {
-            case NoPendingInvitation =>
-              val msg =
-                s"Pending Invitation not found for combination of arn ${authArn.value} and invitationId $invitationId"
-              Logger(getClass).warn(msg)
-              NoPendingInvitation.getResult(msg)
-
-            case _ => BadRequest
-          },
-          _ => NoContent
-        )
-      }
-
+      invitationService
+        .cancelInvitation(authArn, invitationId)
+        .map(_ => NoContent)
     }
   }
 

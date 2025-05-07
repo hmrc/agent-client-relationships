@@ -23,8 +23,6 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{ await, defaultAwaitTimeout }
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.{ CorrelationIdGenerator, HipHeaders }
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails }
@@ -32,15 +30,10 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2R
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.{ VatCustomerDetails, VatIndividual }
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ ClientDetailsNotFound, ErrorRetrievingClientDetails }
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{ ClientDetailsStub, DataStreamStub, IfStub }
 import uk.gov.hmrc.agentclientrelationships.support.{ UnitSpec, WireMockSupport }
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpClient }
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.LocalDate
-import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor }
 
 class ClientDetailsConnectorIfISpec
   extends UnitSpec
@@ -65,8 +58,8 @@ class ClientDetailsConnectorIfISpec
 
   implicit val request: RequestHeader = FakeRequest()
 
-  val connector: ClientDetailsConnector = app.injector.instanceOf
-  val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf
+  val connector: ClientDetailsConnector = app.injector.instanceOf[ClientDetailsConnector]
+  val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf[IfOrHipConnector]
 
   ".getItsaDesignatoryDetails" should {
 
