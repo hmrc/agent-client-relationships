@@ -19,13 +19,17 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IfStub}
 import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -43,7 +47,7 @@ class DesConnectorISpec
   override implicit lazy val app: Application = appBuilder
     .build()
 
-  val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
+  val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
@@ -69,10 +73,11 @@ class DesConnectorISpec
         "agent.trackPage.cache.enabled"                    -> false
       )
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val desConnector = new DesConnector(httpClient, ec)(metrics, appConfig)
+  val desConnector =
+    new DesConnector(httpClient, app.injector.instanceOf[CorrelationIdGenerator], appConfig)(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

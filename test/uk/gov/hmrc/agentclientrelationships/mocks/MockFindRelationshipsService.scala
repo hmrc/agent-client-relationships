@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.services.FindRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,20 +36,12 @@ trait MockFindRelationshipsService {
   def mockGetItsaRelationshipsForClient(nino: Nino, service: Service)(
     response: Future[Option[ActiveRelationship]]
   ): OngoingStubbing[Future[Option[ActiveRelationship]]] =
-    when(
-      mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(
-        any[HeaderCarrier],
-        any[ExecutionContext]
-      )
-    ).thenReturn(response)
+    when(mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(any[RequestHeader]))
+      .thenReturn(response)
 
   def mockGetActiveRelationshipsForClient(taxId: TaxIdentifier, service: Service)(
     response: Future[Option[ActiveRelationship]]
   ): OngoingStubbing[Future[Option[ActiveRelationship]]] =
-    when(
-      mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(
-        any[HeaderCarrier],
-        any[ExecutionContext]
-      )
-    ).thenReturn(response)
+    when(mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(any[RequestHeader]))
+      .thenReturn(response)
 }

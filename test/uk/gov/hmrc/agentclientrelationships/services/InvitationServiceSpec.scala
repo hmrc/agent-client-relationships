@@ -24,7 +24,8 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails,
 import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDVAT, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, SuspensionDetails, Vrn}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 
 import java.time.LocalDate
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,7 +40,7 @@ class InvitationServiceSpec
     with MockEmailService {
 
   implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
   val mockAppConfig: AppConfig = mock[AppConfig]
 
   object TestService
@@ -63,10 +64,7 @@ class InvitationServiceSpec
   val invitation3: Invitation =
     Invitation.createNew(testArn3, Vat, testVrn, testVrn, "", "", "", LocalDate.now(), Some("personal"))
   val testAgentDetailsDesResponse: AgentDetailsDesResponse =
-    AgentDetailsDesResponse(
-      agencyDetails = AgencyDetails("ABC Ltd", ""),
-      suspensionDetails = None
-    )
+    AgentDetailsDesResponse(agencyDetails = AgencyDetails("ABC Ltd", ""), suspensionDetails = None)
   val testSuspendedAgentDetailsDesResponse: AgentDetailsDesResponse =
     AgentDetailsDesResponse(
       agencyDetails = AgencyDetails("ABC Ltd", ""),

@@ -29,16 +29,9 @@ class ItsaCitizenDetailsSpec extends UnitSpec {
 
       "optional fields are present" in {
         val json = Json.obj(
-          "name" -> Json.obj(
-            "current" -> Json.obj(
-              "firstName" -> "Matthew",
-              "lastName"  -> "Kovacic"
-            )
-          ),
+          "name"        -> Json.obj("current" -> Json.obj("firstName" -> "Matthew", "lastName" -> "Kovacic")),
           "dateOfBirth" -> "01012000",
-          "ids" -> Json.obj(
-            "sautr" -> "11223344"
-          )
+          "ids"         -> Json.obj("sautr" -> "11223344")
         )
 
         json.as[ItsaCitizenDetails] shouldBe
@@ -46,11 +39,7 @@ class ItsaCitizenDetailsSpec extends UnitSpec {
       }
 
       "optional fields are not present" in {
-        val json = Json.obj(
-          "name" -> Json.obj(
-            "current" -> Json.obj()
-          )
-        )
+        val json = Json.obj("name" -> Json.obj("current" -> Json.obj()))
 
         json.as[ItsaCitizenDetails] shouldBe ItsaCitizenDetails(None, None, None, None)
       }

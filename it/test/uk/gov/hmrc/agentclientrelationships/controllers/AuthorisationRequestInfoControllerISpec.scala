@@ -18,14 +18,14 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{ await, defaultAwaitTimeout }
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, Pending}
-import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository}
+import uk.gov.hmrc.agentclientrelationships.model.{ Accepted, Invitation, Pending }
+import uk.gov.hmrc.agentclientrelationships.repository.{ AgentReferenceRepository, InvitationsRepository }
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 import java.net.URLEncoder
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.{ Instant, LocalDate, ZoneId }
 import scala.concurrent.ExecutionContext
 
 class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with TestData {
@@ -54,8 +54,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
     Some("personal"),
     testDate,
     testTime,
-    testTime
-  )
+    testTime)
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
@@ -79,31 +78,26 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
 
       val uid = await(agentReferenceRepo.findByArn(arn)).get.uid
       result.json shouldBe Json.obj(
-        "agentLink" -> Json.obj(
-          "uid"                 -> uid,
-          "normalizedAgentName" -> "my-agency"
-        ),
+        "agentLink" -> Json.obj("uid" -> uid, "normalizedAgentName" -> "my-agency"),
         "authorisationRequest" -> Json.obj(
-          "invitationId"         -> "testInvitationId",
-          "arn"                  -> "AARN0000002",
-          "service"              -> "HMRC-MTD-VAT",
-          "clientId"             -> vrn.value,
-          "clientIdType"         -> "vrn",
-          "suppliedClientId"     -> vrn.value,
+          "invitationId" -> "testInvitationId",
+          "arn" -> "AARN0000002",
+          "service" -> "HMRC-MTD-VAT",
+          "clientId" -> vrn.value,
+          "clientIdType" -> "vrn",
+          "suppliedClientId" -> vrn.value,
           "suppliedClientIdType" -> "vrn",
-          "clientName"           -> "testName",
-          "agencyName"           -> "testAgentName",
-          "agencyEmail"          -> "agent@email.com",
-          "warningEmailSent"     -> false,
-          "expiredEmailSent"     -> false,
-          "status"               -> "Pending",
-          "relationshipEndedBy"  -> "Me",
-          "clientType"           -> "personal",
-          "expiryDate"           -> testDate,
-          "created"              -> testTime,
-          "lastUpdated"          -> testTime
-        )
-      )
+          "clientName" -> "testName",
+          "agencyName" -> "testAgentName",
+          "agencyEmail" -> "agent@email.com",
+          "warningEmailSent" -> false,
+          "expiredEmailSent" -> false,
+          "status" -> "Pending",
+          "relationshipEndedBy" -> "Me",
+          "clientType" -> "personal",
+          "expiryDate" -> testDate,
+          "created" -> testTime,
+          "lastUpdated" -> testTime))
     }
     "return 404 status when invitation doesnt exist" in {
       val fakeRequest = FakeRequest("GET", testUrl)
@@ -125,11 +119,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val result = doGetRequest(testClientUrl)
       result.status shouldBe 200
 
-      result.json shouldBe Json.obj(
-        "agentName" -> "My Agency",
-        "service"   -> "HMRC-MTD-VAT",
-        "status"    -> "Accepted"
-      )
+      result.json shouldBe Json.obj("agentName" -> "My Agency", "service" -> "HMRC-MTD-VAT", "status" -> "Accepted")
     }
     "return 404 status when invitation doesnt exist" in {
       val fakeRequest = FakeRequest("GET", testClientUrl)
@@ -149,8 +139,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val listOfInvitations = Seq(
         testInvitation.copy(invitationId = "testInvitationId1"),
         testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
-      )
+        testInvitation.copy(invitationId = "testInvitationId3"))
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
 
@@ -158,12 +147,11 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(listOfInvitations),
-        "clientNames"      -> Json.arr("testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(listOfInvitations),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "totalResults"     -> 3
-      )
+        "totalResults" -> 3)
     }
     "correctly filter the result set when the clientName filter is applied" in {
       val clientNameFilter = URLEncoder.encode("Find Me", "UTF-8")
@@ -176,8 +164,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val listOfInvitations = Seq(
         testInvitation.copy(invitationId = "testInvitationId1"),
         matchingInvitation,
-        testInvitation.copy(invitationId = "testInvitationId3")
-      )
+        testInvitation.copy(invitationId = "testInvitationId3"))
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
 
@@ -185,13 +172,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(Seq(matchingInvitation)),
-        "clientNames"      -> Json.arr("Find Me", "testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(Seq(matchingInvitation)),
+        "clientNames" -> Json.arr("Find Me", "testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "filtersApplied"   -> Json.obj("clientFilter" -> "Find Me"),
-        "totalResults"     -> 1
-      )
+        "filtersApplied" -> Json.obj("clientFilter" -> "Find Me"),
+        "totalResults" -> 1)
     }
     "correctly filter the result set when the status filter is applied" in {
       val statusFilterUrl = testTrackRequestsUrl + "&statusFilter=Accepted"
@@ -203,8 +189,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val listOfInvitations = Seq(
         testInvitation.copy(invitationId = "testInvitationId1"),
         matchingInvitation,
-        testInvitation.copy(invitationId = "testInvitationId3")
-      )
+        testInvitation.copy(invitationId = "testInvitationId3"))
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
 
@@ -212,13 +197,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(Seq(matchingInvitation)),
-        "clientNames"      -> Json.arr("testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(Seq(matchingInvitation)),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Accepted", "Pending"),
-        "filtersApplied"   -> Json.obj("statusFilter" -> "Accepted"),
-        "totalResults"     -> 1
-      )
+        "filtersApplied" -> Json.obj("statusFilter" -> "Accepted"),
+        "totalResults" -> 1)
     }
     "correctly filter the result set when the all filters are applied" in {
       val clientNameFilter = URLEncoder.encode("Find Me", "UTF-8")
@@ -232,8 +216,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val listOfInvitations = Seq(
         testInvitation.copy(invitationId = "testInvitationId1"),
         matchingInvitation,
-        testInvitation.copy(invitationId = "testInvitationId3")
-      )
+        testInvitation.copy(invitationId = "testInvitationId3"))
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
 
@@ -241,13 +224,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(Seq(matchingInvitation)),
-        "clientNames"      -> Json.arr("Find Me", "testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(Seq(matchingInvitation)),
+        "clientNames" -> Json.arr("Find Me", "testName"),
         "availableFilters" -> Json.arr("Accepted", "Pending"),
-        "filtersApplied"   -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
-        "totalResults"     -> 1
-      )
+        "filtersApplied" -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
+        "totalResults" -> 1)
     }
     "correctly return an empty result set when filters are not matched" in {
       val clientNameFilter = URLEncoder.encode("Find Me", "UTF-8")
@@ -259,8 +241,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val listOfInvitations = Seq(
         testInvitation.copy(invitationId = "testInvitationId1"),
         testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
-      )
+        testInvitation.copy(invitationId = "testInvitationId3"))
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
 
@@ -268,13 +249,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.arr(),
-        "clientNames"      -> Json.arr("testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.arr(),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "filtersApplied"   -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
-        "totalResults"     -> 0
-      )
+        "filtersApplied" -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
+        "totalResults" -> 0)
     }
     "respect the page size" in {
       val expectedPageSize = 2
@@ -286,8 +266,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val listOfInvitations = Seq(
         testInvitation.copy(invitationId = "testInvitationId1"),
         testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
-      )
+        testInvitation.copy(invitationId = "testInvitationId3"))
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
 
@@ -299,21 +278,17 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
         "requests" -> Json.toJson(
           Seq(
             testInvitation.copy(invitationId = "testInvitationId1"),
-            testInvitation.copy(invitationId = "testInvitationId2")
-          )
-        ),
-        "clientNames"      -> Json.arr("testName"),
+            testInvitation.copy(invitationId = "testInvitationId2"))),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "totalResults"     -> 3
-      )
+        "totalResults" -> 3)
     }
     "respect the page number" in {
       val expectedPageNumber = 2
       val expectedPageSize = 2
       val pageSizeUrl = testTrackRequestsUrl.replace(
         "pageNumber=1&pageSize=10",
-        "pageNumber=" + expectedPageNumber + "&pageSize=" + expectedPageSize
-      )
+        "pageNumber=" + expectedPageNumber + "&pageSize=" + expectedPageSize)
       val fakeRequest = FakeRequest("GET", pageSizeUrl)
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
@@ -321,8 +296,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val listOfInvitations = Seq(
         testInvitation.copy(invitationId = "testInvitationId1"),
         testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
-      )
+        testInvitation.copy(invitationId = "testInvitationId3"))
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
 
@@ -331,15 +305,10 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
 
       result.json shouldBe Json.obj(
         "pageNumber" -> expectedPageNumber,
-        "requests" -> Json.toJson(
-          Seq(
-            testInvitation.copy(invitationId = "testInvitationId3")
-          )
-        ),
-        "clientNames"      -> Json.arr("testName"),
+        "requests" -> Json.toJson(Seq(testInvitation.copy(invitationId = "testInvitationId3"))),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "totalResults"     -> 3
-      )
+        "totalResults" -> 3)
     }
     "return 400 status when the query is not well formed" in {
       val badUrl = testTrackRequestsUrl.replace("&pageSize=10", "")

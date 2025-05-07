@@ -24,6 +24,7 @@ import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, MongoLocalDateTimeFormat}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
@@ -36,6 +37,7 @@ import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 case class DeleteRecord(
   arn: String,
@@ -81,11 +83,12 @@ object DeleteRecord {
 
   import play.api.libs.functional.syntax._
 
-  implicit val reads: Reads[HeaderCarrier] = (
-    (JsPath \ "authorization").readNullable[String].map(_.map(Authorization.apply)) and
+  implicit val reads: Reads[HeaderCarrier] =
+    ((JsPath \ "authorization").readNullable[String].map(_.map(Authorization.apply)) and
       (JsPath \ "sessionId").readNullable[String].map(_.map(SessionId.apply)) and
-      (JsPath \ "gaToken").readNullable[String]
-  )((a, s, g) => HeaderCarrier(authorization = a, sessionId = s, gaToken = g))
+      (JsPath \ "gaToken").readNullable[String])((a, s, g) =>
+      HeaderCarrier(authorization = a, sessionId = s, gaToken = g)
+    )
 
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
 }
@@ -204,10 +207,7 @@ class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(imp
     val identifierType: String = enrolmentKey.identifiers.head.key
     val identifier: String = enrolmentKey.identifiers.head.value
     Filters.or(
-      Filters.and(
-        Filters.equal("arn", arn.value),
-        Filters.equal("enrolmentKey", enrolmentKey.tag)
-      ),
+      Filters.and(Filters.equal("arn", arn.value), Filters.equal("enrolmentKey", enrolmentKey.tag)),
       Filters.and(
         Filters.equal("arn", arn.value),
         Filters.equal("clientIdentifier", identifier),

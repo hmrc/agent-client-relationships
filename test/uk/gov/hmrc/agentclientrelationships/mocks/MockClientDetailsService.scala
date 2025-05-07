@@ -22,7 +22,7 @@ import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsResponse}
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 
@@ -36,7 +36,7 @@ trait MockClientDetailsService {
   ): OngoingStubbing[Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]]] =
     when(
       mockClientDetailsService
-        .findClientDetails(eqs(service), eqs(clientId))(any[HeaderCarrier])
+        .findClientDetails(eqs(service), eqs(clientId))(any[RequestHeader])
     ).thenReturn(response)
 
 }

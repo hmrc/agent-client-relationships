@@ -44,12 +44,9 @@ class CleanUpInvitationStatusController @Inject() (
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
           payload => {
             val responseT = for {
-              service <- EitherT.fromEither[Future](
-                           setRelationshipEndedService.validateService(payload.service)
-                         )
-              clientId <- EitherT.fromEither[Future](
-                            setRelationshipEndedService.validateClientId(service, payload.clientId)
-                          )
+              service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
+              clientId <-
+                EitherT.fromEither[Future](setRelationshipEndedService.validateClientId(service, payload.clientId))
               result <- EitherT(
                           setRelationshipEndedService.deauthoriseInvitation(
                             arn = payload.arn,

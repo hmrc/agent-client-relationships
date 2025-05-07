@@ -124,12 +124,7 @@ class ChangeInvitationStatusByIdService @Inject() (
     nino: Nino
   ): Future[Either[InvitationFailureResponse, Unit]] =
     partialAuthRepository
-      .create(
-        created = created,
-        arn = arn,
-        service = service,
-        nino = nino
-      )
+      .create(created = created, arn = arn, service = service, nino = nino)
       .map(Right(_))
 
   private def findMatchingInvitationById(invitationId: String): Future[Option[Invitation]] =

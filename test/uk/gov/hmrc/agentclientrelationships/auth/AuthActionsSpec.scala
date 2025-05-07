@@ -23,14 +23,14 @@ import play.api.mvc.{Result, Results}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionToPerformOperation
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.{NoRequest, ResettingMockitoSugar, UnitSpec}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Utr, Vrn}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Retrieval, ~}
 import uk.gov.hmrc.domain.TaxIdentifier
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -59,7 +59,8 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     Enrolment("HMRC-TERS-ORG", Seq(EnrolmentIdentifier("SAUTR", utr)), state = "", delegatedAuthRule = None)
 
   class TestAuth() extends AuthActions with Results {
-    implicit val hc: HeaderCarrier = HeaderCarrier()
+    implicit val request: RequestHeader = NoRequest
+
     def testAuthActions(arn: Arn, identifier: TaxIdentifier, strideRoles: Seq[String]) =
       authorisedClientOrStrideUserOrAgent(identifier, strideRoles) { _ =>
         Future.successful(Ok)
@@ -72,17 +73,14 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     override def authConnector: AuthConnector = mockAuthConnector
 
     val supportedServices: Seq[Service] = Service.supportedServices
+    override implicit val executionContext: ExecutionContext = ec
   }
 
   def mockAgentAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
-  ): OngoingStubbing[Future[
-    Enrolments ~
-      Option[AffinityGroup] ~
-      Option[Credentials]
-  ]] =
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] =
     when(
       mockAuthConnector
         .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
@@ -96,11 +94,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment],
     credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
-  ): OngoingStubbing[Future[
-    Enrolments ~
-      Option[AffinityGroup] ~
-      Option[Credentials]
-  ]] =
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] =
     when(
       mockAuthConnector
         .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(
@@ -113,11 +107,7 @@ class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
   def mockStrideAuth(
     strideRole: String,
     credentials: Credentials = Credentials("someStrideUser", "PrivilegedApplication")
-  ): OngoingStubbing[Future[
-    Enrolments ~
-      Option[AffinityGroup] ~
-      Option[Credentials]
-  ]] =
+  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] =
     when(
       mockAuthConnector
         .authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]())(

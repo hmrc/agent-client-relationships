@@ -43,7 +43,7 @@ class InvitationLinkController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions {
 
@@ -145,9 +145,7 @@ class InvitationLinkController @Inject() (
           logger.warn(
             s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion"
           )
-          Future(
-            NoContent
-          )
+          Future(NoContent)
         case other => Future.failed(other)
       }
   }

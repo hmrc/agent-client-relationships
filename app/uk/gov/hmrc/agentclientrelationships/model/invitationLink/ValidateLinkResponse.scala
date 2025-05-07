@@ -19,10 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 import play.api.libs.json.{Format, JsResult, JsString, JsValue, Json, OFormat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-case class ValidateLinkResponse(
-  arn: Arn,
-  name: String
-)
+case class ValidateLinkResponse(arn: Arn, name: String)
 
 object ValidateLinkResponse {
   implicit val arnFormat: Format[Arn] = new Format[Arn] {

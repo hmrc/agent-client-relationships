@@ -33,20 +33,16 @@ trait MockPartialAuthRepository {
 
   val mockPartialAuthRepository: PartialAuthRepository = resettingMock[PartialAuthRepository]
 
-  def mockFindMainAgent(nino: String)(
-    response: Future[Option[PartialAuthRelationship]]
-  ): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
-    when(
-      mockPartialAuthRepository.findMainAgent(eqs(nino))
-    )
+  def mockFindMainAgent(
+    nino: String
+  )(response: Future[Option[PartialAuthRelationship]]): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
+    when(mockPartialAuthRepository.findMainAgent(eqs(nino)))
       .thenReturn(response)
 
   def mockDeauthorisePartialAuth(service: String, nino: Nino, arn: Arn)(
     response: Future[Boolean]
   ): OngoingStubbing[Future[Boolean]] =
-    when(
-      mockPartialAuthRepository.deauthorise(eqs(service), eqs(nino), eqs(arn), any[Instant])
-    )
+    when(mockPartialAuthRepository.deauthorise(eqs(service), eqs(nino), eqs(arn), any[Instant]))
       .thenReturn(response)
 
   def mockCreatePartialAuth(arn: Arn, service: String, nino: Nino)(

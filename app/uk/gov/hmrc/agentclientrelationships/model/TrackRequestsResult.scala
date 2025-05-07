@@ -56,9 +56,7 @@ case class MongoTrackRequestsResult(
   totalResultsFacet: Seq[MongoTotalResults] = Nil
 )
 object MongoTrackRequestsResult {
-  def format(implicit
-    crypto: Encrypter with Decrypter
-  ): Format[MongoTrackRequestsResult] = {
+  def format(implicit crypto: Encrypter with Decrypter): Format[MongoTrackRequestsResult] = {
     implicit val invitationFormat: Format[Invitation] = Invitation.mongoFormat
     implicit val mongoClientNamesFormat: Format[MongoClientNames] = MongoClientNames.mongoFormat
     Json.format[MongoTrackRequestsResult]

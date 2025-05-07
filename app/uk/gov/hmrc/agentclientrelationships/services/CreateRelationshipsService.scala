@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import play.api.mvc.Request
+import play.api.mvc.{Request, RequestHeader}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{enrolmentDelegatedKey, etmpRelationshipCreatedKey}
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -27,12 +27,13 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 @Singleton
 class CreateRelationshipsService @Inject() (
@@ -45,7 +46,8 @@ class CreateRelationshipsService @Inject() (
   agentUserService: AgentUserService,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   val metrics: Metrics
-) extends Monitoring
+)(implicit ec: ExecutionContext)
+    extends Monitoring
     with Logging {
 
   // noinspection ScalaStyle
@@ -55,12 +57,7 @@ class CreateRelationshipsService @Inject() (
     oldReferences: Set[RelationshipReference],
     failIfCreateRecordFails: Boolean,
     failIfAllocateAgentInESFails: Boolean
-  )(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData
-  ): Future[Option[DbUpdateStatus]] =
+  )(implicit request: RequestHeader, auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
       .recoveryLock(arn, enrolmentKey) {
         auditData.set(enrolmentDelegatedKey, false)
@@ -98,7 +95,7 @@ class CreateRelationshipsService @Inject() (
 
   private def createEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
     ec: ExecutionContext,
-    hc: HeaderCarrier,
+    request: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
     val updateEtmpSyncStatus = relationshipCopyRepository
@@ -113,9 +110,8 @@ class CreateRelationshipsService @Inject() (
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <-
-        hipConnector
-          .createAgentRelationship(enrolmentKey, arn)
+      maybeResponse <- hipConnector
+                         .createAgentRelationship(enrolmentKey, arn)
       if maybeResponse.nonEmpty
       _ = auditData.set(etmpRelationshipCreatedKey, true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
@@ -138,12 +134,7 @@ class CreateRelationshipsService @Inject() (
     enrolmentKey: EnrolmentKey,
     agentUser: AgentUser,
     failIfAllocateAgentInESFails: Boolean
-  )(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData
-  ): Future[DbUpdateStatus] = {
+  )(implicit request: RequestHeader, auditData: AuditData): Future[DbUpdateStatus] = {
 
     def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
       relationshipCopyRepository
@@ -195,9 +186,7 @@ class CreateRelationshipsService @Inject() (
 
   // noinspection ScalaStyle
   def deallocatePreviousRelationship(newArn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[Unit] =
     for {
       existingAgents <- es.getDelegatedGroupIdsFor(enrolmentKey)
@@ -254,7 +243,7 @@ class CreateRelationshipsService @Inject() (
 
   private def retrieveAgentUser(
     arn: Arn
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[AgentUser] =
+  )(implicit ec: ExecutionContext, request: RequestHeader, auditData: AuditData): Future[AgentUser] =
     agentUserService.getAgentAdminAndSetAuditData(arn).map {
       _.toOption.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
     }
@@ -264,12 +253,7 @@ class CreateRelationshipsService @Inject() (
     relationshipCopyRecord: RelationshipCopyRecord,
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData
-  ): Future[Option[DbUpdateStatus]] =
+  )(implicit request: RequestHeader, auditData: AuditData): Future[Option[DbUpdateStatus]] =
     lockService
       .recoveryLock(arn, enrolmentKey) {
         (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {

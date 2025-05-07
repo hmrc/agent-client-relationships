@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
 import play.api.Logging
-import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
@@ -31,8 +31,9 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
@@ -50,8 +51,9 @@ class DeleteRelationshipsService @Inject() (
   agentUserService: AgentUserService,
   auditService: AuditService,
   val metrics: Metrics,
-  invitationService: InvitationService
-)(implicit appConfig: AppConfig, ec: ExecutionContext)
+  invitationService: InvitationService,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext)
     extends Monitoring
     with Logging {
 
@@ -59,8 +61,7 @@ class DeleteRelationshipsService @Inject() (
 
   // noinspection ScalaStyle
   def deleteRelationship(arn: Arn, enrolmentKey: EnrolmentKey, affinityGroup: Option[AffinityGroup])(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData = new AuditData
   ): Future[Unit] = {
@@ -80,12 +81,7 @@ class DeleteRelationshipsService @Inject() (
 
     def delete: Future[Unit] = {
       val endedBy = determineUserTypeFromAG(affinityGroup)
-      val record = DeleteRecord(
-        arn.value,
-        Some(enrolmentKey),
-        headerCarrier = Some(hc),
-        relationshipEndedBy = endedBy
-      )
+      val record = DeleteRecord(arn.value, Some(enrolmentKey), headerCarrier = Some(hc), relationshipEndedBy = endedBy)
       for {
         recordDeletionStatus <- createDeleteRecord(record)
         if recordDeletionStatus == DbUpdateSucceeded
@@ -120,7 +116,7 @@ class DeleteRelationshipsService @Inject() (
   }
 
   private def deleteEtmpRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    hc: HeaderCarrier,
+    rh: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
     val updateEtmpSyncStatus = deleteRecordRepository
@@ -135,10 +131,9 @@ class DeleteRelationshipsService @Inject() (
     (for {
       etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
       if etmpSyncStatusInProgress == DbUpdateSucceeded
-      maybeResponse <- hipConnector.deleteAgentRelationship(
-                         enrolmentKey,
-                         arn
-                       ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
+      maybeResponse <-
+        hipConnector
+          .deleteAgentRelationship(enrolmentKey, arn) // TODO DG oneTaxIdentifier may not return what we want for CBC!
       _ = if (maybeResponse.nonEmpty) auditData.set(etmpRelationshipRemovedKey, true)
       etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
     } yield etmpSyncStatusSuccess)
@@ -158,7 +153,7 @@ class DeleteRelationshipsService @Inject() (
 
   // noinspection ScalaStyle
   def deleteEsRecord(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    hc: HeaderCarrier,
+    request: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
 
@@ -226,22 +221,21 @@ class DeleteRelationshipsService @Inject() (
         Future.successful(false)
       }
 
-  def tryToResume(implicit ec: ExecutionContext, auditData: AuditData): Future[Boolean] =
+  def tryToResume(implicit auditData: AuditData): Future[Boolean] =
     deleteRecordRepository.selectNextToRecover().flatMap {
       case Some(record) =>
-        val headerCarrier = record.headerCarrier.getOrElse(HeaderCarrier())
         val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
-        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(headerCarrier, auditData, NoRequest, ec)
+        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
 
       case None =>
         logger.info("No Delete Record Found")
         Future.successful(true)
     }
 
-  def checkDeleteRecordAndEventuallyResume(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  )(implicit hc: HeaderCarrier, auditData: AuditData, request: Request[_], ec: ExecutionContext): Future[Boolean] =
+  def checkDeleteRecordAndEventuallyResume(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Boolean] =
     (for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
       isComplete <- recordOpt match {
@@ -283,7 +277,7 @@ class DeleteRelationshipsService @Inject() (
 
   def resumeRelationshipRemoval(
     deleteRecord: DeleteRecord
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Boolean] = {
+  )(implicit request: RequestHeader, auditData: AuditData): Future[Boolean] = {
     val arn = Arn(deleteRecord.arn)
     val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey.getOrElse(enrolmentKeyFallback(deleteRecord))
     lockService
@@ -332,10 +326,7 @@ class DeleteRelationshipsService @Inject() (
       clientIdTypeStr <- deleteRecord.clientIdentifierType
       clientIdStr     <- deleteRecord.clientIdentifier
       service <- appConfig.supportedServicesWithoutPir.find(_.supportedClientIdType.enrolmentId == clientIdTypeStr)
-    } yield EnrolmentKey(
-      service.id,
-      Seq(Identifier(clientIdTypeStr, clientIdStr))
-    )).getOrElse(
+    } yield EnrolmentKey(service.id, Seq(Identifier(clientIdTypeStr, clientIdStr)))).getOrElse(
       throw new RuntimeException(
         s"Fallback determination of enrolment key failed for ${deleteRecord.clientIdentifierType}"
       )
@@ -349,9 +340,7 @@ class DeleteRelationshipsService @Inject() (
       case _                                                                 => Some("HMRC")
     }
 
-  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
-    ec: ExecutionContext
-  ): Future[Done] =
+  def setRelationshipEnded(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String): Future[Done] =
     invitationService
       .deauthoriseInvitation(arn, enrolmentKey, endedBy)
       .map(success =>

@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.{Instant, LocalDate}
 import scala.concurrent.{ExecutionContext, Future}
@@ -55,7 +55,6 @@ class ItsaDeauthAndCleanupServiceSpec
       )
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
   implicit val auditData: AuditData = new AuditData
   implicit val currentUser: CurrentUser =
@@ -126,11 +125,10 @@ class ItsaDeauthAndCleanupServiceSpec
         verify(mockPartialAuthRepository, times(1))
           .deauthorise(any[String], any[Nino], any[Arn], any[Instant])
         verify(mockCheckRelationshipsService, times(1))
-          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[ExecutionContext], any[HeaderCarrier])
+          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
         verify(mockDeleteRelationshipsService, times(0))
           .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
-            any[HeaderCarrier],
-            any[Request[_]],
+            any[RequestHeader],
             any[CurrentUser],
             any[AuditData]
           )
@@ -159,11 +157,10 @@ class ItsaDeauthAndCleanupServiceSpec
         verify(mockPartialAuthRepository, times(1))
           .deauthorise(any[String], any[Nino], any[Arn], any[Instant])
         verify(mockCheckRelationshipsService, times(1))
-          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[ExecutionContext], any[HeaderCarrier])
+          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
         verify(mockDeleteRelationshipsService, times(1))
           .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
-            any[HeaderCarrier],
-            any[Request[_]],
+            any[RequestHeader],
             any[CurrentUser],
             any[AuditData]
           )
@@ -175,20 +172,17 @@ class ItsaDeauthAndCleanupServiceSpec
     }
     "called for a user without an mtd id" should {
       "check only for partial auth" in {
-        mockDeauthorisePartialAuth(MtdIt.id, testNino, testArn)(
-          Future.successful(false)
-        )
+        mockDeauthorisePartialAuth(MtdIt.id, testNino, testArn)(Future.successful(false))
 
         await(TestService.deleteSameAgentRelationship(MtdItSupp.id, testArn.value, None, testNino.nino)) shouldBe false
 
         verify(mockPartialAuthRepository, times(1))
           .deauthorise(any[String], any[Nino], any[Arn], any[Instant])
         verify(mockCheckRelationshipsService, times(0))
-          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[ExecutionContext], any[HeaderCarrier])
+          .checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(any[RequestHeader]())
         verify(mockDeleteRelationshipsService, times(0))
           .deleteRelationship(any[Arn], any[EnrolmentKey], any[Option[AffinityGroup]])(
-            any[HeaderCarrier],
-            any[Request[_]],
+            any[RequestHeader],
             any[CurrentUser],
             any[AuditData]
           )

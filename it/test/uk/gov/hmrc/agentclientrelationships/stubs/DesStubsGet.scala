@@ -32,7 +32,7 @@ trait DesStubsGet {
   private val agentRecordUrl: TaxIdentifier => String = {
     case Arn(arn) => s"/registration/personal-details/arn/$arn"
     case Utr(utr) => s"/registration/personal-details/utr/$utr"
-    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   def getAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping =
@@ -48,9 +48,7 @@ trait DesStubsGet {
                          |    "regimes": []
                          |  }
                          | }
-                         |""".stripMargin)
-        )
-    )
+                         |""".stripMargin)))
 
   def getSuspendedAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping =
     stubFor(
@@ -65,15 +63,12 @@ trait DesStubsGet {
                          |    "regimes": ["ITSA"]
                          |  }
                          | }
-                         |""".stripMargin)
-        )
-    )
+                         |""".stripMargin)))
 
   def getVrnIsKnownInETMPFor(vrn: Vrn): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
-        .willReturn(aResponse().withBody(s"""{ "vrn": "${vrn.value}"}""").withStatus(200))
-    )
+        .willReturn(aResponse().withBody(s"""{ "vrn": "${vrn.value}"}""").withStatus(200)))
 
   def getVrnIsKnownInETMPFor2(vrn: Vrn): StubMapping =
     stubFor(
@@ -86,34 +81,22 @@ trait DesStubsGet {
                   "approvedInformation" -> Json.obj(
                     "customerDetails" -> Json.obj(
                       "organisationName" -> "CFG",
-                      "tradingName"      -> "CFG Solutions",
-                      "individual" -> Json.obj(
-                        "title"      -> "0001",
-                        "firstName"  -> "Ilkay",
-                        "middleName" -> "Silky",
-                        "lastName"   -> "Gundo"
-                      ),
+                      "tradingName" -> "CFG Solutions",
+                      "individual" -> Json
+                        .obj("title" -> "0001", "firstName" -> "Ilkay", "middleName" -> "Silky", "lastName" -> "Gundo"),
                       "effectiveRegistrationDate" -> "2020-01-01",
-                      "isInsolvent"               -> false
-                    )
-                  )
-                )
-                .toString()
-            )
-            .withStatus(200)
-        )
-    )
+                      "isInsolvent" -> false)))
+                .toString())
+            .withStatus(200)))
 
   def getVrnIsNotKnownInETMPFor(vrn: Vrn): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
-        .willReturn(aResponse().withBody(s"""{}""").withStatus(200))
-    )
+        .willReturn(aResponse().withBody(s"""{}""").withStatus(200)))
 
   def givenDESRespondsWithStatusForVrn(vrn: Vrn, status: Int): StubMapping =
     stubFor(
       get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))
-        .willReturn(aResponse().withStatus(status))
-    )
+        .willReturn(aResponse().withStatus(status)))
 
 }

@@ -22,8 +22,10 @@ import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecordRepository, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 import org.scalamock.scalatest.MockFactory
+import play.api.test.FakeRequest
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -32,7 +34,6 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
 
   val drrMock: DeleteRecordRepository = mock[DeleteRecordRepository]
   val rcrrMock: RelationshipCopyRecordRepository = mock[RelationshipCopyRecordRepository]
-  val hc: HeaderCarrier = HeaderCarrier()
   val ec: ExecutionContext = implicitly[ExecutionContext]
 
   val service = new AgentTerminationService(drrMock, rcrrMock)

@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnec
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.LocalDateTime
 import scala.concurrent.Future
@@ -33,21 +33,19 @@ trait MockAgentFiRelationshipConnector {
 
   val mockAgentFiRelationshipConnector: AgentFiRelationshipConnector = resettingMock[AgentFiRelationshipConnector]
 
-  def mockCreateFiRelationship(arn: Arn, service: String, clientId: String)(
-    response: Future[Boolean]
-  ): OngoingStubbing[Future[Boolean]] =
+  def mockCreateFiRelationship(arn: Arn, service: String, clientId: String): OngoingStubbing[Future[Unit]] =
     when(
       mockAgentFiRelationshipConnector
-        .createRelationship(eqs(arn), eqs(service), eqs(clientId), any[LocalDateTime])(any[HeaderCarrier])
+        .createRelationship(eqs(arn), eqs(service), eqs(clientId), any[LocalDateTime])(any[RequestHeader])
     )
-      .thenReturn(response)
+      .thenReturn(Future.unit)
 
   def mockFindRelationshipForClient(
     clientId: String
   )(response: Option[ClientRelationship]): OngoingStubbing[Future[Option[ClientRelationship]]] =
     when(
       mockAgentFiRelationshipConnector
-        .findIrvRelationshipForClient(eqs(clientId))(any[HeaderCarrier])
+        .findIrvRelationshipForClient(eqs(clientId))(any[RequestHeader])
     ).thenReturn(Future.successful(response))
 
 }

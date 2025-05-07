@@ -24,30 +24,28 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, InvitationsRepository, PartialAuthRepository, SyncStatus}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, RemoveAuthorisationService, ValidationService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HipStub}
+import uk.gov.hmrc.agentclientrelationships.model.{ EnrolmentKey, _ }
+import uk.gov.hmrc.agentclientrelationships.repository.{ DeleteRecord, InvitationsRepository, PartialAuthRepository, SyncStatus }
+import uk.gov.hmrc.agentclientrelationships.services.{ DeleteRelationshipsService, RemoveAuthorisationService, ValidationService }
+import uk.gov.hmrc.agentclientrelationships.stubs.{ AfiRelationshipStub, ClientDetailsStub, HipStub }
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat }
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.{ Nino, TaxIdentifier }
 import uk.gov.hmrc.http.HttpResponse
 
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
+import java.time.{ Instant, LocalDate, LocalDateTime, ZoneOffset }
 import scala.concurrent.ExecutionContext
 
 class RemoveAuthorisationControllerISpec
-    extends RelationshipsBaseControllerISpec
-    with HipStub
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with TestData {
+  extends RelationshipsBaseControllerISpec
+  with HipStub
+  with ClientDetailsStub
+  with AfiRelationshipStub
+  with TestData {
 
-  override def additionalConfig: Map[String, Any] = Map(
-    "hip.BusinessDetails.enabled" -> true
-  )
+  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
   val deAuthorisationService: RemoveAuthorisationService = app.injector.instanceOf[RemoveAuthorisationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -69,25 +67,23 @@ class RemoveAuthorisationControllerISpec
       appConfig,
       validationService,
       auditSerice,
-      stubControllerComponents()
-    )
+      stubControllerComponents())
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   def allServices: Map[Service, TaxIdentifier] = Map(
     MtdIt -> mtdItId,
-//    PersonalIncomeRecord -> nino, PIR tested separately in this file
-    Vat          -> vrn,
-    Trust        -> utr,
-    TrustNT      -> urn,
+    //    PersonalIncomeRecord -> nino, PIR tested separately in this file
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
     CapitalGains -> cgtRef,
-    Ppt          -> pptRef,
-    Cbc          -> cbcId,
-    CbcNonUk     -> cbcId,
-    Pillar2      -> plrId,
-    MtdItSupp    -> mtdItId
-  )
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId)
 
   val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/remove-authorisation"
 
@@ -98,7 +94,7 @@ class RemoveAuthorisationControllerISpec
 
       val suppliedClientId = taxIdentifier match {
         case _: MtdItId => ClientIdentifier(nino)
-        case taxId      => ClientIdentifier(taxId)
+        case taxId => ClientIdentifier(taxId)
       }
 
       val enrolmentKey: EnrolmentKey = taxIdentifier match {
@@ -109,7 +105,7 @@ class RemoveAuthorisationControllerISpec
 
       val serviceId = service match {
         case PersonalIncomeRecord => PersonalIncomeRecord.id
-        case s                    => s.id
+        case s => s.id
       }
       val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
@@ -128,15 +124,14 @@ class RemoveAuthorisationControllerISpec
           case mtdIdentifier @ MtdItId(_) =>
             givenMtdItIdIsKnownFor(nino, mtdIdentifier)
             givenMtdItsaBusinessDetailsExists(nino, mtdIdentifier)
-          case _ @CbcId(_) if service == Cbc =>
+          case _@ CbcId(_) if service == Cbc =>
             givenKnownFactsQuery(
               Service.Cbc,
               cbcId,
-              Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
-            )
-          case _ @CbcId(_) if service == CbcNonUk =>
+              Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value))))
+          case _@ CbcId(_) if service == CbcNonUk =>
             givenKnownFactsQuery(Service.CbcNonUk, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
-          case _ @Nino(_) if service == PersonalIncomeRecord =>
+          case _@ Nino(_) if service == PersonalIncomeRecord =>
             givenTerminateAfiRelationshipSucceeds(arn, PersonalIncomeRecord.id, nino.value)
           case _ =>
         }
@@ -149,8 +144,7 @@ class RemoveAuthorisationControllerISpec
             requestPath,
             Json
               .toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId))
-              .toString()
-          ).status shouldBe 204
+              .toString()).status shouldBe 204
           verifyDeleteRecordNotExists
 
           verifyTerminateRelationshipAuditSent(
@@ -159,13 +153,10 @@ class RemoveAuthorisationControllerISpec
             clientId.value,
             clientId.enrolmentId,
             serviceId,
-            "AgentLedTermination"
-          )
+            "AgentLedTermination")
         }
 
-        s"return 204 for $serviceId when initiated by client" in new StubsForThisScenario(
-          isAgent = false
-        ) {
+        s"return 204 for $serviceId when initiated by client" in new StubsForThisScenario(isAgent = false) {
           val suppliedClientId: ClientIdentifier[TaxIdentifier] =
             ClientIdentifier(taxIdentifier) // undoing the itsa -> nino replacement
 
@@ -173,8 +164,7 @@ class RemoveAuthorisationControllerISpec
             requestPath,
             Json
               .toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId))
-              .toString()
-          ).status shouldBe 204
+              .toString()).status shouldBe 204
           verifyDeleteRecordNotExists
         }
       }
@@ -191,8 +181,7 @@ class RemoveAuthorisationControllerISpec
               "testAgentName",
               "agent@email.com",
               expiryDate,
-              None
-            )
+              None)
             .copy(status = Accepted)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -204,15 +193,11 @@ class RemoveAuthorisationControllerISpec
                 enrolmentKey = Some(enrolmentKey),
                 dateTime = LocalDateTime.now.minusMinutes(1),
                 syncToETMPStatus = Some(SyncStatus.Success),
-                syncToESStatus = Some(SyncStatus.Failed)
-              )
-            )
-          )
+                syncToESStatus = Some(SyncStatus.Failed))))
 
           doAgentPostRequest(
             requestPath,
-            Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId)).toString()
-          ).status shouldBe 204
+            Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId)).toString()).status shouldBe 204
 
           await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
 
@@ -223,8 +208,7 @@ class RemoveAuthorisationControllerISpec
             clientId.value,
             clientId.enrolmentId,
             serviceId,
-            "AgentLedTermination"
-          )
+            "AgentLedTermination")
         }
 
         s"resume an ongoing de-auth if unfinished ETMP delete record found  for ${service.id}" in new StubsForThisScenario {
@@ -234,14 +218,10 @@ class RemoveAuthorisationControllerISpec
                 arn = arn.value,
                 enrolmentKey = Some(enrolmentKey),
                 dateTime = LocalDateTime.now.minusMinutes(1),
-                syncToETMPStatus = Some(SyncStatus.Failed)
-              )
-            )
-          )
+                syncToETMPStatus = Some(SyncStatus.Failed))))
           doAgentPostRequest(
             requestPath,
-            Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()
-          ).status shouldBe 204
+            Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()).status shouldBe 204
           verifyDeleteRecordNotExists
         }
 
@@ -251,20 +231,15 @@ class RemoveAuthorisationControllerISpec
               DeleteRecord(
                 arn = arn.value,
                 enrolmentKey = Some(enrolmentKey),
-                dateTime = LocalDateTime.now.minusMinutes(1)
-              )
-            )
-          )
+                dateTime = LocalDateTime.now.minusMinutes(1))))
           doAgentPostRequest(
             requestPath,
-            Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()
-          ).status shouldBe 204
+            Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()).status shouldBe 204
           verifyDeleteRecordNotExists
         }
 
       }
-    }
-  )
+    })
 
   "for alt Itsa relationship" should {
     val taxIdentifier = mtdItId
@@ -296,8 +271,7 @@ class RemoveAuthorisationControllerISpec
           "testAgentName",
           "agent@email.com",
           expiryDate,
-          None
-        )
+          None)
         .copy(status = PartialAuth)
 
       await(
@@ -307,17 +281,13 @@ class RemoveAuthorisationControllerISpec
             enrolmentKey = Some(EnrolmentKey(service.enrolmentKey, nino)),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
-            syncToESStatus = Some(SyncStatus.Failed)
-          )
-        )
-      )
+            syncToESStatus = Some(SyncStatus.Failed))))
       await(partialAuthRepository.create(Instant.now(), arn, MtdIt.id, nino))
       await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
       doAgentPostRequest(
         requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-      ).status shouldBe 204
+        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()).status shouldBe 204
 
       val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
         .findActive(MtdIt.id, nino, arn)
@@ -327,13 +297,7 @@ class RemoveAuthorisationControllerISpec
       verifyDeleteRecordNotExists
       await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
 
-      verifyTerminatePartialAuthAuditSent(
-        requestPath,
-        arn.value,
-        nino.value,
-        service.id,
-        "AgentLedTermination"
-      )
+      verifyTerminatePartialAuthAuditSent(requestPath, arn.value, nino.value, service.id, "AgentLedTermination")
     }
 
     "return 204 when PartialAuth exists in PartialAuth Repo and not not exists in InvitationRepo" in new StubsForThisScenario {
@@ -341,8 +305,7 @@ class RemoveAuthorisationControllerISpec
 
       doAgentPostRequest(
         requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-      ).status shouldBe 204
+        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()).status shouldBe 204
 
       val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository
         .findActive(MtdIt.id, nino, arn)
@@ -351,20 +314,12 @@ class RemoveAuthorisationControllerISpec
       partialAuthInvitations.isDefined shouldBe false
       await(invitationRepo.findAllForAgent(arn.value)) shouldBe Seq.empty
 
-      verifyTerminatePartialAuthAuditSent(
-        requestPath,
-        arn.value,
-        nino.value,
-        service.id,
-        "AgentLedTermination"
-      )
+      verifyTerminatePartialAuthAuditSent(requestPath, arn.value, nino.value, service.id, "AgentLedTermination")
     }
 
     "return None when PartialAuth do not exists in PartialAuth Repo" in new StubsForThisScenario {
-      val result: HttpResponse = doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-      )
+      val result: HttpResponse =
+        doAgentPostRequest(requestPath, Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString())
 
       result.status >= 400 && result.status < 600
 
@@ -395,8 +350,7 @@ class RemoveAuthorisationControllerISpec
           "testAgentName",
           "agent@email.com",
           LocalDate.now(),
-          None
-        )
+          None)
         .copy(status = Accepted)
 
       await(invitationRepo.collection.insertOne(pirInvitation).toFuture())
@@ -405,8 +359,7 @@ class RemoveAuthorisationControllerISpec
 
       doAgentPostRequest(
         requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
-      ).status shouldBe 204
+        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()).status shouldBe 204
 
       verifyTerminateRelationshipAuditSent(
         requestPath,
@@ -418,8 +371,7 @@ class RemoveAuthorisationControllerISpec
         enrolmentDeallocated = false,
         etmpRelationshipRemoved = false,
         credId = None,
-        agentCode = None
-      )
+        agentCode = None)
 
       await(invitationRepo.findOneById(pirInvitation.invitationId)).get.status shouldBe DeAuthorised
     }
@@ -429,8 +381,7 @@ class RemoveAuthorisationControllerISpec
 
       val result: HttpResponse = doAgentPostRequest(
         requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
-      )
+        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString())
 
       result.status shouldBe 404
       result.json shouldBe toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
@@ -441,8 +392,7 @@ class RemoveAuthorisationControllerISpec
 
       val result: HttpResponse = doAgentPostRequest(
         requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
-      )
+        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString())
       result.status shouldBe 500
     }
   }
@@ -452,23 +402,19 @@ class RemoveAuthorisationControllerISpec
       "return BadRequest 400 status when clientId is not valid for service" in {
         val result = doAgentPostRequest(
           requestPath,
-          Json.toJson(RemoveAuthorisationRequest("IncorrectNinoOrMtdItId", MtdIt.id)).toString()
-        )
+          Json.toJson(RemoveAuthorisationRequest("IncorrectNinoOrMtdItId", MtdIt.id)).toString())
         result.status shouldBe 400
         result.json shouldBe toJson(
           ErrorBody(
             "INVALID_CLIENT_ID",
-            "Invalid clientId \"IncorrectNinoOrMtdItId\", for service type \"HMRC-MTD-IT\""
-          )
-        )
+            "Invalid clientId \"IncorrectNinoOrMtdItId\", for service type \"HMRC-MTD-IT\""))
       }
 
       "return NotImplemented 501 status and JSON Error If service is not supported" in {
         val result =
           doAgentPostRequest(
             requestPath,
-            Json.toJson(RemoveAuthorisationRequest(nino.value, "IncorrectService")).toString()
-          )
+            Json.toJson(RemoveAuthorisationRequest(nino.value, "IncorrectService")).toString())
         result.status shouldBe 501
 
         val message = s"""Unsupported service "IncorrectService""""
@@ -480,18 +426,13 @@ class RemoveAuthorisationControllerISpec
       "return Forbidden 403 status and JSON Error when MtdId business details record is empty " in {
         givenEmptyItsaBusinessDetailsExists(nino.value)
         val result =
-          doAgentPostRequest(
-            requestPath,
-            Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-          )
+          doAgentPostRequest(requestPath, Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString())
         result.status shouldBe 403
 
         result.json shouldBe toJson(
           ErrorBody(
             "CLIENT_REGISTRATION_NOT_FOUND",
-            "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
-          )
-        )
+            "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."))
       }
     }
   }

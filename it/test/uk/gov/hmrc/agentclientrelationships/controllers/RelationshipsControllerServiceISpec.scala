@@ -20,15 +20,13 @@ import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 class RelationshipsControllerServiceISpec
-    extends RelationshipsBaseControllerISpec
-    with RelationshipsControllerGenericBehaviours
-    with RelationshipsControllerVATBehaviours
-    with RelationshipsControllerITSABehaviours
-    with HipStub {
+  extends RelationshipsBaseControllerISpec
+  with RelationshipsControllerGenericBehaviours
+  with RelationshipsControllerVATBehaviours
+  with RelationshipsControllerITSABehaviours
+  with HipStub {
 
-  override def additionalConfig: Map[String, Any] = Map(
-    "hip.BusinessDetails.enabled" -> true
-  )
+  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
   // Income Tax
   behave like relationshipsControllerGetISpec(Service.MtdIt.id, mtdItId, "MTDITID")

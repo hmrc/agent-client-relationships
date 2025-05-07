@@ -20,12 +20,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.time.LocalDate
 
-case class AuthorisationEvent(
-  agentName: String,
-  service: String,
-  date: LocalDate,
-  eventType: InvitationStatus
-)
+case class AuthorisationEvent(agentName: String, service: String, date: LocalDate, eventType: InvitationStatus)
 
 object AuthorisationEvent {
   implicit val formats: OFormat[AuthorisationEvent] = Json.format[AuthorisationEvent]

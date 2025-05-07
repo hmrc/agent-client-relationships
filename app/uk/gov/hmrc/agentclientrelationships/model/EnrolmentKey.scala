@@ -20,12 +20,15 @@ import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, ClientIdentifier, Identifier, Service}
 import uk.gov.hmrc.domain.TaxIdentifier
 
-/*
-An implementation of EnrolmentKey with some extra features to make life easier.
- */
+/** An implementation of EnrolmentKey with some extra features to make life easier.
+  */
 case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
   lazy val tag = // note: we intentionally do not use the Identifier's toString below because it upper cases everything!
     s"$service~${identifiers.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
+
+  // TODO: enrolmentKey is a case class with overridden toString which is used to construct urls.
+  // This is misleading, difficult to spot, an in general not correct implementation
+  // result in errors in connectors
   override def toString: String = tag
 
   /** Note: unsafe (i.e. can throw exceptions)
@@ -61,10 +64,7 @@ object EnrolmentKey {
     EnrolmentKey(service.id, taxIdentifier)
 
   def apply(serviceKey: String, taxIdentifier: TaxIdentifier): EnrolmentKey =
-    EnrolmentKey(
-      serviceKey,
-      Seq(Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value))
-    )
+    EnrolmentKey(serviceKey, Seq(Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value)))
 
   def parse(s: String): Option[EnrolmentKey] = {
     val parts = s.split("~")

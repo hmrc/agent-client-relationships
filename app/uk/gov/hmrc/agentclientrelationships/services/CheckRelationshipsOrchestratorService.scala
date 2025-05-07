@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import play.api.mvc.Request
+import play.api.mvc.{Request, RequestHeader}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{arnKey, credIdKey}
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -47,15 +47,8 @@ class CheckRelationshipsOrchestratorService @Inject() (
     extends Monitoring
     with Logging {
 
-  def checkForRelationship(
-    arn: Arn,
-    service: String,
-    clientIdType: String,
-    clientId: String,
-    userId: Option[String]
-  )(implicit
-    hc: HeaderCarrier,
-    request: Request[Any]
+  def checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String, userId: Option[String])(
+    implicit request: RequestHeader
   ): Future[CheckRelationshipResult] = {
     val tUserId = userId.map(UserId)
 
@@ -86,7 +79,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
 
   private def withValidEnrolment(service: String, clientIdType: String, clientId: String)(
     proceed: EnrolmentKey => Future[CheckRelationshipResult]
-  )(implicit hc: HeaderCarrier): Future[CheckRelationshipResult] =
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] =
     validationService.validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
       case Right(enrolmentKey) => proceed(enrolmentKey)
       case Left(validationError) =>
@@ -95,8 +88,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
     }
 
   private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
-    request: Request[_],
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
@@ -122,8 +114,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   }
 
   private def checkOldRelationship(arn: Arn, enrolmentKey: EnrolmentKey, errorCode: String)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     auditData: AuditData
   ): Future[CheckRelationshipResult] =
     checkOldAndCopyService
@@ -146,14 +137,14 @@ class CheckRelationshipsOrchestratorService @Inject() (
           CheckRelationshipNotFound(errorCode)
       }
 
-  private def checkAgentFiRelationship(arn: Arn, service: String, clientId: String)(implicit hc: HeaderCarrier) =
+  private def checkAgentFiRelationship(arn: Arn, service: String, clientId: String)(implicit request: RequestHeader) =
     agentFiRelationshipConnector.getRelationship(arn, service, clientId).map {
       case Some(_) => CheckRelationshipFound
       case None    => CheckRelationshipNotFound()
     }
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
-  )(implicit hc: HeaderCarrier): Future[CheckRelationshipResult] =
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] =
     ifOrHipConnector.getMtdIdFor(Nino(clientId)).flatMap {
       case Some(mtdItId) => proceed(mtdItId)
       case None          => Future.successful(CheckRelationshipNotFound())
@@ -161,7 +152,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
 
   private def withIrSaSuspensionCheck(
     arn: Arn
-  )(proceed: => Future[CheckRelationshipResult])(implicit hc: HeaderCarrier): Future[CheckRelationshipResult] =
+  )(proceed: => Future[CheckRelationshipResult])(implicit request: RequestHeader): Future[CheckRelationshipResult] =
     desConnector.getAgentRecord(arn).flatMap {
       case None => Future.successful(CheckRelationshipInvalidRequest)
       case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
@@ -171,8 +162,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
     }
 
   private def checkLegacyWithNinoOrPartialAuth(arn: Arn, nino: Nino)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any]
+    request: RequestHeader
   ): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
@@ -193,10 +183,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
       }
   }
 
-  private def checkWithVrn(arn: Arn, vrn: Vrn)(implicit
-    request: Request[_],
-    hc: HeaderCarrier
-  ): Future[CheckRelationshipResult] = {
+  private def checkWithVrn(arn: Arn, vrn: Vrn)(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
 

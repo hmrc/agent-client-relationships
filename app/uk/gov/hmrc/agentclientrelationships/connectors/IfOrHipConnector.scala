@@ -21,31 +21,29 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFai
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class IfOrHipConnector @Inject() (
-  hipConnector: HipConnector,
-  ifConnector: IfConnector
-)(val appConfig: AppConfig) {
+class IfOrHipConnector @Inject() (hipConnector: HipConnector, ifConnector: IfConnector, appConfig: AppConfig)(implicit
+  executionContext: ExecutionContext
+) {
 
   private val hipBusinessDetailsEnabled: Boolean = appConfig.hipBusinessDetailsEnabled
 
-  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] =
+  def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] =
     if (hipBusinessDetailsEnabled) hipConnector.getNinoFor(mtdId)
     else ifConnector.getNinoFor(mtdId)
 
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] =
+  def getMtdIdFor(nino: Nino)(implicit request: RequestHeader): Future[Option[MtdItId]] =
     if (hipBusinessDetailsEnabled) hipConnector.getMtdIdFor(nino)
     else ifConnector.getMtdIdFor(nino)
 
-  def getItsaBusinessDetails(nino: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] =
+  def getItsaBusinessDetails(
+    nino: String
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] =
     if (hipBusinessDetailsEnabled)
       hipConnector.getItsaBusinessDetails(nino)
     else

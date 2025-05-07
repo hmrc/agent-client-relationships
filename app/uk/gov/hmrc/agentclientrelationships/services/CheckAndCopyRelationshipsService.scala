@@ -32,7 +32,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
 import uk.gov.hmrc.auth.core.AffinityGroup.Agent
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
@@ -96,8 +96,9 @@ class CheckAndCopyRelationshipsService @Inject() (
   invitationsRepository: InvitationsRepository,
   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   val auditService: AuditService,
-  val metrics: Metrics
-)(implicit val appConfig: AppConfig)
+  val metrics: Metrics,
+  val appConfig: AppConfig
+)(implicit ec: ExecutionContext)
     extends Monitoring
     with Logging {
 
@@ -105,9 +106,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
 
   def checkForOldRelationshipAndCopy(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
 
@@ -131,9 +130,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   }
 
   private def checkCesaAndCopy(arn: Arn, mtdItId: MtdItId, nino: Option[Nino])(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     auditData: AuditData,
     currentUser: CurrentUser
   ): Future[CheckAndCopyResult] = {
@@ -161,12 +158,8 @@ class CheckAndCopyRelationshipsService @Inject() (
                             for {
                               _ <-
                                 nino.fold[Future[Boolean]](Future.failed(new RuntimeException("nino not found")))(ni =>
-                                  itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-                                    HMRCMTDIT,
-                                    arn.value,
-                                    Some(mtdItId.value),
-                                    ni.value
-                                  )
+                                  itsaDeauthAndCleanupService
+                                    .deleteSameAgentRelationship(HMRCMTDIT, arn.value, Some(mtdItId.value), ni.value)
                                 )
                               _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
                             } yield FoundAndCopied
@@ -189,9 +182,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     }
   }
 
-  private def endPartialAuth(arn: Arn, service: String, nino: Option[Nino], mtdItId: MtdItId)(implicit
-    ec: ExecutionContext
-  ): Future[Boolean] =
+  private def endPartialAuth(arn: Arn, service: String, nino: Option[Nino], mtdItId: MtdItId): Future[Boolean] =
     nino.fold(Future.successful(false))(ni =>
       partialAuthRepo
         .deleteActivePartialAuth(service, ni, arn)
@@ -205,23 +196,14 @@ class CheckAndCopyRelationshipsService @Inject() (
         }
     )
 
-  private def findPartialAuth(arn: Arn, nino: Option[Nino])(implicit
-    ec: ExecutionContext,
-    auditData: AuditData
-  ): Future[Option[String]] =
+  private def findPartialAuth(arn: Arn, nino: Option[Nino])(implicit auditData: AuditData): Future[Option[String]] =
     nino.fold[Future[Option[String]]](Future.successful(None)) { ni =>
       auditData.set(ninoKey, ni)
       partialAuthRepo.findActive(ni, arn).map(_.map(_.service))
     }
 
-  private def tryCreateRelationshipFromPartialAuth(
-    service: String,
-    arn: Arn,
-    mtdItId: MtdItId
-  )(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext,
+  private def tryCreateRelationshipFromPartialAuth(service: String, arn: Arn, mtdItId: MtdItId)(implicit
+    request: RequestHeader,
     auditData: AuditData
   ): Future[Option[DbUpdateStatus]] = {
     auditData.set(serviceKey, s"$service")
@@ -241,12 +223,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     mtdItId: MtdItId,
     mService: Option[String],
     mNino: Option[Nino]
-  )(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData
-  ): Future[CheckAndCopyResult] = {
+  )(implicit request: RequestHeader, auditData: AuditData): Future[CheckAndCopyResult] = {
 
     auditData.set(clientIdKey, mtdItId)
     auditData.set(clientIdTypeKey, "mtditid")
@@ -296,7 +273,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     maybeRelationshipCopyRecord: Option[RelationshipCopyRecord],
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData) =
+  )(implicit request: RequestHeader, auditData: AuditData): Future[Option[DbUpdateStatus]] =
     maybeRelationshipCopyRecord match {
       case Some(relationshipCopyRecord) =>
         createRelationshipsService.resumeRelationshipCreation(relationshipCopyRecord, arn, enrolmentKey)
@@ -311,9 +288,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     }
 
   private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn)(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
     auditData.set(howRelationshipCreatedKey, "CopyExistingESRelationship")
@@ -363,7 +338,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     }
   }
 
-  private def checkVrnExistsInEtmp(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext, auditData: AuditData) =
+  private def checkVrnExistsInEtmp(vrn: Vrn)(implicit request: RequestHeader, auditData: AuditData): Future[Boolean] =
     des
       .vrnIsKnownInEtmp(vrn)
       .map { result =>
@@ -372,9 +347,7 @@ class CheckAndCopyRelationshipsService @Inject() (
       }
 
   def lookupCesaForOldRelationship(arn: Arn, nino: Nino)(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     auditData: AuditData
   ): Future[Set[SaAgentReference]] = {
     auditData.set(ninoKey, nino)
@@ -391,10 +364,11 @@ class CheckAndCopyRelationshipsService @Inject() (
     }
   }
 
-  def hasPartialAuthOrLegacyRelationshipInCesa(
-    arn: Arn,
-    nino: Nino
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, request: Request[Any], auditData: AuditData): Future[Boolean] =
+  def hasPartialAuthOrLegacyRelationshipInCesa(arn: Arn, nino: Nino)(implicit
+    ec: ExecutionContext,
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Boolean] =
     lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
       if (matching.isEmpty) {
         partialAuthRepo.findActive(nino, arn).map { optPartialAuth =>
@@ -406,9 +380,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     )
 
   def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     auditData: AuditData
   ): Future[Set[AgentCode]] = {
     auditData.set("vrn", clientVrn)
@@ -434,9 +406,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     } yield matching
   }
 
-  def intersection[A](
-    referenceIds: Seq[A]
-  )(mappingServiceCall: => Future[Seq[A]])(implicit ec: ExecutionContext): Future[Set[A]] = {
+  def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]]): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
@@ -454,7 +424,7 @@ class CheckAndCopyRelationshipsService @Inject() (
       }
   }
 
-  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId)(implicit executionContext: ExecutionContext): Future[Unit] =
+  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Future[Unit] =
     relationshipCopyRepository.remove(arn, EnrolmentKey(Service.MtdIt, mtdItId)).flatMap { n =>
       if (n == 0)
         Future.failed(RelationshipNotFound("Nothing has been removed from db."))

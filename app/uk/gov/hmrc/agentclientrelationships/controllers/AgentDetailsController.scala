@@ -35,7 +35,7 @@ class AgentDetailsController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions {
 

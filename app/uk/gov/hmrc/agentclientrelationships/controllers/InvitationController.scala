@@ -42,7 +42,7 @@ class InvitationController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions {
 
@@ -113,34 +113,32 @@ class InvitationController @Inject() (
     invitationService.findInvitation(invitationId).flatMap {
       case Some(invitation) if invitation.status == Pending =>
         for {
-          enrolment <-
-            validationService
-              .validateForEnrolmentKey(
-                invitation.service,
-                ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                invitation.clientId
-              )
-              .map(either =>
-                either.getOrElse(
-                  throw new RuntimeException(
-                    s"Could not parse invitation details into enrolment reason: ${either.left}"
-                  )
-                )
-              )
-          result <-
-            authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { currentUser =>
-              invitationService
-                .rejectInvitation(invitationId)
-                .map { _ =>
-                  auditService
-                    .sendRespondToInvitationAuditEvent(
-                      invitation,
-                      accepted = false,
-                      isStride = currentUser.isStride
-                    )
-                  NoContent
-                }
-            }
+          enrolment <- validationService
+                         .validateForEnrolmentKey(
+                           invitation.service,
+                           ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                           invitation.clientId
+                         )
+                         .map(either =>
+                           either.getOrElse(
+                             throw new RuntimeException(
+                               s"Could not parse invitation details into enrolment reason: ${either.left}"
+                             )
+                           )
+                         )
+          result <- authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { currentUser =>
+                      invitationService
+                        .rejectInvitation(invitationId)
+                        .map { _ =>
+                          auditService
+                            .sendRespondToInvitationAuditEvent(
+                              invitation,
+                              accepted = false,
+                              isStride = currentUser.isStride
+                            )
+                          NoContent
+                        }
+                    }
         } yield result
 
       case _ =>

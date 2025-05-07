@@ -18,20 +18,20 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HipStub}
+import uk.gov.hmrc.agentclientrelationships.repository.{ InvitationsRepository, PartialAuthRepository }
+import uk.gov.hmrc.agentclientrelationships.stubs.{ AfiRelationshipStub, ClientDetailsStub, HipStub }
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model._
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, ZoneOffset}
+import java.time.{ Instant, ZoneOffset }
 
 class ClientTaxAgentsDataControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with HipStub
-    with TestData {
+  extends BaseControllerISpec
+  with ClientDetailsStub
+  with AfiRelationshipStub
+  with HipStub
+  with TestData {
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
@@ -46,41 +46,20 @@ class ClientTaxAgentsDataControllerISpec
   val testAgentRecord1: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(
-        agencyName = Some(agentName1),
-        agencyEmail = None,
-        agencyTelephone = None,
-        agencyAddress = None
-      )
-    ),
-    suspensionDetails = None
-  )
+      TestAgencyDetails(agencyName = Some(agentName1), agencyEmail = None, agencyTelephone = None, agencyAddress = None)),
+    suspensionDetails = None)
 
   val testAgentRecord2: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(
-        agencyName = Some(agentName2),
-        agencyEmail = None,
-        agencyTelephone = None,
-        agencyAddress = None
-      )
-    ),
-    suspensionDetails = None
-  )
+      TestAgencyDetails(agencyName = Some(agentName2), agencyEmail = None, agencyTelephone = None, agencyAddress = None)),
+    suspensionDetails = None)
 
   val testAgentRecord3: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(
-        agencyName = Some(agentName3),
-        agencyEmail = None,
-        agencyTelephone = None,
-        agencyAddress = None
-      )
-    ),
-    suspensionDetails = None
-  )
+      TestAgencyDetails(agencyName = Some(agentName3), agencyEmail = None, agencyTelephone = None, agencyAddress = None)),
+    suspensionDetails = None)
 
   val pendingVatInvitationAgent1: Invitation = Invitation
     .createNew(
@@ -92,8 +71,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName1,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Pending)
 
   val pendingItsaInvitationAgent1: Invitation = Invitation
@@ -106,8 +84,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName1,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Pending)
 
   val pendingCbcInvitationAgent1: Invitation = Invitation
@@ -120,8 +97,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName1,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Pending)
 
   val pendingVatInvitationAgent2: Invitation = Invitation
@@ -134,8 +110,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Pending)
 
   val pendingItsaInvitationAgent2: Invitation = Invitation
@@ -148,8 +123,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Pending)
 
   val pendingCbcInvitationAgent2: Invitation = Invitation
@@ -162,8 +136,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Pending)
 
   val expiredVatInvitationAgent1: Invitation = Invitation
@@ -176,8 +149,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName1,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Expired)
 
   val rejectedCgtInvitationAgent2: Invitation = Invitation
@@ -190,8 +162,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Rejected)
 
   val rejectedCbcInvitationAgent2: Invitation = Invitation
@@ -204,8 +175,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Rejected)
 
   val acceptedItsaInvitationAgent2: Invitation = Invitation
@@ -218,8 +188,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Accepted)
 
   val acceptedPartialAuthInvitationAgent2: Invitation = Invitation
@@ -232,8 +201,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = PartialAuth)
 
   val cancelledVatInvitationAgent2: Invitation = Invitation
@@ -246,8 +214,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName2,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = Cancelled)
 
   val deAuthorisedItsaInvitationAgent1: Invitation = Invitation
@@ -260,8 +227,7 @@ class ClientTaxAgentsDataControllerISpec
       agentName1,
       "testAgent@email.com",
       expiryDate,
-      None
-    )
+      None)
     .copy(status = DeAuthorised)
 
   val testEndpoint = "/agent-client-relationships/client/authorisations-relationships"
@@ -273,12 +239,7 @@ class ClientTaxAgentsDataControllerISpec
       givenAuditConnector()
 
       invitationsRepo.collection
-        .insertMany(
-          Seq(
-            pendingVatInvitationAgent1,
-            pendingItsaInvitationAgent1
-          )
-        )
+        .insertMany(Seq(pendingVatInvitationAgent1, pendingItsaInvitationAgent1))
         .toFuture()
         .futureValue
 
@@ -311,13 +272,7 @@ class ClientTaxAgentsDataControllerISpec
       givenAuditConnector()
 
       invitationsRepo.collection
-        .insertMany(
-          Seq(
-            pendingVatInvitationAgent1,
-            pendingVatInvitationAgent2,
-            pendingItsaInvitationAgent1
-          )
-        )
+        .insertMany(Seq(pendingVatInvitationAgent1, pendingVatInvitationAgent2, pendingItsaInvitationAgent1))
         .toFuture()
         .futureValue
 
@@ -356,13 +311,7 @@ class ClientTaxAgentsDataControllerISpec
       givenAuditConnector()
 
       invitationsRepo.collection
-        .insertMany(
-          Seq(
-            pendingVatInvitationAgent1,
-            pendingVatInvitationAgent2,
-            pendingItsaInvitationAgent1
-          )
-        )
+        .insertMany(Seq(pendingVatInvitationAgent1, pendingVatInvitationAgent2, pendingItsaInvitationAgent1))
         .toFuture()
         .futureValue
 
@@ -378,9 +327,7 @@ class ClientTaxAgentsDataControllerISpec
       givenAgentRecordFound(
         arn2,
         testAgentRecord2.copy(suspensionDetails =
-          Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV"))))
-        )
-      )
+          Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV"))))))
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -432,8 +379,7 @@ class ClientTaxAgentsDataControllerISpec
         taxIdentifier = mtdItId,
         arnMain = arn,
         arnSup = arn2,
-        activeOnly = false
-      )
+        activeOnly = false)
       getAllActiveRelationshipsViaClient(taxIdentifier = vrn, arn = arn, activeOnly = false)
       getAllActiveRelationshipsViaClient(taxIdentifier = utr, arn = arn, activeOnly = false)
       getAllActiveRelationshipsViaClient(taxIdentifier = urn, arn = arn2, activeOnly = false)
@@ -547,8 +493,7 @@ class ClientTaxAgentsDataControllerISpec
         taxIdentifier = mtdItId,
         arnMain = arn,
         arnSup = arn2,
-        activeOnly = false
-      )
+        activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = vrn, status = 422, activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
@@ -592,8 +537,7 @@ class ClientTaxAgentsDataControllerISpec
         taxIdentifier = mtdItId,
         arnMain = arn,
         arnSup = arn2,
-        activeOnly = false
-      )
+        activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = vrn, status = 422, activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
       getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
@@ -791,8 +735,7 @@ class ClientTaxAgentsDataControllerISpec
         taxIdentifier = mtdItId,
         arnMain = arn,
         arnSup = arn2,
-        activeOnly = false
-      )
+        activeOnly = false)
       getAllActiveRelationshipsViaClient(taxIdentifier = vrn, arn = arn, activeOnly = false)
       getAllInactiveRelationshipsViaClient(taxIdentifier = utr, arn = arn, activeOnly = false)
       getAllActiveRelationshipsViaClient(taxIdentifier = urn, arn = arn2, activeOnly = false)
@@ -833,8 +776,7 @@ class ClientTaxAgentsDataControllerISpec
       agent3Authorisations.exists(x => x.service == Service.Ppt.id && x.eventType == Accepted) shouldBe true
       agent3Authorisations.exists(x => x.service == Service.CapitalGains.id && x.eventType == Accepted) shouldBe true
       agent3Authorisations.exists(x =>
-        x.service == Service.CapitalGains.id && x.eventType == DeAuthorised
-      ) shouldBe true
+        x.service == Service.CapitalGains.id && x.eventType == DeAuthorised) shouldBe true
     }
 
     "Authorisation events for Invitations excluding Pending, Accepted, DeAuthorised invitations" in {
@@ -849,9 +791,7 @@ class ClientTaxAgentsDataControllerISpec
             deAuthorisedItsaInvitationAgent1,
             rejectedCgtInvitationAgent2,
             acceptedItsaInvitationAgent2,
-            cancelledVatInvitationAgent2
-          )
-        )
+            cancelledVatInvitationAgent2))
         .toFuture()
         .futureValue
 
@@ -886,8 +826,7 @@ class ClientTaxAgentsDataControllerISpec
       agent2AuthorisationEvents.size shouldBe 2
       agent2AuthorisationEvents.exists(x => x.service == Service.Vat.id && x.eventType == Cancelled) shouldBe true
       agent2AuthorisationEvents.exists(x =>
-        x.service == Service.CapitalGains.id && x.eventType == Rejected
-      ) shouldBe true
+        x.service == Service.CapitalGains.id && x.eventType == Rejected) shouldBe true
       agent2AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe false
     }
 
@@ -896,11 +835,7 @@ class ClientTaxAgentsDataControllerISpec
       givenAuditConnector()
 
       invitationsRepo.collection
-        .insertMany(
-          Seq(
-            acceptedPartialAuthInvitationAgent2
-          )
-        )
+        .insertMany(Seq(acceptedPartialAuthInvitationAgent2))
         .toFuture()
         .futureValue
 
@@ -913,12 +848,7 @@ class ClientTaxAgentsDataControllerISpec
         .futureValue
 
       partialAuthRepo
-        .deauthorise(
-          Service.MtdIt.id,
-          nino,
-          arn,
-          updated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        )
+        .deauthorise(Service.MtdIt.id, nino, arn, updated = Instant.now().truncatedTo(ChronoUnit.SECONDS))
         .futureValue
 
       givenAgentRecordFound(arn2, testAgentRecord2)

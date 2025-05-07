@@ -53,7 +53,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val userGroupsSearchUrl = servicesConfig.baseUrl("users-groups-search")
 
-  val agentPermissionsUrl = servicesConfig.baseUrl("agent-permissions")
+  val agentPermissionsUrl: String = servicesConfig.baseUrl("agent-permissions")
 
   val agentFiRelationshipBaseUrl: String = servicesConfig.baseUrl("agent-fi-relationship")
 
@@ -62,7 +62,11 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val desToken = getConfigString("des.authorization-token")
 
   val ifPlatformBaseUrl = servicesConfig.baseUrl("if")
-  val ifEnvironment = getConfigString("if.environment")
+
+  /** Itegration Framework (If) Environment
+    */
+  val ifEnvironment: String = getConfigString("if.environment")
+
   val ifAPI1171Token = getConfigString("if.authorization-api1171-token")
   val ifAPI1712Token = getConfigString("if.authorization-api1712-token")
   val ifAPI1495Token = getConfigString("if.authorization-api1495-token")

@@ -66,26 +66,17 @@ trait AuthRedirects {
   def origin: String = defaultOrigin
 
   def toGGLogin(continueUrl: String): Result =
-    Redirect(
-      ggLoginUrl,
-      Map(
-        "continue_url" -> Seq(continueUrl),
-        "origin"       -> Seq(origin)
-      )
-    )
+    Redirect(ggLoginUrl, Map("continue_url" -> Seq(continueUrl), "origin" -> Seq(origin)))
 
-  def toVerifyLogin(continueUrl: String): Result = Redirect(verifyLoginUrl).withSession(
-    SessionKeys.redirect    -> continueUrl,
-    SessionKeys.loginOrigin -> origin
-  )
+  def toVerifyLogin(continueUrl: String): Result =
+    Redirect(verifyLoginUrl).withSession(SessionKeys.redirect -> continueUrl, SessionKeys.loginOrigin -> origin)
 
   def toStrideLogin(successUrl: String, failureUrl: Option[String] = None): Result =
     Redirect(
       strideLoginUrl,
-      Map(
-        "successURL" -> Seq(successUrl),
-        "origin"     -> Seq(origin)
-      ) ++ failureUrl.map(f => Map("failureURL" -> Seq(f))).getOrElse(Map())
+      Map("successURL" -> Seq(successUrl), "origin" -> Seq(origin)) ++ failureUrl
+        .map(f => Map("failureURL" -> Seq(f)))
+        .getOrElse(Map())
     )
 
 }

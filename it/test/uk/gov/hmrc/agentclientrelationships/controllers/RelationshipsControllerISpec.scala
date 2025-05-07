@@ -33,19 +33,20 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import org.mongodb.scala.model.Filters
-import play.api.libs.json.{Format, JsObject}
+import play.api.libs.json.{ Format, JsObject }
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.model.{ DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse }
+import uk.gov.hmrc.agentclientrelationships.repository.{ DeleteRecord, RelationshipCopyRecord, SyncStatus }
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.{Identifier, MtdItId, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Identifier, MtdItId, Service }
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
+import uk.gov.hmrc.http.{ HeaderCarrier, HeaderNames, HttpResponse }
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{ LocalDate, LocalDateTime }
 import java.util.Base64
 
 class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec with HipStub {
@@ -54,8 +55,7 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     arn.value,
     Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
     syncToETMPStatus = Some(SyncStatus.Success),
-    syncToESStatus = Some(SyncStatus.Success)
-  )
+    syncToESStatus = Some(SyncStatus.Success))
 
   case class TestClient(service: String, regime: String, clientId: TaxIdentifier)
 
@@ -109,14 +109,15 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   def runActiveRelationshipsScenario(
     testClient: TestClient,
     isLoggedInClientInd: Boolean,
-    isLoggedInBusiness: Boolean
-  ): Unit = {
+    isLoggedInBusiness: Boolean): Unit = {
     val requestPath: String = s"/agent-client-relationships/client/relationships/service/${testClient.service}"
 
     def doRequest() = doGetRequest(requestPath)
 
-    s"find relationship for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual"
-    else "Business"}" in
+    s"find relationship for service ${testClient.service} and user ${
+      if (isLoggedInClientInd) "Individual"
+      else "Business"
+    }" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipsViaClient(testClient.clientId, arn)
@@ -144,8 +145,7 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   def runActiveRelationshipsErrorScenario(
     testClient: TestClient,
     isLoggedInClientInd: Boolean,
-    isLoggedInBusiness: Boolean
-  ): Unit = {
+    isLoggedInBusiness: Boolean): Unit = {
     val requestPath: String = s"/agent-client-relationships/relationships/service/${testClient.service}"
 
     def doRequest() = doGetRequest(requestPath)
@@ -360,10 +360,7 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
             Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
-            syncToESStatus = Some(SyncStatus.Failed)
-          )
-        )
-      )
+            syncToESStatus = Some(SyncStatus.Failed))))
 
       // insert copy-relationship document
       await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
@@ -375,9 +372,7 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       response shouldBe TerminationResponse(
         Seq(
           DeletionCount("agent-client-relationships", "delete-record", 1),
-          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)
-        )
-      )
+          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)))
 
       // verify termination has deleted all record for that agent
       await(deleteRecordRepository.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
@@ -452,7 +447,7 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   }
 
   "sanitising a CBC enrolment key" should {
-    implicit val hc: HeaderCarrier = HeaderCarrier()
+    implicit val request: RequestHeader = FakeRequest()
     implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     "work for a HMRC-CBC-ORG enrolment key with a UTR stored in the enrolment store" in {
       val validationService = app.injector.instanceOf[ValidationService]
@@ -471,7 +466,8 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       val validationService = app.injector.instanceOf[ValidationService]
       givenCbcUkDoesNotExistInES(cbcId)
       givenCbcNonUkDoesNotExistInES(cbcId)
-      await(validationService.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern { case Left(_) =>
+      await(validationService.makeSanitisedCbcEnrolmentKey(cbcId)) should matchPattern {
+        case Left(_) =>
       }
     }
   }

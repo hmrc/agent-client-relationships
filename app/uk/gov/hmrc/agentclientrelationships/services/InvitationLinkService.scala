@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import javax.inject.{Inject, Singleton}
 import scala.collection.Seq
@@ -45,7 +45,7 @@ class InvitationLinkService @Inject() (
       .map(_ => ())
 
   def validateLink(uid: String, normalizedAgentName: String)(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
 
     val agencyNameT = for {
@@ -62,9 +62,7 @@ class InvitationLinkService @Inject() (
 
   }
 
-  def createLink(
-    arn: Arn
-  )(implicit hc: HeaderCarrier): Future[CreateLinkResponse] =
+  def createLink(arn: Arn)(implicit request: RequestHeader): Future[CreateLinkResponse] =
     for {
       agentDetailsResponse <- getAgentDetails(arn)
       newNormaliseAgentName = normaliseAgentName(agentDetailsResponse.agencyDetails.agencyName)
@@ -78,7 +76,7 @@ class InvitationLinkService @Inject() (
 
   def validateInvitationRequest(
     uid: String
-  )(implicit hc: HeaderCarrier): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
+  )(implicit request: RequestHeader): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
     val responseT = for {
       agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
       agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
@@ -96,10 +94,7 @@ class InvitationLinkService @Inject() (
       .findBy(uid)
       .map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
 
-  def getAgentReferenceRecordByArn(
-    arn: Arn,
-    newNormaliseAgentName: String
-  ): Future[AgentReferenceRecord] =
+  def getAgentReferenceRecordByArn(arn: Arn, newNormaliseAgentName: String): Future[AgentReferenceRecord] =
     agentReferenceRepository.findByArn(arn).flatMap {
       case Some(value) =>
         Future.successful(value)
@@ -132,9 +127,7 @@ class InvitationLinkService @Inject() (
     if (normalisedAgentNames.contains(normalizedAgentName)) Right(true)
     else Left(InvitationLinkFailureResponse.NormalizedAgentNameNotMatched)
 
-  private def getAgentDetails(arn: Arn)(implicit
-    hc: HeaderCarrier
-  ): Future[AgentDetailsDesResponse] =
+  private def getAgentDetails(arn: Arn)(implicit request: RequestHeader): Future[AgentDetailsDesResponse] =
     agentAssuranceConnector.getAgentRecordWithChecks(arn)
 
   private def checkSuspensionDetails(
@@ -147,8 +140,6 @@ class InvitationLinkService @Inject() (
   private def getAgencyName(
     agentDetailsDesResponse: AgentDetailsDesResponse
   ): Future[Either[InvitationLinkFailureResponse, String]] =
-    Future.successful(
-      Right(agentDetailsDesResponse.agencyDetails.agencyName)
-    )
+    Future.successful(Right(agentDetailsDesResponse.agencyDetails.agencyName))
 
 }

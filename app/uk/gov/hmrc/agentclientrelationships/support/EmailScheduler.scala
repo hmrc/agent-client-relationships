@@ -25,6 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Expired
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.{EmailService, MongoLockService}
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport
 
 import java.util.TimeZone
 import javax.inject.{Inject, Singleton}
@@ -80,11 +81,8 @@ class WarningEmailActor(
   invitationsRepository: InvitationsRepository,
   emailService: EmailService,
   mongoLockService: MongoLockService
-)(implicit
-  ec: ExecutionContext,
-  mat: Materializer,
-  appConfig: AppConfig
-) extends Actor
+)(implicit ec: ExecutionContext, mat: Materializer, appConfig: AppConfig)
+    extends Actor
     with Logging {
 
   def receive: Receive = { case _ =>
@@ -94,7 +92,7 @@ class WarningEmailActor(
         .fromPublisher(invitationsRepository.findAllForWarningEmail)
         .throttle(10, 1.second)
         .runForeach { aggregationResult =>
-          emailService.sendWarningEmail(aggregationResult.invitations).map {
+          emailService.sendWarningEmail(aggregationResult.invitations)(RequestSupport.thereIsNoRequest).map {
             case true =>
               aggregationResult.invitations.foreach { invitation =>
                 invitationsRepository.updateWarningEmailSent(invitation.invitationId)
@@ -113,11 +111,8 @@ class ExpiredEmailActor(
   invitationsRepository: InvitationsRepository,
   emailService: EmailService,
   mongoLockService: MongoLockService
-)(implicit
-  ec: ExecutionContext,
-  mat: Materializer,
-  appConfig: AppConfig
-) extends Actor
+)(implicit ec: ExecutionContext, mat: Materializer, appConfig: AppConfig)
+    extends Actor
     with Logging {
 
   def receive: Receive = { case _ =>
@@ -128,10 +123,16 @@ class ExpiredEmailActor(
         .throttle(10, 1.second)
         .runForeach { invitation =>
           invitationsRepository.updateStatus(invitation.invitationId, Expired)
-          emailService.sendExpiredEmail(invitation).map {
+
+          emailService.sendExpiredEmail(invitation)(NoRequest).map {
             case true =>
               invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
             case false =>
+              // TODO: Improve error handling to provide clearer insights into why the email was not sent.
+              // Throw an exception in EmailConnector so it can fail properly.
+              // This will allow the error to be logged correctly by the error handler.
+              // Then it can be monitored in kibana and actioned when failures happen on production.
+              // The current approach suppresses such details  hindering debugging and monitoring efforts.
               logger.warn(s"[EmailScheduler] Expiry email failed to send for invitation: ${invitation.invitationId}")
           }
           ()

@@ -62,10 +62,7 @@ class AgentReferenceController @Inject() (
                   )
               case None =>
                 invitationLinkService
-                  .createAgentReferenceRecord(
-                    arn = arn,
-                    normalisedAgentNames = normalisedAgentName
-                  )
+                  .createAgentReferenceRecord(arn = arn, normalisedAgentNames = normalisedAgentName)
                   .map(record => Ok(Json.toJson(record)))
             }
         )

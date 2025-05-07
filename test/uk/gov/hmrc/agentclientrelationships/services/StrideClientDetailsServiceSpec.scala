@@ -27,7 +27,8 @@ import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, Unit
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PlrId, PptRef, Vrn}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 
 import java.time.{Instant, LocalDate}
 import scala.concurrent.{ExecutionContext, Future}
@@ -96,7 +97,7 @@ class StrideClientDetailsServiceSpec
     PartialAuthRelationship(Instant.now, testArn2.value, HMRCMTDIT, testNino.value, active = true, Instant.now)
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
 
   "getClientDetailsWithCheck" when {
     "pending invitations exist for HMRC-MTD-IT" should {

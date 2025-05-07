@@ -26,11 +26,7 @@ class ItsaDesignatoryDetailsSpec extends UnitSpec {
     "read from JSON" when {
 
       "optional fields are present" in {
-        val json = Json.obj(
-          "address" -> Json.obj(
-            "postcode" -> "AA1 1AA"
-          )
-        )
+        val json = Json.obj("address" -> Json.obj("postcode" -> "AA1 1AA"))
 
         json.as[ItsaDesignatoryDetails] shouldBe ItsaDesignatoryDetails(Some("AA1 1AA"))
       }

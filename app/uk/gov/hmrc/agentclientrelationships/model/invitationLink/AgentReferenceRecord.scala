@@ -24,21 +24,15 @@ import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
 
 import scala.collection.Seq
 
-case class AgentReferenceRecord(
-  uid: String,
-  arn: Arn,
-  normalisedAgentNames: Seq[String]
-)
+case class AgentReferenceRecord(uid: String, arn: Arn, normalisedAgentNames: Seq[String])
 
 object AgentReferenceRecord {
   implicit val formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
 
   def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[AgentReferenceRecord] =
-    (
-      (__ \ "uid").format[String] and
-        (__ \ "arn").format[Arn] and {
-          implicit val cryptoFormat: Format[String] = stringEncrypterDecrypter
-          (__ \ "normalisedAgentNames").format[Seq[String]]
-        }
-    )(AgentReferenceRecord.apply, unlift(AgentReferenceRecord.unapply))
+    ((__ \ "uid").format[String] and
+      (__ \ "arn").format[Arn] and {
+        implicit val cryptoFormat: Format[String] = stringEncrypterDecrypter
+        (__ \ "normalisedAgentNames").format[Seq[String]]
+      })(AgentReferenceRecord.apply, unlift(AgentReferenceRecord.unapply))
 }

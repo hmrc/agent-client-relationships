@@ -20,9 +20,11 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails}
@@ -66,22 +68,10 @@ class ClientDetailsConnectorHipISpec
         "hip.BusinessDetails.enabled"                -> true
       )
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
 
-  val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
-  val httpClient2: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  val metrics: Metrics = app.injector.instanceOf[Metrics]
-  val hipHeaders: HIPHeaders = app.injector.instanceOf[HIPHeaders]
-
-  val connector = new ClientDetailsConnector(appConfig, httpClient, app.injector.instanceOf[Metrics])
-
-  val ifConnector = new IfConnector(httpClient, ec)(metrics, appConfig)
-  val hipConnector = new HipConnector(httpClient2, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
-
-  val ifOrHipConnector = new IfOrHipConnector(hipConnector, ifConnector)(appConfig)
+  val connector: ClientDetailsConnector = app.injector.instanceOf
+  val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf
 
   ".getItsaDesignatoryDetails" should {
 

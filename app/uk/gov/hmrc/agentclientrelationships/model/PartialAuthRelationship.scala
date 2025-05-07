@@ -59,13 +59,11 @@ object PartialAuthRelationship {
 
   def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[PartialAuthRelationship] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-    (
-      (__ \ "created").format[Instant] and
-        (__ \ "arn").format[String] and
-        (__ \ "service").format[String] and
-        (__ \ "nino").format[String](stringEncrypterDecrypter) and
-        (__ \ "active").format[Boolean] and
-        (__ \ "lastUpdated").format[Instant]
-    )(PartialAuthRelationship.apply, unlift(PartialAuthRelationship.unapply))
+    ((__ \ "created").format[Instant] and
+      (__ \ "arn").format[String] and
+      (__ \ "service").format[String] and
+      (__ \ "nino").format[String](stringEncrypterDecrypter) and
+      (__ \ "active").format[Boolean] and
+      (__ \ "lastUpdated").format[Instant])(PartialAuthRelationship.apply, unlift(PartialAuthRelationship.unapply))
   }
 }

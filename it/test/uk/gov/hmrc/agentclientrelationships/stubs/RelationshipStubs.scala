@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId, Service, Vrn }
 import uk.gov.hmrc.domain.Nino
 
 trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {

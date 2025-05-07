@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,9 +41,7 @@ trait MockCreateRelationshipsService {
     when(
       mockCreateRelationshipsService
         .createRelationship(eqs(arn), eqs(enrolment), eqs(Set()), any[Boolean], any[Boolean])(
-          any[ExecutionContext],
-          any[HeaderCarrier],
-          any[Request[_]],
+          any[RequestHeader],
           any[AuditData]
         )
     )

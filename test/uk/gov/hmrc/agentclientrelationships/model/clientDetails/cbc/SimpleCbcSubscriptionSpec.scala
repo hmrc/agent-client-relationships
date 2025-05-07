@@ -34,26 +34,16 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
               "tradingName" -> "CFG Solutions",
               "primaryContact" -> Json.arr(
                 Json.obj(
-                  "email" -> "test@email.com",
-                  "individual" -> Json.obj(
-                    "firstName" -> "Erling",
-                    "lastName"  -> "Haal"
-                  ),
-                  "organisation" -> Json.obj(
-                    "organisationName" -> "CFG"
-                  )
+                  "email"        -> "test@email.com",
+                  "individual"   -> Json.obj("firstName" -> "Erling", "lastName" -> "Haal"),
+                  "organisation" -> Json.obj("organisationName" -> "CFG")
                 )
               ),
               "secondaryContact" -> Json.arr(
                 Json.obj(
-                  "email" -> "test2@email.com",
-                  "individual" -> Json.obj(
-                    "firstName" -> "Kevin",
-                    "lastName"  -> "De Burner"
-                  ),
-                  "organisation" -> Json.obj(
-                    "organisationName" -> "CFG"
-                  )
+                  "email"        -> "test2@email.com",
+                  "individual"   -> Json.obj("firstName" -> "Kevin", "lastName" -> "De Burner"),
+                  "organisation" -> Json.obj("organisationName" -> "CFG")
                 )
               )
             )
@@ -72,20 +62,12 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
 
         val json = Json.obj(
           "displaySubscriptionForCBCResponse" -> Json.obj(
-            "responseDetail" -> Json.obj(
-              "isGBUser"         -> true,
-              "primaryContact"   -> Json.arr(),
-              "secondaryContact" -> Json.arr()
-            )
+            "responseDetail" -> Json
+              .obj("isGBUser" -> true, "primaryContact" -> Json.arr(), "secondaryContact" -> Json.arr())
           )
         )
 
-        json.as[SimpleCbcSubscription] shouldBe SimpleCbcSubscription(
-          None,
-          Seq(),
-          isGBUser = true,
-          Seq()
-        )
+        json.as[SimpleCbcSubscription] shouldBe SimpleCbcSubscription(None, Seq(), isGBUser = true, Seq())
       }
     }
   }
@@ -110,10 +92,7 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
             "originatingSystem"        -> "MDTP",
             "conversationID"           -> "abc123"
           ),
-          "requestDetail" -> Json.obj(
-            "IDType"   -> "CBC",
-            "IDNumber" -> "XCBCX1234567890"
-          )
+          "requestDetail" -> Json.obj("IDType" -> "CBC", "IDNumber" -> "XCBCX1234567890")
         )
       )
 

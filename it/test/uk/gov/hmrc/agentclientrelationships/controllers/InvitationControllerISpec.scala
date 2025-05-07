@@ -16,19 +16,19 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.i18n.{Lang, Langs, MessagesApi}
+import play.api.i18n.{ Lang, Langs, MessagesApi }
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.{ AgentFiRelationshipConnector, EnrolmentStoreProxyConnector }
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, InvitationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.model.{ Cancelled, EmailInformation, Pending, Rejected }
+import uk.gov.hmrc.agentclientrelationships.repository.{ InvitationsRepository, PartialAuthRepository }
+import uk.gov.hmrc.agentclientrelationships.services.{ DeleteRelationshipsService, InvitationService, ValidationService }
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
@@ -41,17 +41,15 @@ import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with AgentAssuranceStubs
-    with EmailStubs
-    with HipStub
-    with TestData {
+  extends BaseControllerISpec
+  with ClientDetailsStub
+  with AfiRelationshipStub
+  with AgentAssuranceStubs
+  with EmailStubs
+  with HipStub
+  with TestData {
 
-  override def additionalConfig: Map[String, Any] = Map(
-    "hip.BusinessDetails.enabled" -> true
-  )
+  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
   val validationService: ValidationService = app.injector.instanceOf[ValidationService]
@@ -75,8 +73,7 @@ class InvitationControllerISpec
       validationService,
       authConnector,
       appConfig,
-      stubControllerComponents()
-    )
+      stubControllerComponents())
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -87,7 +84,7 @@ class InvitationControllerISpec
 
   def allServices: Map[String, CreateInvitationRequest] = Map(
     HMRCMTDIT -> baseInvitationInputData,
-    HMRCPIR   -> baseInvitationInputData.copy(service = HMRCPIR),
+    HMRCPIR -> baseInvitationInputData.copy(service = HMRCPIR),
     HMRCMTDVAT -> baseInvitationInputData
       .copy(service = HMRCMTDVAT, clientId = vrn.value, suppliedClientIdType = VrnType.id),
     HMRCTERSORG -> baseInvitationInputData
@@ -100,18 +97,11 @@ class InvitationControllerISpec
       .copy(service = HMRCPPTORG, clientId = pptRef.value, suppliedClientIdType = PptRefType.id),
     HMRCCBCORG -> baseInvitationInputData
       .copy(service = HMRCCBCORG, clientId = cbcId.value, suppliedClientIdType = CbcIdType.id),
-    HMRCCBCNONUKORG -> baseInvitationInputData.copy(
-      service = HMRCCBCNONUKORG,
-      clientId = cbcId.value,
-      suppliedClientIdType = CbcIdType.id
-    ),
-    HMRCPILLAR2ORG -> baseInvitationInputData.copy(
-      service = HMRCPILLAR2ORG,
-      clientId = plrId.value,
-      suppliedClientIdType = PlrIdType.id
-    ),
-    HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
-  )
+    HMRCCBCNONUKORG -> baseInvitationInputData
+      .copy(service = HMRCCBCNONUKORG, clientId = cbcId.value, suppliedClientIdType = CbcIdType.id),
+    HMRCPILLAR2ORG -> baseInvitationInputData
+      .copy(service = HMRCPILLAR2ORG, clientId = plrId.value, suppliedClientIdType = PlrIdType.id),
+    HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP))
 
   val testAgentRecord: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
@@ -120,11 +110,8 @@ class InvitationControllerISpec
         agencyName = Some("testAgentName"),
         agencyEmail = Some("agent@email.com"),
         agencyTelephone = None,
-        agencyAddress = None
-      )
-    ),
-    suspensionDetails = None
-  )
+        agencyAddress = None)),
+    suspensionDetails = None)
 
   val dateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
@@ -160,9 +147,7 @@ class InvitationControllerISpec
 
         val invitation = invitationSeq.head
 
-        result.json shouldBe Json.obj(
-          "invitationId" -> invitation.invitationId
-        )
+        result.json shouldBe Json.obj("invitationId" -> invitation.invitationId)
 
         invitation.status shouldBe Pending
         invitation.suppliedClientId shouldBe inputData.clientId
@@ -173,8 +158,7 @@ class InvitationControllerISpec
         invitation.clientName shouldBe clientName
 
         verifyCreateInvitationAuditSent(requestPath, invitation)
-      }
-    )
+      })
 
     "return 201 status and valid JSON when invitation is created for altItSa" in {
       val suppliedClientId = nino.value
@@ -188,8 +172,7 @@ class InvitationControllerISpec
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
         service = service,
-        clientType = clientType
-      )
+        clientType = clientType)
 
       val inputData: CreateInvitationRequest = baseInvitationInputData
 
@@ -201,8 +184,7 @@ class InvitationControllerISpec
       val result =
         doAgentPostRequest(
           s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-          Json.toJson(createInvitationInputData).toString()
-        )
+          Json.toJson(createInvitationInputData).toString())
       result.status shouldBe 201
 
       val invitationSeq = invitationRepo
@@ -213,9 +195,7 @@ class InvitationControllerISpec
 
       val invitation = invitationSeq.head
 
-      result.json shouldBe Json.obj(
-        "invitationId" -> invitation.invitationId
-      )
+      result.json shouldBe Json.obj("invitationId" -> invitation.invitationId)
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.clientId
@@ -238,8 +218,7 @@ class InvitationControllerISpec
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
         service = service,
-        clientType = clientType
-      )
+        clientType = clientType)
 
       givenAuditConnector()
 
@@ -250,8 +229,7 @@ class InvitationControllerISpec
       val result =
         doAgentPostRequest(
           s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-          Json.toJson(createInvitationInputData).toString()
-        )
+          Json.toJson(createInvitationInputData).toString())
       result.status shouldBe 501
 
       invitationRepo
@@ -274,8 +252,7 @@ class InvitationControllerISpec
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
         service = service,
-        clientType = clientType
-      )
+        clientType = clientType)
 
       givenAuditConnector()
 
@@ -286,8 +263,7 @@ class InvitationControllerISpec
       val result =
         doAgentPostRequest(
           s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-          Json.toJson(createInvitationInputData).toString()
-        )
+          Json.toJson(createInvitationInputData).toString())
       result.status shouldBe 400
 
       invitationRepo
@@ -308,8 +284,7 @@ class InvitationControllerISpec
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
         service = service,
-        clientType = clientType
-      )
+        clientType = clientType)
 
       givenAuditConnector()
 
@@ -320,8 +295,7 @@ class InvitationControllerISpec
       val result =
         doAgentPostRequest(
           s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-          Json.toJson(createInvitationInputData).toString()
-        )
+          Json.toJson(createInvitationInputData).toString())
       result.status shouldBe 400
 
       val message =
@@ -346,8 +320,7 @@ class InvitationControllerISpec
         suppliedClientIdType = suppliedClientIdType,
         clientName = clientName,
         service = service,
-        clientType = clientType
-      )
+        clientType = clientType)
 
       givenAuditConnector()
 
@@ -358,8 +331,7 @@ class InvitationControllerISpec
       val result =
         doAgentPostRequest(
           s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
-          Json.toJson(createInvitationInputData).toString()
-        )
+          Json.toJson(createInvitationInputData).toString())
       result.status shouldBe 400
 
       val message =
@@ -386,9 +358,7 @@ class InvitationControllerISpec
             "agencyName" -> "testAgentName",
             "clientName" -> "Erling Haal",
             "expiryDate" -> LocalDate.now().format(dateFormatter),
-            "service"    -> messagesApi(s"service.$taxService")
-          )
-        )
+            "service" -> messagesApi(s"service.$taxService")))
 
         val clientId =
           if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value else inputData.clientId
@@ -412,9 +382,7 @@ class InvitationControllerISpec
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
         val requestPath =
           s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
         val result = doAgentPutRequest(requestPath)
@@ -429,15 +397,12 @@ class InvitationControllerISpec
 
         verifyRejectInvitationSent(emailInfo)
         verifyRespondToInvitationAuditSent(requestPath, pendingInvitation, accepted = false, isStride = false)
-      }
-    )
+      })
 
     s"return NoFound status when no Pending Invitation " in {
 
       val result =
-        doAgentPutRequest(
-          s"/agent-client-relationships/client/authorisation-response/reject/123456"
-        )
+        doAgentPutRequest(s"/agent-client-relationships/client/authorisation-response/reject/123456")
       result.status shouldBe 404
 
       val invitationSeq = invitationRepo
@@ -467,13 +432,10 @@ class InvitationControllerISpec
           "testAgentName",
           "agent@email.com",
           LocalDate.now(),
-          Some("personal")
-        )
-      )
+          Some("personal")))
       val result = doAgentPostRequest(
         s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
-        requestJson
-      )
+        requestJson)
       val updatedInvitation = await(invitationRepo.findAllForAgent(arn.value)).head
 
       result.status shouldBe 204
@@ -486,16 +448,14 @@ class InvitationControllerISpec
     "return 404 when no invitation was found" in {
       val result = doAgentPostRequest(
         s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
-        requestJson
-      )
+        requestJson)
       result.status shouldBe 404
     }
 
     "return 400 when request body is not JSON" in {
       val result = doAgentPostRequest(
         s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
-        "stringBody"
-      )
+        "stringBody")
       result.status shouldBe 400
     }
 
@@ -503,8 +463,7 @@ class InvitationControllerISpec
       val invalidJson = Json.obj("abc" -> "xyz")
       val result = doAgentPostRequest(
         s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
-        invalidJson
-      )
+        invalidJson)
       result.status shouldBe 500
       result.body should include("JsResultException")
     }
@@ -533,9 +492,7 @@ class InvitationControllerISpec
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
         val pendingInvitation = invitationRepo
           .findAllForAgent(arn.value)
@@ -555,15 +512,12 @@ class InvitationControllerISpec
         invitationSeq.size shouldBe 1
         invitationSeq.head.status shouldBe Cancelled
 
-      }
-    )
+      })
 
     s"return NoFound status when no Pending Invitation " in {
 
       val result =
-        doAgentPutRequest(
-          s"/agent-client-relationships/agent/cancel-invitation/123456"
-        )
+        doAgentPutRequest(s"/agent-client-relationships/agent/cancel-invitation/123456")
       result.status shouldBe 404
 
       val invitationSeq = invitationRepo

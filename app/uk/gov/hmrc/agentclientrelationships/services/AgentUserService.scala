@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{agentCodeKey, credI
 import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,7 +34,8 @@ class AgentUserService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ugs: UsersGroupsSearchConnector,
   agentCacheProvider: AgentCacheProvider
-) extends Logging {
+)(implicit val executionContext: ExecutionContext)
+    extends Logging {
 
   val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache
@@ -42,7 +43,7 @@ class AgentUserService @Inject() (
 
   def getAgentAdminAndSetAuditData(
     arn: Arn
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, AgentUser]] =
+  )(implicit request: RequestHeader, auditData: AuditData): Future[Either[String, AgentUser]] =
     for {
       agentGroupId   <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
       firstAdminUser <- firstGroupAdminCache(agentGroupId)(ugs.getFirstGroupAdminUser(agentGroupId))

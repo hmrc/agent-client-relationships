@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
+import com.github.tomakehurst.wiremock.matching.{ MatchResult, UrlPattern }
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
+import uk.gov.hmrc.agentclientrelationships.connectors.{ GroupInfo, UserDetails }
 import uk.gov.hmrc.domain.AgentCode
 
 trait UsersGroupsSearchStubs {
@@ -32,9 +32,7 @@ trait UsersGroupsSearchStubs {
       get(urlEqualTo(s"$ugsBaseUrl/groups/$groupId"))
         .willReturn(
           aResponse()
-            .withBody(GroupInfo.formats.writes(groupInfo).toString())
-        )
-    )
+            .withBody(GroupInfo.formats.writes(groupInfo).toString())))
   }
 
   def givenGroupInfoNoAgentCode(groupId: String) = {
@@ -43,16 +41,13 @@ trait UsersGroupsSearchStubs {
       get(urlEqualTo(s"$ugsBaseUrl/groups/$groupId"))
         .willReturn(
           aResponse()
-            .withBody(GroupInfo.formats.writes(groupInfo).toString())
-        )
-    )
+            .withBody(GroupInfo.formats.writes(groupInfo).toString())))
   }
 
   def givenGroupInfoNotExists(groupId: String) =
     stubFor(
       get(urlEqualTo(s"$ugsBaseUrl/groups/$groupId"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
 
   private def urlContains(str: String): UrlPattern = new UrlPattern(containing(str), false) {
     override def `match`(url: String): MatchResult = pattern.`match`(url)
@@ -61,8 +56,7 @@ trait UsersGroupsSearchStubs {
   def givenGroupInfoFailsWith(status: Int) =
     stubFor(
       get(urlContains(s"$ugsBaseUrl/groups/"))
-        .willReturn(aResponse().withStatus(status))
-    )
+        .willReturn(aResponse().withStatus(status)))
 
   def givenAgentGroupExistsFor(groupId: String): StubMapping =
     stubFor(
@@ -79,9 +73,7 @@ trait UsersGroupsSearchStubs {
                          |  "agentCode": "NQJUEJCWT14",
                          |  "agentFriendlyName": "JoeBloggs"
                          |}
-          """.stripMargin)
-        )
-    )
+          """.stripMargin)))
 
   def givenNonAgentGroupExistsFor(groupId: String): StubMapping =
     stubFor(
@@ -96,15 +88,12 @@ trait UsersGroupsSearchStubs {
                          |  "groupId": "foo",
                          |  "affinityGroup": "Organisation"
                          |}
-          """.stripMargin)
-        )
-    )
+          """.stripMargin)))
 
   def givenGroupNotExistsFor(groupId: String) =
     stubFor(
       get(urlEqualTo(s"/users-groups-search/groups/$groupId"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
 
   def givenAdminUser(groupId: String, userId: String) =
     givenAgentGroupWithUsers(groupId, List(UserDetails(userId = Some(userId), credentialRole = Some("Admin"))))
@@ -118,14 +107,11 @@ trait UsersGroupsSearchStubs {
                          |[
                          |    ${users.map(UserDetails.formats.writes).mkString(",")}
                          |]
-          """.stripMargin)
-        )
-    )
+          """.stripMargin)))
 
   def givenUserIdNotExistsFor(userId: String) =
     stubFor(
       get(urlEqualTo(s"/users-groups-search/users/$userId"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
 
 }

@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, P
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR}
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.{Instant, LocalDateTime, ZoneId}
 import javax.inject.{Inject, Singleton}
@@ -48,12 +48,8 @@ class AuthorisationAcceptService @Inject() (
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  def accept(
-    invitation: Invitation,
-    enrolment: EnrolmentKey
-  )(implicit
-    hc: HeaderCarrier,
-    request: Request[_],
+  def accept(invitation: Invitation, enrolment: EnrolmentKey)(implicit
+    request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData
   ): Future[Invitation] = {
@@ -112,12 +108,7 @@ class AuthorisationAcceptService @Inject() (
     enrolment: EnrolmentKey,
     isAltItsa: Boolean,
     timestamp: Instant
-  )(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    currentUser: CurrentUser,
-    auditData: AuditData
-  ) = {
+  )(implicit request: RequestHeader, currentUser: CurrentUser, auditData: AuditData) = {
     auditData.set(
       key = if (isAltItsa) howPartialAuthCreatedKey else howRelationshipCreatedKey,
       value = if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
@@ -178,7 +169,7 @@ class AuthorisationAcceptService @Inject() (
     }
   }
 
-  private def deauthPartialAuth(nino: String, timestamp: Instant)(implicit hc: HeaderCarrier, request: Request[Any]) =
+  private def deauthPartialAuth(nino: String, timestamp: Instant)(implicit request: RequestHeader): Future[Boolean] =
     partialAuthRepository.findMainAgent(nino).flatMap {
       case Some(mainAuth) =>
         partialAuthRepository.deauthorise(mainAuth.service, Nino(mainAuth.nino), Arn(mainAuth.arn), timestamp).map {
@@ -207,12 +198,7 @@ class AuthorisationAcceptService @Inject() (
   ) = {
     val acceptedStatus = if (isAltItsa) PartialAuth else Accepted
     invitationsRepository
-      .findAllBy(
-        arn = optArn,
-        services = Seq(service),
-        clientIds = Seq(clientId),
-        status = Some(acceptedStatus)
-      )
+      .findAllBy(arn = optArn, services = Seq(service), clientIds = Seq(clientId), status = Some(acceptedStatus))
       .fallbackTo(Future.successful(Nil))
       .map { acceptedInvitations: Seq[Invitation] =>
         acceptedInvitations

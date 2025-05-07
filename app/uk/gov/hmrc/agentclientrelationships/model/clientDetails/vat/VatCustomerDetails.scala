@@ -71,11 +71,10 @@ object VatIndividual {
 
   implicit val writes: OWrites[VatIndividual] = Json.writes[VatIndividual]
 
-  implicit val reads: Reads[VatIndividual] = (
-    (JsPath \ "title").readNullable[String].map(title => titles.get(title.getOrElse(""))) and
+  implicit val reads: Reads[VatIndividual] =
+    ((JsPath \ "title").readNullable[String].map(title => titles.get(title.getOrElse(""))) and
       (JsPath \ "firstName").readNullable[String] and
       (JsPath \ "middleName").readNullable[String] and
-      (JsPath \ "lastName").readNullable[String]
-  )(VatIndividual.apply _)
+      (JsPath \ "lastName").readNullable[String])(VatIndividual.apply _)
 
 }

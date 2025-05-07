@@ -41,7 +41,7 @@ class CustomerStatusController @Inject() (
   val authConnector: AuthConnector,
   appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions {
 

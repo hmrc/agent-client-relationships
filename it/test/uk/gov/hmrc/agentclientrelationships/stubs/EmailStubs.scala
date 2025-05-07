@@ -30,8 +30,7 @@ trait EmailStubs extends TestData {
       verify(
         count,
         postRequestedFor(urlPathEqualTo(s"/hmrc/email"))
-          .withRequestBody(similarToJson(Json.toJson(emailInformation).toString))
-      )
+          .withRequestBody(similarToJson(Json.toJson(emailInformation).toString)))
     }
 
   private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
@@ -42,8 +41,6 @@ trait EmailStubs extends TestData {
         .withRequestBody(similarToJson(Json.toJson(emailInformation).toString()))
         .willReturn(
           aResponse()
-            .withStatus(status)
-        )
-    )
+            .withStatus(status)))
 
 }

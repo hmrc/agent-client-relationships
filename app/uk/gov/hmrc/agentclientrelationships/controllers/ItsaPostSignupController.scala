@@ -40,7 +40,7 @@ class ItsaPostSignupController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext, auditData: AuditData)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions
     with Logging {
@@ -51,13 +51,9 @@ class ItsaPostSignupController @Inject() (
     withAuthorisedAsAgent { arn =>
       ifOrHipConnector.getMtdIdFor(nino).flatMap {
         case Some(mtdItId) =>
+          implicit val auditData: AuditData = new AuditData()
           checkAndCopyRelationshipsService
-            .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(
-              arn,
-              mtdItId,
-              mService = None,
-              mNino = Some(nino)
-            )
+            .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, mService = None, mNino = Some(nino))
             .map {
               case AltItsaCreateRelationshipSuccess(service) => Created(Json.parse(s"""{"service": "$service"}"""))
               case FoundAndCopied                            => Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))

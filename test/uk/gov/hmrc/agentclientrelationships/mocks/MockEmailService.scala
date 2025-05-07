@@ -22,7 +22,7 @@ import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,10 +31,8 @@ trait MockEmailService {
 
   val mockEmailService: EmailService = resettingMock[EmailService]
 
-  def mockSendAcceptedEmail(
-    invitation: Invitation
-  )(response: Boolean = true): OngoingStubbing[Future[Boolean]] =
-    when(mockEmailService.sendAcceptedEmail(eqs(invitation))(any[HeaderCarrier], any[ExecutionContext]))
+  def mockSendAcceptedEmail(invitation: Invitation)(response: Boolean = true): OngoingStubbing[Future[Boolean]] =
+    when(mockEmailService.sendAcceptedEmail(eqs(invitation))(any[RequestHeader]))
       .thenReturn(Future.successful(response))
 
 }

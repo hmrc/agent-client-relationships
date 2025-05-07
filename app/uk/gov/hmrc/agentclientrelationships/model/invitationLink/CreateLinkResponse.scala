@@ -18,10 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
 import play.api.libs.json._
 
-case class CreateLinkResponse(
-  uid: String,
-  normalizedAgentName: String
-)
+case class CreateLinkResponse(uid: String, normalizedAgentName: String)
 
 object CreateLinkResponse {
 

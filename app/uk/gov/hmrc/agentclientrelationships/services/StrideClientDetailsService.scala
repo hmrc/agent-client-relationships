@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, P
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, MtdIt, PersonalIncomeRecord}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.ZoneId
 import javax.inject.{Inject, Singleton}
@@ -47,7 +47,7 @@ class StrideClientDetailsService @Inject() (
 
   def getClientDetailsWithChecks(
     ek: EnrolmentKey
-  )(implicit hc: HeaderCarrier): Future[Option[ClientDetailsStrideResponse]] = {
+  )(implicit request: RequestHeader): Future[Option[ClientDetailsStrideResponse]] = {
 
     val clientId: String = ek.oneTaxIdentifier().value
     val services = if (ek.service == HMRCMTDIT) Seq(ek.service, HMRCMTDITSUPP) else Seq(ek.service)
@@ -63,7 +63,7 @@ class StrideClientDetailsService @Inject() (
 
   def findAllActiveRelationship(
     clientsRelationshipsRequest: ClientsRelationshipsRequest
-  )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, Seq[ActiveClientRelationship]]] =
+  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ActiveClientRelationship]]] =
     clientsRelationshipsRequest.clientRelationshipRequest
       .map { crr =>
         for {
@@ -90,7 +90,7 @@ class StrideClientDetailsService @Inject() (
     taxIdentifier: TaxIdentifier,
     activeRelationships: Seq[ClientRelationship]
   )(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): EitherT[Future, RelationshipFailureResponse, (ClientDetailsResponse, Seq[ClientRelationshipWithAgentName])] =
     for {
       activeRelationshipsWithAgentName <-
@@ -101,7 +101,7 @@ class StrideClientDetailsService @Inject() (
 
   private def findAllActiveRelationshipForTaxId(
     taxIdentifier: TaxIdentifier
-  )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
+  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     (taxIdentifier match {
       case Nino(_) =>
         (for {
@@ -125,9 +125,9 @@ class StrideClientDetailsService @Inject() (
 
     }).map(_.map(_.filter(_.isActive))) // additional filtering for IF
 
-  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
-    ec: ExecutionContext
-  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+  private def recoverNotFoundRelationship(
+    relationshipFailureResponse: RelationshipFailureResponse
+  )(implicit ec: ExecutionContext): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
     relationshipFailureResponse match {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
@@ -160,15 +160,16 @@ class StrideClientDetailsService @Inject() (
   private def findAgentNameForActiveRelationships(
     activeRelationships: Seq[ClientRelationship],
     taxIdentifier: TaxIdentifier
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationshipWithAgentName]] =
+  )(implicit
+    request: RequestHeader
+  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationshipWithAgentName]] =
     activeRelationships.map { ar =>
       for {
         agentDetails <- findAgentDetailsByArn(ar.arn)
-        service <-
-          EitherT(
-            validationService
-              .validateAuthProfileToService(taxIdentifier, ar.authProfile, ar.relationshipSource, ar.service)
-          )
+        service <- EitherT(
+                     validationService
+                       .validateAuthProfileToService(taxIdentifier, ar.authProfile, ar.relationshipSource, ar.service)
+                   )
       } yield ClientRelationshipWithAgentName(
         ar.arn,
         agentDetails.agencyDetails.agencyName,
@@ -180,7 +181,7 @@ class StrideClientDetailsService @Inject() (
 
   private def findAgentDetailsByArn(
     arn: Arn
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, AgentDetailsDesResponse] =
+  )(implicit request: RequestHeader): EitherT[Future, RelationshipFailureResponse, AgentDetailsDesResponse] =
     EitherT(
       Try(agentAssuranceConnector.getAgentRecordWithChecks(arn)).toEither
         .pure[Future]
@@ -189,7 +190,7 @@ class StrideClientDetailsService @Inject() (
 
   private def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier
-  )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, ClientDetailsResponse]] =
     clientDetailsService
       .findClientDetailsByTaxIdentifier(taxIdentifier)
       .map(_.left.map {
@@ -202,7 +203,7 @@ class StrideClientDetailsService @Inject() (
     agentRecord.suspensionDetails.exists(_.suspensionStatus)
 
   private def getNonSuspendedInvitations(clientId: String, services: Seq[String])(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Seq[InvitationWithAgentName]] =
     for {
       invitations <- invitationsRepository.findAllPendingForSuppliedClient(clientId, services)
@@ -219,7 +220,7 @@ class StrideClientDetailsService @Inject() (
     } yield nonSuspended.flatten
 
   private def findActiveRelationship(taxIdentifier: TaxIdentifier, service: Service)(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Option[ActiveMainAgentRelationship]] =
     (taxIdentifier, service) match {
       case (_: Nino, MtdIt) =>
@@ -246,7 +247,7 @@ class StrideClientDetailsService @Inject() (
 
   private def findAgentDetails(
     mActiveRelationship: Option[ActiveMainAgentRelationship]
-  )(implicit hc: HeaderCarrier): Future[Option[ActiveMainAgent]] =
+  )(implicit request: RequestHeader): Future[Option[ActiveMainAgent]] =
     mActiveRelationship.fold[Future[Option[ActiveMainAgent]]](Future.successful(None)) { activeRelationship =>
       agentAssuranceConnector
         .getAgentRecordWithChecks(Arn(activeRelationship.arn))
@@ -256,7 +257,7 @@ class StrideClientDetailsService @Inject() (
     }
 
   private def getClientName(invitations: Seq[InvitationWithAgentName], service: String, clientId: String)(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Option[String]] =
     for {
       fromInv <- Future.successful(invitations.headOption.map(i => i.clientName))

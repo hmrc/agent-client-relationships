@@ -20,15 +20,16 @@ import cats.data.EitherT
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ErrorRetrievingClientDetails}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
@@ -36,6 +37,7 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 import java.net.URL
 import java.time.{Instant, LocalDate, ZoneOffset}
@@ -47,12 +49,10 @@ import scala.util.Try
 class HipConnector @Inject() (
   httpClient: HttpClientV2,
   agentCacheProvider: AgentCacheProvider,
-  headers: HIPHeaders,
-  val ec: ExecutionContext
-)(implicit
-  val metrics: Metrics,
-  val appConfig: AppConfig
-) extends HttpAPIMonitor
+  headers: HipHeaders,
+  appConfig: AppConfig
+)(implicit val metrics: Metrics, val ec: ExecutionContext)
+    extends HttpApiMonitor
     with Logging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
@@ -60,8 +60,7 @@ class HipConnector @Inject() (
 
   // HIP API #EPID1521 Create/Update Agent Relationship
   def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
@@ -83,8 +82,7 @@ class HipConnector @Inject() (
 
   // HIP API #EPID1521 Create/Update Agent Relationship
   def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
@@ -102,10 +100,9 @@ class HipConnector @Inject() (
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
-  def getActiveClientRelationships(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] = {
+  def getActiveClientRelationships(taxIdentifier: TaxIdentifier, service: Service)(implicit
+    request: RequestHeader
+  ): Future[Option[ActiveRelationship]] = {
     val authProfile = getAuthProfile(service.id)
     val url =
       relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
@@ -130,12 +127,8 @@ class HipConnector @Inject() (
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship //url and error handling is different to getActiveClientRelationships
-  def getAllRelationships(
-    taxIdentifier: TaxIdentifier,
-    activeOnly: Boolean
-  )(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+  def getAllRelationships(taxIdentifier: TaxIdentifier, activeOnly: Boolean)(implicit
+    request: RequestHeader
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
     val url = relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)
 
@@ -165,10 +158,9 @@ class HipConnector @Inject() (
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
-  def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+  def getInactiveClientRelationships(taxIdentifier: TaxIdentifier, service: Service)(implicit
+    request: RequestHeader
+  ): Future[Seq[InactiveRelationship]] = {
 
     val authProfile = getAuthProfile(service.id)
     val url =
@@ -194,9 +186,7 @@ class HipConnector @Inject() (
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship (agent)
-  def getInactiveRelationships(
-    arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] = {
+  def getInactiveRelationships(arn: Arn)(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = {
     val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
     val now = LocalDate.now().toString
     val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDays).toString
@@ -228,7 +218,7 @@ class HipConnector @Inject() (
     }
   }
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
-  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
+  def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] = {
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
 
@@ -250,7 +240,7 @@ class HipConnector @Inject() (
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
+  def getMtdIdFor(nino: Nino)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
@@ -273,7 +263,7 @@ class HipConnector @Inject() (
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
   def getItsaBusinessDetails(nino: String)(implicit
-    hc: HeaderCarrier,
+    request: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
     val encodedNino = UriEncoding.encodePathSegment(nino, "UTF-8")
@@ -311,8 +301,7 @@ class HipConnector @Inject() (
   }
 
   private def getWithHipHeaders(apiName: String, url: URL, getHeaders: () => Seq[(String, String)])(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-GET") {
       httpClient
@@ -323,7 +312,7 @@ class HipConnector @Inject() (
 
   private def postWithHipHeaders(apiName: String, url: URL, body: JsValue, getHeaders: () => Seq[(String, String)])(
     implicit
-    hc: HeaderCarrier,
+    request: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-POST") {

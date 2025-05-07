@@ -36,11 +36,11 @@ object ActiveRelationship {
     (__ \ "dateTo").readNullable[LocalDate] and
     (__ \ "dateFrom").readNullable[LocalDate])(ActiveRelationship.apply _)
 
-  val irvReads: Reads[ActiveRelationship] = (
-    (__ \ "arn").read[Arn] and
-      (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
-      (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate))
-  )(ActiveRelationship.apply _)
+  val irvReads: Reads[ActiveRelationship] = ((__ \ "arn").read[Arn] and
+    (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+    (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)))(
+    ActiveRelationship.apply _
+  )
 }
 
 case class ActiveRelationshipResponse(relationship: Seq[ActiveRelationship])

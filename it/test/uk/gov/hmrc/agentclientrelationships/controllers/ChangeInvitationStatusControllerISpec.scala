@@ -23,13 +23,13 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.transitional.ChangeInvitationStatusRequest
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.{ InvitationsRepository, PartialAuthRepository }
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat }
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
-import java.time.{Instant, ZoneOffset}
+import java.time.{ Instant, ZoneOffset }
 import scala.concurrent.ExecutionContext
 
 class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with TestData {
@@ -41,18 +41,17 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt                -> mtdItId,
+    MtdIt -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat                  -> vrn,
-    Trust                -> utr,
-    TrustNT              -> urn,
-    CapitalGains         -> cgtRef,
-    Ppt                  -> pptRef,
-    Cbc                  -> cbcId,
-    CbcNonUk             -> cbcId,
-    Pillar2              -> plrId,
-    MtdItSupp            -> mtdItId
-  )
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
+    CapitalGains -> cgtRef,
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId)
 
   def requestPath(service: String, clientId: String): String =
     s"/agent-client-relationships/transitional/change-invitation-status/arn/${arn.value}/service/$service/client/$clientId"
@@ -63,7 +62,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
       val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
       val suppliedClientId = taxIdentifier match {
         case _: MtdItId => ClientIdentifier(nino)
-        case taxId      => ClientIdentifier(taxId)
+        case taxId => ClientIdentifier(taxId)
       }
       val clientName = "TestClientName"
       val agentName = "testAgentName"
@@ -71,7 +70,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
       val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
       val serviceId = service match {
         case PersonalIncomeRecord => PersonalIncomeRecord.id
-        case s                    => s.id
+        case s => s.id
       }
 
       s"when no invitation record for ${service.id}" should {
@@ -80,8 +79,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             requestPath(serviceId, suppliedClientId.value),
             Json
               .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-              .toString()
-          )
+              .toString())
           result.status shouldBe NOT_FOUND
         }
 
@@ -99,8 +97,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
               agentName,
               agentEmail,
               expiryDate,
-              None
-            )
+              None)
             .copy(status = Accepted)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -109,8 +106,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             requestPath(serviceId, suppliedClientId.value),
             Json
               .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-              .toString()
-          ).status shouldBe 204
+              .toString()).status shouldBe 204
 
           await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
         }
@@ -128,8 +124,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
               agentName,
               agentEmail,
               expiryDate,
-              None
-            )
+              None)
             .copy(status = DeAuthorised)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -138,15 +133,13 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             requestPath(serviceId, suppliedClientId.value),
             Json
               .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-              .toString()
-          ).status shouldBe NOT_FOUND
+              .toString()).status shouldBe NOT_FOUND
 
           await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
         }
       }
 
-    }
-  )
+    })
 
   s"/transitional/change-invitation-status/arn/:arn/service/:service/client/:clientId for MtdIt PartialAuth status to DeAuthorised" should {
     val service = MtdIt
@@ -164,8 +157,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           requestPath(service.id, suppliedClientId.value),
           Json
             .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-            .toString()
-        )
+            .toString())
         result.status shouldBe NOT_FOUND
 
       }
@@ -184,8 +176,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             agentName,
             agentEmail,
             expiryDate,
-            None
-          )
+            None)
           .copy(status = PartialAuth)
 
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -194,8 +185,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           requestPath(service.id, suppliedClientId.value),
           Json
             .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-            .toString()
-        ).status shouldBe 204
+            .toString()).status shouldBe 204
 
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
       }
@@ -217,8 +207,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             agentName,
             agentEmail,
             expiryDate,
-            None
-          )
+            None)
           .copy(status = PartialAuth)
 
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -228,8 +217,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           requestPath(service.id, suppliedClientId.value),
           Json
             .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-            .toString()
-        ).status shouldBe 204
+            .toString()).status shouldBe 204
 
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
         await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
@@ -248,8 +236,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           requestPath(service.id, suppliedClientId.value),
           Json
             .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-            .toString()
-        ).status shouldBe 204
+            .toString()).status shouldBe 204
 
         await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
       }
@@ -267,8 +254,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             agentName,
             agentEmail,
             expiryDate,
-            None
-          )
+            None)
           .copy(status = DeAuthorised)
 
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
@@ -277,8 +263,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           requestPath(service.id, suppliedClientId.value),
           Json
             .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-            .toString()
-        ).status shouldBe NOT_FOUND
+            .toString()).status shouldBe NOT_FOUND
 
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
       }
@@ -293,15 +278,10 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           requestPath(MtdIt.id, mtdItId.value),
           Json
             .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-            .toString()
-        )
+            .toString())
         result.status shouldBe 400
         result.json shouldBe toJson(
-          ErrorBody(
-            "INVALID_CLIENT_ID",
-            "Invalid clientId \"ABCDEF123456789\", for service type \"HMRC-MTD-IT\""
-          )
-        )
+          ErrorBody("INVALID_CLIENT_ID", "Invalid clientId \"ABCDEF123456789\", for service type \"HMRC-MTD-IT\""))
       }
 
       "return NotImplemented 501 status and JSON Error If service is not supported" in {
@@ -309,8 +289,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
           requestPath("IncorrectService", mtdItId.value),
           Json
             .toJson(ChangeInvitationStatusRequest(invitationStatus = DeAuthorised, endedBy = Some("TestUser")))
-            .toString()
-        )
+            .toString())
         result.status shouldBe 501
 
         val message = s"""Unsupported service "IncorrectService""""

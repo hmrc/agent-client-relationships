@@ -29,16 +29,9 @@ class Pillar2RecordSpec extends UnitSpec {
 
         val json = Json.obj(
           "success" -> Json.obj(
-            "upeDetails" -> Json.obj(
-              "organisationName" -> "CFG Solutions",
-              "registrationDate" -> "2020-01-01"
-            ),
-            "upeCorrespAddressDetails" -> Json.obj(
-              "countryCode" -> "GB"
-            ),
-            "accountStatus" -> Json.obj(
-              "inactive" -> true
-            )
+            "upeDetails" -> Json.obj("organisationName" -> "CFG Solutions", "registrationDate" -> "2020-01-01"),
+            "upeCorrespAddressDetails" -> Json.obj("countryCode" -> "GB"),
+            "accountStatus"            -> Json.obj("inactive" -> true)
           )
         )
 
@@ -50,13 +43,8 @@ class Pillar2RecordSpec extends UnitSpec {
 
       val json = Json.obj(
         "success" -> Json.obj(
-          "upeDetails" -> Json.obj(
-            "organisationName" -> "CFG Solutions",
-            "registrationDate" -> "2020-01-01"
-          ),
-          "upeCorrespAddressDetails" -> Json.obj(
-            "countryCode" -> "GB"
-          )
+          "upeDetails" -> Json.obj("organisationName" -> "CFG Solutions", "registrationDate" -> "2020-01-01"),
+          "upeCorrespAddressDetails" -> Json.obj("countryCode" -> "GB")
         )
       )
 

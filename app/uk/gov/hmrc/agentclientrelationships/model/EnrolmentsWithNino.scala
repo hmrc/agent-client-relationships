@@ -32,10 +32,7 @@ case class EnrolmentsWithNino(enrolments: Enrolments, nino: Option[String]) {
       supportedService <- supportedServices
       enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
       clientId         <- enrolment.identifiers.headOption
-    } yield (
-      supportedService,
-      supportedService.supportedClientIdType.createUnderlying(clientId.value)
-    )
+    } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
     identifiers.toMap
   }
@@ -44,10 +41,7 @@ case class EnrolmentsWithNino(enrolments: Enrolments, nino: Option[String]) {
       supportedService <- supportedServices
       enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
       clientId         <- enrolment.identifiers.headOption
-    } yield (
-      supportedService.id,
-      supportedService.supportedClientIdType.createUnderlying(clientId.value)
-    )
+    } yield (supportedService.id, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
     identifiers.toMap
   }

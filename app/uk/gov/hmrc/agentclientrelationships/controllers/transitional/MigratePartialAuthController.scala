@@ -27,11 +27,9 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MigratePartialAuthController @Inject() (
-  invitationService: InvitationService,
-  cc: ControllerComponents
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc)
+class MigratePartialAuthController @Inject() (invitationService: InvitationService, cc: ControllerComponents)(implicit
+  ec: ExecutionContext
+) extends BackendController(cc)
     with Logging {
 
   def migratePartialAuth: Action[AnyContent] = Action.async { implicit request =>
@@ -45,9 +43,7 @@ class MigratePartialAuthController @Inject() (
             logger.warn(
               s"Duplicate found for invitationId ${invitation.invitationId} so record already there and continuing with deletion"
             )
-            Future(
-              NoContent
-            )
+            Future(NoContent)
           case other => Future.failed(other)
         }
     else Future.successful(BadRequest)

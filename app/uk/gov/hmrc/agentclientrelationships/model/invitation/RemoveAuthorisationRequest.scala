@@ -18,10 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.{Json, OFormat}
 
-case class RemoveAuthorisationRequest(
-  clientId: String,
-  service: String
-)
+case class RemoveAuthorisationRequest(clientId: String, service: String)
 
 object RemoveAuthorisationRequest {
   implicit val format: OFormat[RemoveAuthorisationRequest] = Json.format[RemoveAuthorisationRequest]

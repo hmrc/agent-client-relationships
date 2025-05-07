@@ -33,17 +33,12 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
           "legalEntityDetails" -> Json.obj(
             "dateOfApplication" -> "2020-01-01",
             "customerDetails" -> Json.obj(
-              "customerType" -> "Individual",
-              "individualDetails" -> Json.obj(
-                "firstName" -> "Bernard",
-                "lastName"  -> "Silver"
-              )
+              "customerType"      -> "Individual",
+              "individualDetails" -> Json.obj("firstName" -> "Bernard", "lastName" -> "Silver")
             )
           ),
           "changeOfCircumstanceDetails" -> Json.obj(
-            "deregistrationDetails" -> Json.obj(
-              "deregistrationDate" -> "2030-01-01"
-            )
+            "deregistrationDetails" -> Json.obj("deregistrationDate" -> "2030-01-01")
           )
         )
 
@@ -59,16 +54,12 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
           "legalEntityDetails" -> Json.obj(
             "dateOfApplication" -> "2020-01-01",
             "customerDetails" -> Json.obj(
-              "customerType" -> "Organisation",
-              "organisationDetails" -> Json.obj(
-                "organisationName" -> "CFG Solutions"
-              )
+              "customerType"        -> "Organisation",
+              "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
             )
           ),
           "changeOfCircumstanceDetails" -> Json.obj(
-            "deregistrationDetails" -> Json.obj(
-              "deregistrationDate" -> "2030-01-01"
-            )
+            "deregistrationDetails" -> Json.obj("deregistrationDate" -> "2030-01-01")
           )
         )
 
@@ -84,10 +75,8 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
           "legalEntityDetails" -> Json.obj(
             "dateOfApplication" -> "2020-01-01",
             "customerDetails" -> Json.obj(
-              "customerType" -> "Organisation",
-              "organisationDetails" -> Json.obj(
-                "organisationName" -> "CFG Solutions"
-              )
+              "customerType"        -> "Organisation",
+              "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
             )
           )
         )

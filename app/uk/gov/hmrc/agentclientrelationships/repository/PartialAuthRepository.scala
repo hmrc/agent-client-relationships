@@ -60,12 +60,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
   // Permanent store of alt itsa authorisations
   override lazy val requiresTtlIndex: Boolean = false
 
-  def create(
-    created: Instant,
-    arn: Arn,
-    service: String,
-    nino: Nino
-  ): Future[Unit] = {
+  def create(created: Instant, arn: Arn, service: String, nino: Nino): Future[Unit] = {
     require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
     val partialAuth =
       PartialAuthRelationship(created, arn.value, service, nino.value, active = true, lastUpdated = created)
@@ -86,21 +81,12 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
 
   def findAllByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
     collection
-      .find(
-        and(
-          equal("nino", encryptedString(nino.value))
-        )
-      )
+      .find(and(equal("nino", encryptedString(nino.value))))
       .toFuture()
 
   def findActiveByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] =
     collection
-      .find(
-        and(
-          equal("nino", encryptedString(nino.value)),
-          equal("active", true)
-        )
-      )
+      .find(and(equal("nino", encryptedString(nino.value)), equal("active", true)))
       .toFuture()
 
   def findActive(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] =
@@ -121,13 +107,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
   /* this will only find partially authorised ITSA main agents for a given nino string */
   def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] =
     collection
-      .find(
-        and(
-          equal("service", HMRCMTDIT),
-          equal("nino", encryptedString(nino)),
-          equal("active", true)
-        )
-      )
+      .find(and(equal("service", HMRCMTDIT), equal("nino", encryptedString(nino)), equal("active", true)))
       .headOption()
 
   def deauthorise(serviceId: String, nino: Nino, arn: Arn, updated: Instant): Future[Boolean] =

@@ -28,11 +28,11 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 class AgentReferenceRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
-    with LogCapturing {
+  extends AnyWordSpec
+  with Matchers
+  with GuiceOneAppPerSuite
+  with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
+  with LogCapturing {
 
   override lazy val app: Application =
     new GuiceApplicationBuilder()
@@ -86,8 +86,7 @@ class AgentReferenceRepositoryISpec
         await(repository.updateAgentName("SCX39TGT", "chandler-bing"))
 
         await(repository.findByArn(Arn("LARN7404004"))) shouldBe Some(
-          agentReferenceRecord("SCX39TGT", "LARN7404004").copy(normalisedAgentNames = Seq("stan-lee", "chandler-bing"))
-        )
+          agentReferenceRecord("SCX39TGT", "LARN7404004").copy(normalisedAgentNames = Seq("stan-lee", "chandler-bing")))
       }
     }
 
@@ -115,8 +114,7 @@ class AgentReferenceRepositoryISpec
           await(repository.delete(Arn("LARN7404004"))) shouldBe ()
 
           logEvents.count(
-            _.getMessage.contains("could not delete agent reference record, no matching ARN found.")
-          ) shouldBe 1
+            _.getMessage.contains("could not delete agent reference record, no matching ARN found.")) shouldBe 1
         }
 
         await(repository.delete(Arn("LARN7404004"))) shouldBe ()
@@ -128,7 +126,7 @@ class AgentReferenceRepositoryISpec
 trait LogCapturing {
 
   import ch.qos.logback.classic.spi.ILoggingEvent
-  import ch.qos.logback.classic.{Level, Logger => LogbackLogger}
+  import ch.qos.logback.classic.{ Level, Logger => LogbackLogger }
   import ch.qos.logback.core.read.ListAppender
   import play.api.LoggerLike
 

@@ -20,11 +20,10 @@ import play.api.libs.json.{JsPath, Reads}
 case class RegistrationRelationshipResponse(processingDate: String)
 
 object RegistrationRelationshipResponse {
+  // TODO: this reads is used only in one http connector but it is exposed globally. Move it to this connector
   implicit val regReads: Reads[RegistrationRelationshipResponse] =
     (JsPath \ "success" \ "processingDate")
       .read[String]
-      .orElse(
-        (JsPath \ "processingDate").read[String]
-      )
+      .orElse((JsPath \ "processingDate").read[String])
       .map(r => RegistrationRelationshipResponse(r))
 }

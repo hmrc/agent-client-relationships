@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, P
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -48,11 +48,7 @@ class ItsaDeauthAndCleanupService @Inject() (
     optMtdItId: Option[String],
     nino: String,
     timestamp: Instant = Instant.now()
-  )(implicit
-    hc: HeaderCarrier,
-    currentUser: CurrentUser,
-    request: Request[_]
-  ): Future[Boolean] =
+  )(implicit request: RequestHeader, currentUser: CurrentUser): Future[Boolean] =
     service match {
       case `HMRCMTDIT` | `HMRCMTDITSUPP` =>
         val serviceToCheck = Service.forId(if (service == HMRCMTDIT) HMRCMTDITSUPP else HMRCMTDIT)
@@ -62,22 +58,12 @@ class ItsaDeauthAndCleanupService @Inject() (
           _ = if (altItsa) {
                 implicit val auditData: AuditData = new AuditData()
                 auditData.set(howPartialAuthTerminatedKey, agentRoleChange)
-                auditService.sendTerminatePartialAuthAuditEvent(
-                  arn,
-                  serviceToCheck.id,
-                  nino
-                )
+                auditService.sendTerminatePartialAuthAuditEvent(arn, serviceToCheck.id, nino)
               }
           // Attempt to remove existing itsa relationship
           itsa <- optMtdItId.fold(Future.successful(false)) { mtdItId =>
                     checkRelationshipsService
-                      .checkForRelationshipAgencyLevel(
-                        Arn(arn),
-                        EnrolmentKey(
-                          serviceToCheck,
-                          MtdItId(mtdItId)
-                        )
-                      )
+                      .checkForRelationshipAgencyLevel(Arn(arn), EnrolmentKey(serviceToCheck, MtdItId(mtdItId)))
                       .flatMap {
                         case (true, _) =>
                           implicit val auditData: AuditData = new AuditData()
@@ -85,10 +71,7 @@ class ItsaDeauthAndCleanupService @Inject() (
                           deleteRelationshipsService
                             .deleteRelationship(
                               Arn(arn),
-                              EnrolmentKey(
-                                serviceToCheck,
-                                MtdItId(mtdItId)
-                              ),
+                              EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
                               currentUser.affinityGroup
                             )
                             .map(_ => true)
@@ -118,12 +101,7 @@ class ItsaDeauthAndCleanupService @Inject() (
   ) = {
     val acceptedStatus = if (isAltItsa) PartialAuth else Accepted
     invitationsRepository
-      .findAllBy(
-        arn = optArn,
-        services = Seq(service),
-        clientIds = Seq(clientId),
-        status = Some(acceptedStatus)
-      )
+      .findAllBy(arn = optArn, services = Seq(service), clientIds = Seq(clientId), status = Some(acceptedStatus))
       .fallbackTo(Future.successful(Nil))
       .map { acceptedInvitations: Seq[Invitation] =>
         acceptedInvitations

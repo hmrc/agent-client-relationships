@@ -74,20 +74,18 @@ trait RelationshipsControllerITSASUPP {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "nino"                    -> nino.value,
-            "saAgentRef"              -> "foo",
-            "service"                 -> "HMRC-MTD-IT-SUPP",
-            "clientId"                -> mtdItId.value,
-            "clientIdType"            -> "mtditid",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "service" -> "HMRC-MTD-IT-SUPP",
+            "clientId" -> mtdItId.value,
+            "clientIdType" -> "mtditid",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "true",
-            "howRelationshipCreated"  -> "Alt ITSA"
-          ),
-          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
-        )
+            "enrolmentDelegated" -> "true",
+            "howRelationshipCreated" -> "Alt ITSA"),
+          tags = Map("transactionName" -> "create-relationship", "path" -> requestPath))
       }
     }
   }

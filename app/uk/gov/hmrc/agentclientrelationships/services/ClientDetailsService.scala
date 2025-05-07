@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusine
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.LocalDate
 import javax.inject.{Inject, Singleton}
@@ -39,13 +39,12 @@ class ClientDetailsService @Inject() (
   clientDetailsConnector: ClientDetailsConnector,
   appConfig: AppConfig,
   ifOrHipConnector: IfOrHipConnector
-)(implicit
-  ec: ExecutionContext
-) extends Logging {
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
-  def findClientDetailsByTaxIdentifier(taxIdentifier: TaxIdentifier)(implicit
-    hc: HeaderCarrier
-  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  def findClientDetailsByTaxIdentifier(
+    taxIdentifier: TaxIdentifier
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     taxIdentifier match {
       case Nino(nino) =>
         EitherT(getItsaClientDetails(nino))
@@ -69,7 +68,7 @@ class ClientDetailsService @Inject() (
     }
 
   def findClientDetails(service: String, clientId: String)(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     service.toUpperCase match {
       case "HMRC-MTD-IT" =>
@@ -92,7 +91,7 @@ class ClientDetailsService @Inject() (
 
   private def getItsaClientDetails(
     nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     ifOrHipConnector.getItsaBusinessDetails(nino).flatMap {
       case Right(details @ ItsaBusinessDetails(name, Some(postcode), _)) =>
         Future
@@ -129,7 +128,7 @@ class ClientDetailsService @Inject() (
 
   private def getVatClientDetails(
     vrn: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getVatCustomerInfo(vrn).map {
       case Right(VatCustomerDetails(None, None, None, _, _)) =>
         logger.warn("[getVatClientDetails] - No name was returned by the API")
@@ -146,7 +145,7 @@ class ClientDetailsService @Inject() (
 
   private def getTrustClientDetails(
     trustTaxIdentifier: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getTrustName(trustTaxIdentifier).map {
       case Right(name) =>
         Right(ClientDetailsResponse(name, None, None, Seq(), None))
@@ -155,7 +154,7 @@ class ClientDetailsService @Inject() (
 
   private def getIrvClientDetails(
     nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getItsaCitizenDetails(nino).map {
       case Right(details @ ItsaCitizenDetails(_, _, Some(dateOfBirth), _)) =>
         details.name match {
@@ -173,7 +172,7 @@ class ClientDetailsService @Inject() (
 
   private def getCgtClientDetails(
     cgtRef: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getCgtSubscriptionDetails(cgtRef).map {
       case Right(CgtSubscriptionDetails(name, Some(postcode), countryCode)) if countryCode.toUpperCase == "GB" =>
         Right(ClientDetailsResponse(name, None, Some(false), Seq(postcode.replaceAll("\\s", "")), Some(PostalCode)))
@@ -184,26 +183,20 @@ class ClientDetailsService @Inject() (
 
   private def getPptClientDetails(
     pptRef: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getPptSubscriptionDetails(pptRef).map {
       case Right(details) =>
         val isDeregistered = details.deregistrationDate.exists(deregDate => deregDate.isBefore(LocalDate.now))
         val status = if (isDeregistered) Some(Deregistered) else None
         Right(
-          ClientDetailsResponse(
-            details.customerName,
-            status,
-            None,
-            Seq(details.dateOfApplication.toString),
-            Some(Date)
-          )
+          ClientDetailsResponse(details.customerName, status, None, Seq(details.dateOfApplication.toString), Some(Date))
         )
       case Left(err) => Left(err)
     }
 
   private def getCbcClientDetails(
     cbcId: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getCbcSubscriptionDetails(cbcId).map {
       case Right(details) =>
         (details.anyAvailableName, details.emails.nonEmpty) match {
@@ -218,7 +211,7 @@ class ClientDetailsService @Inject() (
 
   private def getPillar2ClientDetails(
     plrId: String
-  )(implicit hc: HeaderCarrier): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     clientDetailsConnector.getPillar2SubscriptionDetails(plrId).map {
       case Right(details) =>
         val status = if (details.inactive) Some(Inactive) else None

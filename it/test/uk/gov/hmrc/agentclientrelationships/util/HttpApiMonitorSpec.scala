@@ -17,16 +17,16 @@
 package uk.gov.hmrc.agentclientrelationships.util
 
 import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{ Seconds, Span }
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
-class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpAPIMonitor {
+class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpApiMonitor {
 
   override implicit val patienceConfig: PatienceConfig =
     PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))

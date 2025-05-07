@@ -16,19 +16,23 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.util.UUID
@@ -36,10 +40,12 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class DesConnector @Inject() (httpClient: HttpClient, val ec: ExecutionContext)(implicit
-  val metrics: Metrics,
-  val appConfig: AppConfig
-) extends HttpAPIMonitor
+class DesConnector @Inject() (
+  httpClient: HttpClientV2,
+  randomUuidGenerator: CorrelationIdGenerator,
+  appConfig: AppConfig
+)(implicit val metrics: Metrics, val ec: ExecutionContext)
+    extends HttpApiMonitor
     with Logging {
 
   private val desBaseUrl = appConfig.desUrl
@@ -49,9 +55,7 @@ class DesConnector @Inject() (httpClient: HttpClient, val ec: ExecutionContext)(
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  def getClientSaAgentSaReferences(
-    nino: Nino
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[SaAgentReference]] = {
+  def getClientSaAgentSaReferences(nino: Nino)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
     val url = new URL(s"${appConfig.desUrl}/registration/relationship/nino/${encodePathSegment(nino.value)}")
 
     getWithDesHeaders("GetStatusAgentRelationship", url).map { response =>
@@ -69,9 +73,7 @@ class DesConnector @Inject() (httpClient: HttpClient, val ec: ExecutionContext)(
     }
   }
 
-  def getAgentRecord(
-    agentId: TaxIdentifier
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentRecord]] =
+  def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] =
     getWithDesHeaders("GetAgentRecord", new URL(getAgentRecordUrl(agentId))).map { response =>
       response.status match {
         case Status.OK =>
@@ -95,7 +97,7 @@ class DesConnector @Inject() (httpClient: HttpClient, val ec: ExecutionContext)(
     }
 
   // DES API #1363  Get Vat Customer Information
-  def vrnIsKnownInEtmp(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] = {
+  def vrnIsKnownInEtmp(vrn: Vrn)(implicit request: RequestHeader): Future[Boolean] = {
     val url = new URL(s"$desBaseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information")
     getWithDesHeaders("GetVatCustomerInformation", url, desAuthToken, desEnv).map { response =>
       response.status match {
@@ -109,43 +111,24 @@ class DesConnector @Inject() (httpClient: HttpClient, val ec: ExecutionContext)(
     }
   }
 
-  /*
-   * If the service being called is external (e.g. DES/IF in QA or Prod):
-   * headers from HeaderCarrier are removed (except user-agent header).
-   * Therefore, required headers must be explicitly set.
-   * See https://github.com/hmrc/http-verbs?tab=readme-ov-file#propagation-of-headers
-   * */
-
-  def desHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
-    hc: HeaderCarrier
-  ): Seq[(String, String)] = {
-
-    val additionalHeaders =
-      if (isInternalHost) Seq.empty
-      else
-        Seq(
-          HeaderNames.authorisation -> s"Bearer $authToken",
-          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
-        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
-    val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
-    commonHeaders ++ additionalHeaders
-  }
+  def desHeaders(authToken: String, env: String): Seq[(String, String)] = Seq(
+    Environment               -> env,
+    HeaderNames.authorisation -> s"Bearer $authToken",
+    CorrelationId             -> randomUuidGenerator.makeCorrelationId()
+  )
 
   private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
-    implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    implicit request: RequestHeader
   ): Future[HttpResponse] = {
 
     val isInternalHost = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
 
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
       httpClient
-        .GET(url.toString, Nil, desHeaders(authToken, env, isInternalHost))(
-          implicitly[HttpReads[HttpResponse]],
-          if (isInternalHost) hc.copy(authorization = Some(Authorization(s"Bearer $desAuthToken"))) else hc,
-          ec
-        )
+        .get(url = url)
+        .setHeader(desHeaders(authToken, env): _*)
+        .execute[HttpResponse]
+
     }
   }
 }

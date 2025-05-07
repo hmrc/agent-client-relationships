@@ -41,6 +41,6 @@ trait UnitSpec extends AnyWordSpecLike with Matchers with OptionValues with Scal
   def charset(result: Result): Option[String] =
     result.body.contentType match {
       case Some(s) if s.contains("charset=") => Some(s.split("; *charset=").drop(1).mkString.trim)
-      case _                                 => None
+      case _ => None
     }
 }

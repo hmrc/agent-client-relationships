@@ -20,6 +20,6 @@ import java.util.UUID
 import javax.inject.Singleton
 
 @Singleton
-class RandomUUIDGenerator() {
-  def uuid: String = UUID.randomUUID().toString
+class CorrelationIdGenerator {
+  def makeCorrelationId(): String = UUID.randomUUID().toString
 }

@@ -45,8 +45,7 @@ case class CreateInvitationRequest(
            suppliedClientIdType,
            UnsupportedClientIdType
          )
-    clientId <-
-      Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
+    clientId <- Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
   } yield clientId
 
   private val validClientTypes = Seq("personal", "business", "trust")

@@ -19,6 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
@@ -69,7 +71,7 @@ class AgentFiRelationshipConnectorISpec
         "agent.trackPage.cache.enabled"                    -> false
       )
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private implicit val request: RequestHeader = FakeRequest()
 
   val agentFiRelationshipConnector =
     new AgentFiRelationshipConnector(appConfig, httpClient, metrics)(ec)

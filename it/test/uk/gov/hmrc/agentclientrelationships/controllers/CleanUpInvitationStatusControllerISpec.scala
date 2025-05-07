@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat }
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -48,34 +48,26 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
       agencyName = "A Name",
       agencyEmail = "a@example.com",
       expiryDate = LocalDate.now().plusDays(21),
-      clientType = None
-    )
+      clientType = None)
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt                -> mtdItId,
+    MtdIt -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat                  -> vrn,
-    Trust                -> utr,
-    TrustNT              -> urn,
-    CapitalGains         -> cgtRef,
-    Ppt                  -> pptRef,
-    Cbc                  -> cbcId,
-    CbcNonUk             -> cbcId,
-    Pillar2              -> plrId,
-    MtdItSupp            -> mtdItId
-  )
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
+    CapitalGains -> cgtRef,
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId)
 
   val requestPath: String =
     "/agent-client-relationships/cleanup-invitation-status"
 
   def requestJson(arn: String, clientId: String, service: String) = Json
-    .toJson(
-      CleanUpInvitationStatusRequest(
-        arn = arn,
-        clientId = clientId,
-        service = service
-      )
-    )
+    .toJson(CleanUpInvitationStatusRequest(arn = arn, clientId = clientId, service = service))
     .toString()
 
   allServices.foreach(testset =>
@@ -84,15 +76,12 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
       val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
       val serviceId = service match {
         case PersonalIncomeRecord => PersonalIncomeRecord.id
-        case s                    => s.id
+        case s => s.id
       }
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
-          val result = doAgentPutRequest(
-            route = requestPath,
-            body = requestJson(arn.value, clientId.value, service.id)
-          )
+          val result = doAgentPutRequest(route = requestPath, body = requestJson(arn.value, clientId.value, service.id))
           result.status shouldBe NOT_FOUND
         }
 
@@ -100,34 +89,27 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
 
       s"when invitation exists with the status Accepted in invitationStore for ${service.id}" should {
         s"update status to DeAuthorised" in {
-          val newInvitation: Invitation = baseInvitation.copy(
-            service = serviceId,
-            clientId = clientId.value,
-            status = Accepted
-          )
+          val newInvitation: Invitation =
+            baseInvitation.copy(service = serviceId, clientId = clientId.value, status = Accepted)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
           doAgentPutRequest(
             route = requestPath,
-            body = requestJson(arn.value, clientId.value, serviceId)
-          ).status shouldBe 204
+            body = requestJson(arn.value, clientId.value, serviceId)).status shouldBe 204
 
           await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
         }
       }
 
-    }
-  )
+    })
 
   "handle errors" should {
     "when request data are incorrect" should {
 
       "return NotImplemented 501 status and JSON Error If service is not supported" in {
-        val result = doAgentPutRequest(
-          route = requestPath,
-          body = requestJson(arn.value, mtdItId.value, "INVALID-SERVICE-NAME")
-        )
+        val result =
+          doAgentPutRequest(route = requestPath, body = requestJson(arn.value, mtdItId.value, "INVALID-SERVICE-NAME"))
         result.status shouldBe 501
 
         val message = s"""Unsupported service "INVALID-SERVICE-NAME""""

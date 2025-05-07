@@ -33,12 +33,8 @@ class VatCustomerDetailsSpec extends UnitSpec {
             "customerDetails" -> Json.obj(
               "organisationName" -> "CFG",
               "tradingName"      -> "CFG Solutions",
-              "individual" -> Json.obj(
-                "title"      -> "0001",
-                "firstName"  -> "Ilkay",
-                "middleName" -> "Silky",
-                "lastName"   -> "Gundo"
-              ),
+              "individual" -> Json
+                .obj("title" -> "0001", "firstName" -> "Ilkay", "middleName" -> "Silky", "lastName" -> "Gundo"),
               "effectiveRegistrationDate" -> "2020-01-01",
               "isInsolvent"               -> false
             )
@@ -57,21 +53,9 @@ class VatCustomerDetailsSpec extends UnitSpec {
       }
 
       "optional fields are not present" in {
-        val json = Json.obj(
-          "approvedInformation" -> Json.obj(
-            "customerDetails" -> Json.obj(
-              "isInsolvent" -> false
-            )
-          )
-        )
+        val json = Json.obj("approvedInformation" -> Json.obj("customerDetails" -> Json.obj("isInsolvent" -> false)))
 
-        json.as[VatCustomerDetails] shouldBe VatCustomerDetails(
-          None,
-          None,
-          None,
-          None,
-          isInsolvent = false
-        )
+        json.as[VatCustomerDetails] shouldBe VatCustomerDetails(None, None, None, None, isInsolvent = false)
       }
     }
   }

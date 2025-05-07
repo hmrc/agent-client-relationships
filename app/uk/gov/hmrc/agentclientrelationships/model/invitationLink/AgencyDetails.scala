@@ -19,10 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class AgencyDetails(
-  agencyName: String,
-  agencyEmail: String
-)
+case class AgencyDetails(agencyName: String, agencyEmail: String)
 
 object AgencyDetails {
 
@@ -32,10 +29,9 @@ object AgencyDetails {
     case _               => JsError(s"Invalid $fieldName value")
   }
 
-  private val reads: Reads[AgencyDetails] = (
-    (__ \ "agencyName").read(optionalReads("Agency name")).orElse(Reads.pure("")) and
-      (__ \ "agencyEmail").read(optionalReads("Agency email")).orElse(Reads.pure(""))
-  )(AgencyDetails.apply _)
+  private val reads: Reads[AgencyDetails] =
+    ((__ \ "agencyName").read(optionalReads("Agency name")).orElse(Reads.pure("")) and
+      (__ \ "agencyEmail").read(optionalReads("Agency email")).orElse(Reads.pure("")))(AgencyDetails.apply _)
 
   private val writes: Writes[AgencyDetails] = Json.writes[AgencyDetails]
 

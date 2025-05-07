@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
@@ -56,10 +56,9 @@ class InvitationService @Inject() (
   ): Future[TrackRequestsResult] =
     invitationsRepository.trackRequests(arn.value, statusFilter, clientName, pageNumber, pageSize)
 
-  def createInvitation(
-    arn: Arn,
-    createInvitationInputData: CreateInvitationRequest
-  )(implicit hc: HeaderCarrier): Future[Either[InvitationFailureResponse, Invitation]] = {
+  def createInvitation(arn: Arn, createInvitationInputData: CreateInvitationRequest)(implicit
+    request: RequestHeader
+  ): Future[Either[InvitationFailureResponse, Invitation]] = {
     val invitationT = for {
 
       suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
@@ -91,26 +90,23 @@ class InvitationService @Inject() (
 
   def rejectInvitation(
     invitationId: String
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Invitation] =
+  )(implicit ec: ExecutionContext, request: RequestHeader): Future[Invitation] =
     for {
       invitation <- invitationsRepository.updateStatus(invitationId, Rejected)
       _          <- emailService.sendRejectedEmail(invitation)
     } yield invitation
 
-  def cancelInvitation(
-    arn: Arn,
-    invitationId: String
-  )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Unit]] =
+  def cancelInvitation(arn: Arn, invitationId: String)(implicit
+    ec: ExecutionContext
+  ): Future[Either[InvitationFailureResponse, Unit]] =
     invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
       case true => Right(())
       case _    => Left(NoPendingInvitation)
     }
 
-  def deauthoriseInvitation(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    endedBy: String
-  )(implicit ec: ExecutionContext): Future[Boolean] =
+  def deauthoriseInvitation(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
+    ec: ExecutionContext
+  ): Future[Boolean] =
     invitationsRepository
       .deauthorise(arn.value, enrolmentKey.oneIdentifier().value, enrolmentKey.service, endedBy)
       .map(_.fold(false)(_ => true))
@@ -119,7 +115,7 @@ class InvitationService @Inject() (
     invitationsRepository.findOneByIdForClient(invitationId)
 
   def findNonSuspendedClientInvitations(services: Seq[String], clientIds: Seq[String])(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Seq[Invitation]] = {
     def getSuspendedArns(arns: Seq[String]) =
       Future
@@ -152,17 +148,10 @@ class InvitationService @Inject() (
     newClientId: String,
     newClientIdType: String
   ): Future[Boolean] =
-    invitationsRepository.updateInvitation(
-      service,
-      clientId,
-      clientIdType,
-      newService,
-      newClientId,
-      newClientIdType
-    )
+    invitationsRepository.updateInvitation(service, clientId, clientIdType, newService, newClientId, newClientIdType)
 
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Either[InvitationFailureResponse, ClientId]] = (service, suppliedClientId.typeId) match {
     case (MtdIt | MtdItSupp, NinoType.id) =>
       ifOrHipConnector
@@ -186,18 +175,17 @@ class InvitationService @Inject() (
   )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
-      invitation <-
-        invitationsRepository.create(
-          arn.value,
-          service,
-          clientId,
-          suppliedClientId,
-          clientName,
-          agentDetails.agencyName,
-          agentDetails.agencyEmail,
-          expiryDate,
-          clientType
-        )
+      invitation <- invitationsRepository.create(
+                      arn.value,
+                      service,
+                      clientId,
+                      suppliedClientId,
+                      clientName,
+                      agentDetails.agencyName,
+                      agentDetails.agencyEmail,
+                      expiryDate,
+                      clientType
+                    )
     } yield {
       logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
       Right(invitation)
@@ -209,12 +197,8 @@ class InvitationService @Inject() (
 
   def migratePartialAuth(invitation: Invitation): Future[Unit] =
     for {
-      _ <- partialAuthRepository.create(
-             invitation.created,
-             Arn(invitation.arn),
-             invitation.service,
-             Nino(invitation.clientId)
-           )
+      _ <- partialAuthRepository
+             .create(invitation.created, Arn(invitation.arn), invitation.service, Nino(invitation.clientId))
       _ <- if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
              invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
            } else Future.unit

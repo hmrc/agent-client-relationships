@@ -22,7 +22,7 @@ import org.mockito.ArgumentMatchers.{any, eq => eqs}
 import org.mockito.Mockito._
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
-import play.api.mvc.Request
+import play.api.mvc.{Request, RequestHeader}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.{ConfigLoader, Configuration}
@@ -102,12 +102,10 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   when(servicesConfig.getString(any[String])).thenReturn("")
   when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]]))
     .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
-  implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
-  val appConfig1: AppConfig = new AppConfig(configuration, servicesConfig)
+  val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
   val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
 
-  val hc = HeaderCarrier()
   val ec = implicitly[ExecutionContext]
 
   "tryCreateITSARelationshipFromPartialAuthOrCopyAcross" should {
@@ -152,11 +150,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -195,7 +194,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -209,7 +209,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
           val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
             relationshipsService
-              .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+              .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           })
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
@@ -249,7 +249,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -260,7 +261,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           cesaRelationshipDoesNotExist()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEtmpRecordNotCreated()
@@ -278,12 +279,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             .thenReturn(Future.successful(1))
           when(
             agentUserService
-              .getAgentAdminAndSetAuditData(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+              .getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])
           )
             .thenReturn(Future.successful(agentUserForAsAgent))
           when(
             agentUserService
-              .getAgentAdminAndSetAuditData(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+              .getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])
           )
             .thenReturn(Future.successful(agentUserForAsAgent))
           sendCreateRelationshipAuditEvent()()
@@ -311,7 +312,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
@@ -326,7 +328,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           metricsStub()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -366,7 +368,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
@@ -380,7 +383,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
           val maybeCheck = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
             relationshipsService
-              .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+              .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           })
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
@@ -421,7 +424,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -432,7 +436,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           cesaRelationshipDoesNotExist()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -470,7 +474,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -486,7 +491,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           deleteSameAgentOtherItsaService()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -530,7 +535,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -541,7 +547,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           cesaRelationshipDoesNotExist()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -574,7 +580,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
 
       val auditData = new AuditData()
@@ -584,7 +591,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       partialAuthExists(HMRCMTDITSUPP)
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
       await(check) shouldBe NotFound
 
       verifyEsRecordNotCreated()
@@ -616,7 +623,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -626,7 +634,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       mappingServiceUnavailable()
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -660,7 +668,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
 
       val auditData = new AuditData()
@@ -672,7 +681,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       relationshipWillBeCreated(mtdItEnrolmentKey)
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -712,7 +721,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
 
         val auditData = new AuditData()
@@ -724,7 +734,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipWillBeCreated(mtdItEnrolmentKey)
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
         val checkAndCopyResult = await(check)
         checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -760,7 +770,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
 
         val auditData = new AuditData()
@@ -773,7 +784,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         val check = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
           relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
         })
 
         check.value shouldBe FoundButLockedCouldNotCopy
@@ -810,7 +821,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
 
         val auditData = new AuditData()
@@ -823,7 +835,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
         val check = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
           relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
         })
 
         check.value shouldBe FoundButLockedCouldNotCopy
@@ -859,7 +871,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
 
       val auditData = new AuditData()
@@ -878,7 +891,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       deleteSameAgentOtherItsaService()
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
       await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDIT)
     }
 
@@ -907,7 +920,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
 
       val auditData = new AuditData()
@@ -925,7 +939,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       deleteSameAgentOtherItsaService()
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(request, auditData)
       await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDITSUPP)
     }
   }
@@ -958,7 +972,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
 
         val auditData = new AuditData()
@@ -972,7 +987,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         auditStub()
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -1012,7 +1027,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -1026,7 +1042,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
           val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
             relationshipsService
-              .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+              .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           })
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
@@ -1066,7 +1082,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -1076,7 +1093,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           auditStub()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEtmpRecordNotCreatedForMtdVat()
@@ -1108,7 +1125,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
 
       val auditData = new AuditData()
@@ -1119,7 +1137,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       auditStub()
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
       await(check) shouldBe VrnNotFoundInEtmp
 
       verifyEtmpRecordNotCreatedForMtdVat()
@@ -1136,7 +1154,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             .thenReturn(Future.successful(1))
           when(
             agentUserService
-              .getAgentAdminAndSetAuditData(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+              .getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])
           )
             .thenReturn(Future.successful(agentUserForAsAgent))
 
@@ -1162,7 +1180,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
@@ -1177,7 +1196,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           auditStub()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -1217,7 +1236,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
@@ -1231,7 +1251,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
           val maybeCheck = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
             relationshipsService
-              .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+              .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           })
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
@@ -1272,7 +1292,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -1282,7 +1303,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           auditStub()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -1320,7 +1341,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -1333,7 +1355,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipWillBeCreated(vatEnrolmentKey)
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -1377,7 +1399,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
             invitationsRepository,
             itsaDeauthAndCleanupService,
             auditService,
-            metrics
+            metrics,
+            appConfig
           )
 
           val auditData = new AuditData()
@@ -1387,7 +1410,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           auditStub()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -1420,13 +1443,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
       val auditData = new AuditData()
       val request = FakeRequest()
       mappingServiceUnavailableForMtdVat()
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
 
@@ -1461,7 +1485,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
 
       val auditData = new AuditData()
@@ -1471,7 +1496,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       relationshipWillBeCreated(vatEnrolmentKey)
 
       val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -1511,7 +1536,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
 
         val auditData = new AuditData()
@@ -1521,7 +1547,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         relationshipWillBeCreated(vatEnrolmentKey)
 
         val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+          .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
         val checkAndCopyResult = await(check)
         checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -1558,13 +1584,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
       val auditData = new AuditData()
       val request = FakeRequest()
 
       mappingServiceUnavailable()
-      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
+      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -1598,13 +1625,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         invitationsRepository,
         itsaDeauthAndCleanupService,
         auditService,
-        metrics
+        metrics,
+        appConfig
       )
       val auditData = new AuditData()
       val request = FakeRequest()
 
       mappingServiceUnavailableForMtdVat()
-      val check = relationshipsService.lookupESForOldRelationship(arn, vrn)(ec, hc, request, auditData)
+      val check = relationshipsService.lookupESForOldRelationship(arn, vrn)(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreatedMtdVat()
@@ -1656,14 +1684,15 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               invitationsRepository,
               itsaDeauthAndCleanupService,
               auditService,
-              metrics
-            )(appConfig)
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
 
           val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, enrolmentKey)(ec, hc, request, auditData)
+            .checkForOldRelationshipAndCopy(arn, enrolmentKey)(request, auditData)
 
           await(check) shouldBe CopyRelationshipNotEnabled
 
@@ -1672,35 +1701,36 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   }
 
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq())
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(Future successful Seq())
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq())
   }
 
   private def oldESRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]()))
       .thenReturn(Future successful Set.empty[String])
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
+    when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future.successful(Seq.empty))
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]()))
+      .thenReturn(Future successful Seq(saAgentRef))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]()))
       .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
   private def mappingServiceUnavailableForMtdVat(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]()))
       .thenReturn(Future successful Set(agentGroupId))
-    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc)))
+    when(ugs.getGroupInfo(eqs(agentGroupId))(any[RequestHeader]()))
       .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc)))
+    when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]()))
       .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
   }
 
   private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] =
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
 
   private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
     when(partialAuthRepository.findActive(eqs(nino), eqs(arn)))
@@ -1722,62 +1752,62 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     when(partialAuthRepository.findActive(eqs(nino), eqs(arn))).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]()))
+      .thenReturn(Future successful Seq(saAgentRef))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]()))
       .thenReturn(Future successful Seq(saAgentRef))
   }
 
   private def oldESRelationshipExists(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]()))
       .thenReturn(Future successful Set("test2", "foo", agentGroupId, "ABC-123"))
-    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc)))
+    when(ugs.getGroupInfo(eqs(agentGroupId))(any[RequestHeader]()))
       .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
-    when(ugs.getGroupInfo(eqs("foo"))(eqs(hc)))
+    when(ugs.getGroupInfo(eqs("foo"))(any[RequestHeader]()))
       .thenReturn(Future successful Some(GroupInfo("foo", Some("Agent"), Some(AgentCode("foo")))))
-    when(ugs.getGroupInfo(eqs("ABC-123"))(eqs(hc)))
+    when(ugs.getGroupInfo(eqs("ABC-123"))(any[RequestHeader]()))
       .thenReturn(Future successful Some(GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123")))))
-    when(ugs.getGroupInfo(eqs("test2"))(eqs(hc)))
+    when(ugs.getGroupInfo(eqs("test2"))(any[RequestHeader]()))
       .thenReturn(Future successful Some(GroupInfo("test2", Some("Agent"), None)))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc)))
+    when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]()))
       .thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
   }
 
   private def adminUserExistsForArn(): OngoingStubbing[Future[Either[String, AgentUser]]] =
-    when(
-      agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
-    )
+    when(agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(any[RequestHeader](), any[AuditData]))
       .thenReturn(Future.successful(agentUserForAsAgent))
 
   private def arnExistsForGroupId(): OngoingStubbing[Future[Option[Arn]]] = {
-    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc))).thenReturn(Future.successful(Some(Arn("fooArn"))))
-    when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc))).thenReturn(Future.successful(Some(Arn("barArn"))))
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]()))
+      .thenReturn(Future.successful(Some(Arn("fooArn"))))
+    when(es.getAgentReferenceNumberFor(eqs("bar"))(any[RequestHeader]()))
+      .thenReturn(Future.successful(Some(Arn("barArn"))))
   }
 
   private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[HeaderCarrier]()))
+
+    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[RequestHeader]()))
       .thenReturn(Future.successful(Set("foo")))
-    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc))).thenReturn(Future.successful(Some(arn)))
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(Future.successful(Some(arn)))
     when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
-    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[HeaderCarrier]()))
+    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[RequestHeader]()))
       .thenReturn(Future.successful(()))
   }
 
   private def vrnIsKnownInETMP(vrn: Vrn, isKnown: Boolean): OngoingStubbing[Future[Boolean]] =
-    when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
+    when(des.vrnIsKnownInEtmp(eqs(vrn))(any[RequestHeader]())).thenReturn(Future successful isKnown)
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(eqs(hc), eqs(ec)))
+    when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(any[RequestHeader]()))
       .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
     when(
       es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
-        eqs(hc)
+        any[RequestHeader]()
       )
     )
       .thenReturn(Future.successful(()))
-    when(
-      aucdConnector.cacheRefresh(eqs(arn))(eqs(hc), eqs(ec))
-    ).thenReturn(Future successful (()))
+    when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful (()))
   }
 
   private def metricsStub(): OngoingStubbing[MetricRegistry] =
@@ -1786,19 +1816,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   private def auditStub(): OngoingStubbing[Future[Unit]] =
     when(
       auditService
-        .sendCheckEsAuditEvent()(any[HeaderCarrier], any[Request[Any]], any[AuditData], any[ExecutionContext])
+        .sendCheckEsAuditEvent()(any[RequestHeader](), any[AuditData])
     )
       .thenReturn(Future.successful(()))
 
   private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] =
     when(
       auditService
-        .sendCreateRelationshipAuditEvent()(
-          any[HeaderCarrier],
-          any[Request[Any]],
-          any[AuditData],
-          any[ExecutionContext]
-        )
+        .sendCreateRelationshipAuditEvent()(any[RequestHeader](), any[AuditData])
     )
       .thenReturn(Future.successful(()))
 
@@ -1810,63 +1835,50 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         eqs(Some(mtdItId.value)),
         eqs(nino.value),
         any[Instant]
-      )(any[HeaderCarrier], any[CurrentUser], any[Request[_]])
+      )(any[RequestHeader](), any[CurrentUser])
     )
       .thenReturn(Future.successful(true))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEtmpRecordCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEtmpRecordNotCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEsRecordCreated(): Future[Unit] =
-    verify(es).allocateEnrolmentToAgent(
-      eqs(agentGroupId),
-      eqs(agentUserId),
-      eqs(mtdItEnrolmentKey),
-      eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    verify(es)
+      .allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(mtdItEnrolmentKey), eqs(agentCodeForAsAgent))(
+        any[RequestHeader]()
+      )
 
   def verifyEsRecordNotCreated(): Future[Unit] =
-    verify(es, never()).allocateEnrolmentToAgent(
-      eqs(agentUserId),
-      eqs(agentGroupId),
-      eqs(mtdItEnrolmentKey),
-      eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    verify(es, never())
+      .allocateEnrolmentToAgent(eqs(agentUserId), eqs(agentGroupId), eqs(mtdItEnrolmentKey), eqs(agentCodeForAsAgent))(
+        any[RequestHeader]()
+      )
 
   def verifyEsRecordCreatedForMtdVat(): Future[Unit] =
-    verify(es).allocateEnrolmentToAgent(
-      eqs(agentGroupId),
-      eqs(agentUserId),
-      eqs(vatEnrolmentKey),
-      eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    verify(es)
+      .allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(vatEnrolmentKey), eqs(agentCodeForAsAgent))(
+        any[RequestHeader]()
+      )
 
   def verifyEsRecordNotCreatedMtdVat(): Future[Unit] =
-    verify(es, never()).allocateEnrolmentToAgent(
-      eqs(agentUserId),
-      eqs(agentGroupId),
-      eqs(vatEnrolmentKey),
-      eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    verify(es, never())
+      .allocateEnrolmentToAgent(eqs(agentUserId), eqs(agentGroupId), eqs(vatEnrolmentKey), eqs(agentCodeForAsAgent))(
+        any[RequestHeader]()
+      )
 
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
     verify(auditService)
-      .sendCheckCesaAndPartialAuthAuditEvent()(
-        any[HeaderCarrier],
-        any[Request[Any]],
-        auditDataCaptor.capture(),
-        any[ExecutionContext]()
-      )
+      .sendCheckCesaAndPartialAuthAuditEvent()(any[RequestHeader](), auditDataCaptor.capture())
     val auditData: AuditData = auditDataCaptor.getValue
     val auditDetails = auditData.getDetails
     auditDetails("saAgentRef") shouldBe saAgentRef.value
@@ -1878,12 +1890,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   def verifyESAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
     verify(auditService)
-      .sendCheckEsAuditEvent()(
-        any[HeaderCarrier],
-        any[Request[Any]],
-        auditDataCaptor.capture(),
-        any[ExecutionContext]()
-      )
+      .sendCheckEsAuditEvent()(any[RequestHeader](), auditDataCaptor.capture())
     val auditData: AuditData = auditDataCaptor.getValue
     val auditDetails = auditData.getDetails
     auditDetails("vrn") shouldBe vrn

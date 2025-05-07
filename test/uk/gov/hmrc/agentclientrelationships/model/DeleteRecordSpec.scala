@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import org.scalatest.Inside
 import play.api.libs.json.Json
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, SyncStatus}
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Service

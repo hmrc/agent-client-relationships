@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,10 +37,7 @@ trait MockCheckRelationshipsService {
   ): OngoingStubbing[Future[(Boolean, String)]] =
     when(
       mockCheckRelationshipsService
-        .checkForRelationshipAgencyLevel(eqs(arn), eqs(enrolment))(
-          any[ExecutionContext],
-          any[HeaderCarrier]
-        )
+        .checkForRelationshipAgencyLevel(eqs(arn), eqs(enrolment))(any[RequestHeader])
     )
       .thenReturn(response)
 

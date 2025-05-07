@@ -22,11 +22,12 @@ import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Span}
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.mvc.{AnyContentAsEmpty, RequestHeader}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.{AgentCode, Nino}
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, RequestId, SessionId}
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, RequestId, SessionId}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -39,16 +40,17 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
   implicit val patience: PatienceConfig =
     PatienceConfig(timeout = scaled(Span(500, Millis)), interval = scaled(Span(200, Millis)))
 
+  val request: RequestHeader = FakeRequest("GET", "/path")
+    .withHeaders(
+      HeaderNames.xSessionId    -> "dummy session id",
+      HeaderNames.xRequestId    -> "dummy request id",
+      HeaderNames.authorisation -> "dummy auth"
+    )
+
   "auditEvent" should {
     "send an CreateRelationship event with the correct fields" in {
       val mockConnector = mock[AuditConnector]
       val service = new AuditService(mockConnector)
-
-      val hc = HeaderCarrier(
-        authorization = Some(Authorization("dummy bearer token")),
-        sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id"))
-      )
 
       val auditData = new AuditData()
       auditData.set("agentReferenceNumber", Arn("1234").value)
@@ -66,7 +68,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
       await(
         service
-          .sendCreateRelationshipAuditEvent()(hc, FakeRequest("GET", "/path"), auditData, implicitly[ExecutionContext])
+          .sendCreateRelationshipAuditEvent()(request, auditData)
       )
 
       eventually {
@@ -103,12 +105,6 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val mockConnector = mock[AuditConnector]
       val service = new AuditService(mockConnector)
 
-      val hc = HeaderCarrier(
-        authorization = Some(Authorization("dummy bearer token")),
-        sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id"))
-      )
-
       val auditData = new AuditData()
       auditData.set("agentReferenceNumber", Arn("1234").value)
       auditData.set("credId", "0000001234567890")
@@ -117,14 +113,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       auditData.set("nino", Nino("KS969148D").value)
       auditData.set("cesaRelationship", true)
 
-      await(
-        service.sendCheckCesaAndPartialAuthAuditEvent()(
-          hc,
-          FakeRequest("GET", "/path"),
-          auditData,
-          implicitly[ExecutionContext]
-        )
-      )
+      await(service.sendCheckCesaAndPartialAuthAuditEvent()(request, auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

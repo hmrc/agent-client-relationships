@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
 import play.api.Logging
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource
@@ -26,22 +27,19 @@ import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, RelationshipFai
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class ValidationService @Inject() (
-  esConnector: EnrolmentStoreProxyConnector,
-  appConfig: AppConfig
+class ValidationService @Inject() (esConnector: EnrolmentStoreProxyConnector, appConfig: AppConfig)(implicit
+  ec: ExecutionContext
 ) extends Logging {
 
   // TODO look into updating this to not be an either as we never actually handle the Left it returns in a useful way
   // noinspection ScalaStyle
   def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+    rh: RequestHeader
   ): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
@@ -68,9 +66,7 @@ class ValidationService @Inject() (
     * if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId) as required by specs. First,
     * query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
     */
-  def makeSanitisedCbcEnrolmentKey(
-    cbcId: CbcId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
+  def makeSanitisedCbcEnrolmentKey(cbcId: CbcId)(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     // Try as HMRC-CBC-ORG (UK version)
     esConnector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))).flatMap {
       case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
@@ -80,14 +76,7 @@ class ValidationService @Inject() (
           case None    => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
         }
       case Some(identifiers) =>
-        Future.successful(
-          Right(
-            EnrolmentKey(
-              Service.Cbc.id,
-              identifiers
-            )
-          )
-        )
+        Future.successful(Right(EnrolmentKey(Service.Cbc.id, identifiers)))
     }
 
   def validateForTaxIdentifier(
@@ -104,10 +93,7 @@ class ValidationService @Inject() (
     authProfile: Option[String],
     relationshipSource: RelationshipSource,
     service: Option[Service]
-  )(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[RelationshipFailureResponse, Service]] =
+  )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Service]] =
     service.fold {
       (taxIdentifier, authProfile, relationshipSource) match {
         case (Nino(_), Some("ALL00001"), HipOrIfApi) => Future.successful(Right(Service.MtdIt))

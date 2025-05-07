@@ -56,12 +56,7 @@ class ChangeInvitationStatusController @Inject() (
             } yield result
 
             responseT.value
-              .map(
-                _.fold(
-                  err => invitationErrorHandler(err, serviceStr, clientIdStr),
-                  _ => NoContent
-                )
-              )
+              .map(_.fold(err => invitationErrorHandler(err, serviceStr, clientIdStr), _ => NoContent))
           }
         )
     }

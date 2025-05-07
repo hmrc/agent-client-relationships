@@ -68,11 +68,8 @@ class MongoCache[T] @Inject() (
   cacheRepositoryFactory: CacheRepositoryFactory,
   collectionName: String,
   ttlConfigKey: String
-)(implicit
-  metrics: Metrics,
-  reads: Reads[T],
-  writes: Writes[T]
-) extends KenshooCacheMetrics
+)(implicit metrics: Metrics, reads: Reads[T], writes: Writes[T])
+    extends KenshooCacheMetrics
     with Cache[T] {
 
   val kenshooRegistry: MetricRegistry = metrics.defaultRegistry

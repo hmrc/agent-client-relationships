@@ -86,9 +86,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
         IndexModel(Indexes.ascending(statusKey, expiredEmailSentKey))
       ),
       replaceIndexes = true,
-      extraCodecs = Seq(
-        Codecs.playFormatCodec(MongoTrackRequestsResult.format)
-      )
+      extraCodecs = Seq(Codecs.playFormatCodec(MongoTrackRequestsResult.format))
     )
     with Logging {
 
@@ -119,19 +117,12 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   }
   // scalastyle:on
 
-  def migrateActivePartialAuthInvitation(
-    invitation: Invitation
-  ): Future[InsertOneResult] =
+  def migrateActivePartialAuthInvitation(invitation: Invitation): Future[InsertOneResult] =
     collection.insertOne(invitation).toFuture()
 
   def findOneByIdForAgent(arn: String, invitationId: String): Future[Option[Invitation]] =
     collection
-      .find(
-        combine(
-          equal(arnKey, arn),
-          equal(invitationIdKey, invitationId)
-        )
-      )
+      .find(combine(equal(arnKey, arn), equal(invitationIdKey, invitationId)))
       .headOption()
 
   def cancelByIdForAgent(arn: String, invitationId: String): Future[Boolean] =
@@ -142,10 +133,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
           equal(invitationIdKey, invitationId),
           equal("status", Codecs.toBson[InvitationStatus](Pending))
         ),
-        combine(
-          set("status", Codecs.toBson[InvitationStatus](Cancelled)),
-          set("lastUpdated", Instant.now())
-        )
+        combine(set("status", Codecs.toBson[InvitationStatus](Cancelled)), set("lastUpdated", Instant.now()))
       )
       .toFuture()
       .map(_.getModifiedCount == 1L)
@@ -178,9 +166,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
 
   def findOneByIdForClient(invitationId: String): Future[Option[Invitation]] =
     collection
-      .find(
-        equal(invitationIdKey, invitationId)
-      )
+      .find(equal(invitationIdKey, invitationId))
       .headOption()
 
   def findAllForAgent(arn: String): Future[Seq[Invitation]] =
@@ -213,10 +199,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
     collection
       .findOneAndUpdate(
         equal(invitationIdKey, invitationId),
-        combine(
-          set("status", Codecs.toBson(status)),
-          set("lastUpdated", timestamp.getOrElse(Instant.now()))
-        ),
+        combine(set("status", Codecs.toBson(status)), set("lastUpdated", timestamp.getOrElse(Instant.now()))),
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
       .headOption()
@@ -272,10 +255,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   ): Future[Option[Invitation]] =
     collection
       .findOneAndUpdate(
-        and(
-          equal(invitationIdKey, invitationId),
-          equal("status", Codecs.toBson[InvitationStatus](fromStatus))
-        ),
+        and(equal(invitationIdKey, invitationId), equal("status", Codecs.toBson[InvitationStatus](fromStatus))),
         combine(
           (Seq(
             Some(set("status", Codecs.toBson(toStatus))),
@@ -371,12 +351,7 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
 
   def findAllForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] =
     collection
-      .find(
-        and(
-          equal(clientIdKey, encryptedString(clientId)),
-          in(serviceKey, services: _*)
-        )
-      )
+      .find(and(equal(clientIdKey, encryptedString(clientId)), in(serviceKey, services: _*)))
       .toFuture()
 
   def updatePartialAuthToDeAuthorisedStatus(
@@ -402,22 +377,20 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
       )
       .toFutureOption()
 
-  private def makeTrackRequestsFilters(
-    statusFilter: Option[String],
-    clientName: Option[String]
-  ): conversions.Bson = Aggregates.filter(
-    and(
-      statusFilter
-        .map(status =>
-          if (status == "Accepted") or(equal(statusKey, status), equal(statusKey, PartialAuth.toString))
-          else equal(statusKey, status)
-        )
-        .getOrElse(Filters.exists(statusKey)),
-      clientName
-        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name))))
-        .getOrElse(Filters.exists(clientNameKey))
+  private def makeTrackRequestsFilters(statusFilter: Option[String], clientName: Option[String]): conversions.Bson =
+    Aggregates.filter(
+      and(
+        statusFilter
+          .map(status =>
+            if (status == "Accepted") or(equal(statusKey, status), equal(statusKey, PartialAuth.toString))
+            else equal(statusKey, status)
+          )
+          .getOrElse(Filters.exists(statusKey)),
+        clientName
+          .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name))))
+          .getOrElse(Filters.exists(clientNameKey))
+      )
     )
-  )
 
   def trackRequests(
     arn: String,

@@ -19,18 +19,18 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{ await, defaultAwaitTimeout }
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReferenceRecord, ExistingMainAgent, ValidateInvitationResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{ AgentReferenceRecord, ExistingMainAgent, ValidateInvitationResponse }
+import uk.gov.hmrc.agentclientrelationships.repository.{ AgentReferenceRepository, InvitationsRepository, PartialAuthRepository }
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, MtdIt, MtdItSupp}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ Cbc, MtdIt, MtdItSupp }
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.{ Instant, LocalDate }
 import scala.concurrent.ExecutionContext
 
 class InvitationLinkControllerISpec extends BaseControllerISpec with TestData with HipStub {
@@ -39,17 +39,13 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
   val existingAgentUid = "ExitingAgentUid"
   val normalizedAgentName = "TestNormalizedAgentName"
   val normalizedExistingAgentName = "ExistingAgent"
-  val agentReferenceRecord: AgentReferenceRecord = AgentReferenceRecord(
-    uid = uid,
-    arn = arn,
-    normalisedAgentNames = Seq(normalizedAgentName, "NormalisedAgentName2")
-  )
+  val agentReferenceRecord: AgentReferenceRecord =
+    AgentReferenceRecord(uid = uid, arn = arn, normalisedAgentNames = Seq(normalizedAgentName, "NormalisedAgentName2"))
 
   val existingAgentReferenceRecord: AgentReferenceRecord = AgentReferenceRecord(
     uid = existingAgentUid,
     arn = existingAgentArn,
-    normalisedAgentNames = Seq(normalizedExistingAgentName)
-  )
+    normalisedAgentNames = Seq(normalizedExistingAgentName))
 
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -78,10 +74,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       val result =
         doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 200
-      result.json shouldBe Json.obj(
-        "arn"  -> arn.value,
-        "name" -> agentRecord.agencyDetails.agencyName
-      )
+      result.json shouldBe Json.obj("arn" -> arn.value, "name" -> agentRecord.agencyDetails.agencyName)
     }
 
     "return 404 status when agent reference is not found" in {
@@ -147,10 +140,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       val result =
         doGetRequest(s"/agent-client-relationships/agent/agent-link")
       result.status shouldBe 200
-      result.json shouldBe Json.obj(
-        "uid"                 -> agentReferenceRecord.uid,
-        "normalizedAgentName" -> normalisedName
-      )
+      result.json shouldBe Json.obj("uid" -> agentReferenceRecord.uid, "normalizedAgentName" -> normalisedName)
       agentReferenceRepo
         .findBy(agentReferenceRecord.uid)
         .futureValue
@@ -203,9 +193,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -216,8 +204,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = None,
-        clientType = Some("personal")
-      )
+        clientType = Some("personal"))
 
       result.status shouldBe 200
       result.json shouldBe Json.toJson(expectedResponse)
@@ -243,9 +230,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -256,8 +241,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = Some(expectedExistingMainAgent),
-        clientType = Some("personal")
-      )
+        clientType = Some("personal"))
 
       result.status shouldBe 200
       result.json shouldBe Json.toJson(expectedResponse)
@@ -284,9 +268,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
               "testAgentName",
               "agent@email.com",
               LocalDate.now(),
-              Some("personal")
-            )
-        )
+              Some("personal")))
 
       val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -297,8 +279,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = Some(expectedExistingMainAgent),
-        clientType = Some("personal")
-      )
+        clientType = Some("personal"))
 
       result.status shouldBe 200
       result.json shouldBe Json.toJson(expectedResponse)
@@ -324,9 +305,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-NI", "HMRC-PT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -337,8 +316,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = Some(expectedExistingMainAgent),
-        clientType = Some("personal")
-      )
+        clientType = Some("personal"))
 
       result.status shouldBe 200
       result.json shouldBe Json.toJson(expectedResponse)
@@ -364,9 +342,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
               "testAgentName",
               "agent@email.com",
               LocalDate.now(),
-              Some("personal")
-            )
-        )
+              Some("personal")))
 
       val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-PT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -377,8 +353,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = Some(expectedExistingMainAgent),
-        clientType = Some("personal")
-      )
+        clientType = Some("personal"))
 
       result.status shouldBe 200
       result.json shouldBe Json.toJson(expectedResponse)
@@ -401,9 +376,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -414,8 +387,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = None,
-        clientType = Some("personal")
-      )
+        clientType = Some("personal"))
 
       result.status shouldBe 200
       result.json shouldBe Json.toJson(expectedResponse)
@@ -440,9 +412,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-CBC-ORG"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -454,8 +424,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
         pendingInvitation.status,
         pendingInvitation.lastUpdated.truncatedTo(ChronoUnit.MILLIS),
         existingMainAgent = Some(expectedExistingMainAgent),
-        clientType = Some("personal")
-      )
+        clientType = Some("personal"))
 
       result.status shouldBe 200
       result.json shouldBe Json.toJson(expectedResponse)
@@ -488,9 +457,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -513,9 +480,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MADE-UP"))
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -553,9 +518,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-VAT"))
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -577,9 +540,7 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
             "testAgentName",
             "agent@email.com",
             LocalDate.now(),
-            Some("personal")
-          )
-        )
+            Some("personal")))
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)

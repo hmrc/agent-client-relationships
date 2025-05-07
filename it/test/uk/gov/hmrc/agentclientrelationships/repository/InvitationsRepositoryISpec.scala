@@ -24,24 +24,24 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.{ await, defaultAwaitTimeout }
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCMTDVAT, HMRCPIR, MtdIt, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service, Vrn}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ HMRCMTDIT, HMRCMTDITSUPP, HMRCMTDVAT, HMRCPIR, MtdIt, Vat }
+import uk.gov.hmrc.agentmtdidentifiers.model.{ MtdItId, Service, Vrn }
+import uk.gov.hmrc.domain.{ Nino, TaxIdentifier }
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.{ Instant, LocalDate }
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DAYS
 import scala.util.Random
 
 class InvitationsRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[Invitation] {
+  extends AnyWordSpec
+  with Matchers
+  with GuiceOneAppPerSuite
+  with DefaultPlayMongoRepositorySupport[Invitation] {
 
   override lazy val app: Application =
     new GuiceApplicationBuilder()
@@ -54,8 +54,7 @@ class InvitationsRepositoryISpec
   def pendingInvitation(
     service: Service = Vat,
     clientId: TaxIdentifier = Vrn("123456789"),
-    suppliedClientId: Option[TaxIdentifier] = None
-  ): Invitation =
+    suppliedClientId: Option[TaxIdentifier] = None): Invitation =
     Invitation
       .createNew(
         "XARN1234567",
@@ -66,13 +65,11 @@ class InvitationsRepositoryISpec
         "testAgentName",
         "agent@email.com",
         LocalDate.of(2020, 1, 1),
-        Some("personal")
-      )
+        Some("personal"))
       .copy(
         invitationId = Random.between(100000, 999999).toString, // making sure duplicates aren't generated
         created = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-        lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-      )
+        lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
   "InvitationsRepository" should {
 
@@ -112,9 +109,7 @@ class InvitationsRepositoryISpec
           "testAgentName",
           "agent@email.com",
           LocalDate.parse("2020-01-01"),
-          Some("personal")
-        )
-      )
+          Some("personal")))
       await(repository.collection.countDocuments().toFuture()) shouldBe 2
     }
 
@@ -131,18 +126,14 @@ class InvitationsRepositoryISpec
             "testAgentName",
             "agent@email.com",
             LocalDate.parse("2020-01-01"),
-            Some("personal")
-          )
-        )
-      )
+            Some("personal"))))
     }
 
     "retrieve all existing invitations for a given ARN" in {
       val listOfInvitations = Seq(
         pendingInvitation(clientId = Vrn("123456789")),
         pendingInvitation(clientId = Vrn("123456788")),
-        pendingInvitation(clientId = Vrn("123456787"))
-      )
+        pendingInvitation(clientId = Vrn("123456787")))
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
       await(repository.findAllForAgent("XARN1234567")) shouldBe listOfInvitations
@@ -152,13 +143,11 @@ class InvitationsRepositoryISpec
       val listOfInvitations = Seq(
         pendingInvitation(clientId = Vrn("123456789")),
         pendingInvitation(clientId = Vrn("123456788")),
-        pendingInvitation(clientId = Vrn("123456787"))
-      )
+        pendingInvitation(clientId = Vrn("123456787")))
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
       await(
-        repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("123456789", "123456788", "123456787"))
-      ) shouldBe listOfInvitations
+        repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("123456789", "123456788", "123456787"))) shouldBe listOfInvitations
     }
 
     "fail to retrieve invitations" when {
@@ -217,9 +206,7 @@ class InvitationsRepositoryISpec
             invitationId = invitation.invitationId,
             fromStatus = Accepted,
             toStatus = DeAuthorised,
-            relationshipEndedBy = Some("HMRC")
-          )
-        ).get
+            relationshipEndedBy = Some("HMRC"))).get
       updatedInvitation.relationshipEndedBy shouldBe Some("HMRC")
     }
 
@@ -233,13 +220,7 @@ class InvitationsRepositoryISpec
 
       lazy val updatedInvitation = await(
         repository
-          .deauthorise(
-            invitation.arn,
-            invitation.clientId,
-            invitation.service,
-            "This guy"
-          )
-      ).get
+          .deauthorise(invitation.arn, invitation.clientId, invitation.service, "This guy")).get
       updatedInvitation.status shouldBe DeAuthorised
       updatedInvitation.relationshipEndedBy shouldBe Some("This guy")
       updatedInvitation.lastUpdated.isAfter(pendingInvitation().lastUpdated)
@@ -251,8 +232,7 @@ class InvitationsRepositoryISpec
 
       await(
         repository
-          .deauthorise(invitation.arn, invitation.clientId, invitation.service, "This guy")
-      ) shouldBe None
+          .deauthorise(invitation.arn, invitation.clientId, invitation.service, "This guy")) shouldBe None
     }
 
     "update a client ID and client ID type when a matching invitation is found" in {
@@ -266,9 +246,7 @@ class InvitationsRepositoryISpec
             invitation.clientIdType,
             invitation.service,
             "ABC",
-            "ABCType"
-          )
-      ) shouldBe true
+            "ABCType")) shouldBe true
       lazy val updatedInvitation = await(repository.findOneById(invitation.invitationId)).get
       updatedInvitation.clientId shouldBe "ABC"
       updatedInvitation.clientIdType shouldBe "ABCType"
@@ -293,8 +271,7 @@ class InvitationsRepositoryISpec
 
       await(repository.findAllPendingForSuppliedClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe Seq(
         itsaInv,
-        itsaSuppInv
-      )
+        itsaSuppInv)
     }
 
     "produce a TrackRequestsResult with the correct pagination" in {
@@ -305,8 +282,7 @@ class InvitationsRepositoryISpec
         pendingInvitation()
           .copy(invitationId = "456", suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired),
         pendingInvitation().copy(invitationId = "567", suppliedClientId = "789", service = HMRCMTDITSUPP),
-        pendingInvitation().copy(invitationId = "678", suppliedClientId = "678", service = HMRCPIR)
-      )
+        pendingInvitation().copy(invitationId = "678", suppliedClientId = "678", service = HMRCPIR))
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
       val result = await(repository.trackRequests("XARN1234567", None, None, 1, 10))
@@ -325,14 +301,12 @@ class InvitationsRepositoryISpec
           invitationId = "1",
           suppliedClientId = "1",
           status = Accepted,
-          expiryDate = LocalDate.now().plusDays(5L)
-        )
+          expiryDate = LocalDate.now().plusDays(5L))
         val warningEmailSentInvitation = newInvitation.copy(
           invitationId = "2",
           suppliedClientId = "2",
           warningEmailSent = true,
-          expiryDate = LocalDate.now().plusDays(5L)
-        )
+          expiryDate = LocalDate.now().plusDays(5L))
         val tooEarlyForWarningInvitation =
           newInvitation.copy(invitationId = "3", suppliedClientId = "3", expiryDate = LocalDate.now().plusDays(6L))
         val tooLateForWarningInvitation =
@@ -346,8 +320,7 @@ class InvitationsRepositoryISpec
           warningEmailSentInvitation,
           tooEarlyForWarningInvitation,
           tooLateForWarningInvitation,
-          expectedInvitation
-        )
+          expectedInvitation)
 
         await(repository.collection.insertMany(listOfInvitations).toFuture())
 
@@ -366,14 +339,8 @@ class InvitationsRepositoryISpec
         val secondArnInv2 = secondArnInv1.copy(invitationId = "5", suppliedClientId = "5")
         val thirdArnInv1 = firstArnInv1.copy(arn = "3", invitationId = "6", suppliedClientId = "6")
 
-        val listOfInvitations = Seq(
-          firstArnInv1,
-          firstArnInv2,
-          firstArnInv3,
-          secondArnInv1,
-          secondArnInv2,
-          thirdArnInv1
-        )
+        val listOfInvitations =
+          Seq(firstArnInv1, firstArnInv2, firstArnInv3, secondArnInv1, secondArnInv2, thirdArnInv1)
 
         await(repository.collection.insertMany(listOfInvitations).toFuture())
 
@@ -396,14 +363,12 @@ class InvitationsRepositoryISpec
         invitationId = "1",
         suppliedClientId = "1",
         status = Accepted,
-        expiryDate = LocalDate.now().minusDays(1L)
-      )
+        expiryDate = LocalDate.now().minusDays(1L))
       val expiredEmailSentInvitation = newInvitation.copy(
         invitationId = "2",
         suppliedClientId = "2",
         expiredEmailSent = true,
-        expiryDate = LocalDate.now().minusDays(1L)
-      )
+        expiryDate = LocalDate.now().minusDays(1L))
       val tooEarlyForExpiredInvitation =
         newInvitation.copy(invitationId = "3", suppliedClientId = "3", expiryDate = LocalDate.now().plusDays(1L))
       val expectedInvitation =
@@ -414,8 +379,7 @@ class InvitationsRepositoryISpec
         acceptedInvitation,
         expiredEmailSentInvitation,
         tooEarlyForExpiredInvitation,
-        expectedInvitation
-      )
+        expectedInvitation)
 
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
@@ -458,9 +422,7 @@ class InvitationsRepositoryISpec
             arn = Some("XARN1234567"),
             services = Seq(HMRCMTDVAT),
             clientIds = Seq("123456789"),
-            status = Some(Pending)
-          )
-        )
+            status = Some(Pending)))
 
         result shouldBe Seq(relevantInvitation)
       }

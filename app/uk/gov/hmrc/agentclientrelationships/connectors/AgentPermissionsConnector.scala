@@ -16,41 +16,42 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentPermissionsConnector @Inject() (http: HttpClient, val ec: ExecutionContext)(implicit
-  val metrics: Metrics,
-  val appConfig: AppConfig
-) extends HttpAPIMonitor
+class AgentPermissionsConnector @Inject() (httpClient: HttpClientV2, appConfig: AppConfig, val metrics: Metrics)(
+  implicit val ec: ExecutionContext
+) extends HttpApiMonitor
     with Logging {
 
-  private val agentPermissionsBaseUrl = new URL(appConfig.agentPermissionsUrl)
-  def clientIsUnassigned(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Boolean] = {
-    val url = s"$agentPermissionsBaseUrl/agent-permissions/arn/${arn.value}/client/${enrolmentKey.tag}/groups"
+  def isClientUnassigned(arn: Arn, enrolmentKey: EnrolmentKey)(implicit rh: RequestHeader): Future[Boolean] = {
+    val url = url"${appConfig.agentPermissionsUrl}/agent-permissions/arn/${arn.value}/client/${enrolmentKey.tag}/groups"
     monitor("ConsumedAPI-GetGroupSummariesForClient-GET") {
-      http.GET[HttpResponse](url).map { response =>
-        response.status match {
-          case Status.OK        => false
-          case Status.NOT_FOUND => true
-          case e                => throw UpstreamErrorResponse(response.body, e)
+      httpClient
+        .get(url)
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case Status.OK => false
+            case Status.NOT_FOUND =>
+              true // TODO: the endpoint should return empty Seq for such case. Now when NotFound is return, it's not obvious if records are not found or if the url is not defined or permissions are not found
+            case e => throw UpstreamErrorResponse(response.body, e)
+          }
         }
-      }
     }
   }
 

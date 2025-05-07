@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.{LocalDate, ZoneId}
 import java.util.UUID
@@ -48,7 +48,7 @@ class ClientTaxAgentsDataService @Inject() (
 
   def getClientTaxAgentsData(
     authResponse: EnrolmentsWithNino
-  )(implicit hc: HeaderCarrier): Future[Either[RelationshipFailureResponse, ClientTaxAgentsData]] = {
+  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, ClientTaxAgentsData]] = {
     val clientIds: Seq[String] = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
     val identifiers: Map[String, TaxIdentifier] = authResponse.getIdentifierKeyMap(supportedServices)
     val nino: Option[String] = authResponse.getNino
@@ -72,11 +72,11 @@ class ClientTaxAgentsDataService @Inject() (
     invitations: Seq[Invitation],
     clientAuthorisations: Seq[ClientAuthorisationForTaxId]
   )(implicit
-    hc: HeaderCarrier,
+    request: RequestHeader,
     ec: ExecutionContext
   ): EitherT[Future, RelationshipFailureResponse, Seq[AuthorisationEvent]] = {
 
-    case class AuthorisationEventWithoutAgentName(
+    final case class AuthorisationEventWithoutAgentName(
       arn: String,
       service: String,
       eventDate: LocalDate,
@@ -171,7 +171,7 @@ class ClientTaxAgentsDataService @Inject() (
 
   private def getAllAuthorisationsForAllServices(
     identifiers: Map[String, TaxIdentifier]
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
+  )(implicit request: RequestHeader): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
     identifiers
       .map { case (service, taxIdentifier) =>
         for {
@@ -182,10 +182,9 @@ class ClientTaxAgentsDataService @Inject() (
       .sequence
       .map(_.flatten)
 
-  private def findAllRelationshipForTaxId(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
+  private def findAllRelationshipForTaxId(taxIdentifier: TaxIdentifier, service: Service)(implicit
+    request: RequestHeader
+  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
     taxIdentifier match {
       case Nino(_) =>
         for {
@@ -193,9 +192,8 @@ class ClientTaxAgentsDataService @Inject() (
             EitherT(agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value))
               .map(Seq(_))
               .leftFlatMap(recoverNotFoundRelationship)
-          irvInactiveRelationship <-
-            EitherT(agentFiRelationshipConnector.findIrvInactiveRelationshipForClient)
-              .leftFlatMap(recoverNotFoundRelationship)
+          irvInactiveRelationship <- EitherT(agentFiRelationshipConnector.findIrvInactiveRelationshipForClient)
+                                       .leftFlatMap(recoverNotFoundRelationship)
           irvAllRelationship = irvActiveRelationship ++ irvInactiveRelationship
         } yield irvAllRelationship.map(r =>
           ClientAuthorisationForTaxId(r.arn, service, taxIdentifier.value, r.dateTo, r.dateFrom, r.isActive)
@@ -217,9 +215,9 @@ class ClientTaxAgentsDataService @Inject() (
         }
     }
 
-  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
-    ec: ExecutionContext
-  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+  private def recoverNotFoundRelationship(
+    relationshipFailureResponse: RelationshipFailureResponse
+  )(implicit ec: ExecutionContext): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
     relationshipFailureResponse match {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
@@ -228,10 +226,8 @@ class ClientTaxAgentsDataService @Inject() (
 
     }
 
-  private def getAgentDateForRelationships(
-    relationshipsWithAuthProfile: Seq[ClientAuthorisationForTaxId]
-  )(implicit
-    hc: HeaderCarrier,
+  private def getAgentDateForRelationships(relationshipsWithAuthProfile: Seq[ClientAuthorisationForTaxId])(implicit
+    request: RequestHeader,
     ec: ExecutionContext
   ): EitherT[Future, RelationshipFailureResponse, Seq[AgentAuthorisations]] = {
     val result = relationshipsWithAuthProfile
@@ -284,7 +280,7 @@ class ClientTaxAgentsDataService @Inject() (
     } yield invitations
 
   private def getAgentDataForInvitation(invitations: Seq[Invitation])(implicit
-    hc: HeaderCarrier,
+    request: RequestHeader,
     ec: ExecutionContext
   ): EitherT[Future, RelationshipFailureResponse, Seq[AgentInvitations]] = {
     val result = invitations
@@ -310,10 +306,8 @@ class ClientTaxAgentsDataService @Inject() (
   }
 
   // TODO WG - that is called multiple time ofr same ARN
-  private def findAgentDetailsByArn(
-    arn: Arn
-  )(implicit
-    hc: HeaderCarrier,
+  private def findAgentDetailsByArn(arn: Arn)(implicit
+    request: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[RelationshipFailureResponse, AgentDetailsDesResponse]] =
     agentAssuranceConnector

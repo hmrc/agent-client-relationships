@@ -28,15 +28,9 @@ class CgtSubscriptionDetailsSpec extends UnitSpec {
       "the data indicates the client is an individual" in {
         val json = Json.obj(
           "subscriptionDetails" -> Json.obj(
-            "typeOfPersonDetails" -> Json.obj(
-              "typeOfPerson" -> "Individual",
-              "firstName"    -> "Erling",
-              "lastName"     -> "Haal"
-            ),
-            "addressDetails" -> Json.obj(
-              "postalCode"  -> "AA1 1AA",
-              "countryCode" -> "GB"
-            )
+            "typeOfPersonDetails" -> Json
+              .obj("typeOfPerson" -> "Individual", "firstName" -> "Erling", "lastName" -> "Haal"),
+            "addressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
           )
         )
 
@@ -46,14 +40,8 @@ class CgtSubscriptionDetailsSpec extends UnitSpec {
       "the data indicates the client is an organisation" in {
         val json = Json.obj(
           "subscriptionDetails" -> Json.obj(
-            "typeOfPersonDetails" -> Json.obj(
-              "typeOfPerson"     -> "Trustee",
-              "organisationName" -> "CFG Solutions"
-            ),
-            "addressDetails" -> Json.obj(
-              "postalCode"  -> "AA1 1AA",
-              "countryCode" -> "GB"
-            )
+            "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
+            "addressDetails"      -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
           )
         )
 
@@ -63,13 +51,8 @@ class CgtSubscriptionDetailsSpec extends UnitSpec {
       "the optional fields are missing" in {
         val json = Json.obj(
           "subscriptionDetails" -> Json.obj(
-            "typeOfPersonDetails" -> Json.obj(
-              "typeOfPerson"     -> "Trustee",
-              "organisationName" -> "CFG Solutions"
-            ),
-            "addressDetails" -> Json.obj(
-              "countryCode" -> "GB"
-            )
+            "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
+            "addressDetails"      -> Json.obj("countryCode" -> "GB")
           )
         )
 

@@ -37,7 +37,7 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository =
@@ -51,12 +51,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
     invitationsRepo,
     partialAuthRepo,
     authConnector,
-    stubControllerComponents()
+    stubControllerComponents(),
+    appConfig
   )
 
-  override def additionalConfig: Map[String, Any] = Map(
-    "hip.BusinessDetails.enabled" -> true
-  )
+  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
   def setupCommonStubs(request: FakeRequest[?]): Unit = {
     givenAuthorisedAsValidAgent(request, "XARN1234567")
@@ -255,12 +254,7 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
             partialAuthRepo
-              .create(
-                Instant.now(),
-                Arn("XARN1234567"),
-                MtdItSupp.toString(),
-                Nino("AA000001B")
-              )
+              .create(Instant.now(), Arn("XARN1234567"), MtdItSupp.toString(), Nino("AA000001B"))
           )
 
           val result = doGetRequest(request.uri)

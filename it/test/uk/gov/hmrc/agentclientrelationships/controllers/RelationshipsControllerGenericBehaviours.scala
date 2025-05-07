@@ -20,13 +20,13 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.{ DeleteRecord, RelationshipCopyRecord, SyncStatus }
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, Service}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, CbcId, Identifier, Service }
+import uk.gov.hmrc.domain.{ Nino, TaxIdentifier }
 import uk.gov.hmrc.mongo.lock.Lock
 
-import java.time.{Instant, LocalDate, ZoneOffset}
+import java.time.{ Instant, LocalDate, ZoneOffset }
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
@@ -120,10 +120,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
               arn.value,
               Some(enrolmentKey),
               syncToETMPStatus = Some(SyncStatus.Success),
-              syncToESStatus = Some(SyncStatus.Failed)
-            )
-          )
-        )
+              syncToESStatus = Some(SyncStatus.Failed))))
 
         val result = doRequest
         result.status shouldBe 404
@@ -210,8 +207,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           clientId.value,
           clientIdType,
           serviceId,
-          "ClientAcceptedInvitation"
-        )
+          "ClientAcceptedInvitation")
       }
 
       "return 201 when the relationship exists and the clientId matches that of current Client user" in new StubsForThisScenario {
@@ -226,8 +222,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           clientId.value,
           clientIdType,
           serviceId,
-          "ClientAcceptedInvitation"
-        )
+          "ClientAcceptedInvitation")
 
         if (enrolmentKey.service == Service.HMRCMTDITSUPP) {
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
@@ -240,8 +235,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             enrolmentKey.service,
             "AgentReplacement",
             credId = None,
-            agentCode = None
-          )
+            agentCode = None)
           verifyTerminateRelationshipAuditSent(
             requestPath,
             "fooArn",
@@ -250,8 +244,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             enrolmentKey.service,
             "AgentReplacement",
             credId = None,
-            agentCode = None
-          )
+            agentCode = None)
         }
       }
 
@@ -267,8 +260,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           clientId.value,
           clientIdType,
           serviceId,
-          "HMRCAcceptedInvitation"
-        )
+          "HMRCAcceptedInvitation")
       }
 
       "return 201 when an agent tries to create a relationship" in {
@@ -292,8 +284,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           clientIdType,
           serviceId,
           "ClientAcceptedInvitation",
-          agentCode = Some("NQJUEJCWT14")
-        )
+          agentCode = Some("NQJUEJCWT14"))
       }
 
       "return 423 Locked if there is a record in the lock repository" in {
@@ -307,11 +298,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
                 id = s"recovery-${arn.value}-${enrolmentKey.tag}",
                 owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
                 expiryTime = Instant.now().plusSeconds(2),
-                timeCreated = Instant.now().minusMillis(500)
-              )
-            )
-            .toFuture()
-        )
+                timeCreated = Instant.now().minusMillis(500)))
+            .toFuture())
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe LOCKED
@@ -334,8 +322,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           clientId.value,
           clientIdType,
           serviceId,
-          "ClientAcceptedInvitation"
-        )
+          "ClientAcceptedInvitation")
       }
 
       "return 201 when there are no previous relationships to deallocate" in {
@@ -358,8 +345,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           clientId.value,
           clientIdType,
           serviceId,
-          "ClientAcceptedInvitation"
-        )
+          "ClientAcceptedInvitation")
       }
 
       "return 500 when ES1 is unavailable" in new StubsForThisScenario {
@@ -487,8 +473,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             clientIdType,
             serviceId,
-            "AgentLedTermination"
-          )
+            "AgentLedTermination")
         }
       }
 
@@ -513,8 +498,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             clientIdType,
             serviceId,
-            "ClientLedTermination"
-          )
+            "ClientLedTermination")
         }
       }
 
@@ -538,8 +522,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             clientIdType,
             serviceId,
-            "HMRCLedTermination"
-          )
+            "HMRCLedTermination")
         }
       }
 
@@ -600,13 +583,13 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
             clientId.value,
             clientIdType,
             serviceId,
-            "ClientLedTermination"
-          )
+            "ClientLedTermination")
         }
       }
 
-      /** Agent's Unhappy paths
-        */
+      /**
+       * Agent's Unhappy paths
+       */
       "agent has a mismatched arn" should {
         "return 403 and not send the audit event TerminateRelationship" in {
           givenUserIsSubscribedAgent(Arn("unmatched"))
@@ -674,8 +657,9 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         }
       }
 
-      /** Client's Unhappy paths
-        */
+      /**
+       * Client's Unhappy paths
+       */
 
       "client has a mismatched clientId" should {
         val dummyClientId: TaxIdentifier = Service.forId(serviceId).supportedClientIdType.createUnderlying("unmatched")
@@ -725,10 +709,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
           repo.create(
             RelationshipCopyRecord(
               arn.value,
-              Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value))))
-            )
-          )
-        ) shouldBe 1
+              Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value))))))) shouldBe 1
         val result = doAgentDeleteRequest(requestPath)
         result.status shouldBe 404
       }

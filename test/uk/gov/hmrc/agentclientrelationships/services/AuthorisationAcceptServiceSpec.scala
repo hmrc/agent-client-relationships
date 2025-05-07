@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Personal
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.{Instant, LocalDate}
 import scala.concurrent.{ExecutionContext, Future}
@@ -60,7 +60,6 @@ class AuthorisationAcceptServiceSpec
       )
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
   implicit val auditData: AuditData = new AuditData
   implicit val currentUser: CurrentUser =
@@ -245,7 +244,7 @@ class AuthorisationAcceptServiceSpec
             verify(mockInvitationsRepository, times(1))
               .deauthInvitation(any[String], any[String], any[Option[Instant]])
             verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+              .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
           }
         }
       }
@@ -254,7 +253,7 @@ class AuthorisationAcceptServiceSpec
     "called with a PERSONAL-INCOME-RECORD invitation" should {
       "create a relationship via agent fi relationship" should also {
         "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
-          mockCreateFiRelationship(testArn, pirInvitation.service, pirInvitation.clientId)(Future.successful(true))
+          mockCreateFiRelationship(testArn, pirInvitation.service, pirInvitation.clientId)
           mockUpdateStatus(pirInvitation.invitationId, Accepted)(
             Future.successful(pirInvitation.copy(status = Accepted))
           )
@@ -275,7 +274,7 @@ class AuthorisationAcceptServiceSpec
             verify(mockInvitationsRepository, times(1))
               .deauthInvitation(any[String], any[String], any[Option[Instant]])
             verify(mockEmailService, times(1))
-              .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+              .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
           }
         }
       }
@@ -317,7 +316,7 @@ class AuthorisationAcceptServiceSpec
               verify(mockInvitationsRepository, times(2))
                 .deauthInvitation(any[String], any[String], any[Option[Instant]])
               verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }
@@ -344,7 +343,7 @@ class AuthorisationAcceptServiceSpec
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
               verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }
@@ -355,9 +354,7 @@ class AuthorisationAcceptServiceSpec
       "check for and deauth an existing itsa relationship with the same agent" should also {
         "check for and deauth an existing partial auth then create a new one" should also {
           "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
-            mockDeleteSameAgentRelationship(MtdIt.id, testArn.value, None, testNino.nino)(
-              Future.successful(true)
-            )
+            mockDeleteSameAgentRelationship(MtdIt.id, testArn.value, None, testNino.nino)(Future.successful(true))
             mockFindMainAgent(testNino.nino)(Future.successful(Some(oldAltItsaPartialAuth)))
             mockDeauthorisePartialAuth(MtdIt.id, testNino, testArn3)(Future.successful(true))
             mockCreatePartialAuth(testArn, MtdIt.id, testNino)()
@@ -383,7 +380,7 @@ class AuthorisationAcceptServiceSpec
               verify(mockInvitationsRepository, times(1))
                 .deauthInvitation(any[String], any[String], any[Option[Instant]])
               verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }
@@ -394,9 +391,7 @@ class AuthorisationAcceptServiceSpec
       "check for and deauth an existing itsa relationship with the same agent" should also {
         "create a new partial auth" should also {
           "update the invitation's status and send a confirmation email" in {
-            mockDeleteSameAgentRelationship(MtdItSupp.id, testArn.value, None, testNino.nino)(
-              Future.successful(true)
-            )
+            mockDeleteSameAgentRelationship(MtdItSupp.id, testArn.value, None, testNino.nino)(Future.successful(true))
             mockCreatePartialAuth(testArn, MtdItSupp.id, testNino)()
             mockUpdateStatus(altItsaSuppInvitation.invitationId, PartialAuth)(
               Future.successful(altItsaSuppInvitation.copy(status = PartialAuth))
@@ -410,7 +405,7 @@ class AuthorisationAcceptServiceSpec
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
               verify(mockEmailService, times(1))
-                .sendAcceptedEmail(any[Invitation])(any[HeaderCarrier], any[ExecutionContext])
+                .sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
           }
         }

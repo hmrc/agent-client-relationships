@@ -23,11 +23,14 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -52,54 +55,29 @@ object UserDetails {
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject() (httpGet: HttpClient)(implicit
+class UsersGroupsSearchConnector @Inject() (httpClient: HttpClientV2, appConfig: AppConfig)(implicit
   val metrics: Metrics,
-  val appConfig: AppConfig,
   val ec: ExecutionContext
-) extends HttpAPIMonitor
+) extends HttpApiMonitor
     with HttpErrorFunctions
     with Logging {
-  def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier): Future[Seq[UserDetails]] = {
-    val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
-    monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
-      httpGet.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case status if is2xx(status) => response.json.as[Seq[UserDetails]]
-          case Status.NOT_FOUND =>
-            logger.warn(s"Group $groupId not found in SCP")
-            throw UpstreamErrorResponse(s"Group $groupId not found in SCP", Status.NOT_FOUND)
-          case other =>
-            logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
-            throw UpstreamErrorResponse(s"Error in UGS-getGroupUsers: $other, ${response.body}", other)
-        }
-      }
-    }
-  }
 
-  def getFirstGroupAdminUser(
-    groupId: String
-  )(implicit hc: HeaderCarrier): Future[Option[UserDetails]] =
+  def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] =
+    monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
+      httpClient
+        .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
+        .execute[Seq[UserDetails]]
+    }
+
+  // TODO: move this transformation to the Service Layer
+  def getFirstGroupAdminUser(groupId: String)(implicit rh: RequestHeader): Future[Option[UserDetails]] =
     getGroupUsers(groupId)
       .map(_.find(_.credentialRole.exists(_ == "Admin")))
-      .recover { case e =>
-        logger.error(s"Could not find admin user for groupId $groupId due to: $e")
-        None
-      }
 
-  def getGroupInfo(groupId: String)(implicit hc: HeaderCarrier): Future[Option[GroupInfo]] = {
-    val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
+  def getGroupInfo(groupId: String)(implicit rh: RequestHeader): Future[Option[GroupInfo]] =
     monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
-      httpGet.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case status if is2xx(status) => Some(response.json.as[GroupInfo])
-          case Status.NOT_FOUND =>
-            logger.warn(s"Group $groupId not found in SCP")
-            None
-          case other =>
-            logger.error(s"Error in UGS-getGroupInfo: $other, ${response.body}")
-            None
-        }
-      }
+      httpClient
+        .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
+        .execute[Option[GroupInfo]]
     }
-  }
 }

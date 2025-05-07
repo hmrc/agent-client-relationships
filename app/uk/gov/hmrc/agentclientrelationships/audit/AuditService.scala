@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.audit
 
 import com.google.inject.Singleton
 import play.api.Logging
-import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
@@ -26,10 +26,10 @@ import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import javax.inject.Inject
 import scala.collection.mutable
@@ -82,14 +82,8 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     invitationIdKey
   )
 
-  private val createPartialAuthDetailsFields: Seq[String] = Seq(
-    arnKey,
-    serviceKey,
-    clientIdKey,
-    clientIdTypeKey,
-    howPartialAuthCreatedKey,
-    invitationIdKey
-  )
+  private val createPartialAuthDetailsFields: Seq[String] =
+    Seq(arnKey, serviceKey, clientIdKey, clientIdTypeKey, howPartialAuthCreatedKey, invitationIdKey)
 
   // TODO Needs removing when we get the green light to remove legacy VAT code
   private val createRelationshipDetailsFieldsForMtdVat: Seq[String] = Seq(
@@ -106,24 +100,11 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     "vrnExistsInEtmp"
   )
 
-  private val checkCesaDetailsAndPartialAuthFields: Seq[String] = Seq(
-    agentCodeKey,
-    credIdKey,
-    arnKey,
-    saAgentRefKey,
-    cesaRelationshipKey,
-    ninoKey,
-    "partialAuth"
-  )
+  private val checkCesaDetailsAndPartialAuthFields: Seq[String] =
+    Seq(agentCodeKey, credIdKey, arnKey, saAgentRefKey, cesaRelationshipKey, ninoKey, "partialAuth")
 
-  private val checkEsDetailsFields: Seq[String] = Seq(
-    agentCodeKey,
-    credIdKey,
-    "oldAgentCodes",
-    "vrn",
-    arnKey,
-    "ESRelationship"
-  )
+  private val checkEsDetailsFields: Seq[String] =
+    Seq(agentCodeKey, credIdKey, "oldAgentCodes", "vrn", arnKey, "ESRelationship")
 
   private val terminateRelationshipFields: Seq[String] = Seq(
     agentCodeKey,
@@ -137,13 +118,8 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     howRelationshipTerminatedKey
   )
 
-  private val terminatePartialAuthFields: Seq[String] = Seq(
-    arnKey,
-    serviceKey,
-    clientIdKey,
-    clientIdTypeKey,
-    howPartialAuthTerminatedKey
-  )
+  private val terminatePartialAuthFields: Seq[String] =
+    Seq(arnKey, serviceKey, clientIdKey, clientIdTypeKey, howPartialAuthTerminatedKey)
 
   private val recoveryOfDeleteRelationshipDetailsFields: Seq[String] = Seq(
     "agentReferenceNumber",
@@ -158,11 +134,7 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     "abandonmentReason"
   )
 
-  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext
-  ): Future[Unit] =
+  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit request: RequestHeader): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreateInvitation,
       "create-invitation",
@@ -177,9 +149,7 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     )
 
   def sendRespondToInvitationAuditEvent(invitation: Invitation, accepted: Boolean, isStride: Boolean)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.RespondToInvitation,
@@ -196,24 +166,14 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
       )
     )
 
-  def sendCreateRelationshipAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
+  def sendCreateRelationshipAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreateRelationship,
       "create-relationship",
       collectDetails(auditData.getDetails, createRelationshipDetailsFields)
     )
 
-  def sendCreatePartialAuthAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
+  def sendCreatePartialAuthAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreatePartialAuthorisation,
       "create-partial-auth",
@@ -221,48 +181,28 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     )
 
   // TODO Needs removing when we get the green light to remove legacy VAT code
-  def sendCreateRelationshipAuditEventForMtdVat()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
+  def sendCreateRelationshipAuditEventForMtdVat()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CreateRelationship,
       "create-relationship",
       collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat)
     )
 
-  def sendCheckCesaAndPartialAuthAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
+  def sendCheckCesaAndPartialAuthAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CheckCESA,
       "check-cesa",
       collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
     )
 
-  def sendCheckEsAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
+  def sendCheckEsAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.CheckES,
       "check-es",
       collectDetails(auditData.getDetails, checkEsDetailsFields)
     )
 
-  def sendTerminateRelationshipAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
+  def sendTerminateRelationshipAuditEvent()(implicit request: RequestHeader, auditData: AuditData): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.TerminateRelationship,
       "terminate-relationship",
@@ -298,10 +238,10 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     auditData
   }
 
-  def auditForPirTermination(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  )(implicit currentUser: CurrentUser, hc: HeaderCarrier, request: Request[_]): Future[Unit] = {
+  def auditForPirTermination(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+    currentUser: CurrentUser,
+    request: RequestHeader
+  ): Future[Unit] = {
     implicit val auditData: AuditData = new AuditData()
 
     setAuditDataForTermination(arn, enrolmentKey)
@@ -309,10 +249,7 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     sendTerminateRelationshipAuditEvent()
   }
 
-  def auditForAgentReplacement(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  )(implicit hc: HeaderCarrier, request: Request[_]): Future[Unit] = {
+  def auditForAgentReplacement(arn: Arn, enrolmentKey: EnrolmentKey)(implicit request: RequestHeader): Future[Unit] = {
     implicit val auditData: AuditData = new AuditData()
     implicit val currentUser: CurrentUser = CurrentUser(None, None)
 
@@ -324,18 +261,12 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     sendTerminateRelationshipAuditEvent()
   }
 
-  def sendTerminatePartialAuthAuditEvent(
-    arn: String,
-    service: String,
-    nino: String
-  )(implicit
+  def sendTerminatePartialAuthAuditEvent(arn: String, service: String, nino: String)(implicit
     // defaulted as it only needs to be predefined for special cases (agent replacement/role change)
     currentUser: CurrentUser = CurrentUser(None, None),
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     // defaulted as it only needs to be predefined for special cases (agent replacement/role change)
-    auditData: AuditData = new AuditData(),
-    ec: ExecutionContext
+    auditData: AuditData = new AuditData()
   ): Future[Unit] = {
     if (!auditData.getDetails.contains(howPartialAuthTerminatedKey)) {
       auditData.set(
@@ -361,10 +292,8 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
   }
 
   def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
+    request: RequestHeader,
+    auditData: AuditData
   ): Future[Unit] =
     auditEvent(
       AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
@@ -376,26 +305,24 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: Seq[(String, Any)] = Seq.empty
-  )(implicit hc: HeaderCarrier, request: Request[Any], ec: ExecutionContext): Future[Unit] =
+  )(implicit request: RequestHeader): Future[Unit] =
     send(createEvent(event, transactionName, details: _*))
 
-  private def createEvent(
-    event: AgentClientRelationshipEvent,
-    transactionName: String,
-    details: (String, Any)*
-  )(implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
+  private def createEvent(event: AgentClientRelationshipEvent, transactionName: String, details: (String, Any)*)(
+    implicit request: RequestHeader
+  ): DataEvent = {
 
     def toString(x: Any): String = x match {
       case t: TaxIdentifier => t.value
       case _                => x.toString
     }
-
+    val hc = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
     val tags = hc.toAuditTags(transactionName, request.path)
     DataEvent(auditSource = "agent-client-relationships", auditType = event.toString, tags = tags, detail = detail)
   }
 
-  private def send(events: DataEvent*)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =
+  private def send(events: DataEvent*)(implicit request: RequestHeader): Future[Unit] =
     Future {
       events.foreach { event =>
         Try(auditConnector.sendEvent(event))

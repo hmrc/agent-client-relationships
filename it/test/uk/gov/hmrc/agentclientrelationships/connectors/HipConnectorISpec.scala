@@ -20,10 +20,12 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HipStub}
@@ -51,7 +53,7 @@ class HipConnectorISpec
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
   val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
-  val hipHeaders: HIPHeaders = app.injector.instanceOf[HIPHeaders]
+  val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder =
@@ -80,9 +82,9 @@ class HipConnectorISpec
       )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
   val hipConnector =
-    new HipConnector(httpClient, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
+    new HipConnector(httpClient, agentCacheProvider, hipHeaders, appConfig)(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

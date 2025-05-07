@@ -48,7 +48,7 @@ class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
 
   val localLogger: Logger = logger
 
-// to support static link for agents there is no TTL
+  // to support static link for agents there is no TTL
   override lazy val requiresTtlIndex: Boolean = false
 
   def create(agentReferenceRecord: AgentReferenceRecord): Future[Unit] =

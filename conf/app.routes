@@ -1,11 +1,11 @@
 
-GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String, userId: Option[String] ?= None)
-PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.create(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
-DELETE        /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientIdType: String, clientId: String)
+GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String, userId: Option[String] ?= None)
+PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.create(arn: Arn, service: String, clientIdType: String, clientId: String)
+DELETE        /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: Arn, service: String, clientIdType: String, clientId: String)
 
 GET           /agent/relationships/inactive                                  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent
-DELETE        /agent/:arn/terminate                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET           /agent/:arn/client/:nino/legacy-mapped-relationship            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getLegacySaRelationshipStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, nino: uk.gov.hmrc.domain.Nino)
+DELETE        /agent/:arn/terminate                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: Arn)
+GET           /agent/:arn/client/:nino/legacy-mapped-relationship            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getLegacySaRelationshipStatus(arn: Arn, nino: Nino)
 
 GET           /client/relationships/active                                   @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
 GET           /client/relationships/inactive                                 @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsForClient
@@ -18,18 +18,18 @@ GET           /agent/agent-reference/uid/:uid/:normalizedAgentName           @uk
 GET           /agent/agent-link                                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.createLink
 POST          /client/validate-invitation                                    @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateInvitationForClient
 GET           /client/authorisation-request-info/:invitationId               @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.getForClient(invitationId: String)
-GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: Arn)
 
 PUT           /client/authorisation-response/reject/:invitationId            @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.rejectInvitation(invitationId: String)
 PUT           /authorisation-response/accept/:invitationId                   @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationAcceptController.accept(invitationId: String)
 
-POST          /agent/:arn/authorisation-request                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
-GET           /agent/:arn/authorisation-requests                             @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.trackRequests(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, statusFilter: Option[String], clientName: Option[String], pageNumber: Int, pageSize: Int)
-POST          /agent/:arn/remove-authorisation                               @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+POST          /agent/:arn/authorisation-request                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: Arn)
+GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: Arn, invitationId: String)
+GET           /agent/:arn/authorisation-requests                             @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.trackRequests(arn: Arn, statusFilter: Option[String], clientName: Option[String], pageNumber: Int, pageSize: Int)
+POST          /agent/:arn/remove-authorisation                               @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: Arn)
 PUT           /agent/cancel-invitation/:invitationId                         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.cancelInvitation(invitationId: String)
 
-POST          /itsa-post-signup/create-relationship/:nino                    @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: uk.gov.hmrc.domain.Nino)
+POST          /itsa-post-signup/create-relationship/:nino                    @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: Nino)
 
 POST          /invitations/trusts-enrolment-orchestrator/:urn/update         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.replaceUrnWithUtr(urn: String)
 
@@ -45,11 +45,11 @@ GET           /stride/client-details/service/:service/client/:clientIdType/:clie
 # Transitional Routes
 # --------------------------------
 
-PUT          /agent-reference/:arn                                          @uk.gov.hmrc.agentclientrelationships.controllers.AgentReferenceController.fetchOrCreateRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+PUT          /agent-reference/:arn                                          @uk.gov.hmrc.agentclientrelationships.controllers.AgentReferenceController.fetchOrCreateRecord(arn: Arn)
 GET          /agent-reference/uid/:uid                                      @uk.gov.hmrc.agentclientrelationships.controllers.AgentReferenceController.fetchRecordByUid(uid: String)
-GET          /lookup-invitations                                            @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitations(arn: Option[uk.gov.hmrc.agentmtdidentifiers.model.Arn] ?= None, services: Seq[String] ?= Nil, clientIds: Seq[String] ?= Nil, status: Option[uk.gov.hmrc.agentclientrelationships.model.InvitationStatus] ?= None)
+GET          /lookup-invitations                                            @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitations(arn: Option[Arn] ?= None, services: Seq[String] ?= Nil, clientIds: Seq[String] ?= Nil, status: Option[InvitationStatus] ?= None)
 GET          /lookup-invitation/:invitationId                               @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitation(invitationId: String)
 POST         /migrate/agent-reference-record                                @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.migrateRecord
 POST         /migrate/partial-auth-record                                   @uk.gov.hmrc.agentclientrelationships.controllers.transitional.MigratePartialAuthController.migratePartialAuth
-PUT          /transitional/change-invitation-status/arn/:arn/service/:service/client/:clientId      @uk.gov.hmrc.agentclientrelationships.controllers.transitional.ChangeInvitationStatusController.changeInvitationStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, service: String, clientId: String)
+PUT          /transitional/change-invitation-status/arn/:arn/service/:service/client/:clientId      @uk.gov.hmrc.agentclientrelationships.controllers.transitional.ChangeInvitationStatusController.changeInvitationStatus(arn: Arn, service: String, clientId: String)
 PUT          /authorisation-request/action-invitation/:invitationId/action/:action                  @uk.gov.hmrc.agentclientrelationships.controllers.transitional.ChangeInvitationStatusByIdController.changeInvitationStatusById(invitationId: String, action:String)

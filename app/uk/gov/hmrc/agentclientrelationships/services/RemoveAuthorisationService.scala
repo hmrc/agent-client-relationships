@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -92,12 +92,8 @@ class RemoveAuthorisationService @Inject() (
       case _ => Future.successful(false)
     }
 
-  def replaceEnrolmentKeyForItsa(
-    suppliedClientId: ClientId,
-    suppliedEnrolmentKey: EnrolmentKey,
-    service: Service
-  )(implicit
-    hc: HeaderCarrier
+  def replaceEnrolmentKeyForItsa(suppliedClientId: ClientId, suppliedEnrolmentKey: EnrolmentKey, service: Service)(
+    implicit request: RequestHeader
   ): Future[Either[InvitationFailureResponse, EnrolmentKey]] =
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>

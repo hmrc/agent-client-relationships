@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import play.api.http.{HeaderNames, MimeTypes}
-import play.api.libs.ws.{EmptyBody, WSClient, WSRequest, WSResponse}
+import play.api.http.{ HeaderNames, MimeTypes }
+import play.api.libs.ws.{ EmptyBody, WSClient, WSRequest, WSResponse }
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 object Http {
 

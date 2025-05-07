@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 case class CurrentUser(credentials: Option[Credentials], affinityGroup: Option[AffinityGroup]) {
   def isStride: Boolean = credentials.map(_.providerType).contains("PrivilegedApplication")
@@ -41,13 +42,15 @@ case class CurrentUser(credentials: Option[Credentials], affinityGroup: Option[A
 trait AuthActions extends AuthorisedFunctions with Logging {
   me: Results =>
 
+  implicit val executionContext: ExecutionContext
+
   override def authConnector: AuthConnector
 
   val supportedServices: Seq[Service]
 
   def authorisedUser(arn: Option[Arn], clientId: TaxIdentifier, strideRoles: Seq[String])(
     body: CurrentUser => Future[Result]
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  )(implicit request: RequestHeader): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
       optCreds
         .collect {
@@ -65,7 +68,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   def authorisedClientOrStrideUserOrAgent(clientId: TaxIdentifier, strideRoles: Seq[String])(
     body: CurrentUser => Future[Result]
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  )(implicit request: RequestHeader): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
       optCreds
         .collect {
@@ -126,7 +129,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   def authorisedAsClient[A](
     serviceKey: String
-  )(body: TaxIdentifier => Future[Result])(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  )(body: TaxIdentifier => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised(Enrolment(serviceKey) and AuthProviders(GovernmentGateway))
       .retrieve(authorisedEnrolments and affinityGroup) { case enrolments ~ affinityG =>
         affinityG match {
@@ -144,17 +147,15 @@ trait AuthActions extends AuthorisedFunctions with Logging {
       }
 
   // Authorisation request response is a special case where we need to check for multiple services
-  def withAuthorisedClientForServiceKeys[A, T](serviceKeys: Seq[String])(
-    body: Seq[LocalEnrolmentKey] => Future[Result]
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  def withAuthorisedClientForServiceKeys[A, T](
+    serviceKeys: Seq[String]
+  )(body: Seq[LocalEnrolmentKey] => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
         val requiredEnrolments = for {
           serviceKey <- serviceKeys
           enrolment  <- enrolments.getEnrolment(serviceKey)
-        } yield (
-          LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value)))
-        )
+        } yield (LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value))))
 
         requiredEnrolments match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
@@ -164,7 +165,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   def withAuthorisedAsClient[A, T](
     body: Map[Service, TaxIdentifier] => Future[Result]
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  )(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments) { enrolments =>
         val identifiers = for {
@@ -181,7 +182,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   def withAuthorisedAsClientWithNino(
     body: EnrolmentsWithNino => Future[Result]
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  )(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation))
       .retrieve(allEnrolments and nino) { case enrolments ~ nino =>
         body(new EnrolmentsWithNino(enrolments, nino))
@@ -189,7 +190,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
     body: String => Future[Result]
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Result] =
+  )(implicit request: RequestHeader): Future[Result] =
     authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
         case Some(Credentials(strideId, _)) => body(strideId)
@@ -228,9 +229,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         Future successful Unauthorized
     }
 
-  protected def withAuthorisedAsAgent[A](
-    body: Arn => Future[Result]
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+  protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(implicit request: RequestHeader): Future[Result] =
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
       case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
@@ -240,7 +239,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
 
   protected def withEnrolledAsAgent[A](
     body: Option[String] => Future[Result]
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Result] =
+  )(implicit request: RequestHeader): Future[Result] =
     authorised(
       Enrolment("HMRC-AS-AGENT")
         and AuthProviders(GovernmentGateway)

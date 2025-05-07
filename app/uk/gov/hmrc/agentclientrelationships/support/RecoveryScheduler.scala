@@ -34,8 +34,9 @@ import scala.util.Random
 class RecoveryScheduler @Inject() (
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
   deleteRelationshipsService: DeleteRelationshipsService,
-  actorSystem: ActorSystem
-)(implicit appConfig: AppConfig, ec: ExecutionContext)
+  actorSystem: ActorSystem,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext)
     extends Logging {
 
   val recoveryInterval = appConfig.recoveryInterval
@@ -50,7 +51,7 @@ class RecoveryScheduler @Inject() (
     logger.warn("Recovery job scheduler not enabled.")
 
   def recover: Future[Unit] =
-    deleteRelationshipsService.tryToResume(ec, new AuditData).map(_ => ())
+    deleteRelationshipsService.tryToResume(new AuditData).map(_ => ())
 }
 
 class TaskActor(

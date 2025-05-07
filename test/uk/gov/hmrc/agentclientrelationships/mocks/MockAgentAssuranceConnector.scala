@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,7 +37,7 @@ trait MockAgentAssuranceConnector {
   )(response: AgentDetailsDesResponse): OngoingStubbing[Future[AgentDetailsDesResponse]] =
     when(
       mockAgentAssuranceConnector
-        .getAgentRecordWithChecks(eqs(arn))(any[HeaderCarrier], any[ExecutionContext])
+        .getAgentRecordWithChecks(eqs(arn))(any[RequestHeader])
     )
       .thenReturn(Future.successful(response))
 }

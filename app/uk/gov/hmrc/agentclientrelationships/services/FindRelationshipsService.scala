@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
@@ -38,40 +38,33 @@ class FindRelationshipsService @Inject() (
   hipConnector: HipConnector,
   appConfig: AppConfig,
   val metrics: Metrics
-) extends Monitoring
+)(implicit executionContext: ExecutionContext)
+    extends Monitoring
     with Logging {
 
-  def getItsaRelationshipForClient(
-    nino: Nino,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
+  def getItsaRelationshipForClient(nino: Nino, service: Service)(implicit
+    request: RequestHeader
+  ): Future[Option[ActiveRelationship]] =
     for {
       mtdItId <- ifOrHipConnector.getMtdIdFor(nino)
-      relationships <-
-        mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
-          hipConnector.getActiveClientRelationships(_, service)
-        )
+      relationships <- mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
+                         hipConnector.getActiveClientRelationships(_, service)
+                       )
     } yield relationships
 
-  def getAllActiveItsaRelationshipForClient(
-    nino: Nino,
-    activeOnly: Boolean
-  )(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+  def getAllActiveItsaRelationshipForClient(nino: Nino, activeOnly: Boolean)(implicit
+    request: RequestHeader
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     (for {
       mtdItId <- EitherT.fromOptionF(ifOrHipConnector.getMtdIdFor(nino), RelationshipFailureResponse.TaxIdentifierError)
-      relationships <-
-        EitherT(hipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
+      relationships <- EitherT(hipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
     } yield relationships.filter(_.isActive))
       .leftFlatMap(recoverGetRelationships)
       .value
 
-  def getActiveRelationshipsForClient(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ActiveRelationship]] =
+  def getActiveRelationshipsForClient(taxIdentifier: TaxIdentifier, service: Service)(implicit
+    request: RequestHeader
+  ): Future[Option[ActiveRelationship]] =
     // If the tax id type is among one of the supported ones...
     if (
       appConfig.supportedServicesWithoutPir
@@ -84,12 +77,8 @@ class FindRelationshipsService @Inject() (
       Future.successful(None)
     }
 
-  def getAllRelationshipsForClient(
-    taxIdentifier: TaxIdentifier,
-    activeOnly: Boolean
-  )(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
+  def getAllRelationshipsForClient(taxIdentifier: TaxIdentifier, activeOnly: Boolean)(implicit
+    request: RequestHeader
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     // If the tax id type is among one of the supported ones...
     if (
@@ -108,7 +97,7 @@ class FindRelationshipsService @Inject() (
 
   private def recoverGetRelationships(
     relationshipFailureResponse: RelationshipFailureResponse
-  )(implicit ec: ExecutionContext): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
     relationshipFailureResponse match {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended |
           RelationshipFailureResponse.TaxIdentifierError =>
@@ -117,14 +106,12 @@ class FindRelationshipsService @Inject() (
         EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
     }
 
-  def getInactiveRelationshipsForAgent(
-    arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+  def getInactiveRelationshipsForAgent(arn: Arn)(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] =
     hipConnector.getInactiveRelationships(arn)
 
   def getActiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Map[Service, Seq[Arn]]] =
+  )(implicit request: RequestHeader): Future[Map[Service, Seq[Arn]]] =
     Future
       .traverse(appConfig.supportedServicesWithoutPir) { service =>
         identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
@@ -137,7 +124,7 @@ class FindRelationshipsService @Inject() (
 
   def getInactiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] =
     Future
       .traverse(appConfig.supportedServicesWithoutPir) { service =>
         identifiers.get(service) match {
@@ -147,10 +134,9 @@ class FindRelationshipsService @Inject() (
       }
       .map(_.flatten)
 
-  def getInactiveRelationshipsForClient(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[InactiveRelationship]] =
+  def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, service: Service)(implicit
+    request: RequestHeader
+  ): Future[Seq[InactiveRelationship]] =
     // if it is one of the tax ids that we support...
     if (
       appConfig.supportedServicesWithoutPir.exists(

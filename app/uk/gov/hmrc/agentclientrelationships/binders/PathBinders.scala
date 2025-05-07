@@ -41,9 +41,7 @@ object PathBinders {
             Right(Arn.apply(value))
           catch {
             case err: Throwable =>
-              Left(
-                s"Cannot parse parameter as Arn: [$value] is not a valid Arn"
-              )
+              Left(s"Cannot parse parameter as Arn: [$value] is not a valid Arn")
           }
         }
 

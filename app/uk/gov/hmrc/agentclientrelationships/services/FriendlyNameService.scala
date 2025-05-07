@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnec
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCPIR}
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.net.URLEncoder
 import javax.inject.Inject
@@ -32,7 +32,7 @@ class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStor
 ) extends Logging {
 
   def updateFriendlyName(invitation: Invitation, enrolment: EnrolmentKey)(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Unit] =
     invitation.service match {
       case `HMRCPIR`                                             => Future.unit
@@ -41,7 +41,7 @@ class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStor
     }
 
   private def doUpdateFriendlyName(invitation: Invitation, enrolment: EnrolmentKey)(implicit
-    hc: HeaderCarrier
+    request: RequestHeader
   ): Future[Unit] = {
     val clientName: String = URLEncoder.encode(invitation.clientName, "UTF-8")
 

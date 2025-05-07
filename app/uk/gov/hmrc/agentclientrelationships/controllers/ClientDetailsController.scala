@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCCBCNONUKORG, HMRCCBCOR
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -41,17 +41,15 @@ class ClientDetailsController @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   val authConnector: AuthConnector,
-  cc: ControllerComponents
-)(implicit appConfig: AppConfig, ec: ExecutionContext)
+  cc: ControllerComponents,
+  appConfig: AppConfig
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  private def refineService(
-    clientDetails: ClientDetailsResponse,
-    service: String
-  ): String =
+  private def refineService(clientDetails: ClientDetailsResponse, service: String): String =
     service match {
       case `HMRCCBCORG` if clientDetails.isOverseas.contains(true) => HMRCCBCNONUKORG
       case service                                                 => service
@@ -67,10 +65,9 @@ class ClientDetailsController @Inject() (
           val clientIdType = Service(refinedService).supportedSuppliedClientIdType.enrolmentId
           for {
             pendingInvitationMain <- pendingInvitation(arn, refinedService, clientId)
-            pendingInvitationSupp <-
-              if (multiAgentServices.contains(refinedService))
-                pendingInvitation(arn, multiAgentServices(refinedService), clientId)
-              else Future.successful(false)
+            pendingInvitationSupp <- if (multiAgentServices.contains(refinedService))
+                                       pendingInvitation(arn, multiAgentServices(refinedService), clientId)
+                                     else Future.successful(false)
             currentRelationshipMain <- existingRelationship(arn, refinedService, clientIdType, clientId)
             currentRelationshipSupp <-
               if (multiAgentServices.contains(refinedService))
@@ -86,16 +83,13 @@ class ClientDetailsController @Inject() (
           )
         case Left(ClientDetailsNotFound) => Future.successful(NotFound)
         case Left(ErrorRetrievingClientDetails(status, message)) =>
-          throw new RuntimeException(
-            s"Client details lookup failed - status: '$status', error: '$message''"
-          )
+          throw new RuntimeException(s"Client details lookup failed - status: '$status', error: '$message''")
       }
     }
   }
 
   private def existingRelationship(arn: Arn, service: String, clientIdType: String, clientId: String)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any]
+    request: RequestHeader
   ): Future[Option[String]] =
     checkRelationshipsService
       .checkForRelationship(arn, service, clientIdType, clientId, None)

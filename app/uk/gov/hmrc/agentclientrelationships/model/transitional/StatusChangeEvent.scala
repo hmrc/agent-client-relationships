@@ -32,9 +32,6 @@ object StatusChangeEvent {
     }
 
     override def writes(o: StatusChangeEvent): JsValue =
-      Json.obj(
-        "time"   -> o.time.toInstant(ZoneOffset.UTC).toEpochMilli,
-        "status" -> o.status.toString
-      )
+      Json.obj("time" -> o.time.toInstant(ZoneOffset.UTC).toEpochMilli, "status" -> o.status.toString)
   }
 }

@@ -54,7 +54,7 @@ class RelationshipsController @Inject() (
   auditService: AuditService,
   validationService: ValidationService,
   override val controllerComponents: ControllerComponents
-)(implicit executionContext: ExecutionContext)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(controllerComponents)
     with AuthActions {
 

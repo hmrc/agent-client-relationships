@@ -37,7 +37,7 @@ class StrideClientDetailsController @Inject() (
   strideClientDetailsService: StrideClientDetailsService,
   cc: ControllerComponents,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions {
 

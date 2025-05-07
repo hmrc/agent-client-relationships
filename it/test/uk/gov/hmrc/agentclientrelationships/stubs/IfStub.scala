@@ -25,14 +25,12 @@ trait IfStub {
   def givenReturnsServerError(): StubMapping =
     stubFor(
       any(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(500))
-    )
+        .willReturn(aResponse().withStatus(500)))
 
   def givenReturnsServiceUnavailable(): StubMapping =
     stubFor(
       any(urlMatching(s"/registration/.*"))
-        .willReturn(aResponse().withStatus(503))
-    )
+        .willReturn(aResponse().withStatus(503)))
 
   def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino): StubMapping =
     stubFor(
@@ -40,21 +38,17 @@ trait IfStub {
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}""")
-        )
-    )
+            .withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}""")))
 
   def givenNinoIsUnknownFor(mtdId: MtdItId): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
 
   def givenmtdIdIsInvalid(mtdId: MtdItId): StubMapping =
     stubFor(
       get(urlMatching(s"/registration/.*?/mtdId/${mtdId.value}"))
-        .willReturn(aResponse().withStatus(400))
-    )
+        .willReturn(aResponse().withStatus(400)))
 
   def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId): StubMapping =
     stubFor(
@@ -62,21 +56,17 @@ trait IfStub {
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}""")
-        )
-    )
+            .withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}""")))
 
   def givenMtdItIdIsUnKnownFor(nino: Nino): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(404))
-    )
+        .willReturn(aResponse().withStatus(404)))
 
   def givenNinoIsInvalid(nino: Nino): StubMapping =
     stubFor(
       get(urlMatching(s"/registration/.*?/nino/${nino.value}"))
-        .willReturn(aResponse().withStatus(400))
-    )
+        .willReturn(aResponse().withStatus(400)))
 
   def givenItsaBusinessDetailsExists(idType: String, id: String, mtdId: String = "XAIT0000111122"): StubMapping =
     stubFor(
@@ -98,9 +88,7 @@ trait IfStub {
                          |    "mtdId": "$mtdId"
                          |  }
                          |}
-          """.stripMargin)
-        )
-    )
+          """.stripMargin)))
 
   def givenMultipleItsaBusinessDetailsExists(nino: String): StubMapping =
     stubFor(
@@ -128,9 +116,7 @@ trait IfStub {
                          |    ]
                          |  }
                          |}
-          """.stripMargin)
-        )
-    )
+          """.stripMargin)))
 
   def givenEmptyItsaBusinessDetailsExists(nino: String): StubMapping =
     stubFor(
@@ -143,14 +129,11 @@ trait IfStub {
                          |    "businessData": []
                          |  }
                          |}
-          """.stripMargin)
-        )
-    )
+          """.stripMargin)))
 
   def givenItsaBusinessDetailsError(nino: String, status: Int): StubMapping =
     stubFor(
       get(urlEqualTo(s"/registration/business-details/nino/$nino"))
-        .willReturn(aResponse().withStatus(status))
-    )
+        .willReturn(aResponse().withStatus(status)))
 
 }

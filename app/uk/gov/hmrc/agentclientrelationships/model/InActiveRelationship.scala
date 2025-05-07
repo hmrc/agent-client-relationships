@@ -81,12 +81,10 @@ object InactiveRelationship {
     }
   }
 
-  val irvReads: Reads[InactiveRelationship] = (
-    (__ \ "arn").read[Arn] and
-      (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
-      (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
-      (__ \ "clientId").read[String]
-  )((arn, validTo, validFrom, clientId) =>
+  val irvReads: Reads[InactiveRelationship] = ((__ \ "arn").read[Arn] and
+    (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+    (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+    (__ \ "clientId").read[String])((arn, validTo, validFrom, clientId) =>
     InactiveRelationship(arn, validTo, validFrom, clientId, "personal", Service.PersonalIncomeRecord.id)
   )
 

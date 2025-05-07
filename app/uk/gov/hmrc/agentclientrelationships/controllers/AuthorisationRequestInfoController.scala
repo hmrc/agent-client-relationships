@@ -38,7 +38,7 @@ class AuthorisationRequestInfoController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
+)(implicit val executionContext: ExecutionContext)
     extends BackendController(cc)
     with AuthActions {
 
@@ -67,13 +67,7 @@ class AuthorisationRequestInfoController @Inject() (
     withAuthorisedAsAgent {
       case agentArn: Arn if agentArn == arn =>
         invitationService
-          .trackRequests(
-            arn,
-            statusFilter.filter(_.nonEmpty),
-            clientName.filter(_.nonEmpty),
-            pageNumber,
-            pageSize
-          )
+          .trackRequests(arn, statusFilter.filter(_.nonEmpty), clientName.filter(_.nonEmpty), pageNumber, pageSize)
           .map { result =>
             Ok(Json.toJson(result))
           }

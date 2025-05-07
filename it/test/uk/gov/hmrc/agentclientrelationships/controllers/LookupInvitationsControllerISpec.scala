@@ -17,14 +17,14 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, PartialAuth, PartialAuthRelationship}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import play.api.test.Helpers.{ await, defaultAwaitTimeout }
+import uk.gov.hmrc.agentclientrelationships.model.{ Accepted, Invitation, PartialAuth, PartialAuthRelationship }
+import uk.gov.hmrc.agentclientrelationships.repository.{ InvitationsRepository, PartialAuthRepository }
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{ MtdIt, MtdItSupp }
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, MtdItId }
 import uk.gov.hmrc.domain.Nino
 
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.{ Instant, LocalDate, ZoneId }
 
 class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
@@ -55,8 +55,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         testAgentName,
         testAgentEmail,
         LocalDate.now(),
-        Some("personal")
-      )
+        Some("personal"))
       .copy(created = testTime, lastUpdated = testTime)
   val suppItsaInvitation: Invitation =
     Invitation
@@ -69,8 +68,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         testAgentName,
         testAgentEmail,
         LocalDate.now(),
-        Some("personal")
-      )
+        Some("personal"))
       .copy(created = testTime, lastUpdated = testTime)
   val acceptedItsaInvitation: Invitation =
     Invitation
@@ -83,8 +81,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         testAgentName,
         testAgentEmail,
         LocalDate.now(),
-        Some("personal")
-      )
+        Some("personal"))
       .copy(created = testTime, lastUpdated = testTime, status = Accepted)
 
   val altItsaInvitation: Invitation =
@@ -98,8 +95,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         testAgentName,
         testAgentEmail,
         LocalDate.now(),
-        Some("personal")
-      )
+        Some("personal"))
       .copy(created = testTime, lastUpdated = testTime, status = PartialAuth)
   val partialAuth: PartialAuthRelationship =
     PartialAuthRelationship(testTime, testArn.value, MtdIt.id, testNino.value, active = true, testTime)
@@ -175,8 +171,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         val result =
           doGetRequest(
-            invitationsUrl + s"?services=${MtdIt.id}&services=${MtdItSupp.id}&clientIds=${testMtdItId1.value}"
-          )
+            invitationsUrl + s"?services=${MtdIt.id}&services=${MtdItSupp.id}&clientIds=${testMtdItId1.value}")
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(itsaInvitation, suppItsaInvitation))
@@ -191,8 +186,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         val result = doGetRequest(
           invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}&services=${MtdItSupp.id}" +
-            s"&clientIds=${testMtdItId1.value}&clientIds=${testMtdItId2.value}"
-        )
+            s"&clientIds=${testMtdItId1.value}&clientIds=${testMtdItId2.value}")
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(itsaInvitation, acceptedItsaInvitation))
@@ -208,8 +202,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         val result = doGetRequest(
           invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}" +
-            s"&clientIds=${testNino.value}&status=$PartialAuth"
-        )
+            s"&clientIds=${testNino.value}&status=$PartialAuth")
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(altItsaInvitation))
@@ -222,8 +215,7 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
         val result = doGetRequest(
           invitationsUrl + s"?arn=${testArn.value}&services=${MtdIt.id}" +
-            s"&clientIds=${testNino.value}&status=$PartialAuth"
-        )
+            s"&clientIds=${testNino.value}&status=$PartialAuth")
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(Seq(partialAuth.asInvitation))
@@ -235,14 +227,10 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
         await(partialAuthRepo.collection.insertOne(partialAuth).toFuture())
 
-        val result = doGetRequest(
-          invitationsUrl + s"?arn=${testArn.value}"
-        )
+        val result = doGetRequest(invitationsUrl + s"?arn=${testArn.value}")
 
         result.status shouldBe 200
-        result.json shouldBe Json.toJson(
-          Seq(itsaInvitation, partialAuth.asInvitation)
-        )
+        result.json shouldBe Json.toJson(Seq(itsaInvitation, partialAuth.asInvitation))
       }
     }
   }
