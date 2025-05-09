@@ -2,13 +2,9 @@ package uk.gov.hmrc.agentclientrelationships
 
 import java.net.URL
 import java.time.Clock
-import scala.concurrent.ExecutionContext
-import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
-import uk.gov.hmrc.agentclientrelationships.model.TerminationResponse
-
 import javax.inject.Inject
 import javax.inject.Singleton
-import scala.annotation.unused
+import scala.concurrent.ExecutionContext
 
 trait T1
 trait T2
@@ -112,7 +108,50 @@ with T3 {
   ): String = {
     if (i < 2) {
 
-      new URL(s + b + i + i2).toString.toString.trim.toLowerCase().toLowerCase().toLowerCase()
+      (
+        new URL(s + b + i + i2)
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString.toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .toString
+          .trim
+          .trim
+      ).trim
+
+      new URL(s + b + i + i2).toString.toLowerCase().toLowerCase().toLowerCase().toLowerCase()
+
+      List(1)
+        .toIterator
+        .buffered
+        .map(_ + 2).filter(_ > 2)
 
       new URL(s + b + i + i2).toString.trim
     }
@@ -260,8 +299,7 @@ class IntStringLong(
     case 1 =>
       println("aialala")
       1
-    case 2 =>
-      2
+    case 2 => 2
   }
 
   def func(
