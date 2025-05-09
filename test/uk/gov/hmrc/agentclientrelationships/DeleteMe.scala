@@ -21,6 +21,9 @@ class Dm2(
 )
 extends Dm1(a, b)
 
+object X
+extends T1
+
 class Dm3(
   a: Any,
   b: Any,
