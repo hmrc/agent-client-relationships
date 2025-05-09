@@ -24,6 +24,7 @@ import uk.gov.hmrc.domain.Nino
 
 object PathBinders {
 
+  // scalafmt: { binPack.parentConstructors = Always }
   implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
   implicit object MtdItIdBinder extends SimpleObjectBinder[MtdItId](MtdItId.apply, _.value)
   implicit object NinoBinder extends SimpleObjectBinder[Nino](Nino.apply, _.value)
@@ -54,8 +55,8 @@ object PathBinders {
     ): String = s"$key=${Arn.unapply(value)}"
 
   }
-  implicit object InvitationStatusBinder
-  extends QueryStringBindable[InvitationStatus] {
+
+  implicit object InvitationStatusBinder extends QueryStringBindable[InvitationStatus] {
 
     override def bind(
       key: String,
@@ -81,3 +82,5 @@ object PathBinders {
   }
 
 }
+
+// scalafmt: OFF
