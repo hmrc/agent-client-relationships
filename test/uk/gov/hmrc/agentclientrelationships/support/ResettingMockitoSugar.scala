@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.support
 
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterEach, Suite}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.Suite
 
 import scala.reflect.Manifest
 
@@ -39,4 +40,5 @@ with BeforeAndAfterEach {
     super.beforeEach()
     Mockito.reset(mocksToReset: _*)
   }
+
 }

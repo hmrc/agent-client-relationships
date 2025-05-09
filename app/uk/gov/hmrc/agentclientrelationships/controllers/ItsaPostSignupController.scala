@@ -18,20 +18,28 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.Logging
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
-import uk.gov.hmrc.agentclientrelationships.services.{AltItsaCreateRelationshipSuccess, AltItsaNotFoundOrFailed, CheckAndCopyRelationshipsService, FoundAndCopied, NotFound => CheckAndCopyNotFound}
+import uk.gov.hmrc.agentclientrelationships.services.AltItsaCreateRelationshipSuccess
+import uk.gov.hmrc.agentclientrelationships.services.AltItsaNotFoundOrFailed
+import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.FoundAndCopied
+import uk.gov.hmrc.agentclientrelationships.services.{NotFound => CheckAndCopyNotFound}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class ItsaPostSignupController @Inject() (
@@ -55,10 +63,17 @@ with Logging {
           case Some(mtdItId) =>
             implicit val auditData: AuditData = new AuditData()
             checkAndCopyRelationshipsService
-              .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, mService = None, mNino = Some(nino))
+              .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(
+                arn,
+                mtdItId,
+                mService = None,
+                mNino = Some(nino)
+              )
               .map {
-                case AltItsaCreateRelationshipSuccess(service) => Created(Json.parse(s"""{"service": "$service"}"""))
-                case FoundAndCopied                            => Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
+                case AltItsaCreateRelationshipSuccess(service) =>
+                  Created(Json.parse(s"""{"service": "$service"}"""))
+                case FoundAndCopied =>
+                  Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
                 case AltItsaNotFoundOrFailed =>
                   val msg = s"itsa-post-signup create relationship failed: no partial auth"
                   logger.warn(msg)
@@ -79,4 +94,5 @@ with Logging {
         }
     }
   }
+
 }

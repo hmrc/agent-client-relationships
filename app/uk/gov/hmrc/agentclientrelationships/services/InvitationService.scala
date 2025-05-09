@@ -20,21 +20,35 @@ import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IfOrHipConnector}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateInvitationError
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, Rejected, TrackRequestsResult}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Rejected
+import uk.gov.hmrc.agentclientrelationships.model.TrackRequestsResult
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, NinoType, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.NinoType
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
 
-import java.time.{Instant, ZoneOffset}
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
+import java.time.ZoneOffset
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class InvitationService @Inject() (
@@ -61,78 +75,97 @@ extends Logging {
     pageSize
   )
 
-  def createInvitation(arn: Arn, createInvitationInputData: CreateInvitationRequest)(implicit
-    request: RequestHeader
-  ): Future[Either[InvitationFailureResponse, Invitation]] = {
+  def createInvitation(
+    arn: Arn,
+    createInvitationInputData: CreateInvitationRequest
+  )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, Invitation]] = {
     val invitationT =
       for {
 
         suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
-        service          <- EitherT.fromEither[Future](createInvitationInputData.getService)
-        clientType       <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
-        agentRecord      <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
-        clientId         <- EitherT(getClientId(suppliedClientId, service))
+        service <- EitherT.fromEither[Future](createInvitationInputData.getService)
+        clientType <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
+        agentRecord <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
+        clientId <- EitherT(getClientId(suppliedClientId, service))
         invitation <- EitherT(
-                        create(
-                          arn,
-                          service,
-                          clientId,
-                          suppliedClientId,
-                          createInvitationInputData.clientName,
-                          clientType,
-                          agentRecord.agencyDetails
-                        )
-                      )
+          create(
+            arn,
+            service,
+            clientId,
+            suppliedClientId,
+            createInvitationInputData.clientName,
+            clientType,
+            agentRecord.agencyDetails
+          )
+        )
       } yield invitation
 
     invitationT.value
   }
 
-  def findInvitationForAgent(arn: String, invitationId: String): Future[Option[Invitation]] = invitationsRepository
-    .findOneByIdForAgent(arn, invitationId)
+  def findInvitationForAgent(
+    arn: String,
+    invitationId: String
+  ): Future[Option[Invitation]] = invitationsRepository.findOneByIdForAgent(arn, invitationId)
 
   def findInvitation(invitationId: String): Future[Option[Invitation]] = invitationsRepository.findOneById(invitationId)
 
-  def rejectInvitation(
-    invitationId: String
-  )(implicit ec: ExecutionContext, request: RequestHeader): Future[Invitation] =
+  def rejectInvitation(invitationId: String)(implicit
+    ec: ExecutionContext,
+    request: RequestHeader
+  ): Future[Invitation] =
     for {
       invitation <- invitationsRepository.updateStatus(invitationId, Rejected)
-      _          <- emailService.sendRejectedEmail(invitation)
+      _ <- emailService.sendRejectedEmail(invitation)
     } yield invitation
 
-  def cancelInvitation(arn: Arn, invitationId: String): Future[Unit] = invitationsRepository.cancelByIdForAgent(
-    arn.value,
-    invitationId
-  )
+  def cancelInvitation(
+    arn: Arn,
+    invitationId: String
+  ): Future[Unit] = invitationsRepository.cancelByIdForAgent(arn.value, invitationId)
 
-  def deauthoriseInvitation(arn: Arn, enrolmentKey: EnrolmentKey, endedBy: String)(implicit
-    ec: ExecutionContext
-  ): Future[Boolean] = invitationsRepository
-    .deauthorise(arn.value, enrolmentKey.oneIdentifier().value, enrolmentKey.service, endedBy)
+  def deauthoriseInvitation(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    endedBy: String
+  )(implicit ec: ExecutionContext): Future[Boolean] = invitationsRepository
+    .deauthorise(
+      arn.value,
+      enrolmentKey.oneIdentifier().value,
+      enrolmentKey.service,
+      endedBy
+    )
     .map(_.fold(false)(_ => true))
 
   def findInvitationForClient(invitationId: String): Future[Option[Invitation]] = invitationsRepository
     .findOneByIdForClient(invitationId)
 
-  def findNonSuspendedClientInvitations(services: Seq[String], clientIds: Seq[String])(implicit
-    request: RequestHeader
-  ): Future[Seq[Invitation]] = {
+  def findNonSuspendedClientInvitations(
+    services: Seq[String],
+    clientIds: Seq[String]
+  )(implicit request: RequestHeader): Future[Seq[Invitation]] = {
     def getSuspendedArns(arns: Seq[String]) = Future
-      .sequence(arns.map { arn =>
-        agentAssuranceConnector
-          .getAgentRecordWithChecks(Arn(arn))
-          .map(record =>
-            if (record.suspensionDetails.exists(_.suspensionStatus))
-              Some(arn)
-            else
-              None
-          )
-      })
+      .sequence(
+        arns.map { arn =>
+          agentAssuranceConnector
+            .getAgentRecordWithChecks(Arn(arn))
+            .map(record =>
+              if (record.suspensionDetails.exists(_.suspensionStatus))
+                Some(arn)
+              else
+                None
+            )
+        }
+      )
       .map(_.flatten)
 
     for {
-      invitations   <- invitationsRepository.findAllBy(arn = None, services, clientIds, status = None)
+      invitations <- invitationsRepository.findAllBy(
+        arn = None,
+        services,
+        clientIds,
+        status = None
+      )
       suspendedArns <- getSuspendedArns(invitations.map(_.arn).distinct)
     } yield invitations.filterNot(invitation => suspendedArns.contains(invitation.arn))
   }
@@ -142,7 +175,12 @@ extends Logging {
     services: Set[String],
     clientIds: Seq[String],
     isSuppliedClientId: Boolean = false
-  ): Future[Seq[Invitation]] = invitationsRepository.findAllForAgent(arn, services.toSeq, clientIds, isSuppliedClientId)
+  ): Future[Seq[Invitation]] = invitationsRepository.findAllForAgent(
+    arn,
+    services.toSeq,
+    clientIds,
+    isSuppliedClientId
+  )
 
   def updateInvitation(
     service: String,
@@ -160,9 +198,10 @@ extends Logging {
     newClientIdType
   )
 
-  private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
-    request: RequestHeader
-  ): Future[Either[InvitationFailureResponse, ClientId]] =
+  private def getClientId(
+    suppliedClientId: ClientId,
+    service: Service
+  )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, ClientId]] =
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
         ifOrHipConnector
@@ -172,7 +211,8 @@ extends Logging {
               Right(ClientIdentifier(mdtId))
             )
           )
-      case _ => Future successful Right(suppliedClientId)
+      case _ =>
+        Future successful Right(suppliedClientId)
     }
 
   private def create(
@@ -185,38 +225,42 @@ extends Logging {
     agentDetails: AgencyDetails
   )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
-    (for {
-      invitation <- invitationsRepository.create(
-                      arn.value,
-                      service,
-                      clientId,
-                      suppliedClientId,
-                      clientName,
-                      agentDetails.agencyName,
-                      agentDetails.agencyEmail,
-                      expiryDate,
-                      clientType
-                    )
-    } yield {
-      logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
-      Right(invitation)
-    }).recover {
-      case e: MongoException if e.getMessage.contains("E11000 duplicate key error") => Left(DuplicateInvitationError)
+    (
+      for {
+        invitation <- invitationsRepository.create(
+          arn.value,
+          service,
+          clientId,
+          suppliedClientId,
+          clientName,
+          agentDetails.agencyName,
+          agentDetails.agencyEmail,
+          expiryDate,
+          clientType
+        )
+      } yield {
+        logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
+        Right(invitation)
+      }
+    ).recover {
+      case e: MongoException if e.getMessage.contains("E11000 duplicate key error") =>
+        Left(DuplicateInvitationError)
     }
   }
 
   def migratePartialAuth(invitation: Invitation): Future[Unit] =
     for {
       _ <- partialAuthRepository.create(
-             invitation.created,
-             Arn(invitation.arn),
-             invitation.service,
-             Nino(invitation.clientId)
-           )
+        invitation.created,
+        Arn(invitation.arn),
+        invitation.service,
+        Nino(invitation.clientId)
+      )
       _ <-
         if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
           invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
-        } else
+        }
+        else
           Future.unit
     } yield ()
 

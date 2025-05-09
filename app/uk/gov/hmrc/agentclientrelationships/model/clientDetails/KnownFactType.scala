@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 
 object KnownFactType
 extends Enumeration {

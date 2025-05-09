@@ -17,9 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Vrn}
-import uk.gov.hmrc.auth.core.{Enrolment, EnrolmentIdentifier, Enrolments}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.auth.core.Enrolment
+import uk.gov.hmrc.auth.core.EnrolmentIdentifier
+import uk.gov.hmrc.auth.core.Enrolments
 
 class EnrolmentsWithNinoSpec
 extends UnitSpec {
@@ -27,9 +31,21 @@ extends UnitSpec {
   val nino = "AA111111A"
   val mtdItId = "XAIT1234567"
   val vrn = "123456789"
-  val ptEnrolment: Enrolment = Enrolment("HMRC-PT", Seq(EnrolmentIdentifier("NINO", nino)), "active")
-  val itsaEnrolment: Enrolment = Enrolment("HMRC-MTD-IT", Seq(EnrolmentIdentifier("MTDITID", mtdItId)), "active")
-  val vatEnrolment: Enrolment = Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", vrn)), "active")
+  val ptEnrolment: Enrolment = Enrolment(
+    "HMRC-PT",
+    Seq(EnrolmentIdentifier("NINO", nino)),
+    "active"
+  )
+  val itsaEnrolment: Enrolment = Enrolment(
+    "HMRC-MTD-IT",
+    Seq(EnrolmentIdentifier("MTDITID", mtdItId)),
+    "active"
+  )
+  val vatEnrolment: Enrolment = Enrolment(
+    "HMRC-MTD-VAT",
+    Seq(EnrolmentIdentifier("VRN", vrn)),
+    "active"
+  )
 
   ".getNino" should {
 
@@ -52,7 +68,17 @@ extends UnitSpec {
   ".getIdentifierMap" should {
 
     "return a Map of services and tax identifiers for the provided supported services" in {
-      val model = new EnrolmentsWithNino(Enrolments(Set(ptEnrolment, itsaEnrolment, vatEnrolment)), Some(nino))
+      val model =
+        new EnrolmentsWithNino(
+          Enrolments(
+            Set(
+              ptEnrolment,
+              itsaEnrolment,
+              vatEnrolment
+            )
+          ),
+          Some(nino)
+        )
       val supportedServices = Seq(MtdIt, Vat)
       val expectedMap = Map(MtdIt -> MtdItId(mtdItId), Vat -> Vrn(vrn))
 
@@ -67,4 +93,5 @@ extends UnitSpec {
       model.getIdentifierMap(supportedServices) shouldBe expectedMap
     }
   }
+
 }

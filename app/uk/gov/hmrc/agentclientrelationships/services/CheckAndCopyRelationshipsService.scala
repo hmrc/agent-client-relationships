@@ -19,24 +19,35 @@ package uk.gov.hmrc.agentclientrelationships.services
 import play.api.Logging
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.auth.core.AffinityGroup.Agent
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.SaAgentReference
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 sealed trait CheckAndCopyResult {
@@ -115,7 +126,10 @@ with Logging {
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
 
-  def checkForOldRelationshipAndCopy(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+  def checkForOldRelationshipAndCopy(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
@@ -123,22 +137,34 @@ with Logging {
     def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
       if (copyRelationshipFlag) {
         body
-      } else {
+      }
+      else {
         returnValue(CopyRelationshipNotEnabled)
       }
 
     enrolmentKey.oneTaxIdentifier() match {
       case mtdItId @ MtdItId(_) =>
         ifEnabled(copyMtdItRelationshipFlag)(
-          tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, Some(enrolmentKey.service), mNino = None)
+          tryCreateITSARelationshipFromPartialAuthOrCopyAcross(
+            arn,
+            mtdItId,
+            Some(enrolmentKey.service),
+            mNino = None
+          )
         )
-      case vrn @ Vrn(_) => ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
+      case vrn @ Vrn(_) =>
+        ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
 
-      case _ => Future.successful(CheckAndCopyNotImplemented)
+      case _ =>
+        Future.successful(CheckAndCopyNotImplemented)
     }
   }
 
-  private def checkCesaAndCopy(arn: Arn, mtdItId: MtdItId, nino: Option[Nino])(implicit
+  private def checkCesaAndCopy(
+    arn: Arn,
+    mtdItId: MtdItId,
+    nino: Option[Nino]
+  )(implicit
     request: RequestHeader,
     auditData: AuditData,
     currentUser: CurrentUser
@@ -199,27 +225,49 @@ with Logging {
       }
   }
 
-  private def endPartialAuth(arn: Arn, service: String, nino: Option[Nino], mtdItId: MtdItId): Future[Boolean] =
+  private def endPartialAuth(
+    arn: Arn,
+    service: String,
+    nino: Option[Nino],
+    mtdItId: MtdItId
+  ): Future[Boolean] =
     nino.fold(Future.successful(false))(ni =>
       partialAuthRepo
-        .deleteActivePartialAuth(service, ni, arn)
+        .deleteActivePartialAuth(
+          service,
+          ni,
+          arn
+        )
         .flatMap { deleteResult =>
           if (deleteResult) {
-            invitationsRepository.updatePartialAuthToAcceptedStatus(arn, service, ni, mtdItId)
-          } else {
+            invitationsRepository.updatePartialAuthToAcceptedStatus(
+              arn,
+              service,
+              ni,
+              mtdItId
+            )
+          }
+          else {
             logger.error("error ending partialauth")
             Future.successful(false)
           }
         }
     )
 
-  private def findPartialAuth(arn: Arn, nino: Option[Nino])(implicit auditData: AuditData): Future[Option[String]] =
+  private def findPartialAuth(
+    arn: Arn,
+    nino: Option[Nino]
+  )(implicit auditData: AuditData): Future[Option[String]] =
     nino.fold[Future[Option[String]]](Future.successful(None)) { ni =>
       auditData.set(ninoKey, ni)
       partialAuthRepo.findActive(ni, arn).map(_.map(_.service))
     }
 
-  private def tryCreateRelationshipFromPartialAuth(service: String, arn: Arn, mtdItId: MtdItId)(implicit
+  private def tryCreateRelationshipFromPartialAuth(
+    service: String,
+    arn: Arn,
+    mtdItId: MtdItId
+  )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[Option[DbUpdateStatus]] = {
@@ -239,7 +287,10 @@ with Logging {
     mtdItId: MtdItId,
     mService: Option[String],
     mNino: Option[Nino]
-  )(implicit request: RequestHeader, auditData: AuditData): Future[CheckAndCopyResult] = {
+  )(implicit
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[CheckAndCopyResult] = {
 
     auditData.set(clientIdKey, mtdItId)
     auditData.set(clientIdTypeKey, "mtditid")
@@ -248,31 +299,51 @@ with Logging {
     implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
 
     for {
-      mNino        <- mNino.fold(ifOrHipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
+      mNino <- mNino.fold(ifOrHipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
       mPartialAuth <- findPartialAuth(arn, mNino)
       createFromPartialAuthRes <-
         mPartialAuth.fold[Future[CheckAndCopyResult]](Future.successful(AltItsaNotFoundOrFailed))(partialAuth =>
           if (mService.orElse(Some(partialAuth)).contains(partialAuth))
-            tryCreateRelationshipFromPartialAuth(partialAuth, arn, mtdItId).flatMap {
+            tryCreateRelationshipFromPartialAuth(
+              partialAuth,
+              arn,
+              mtdItId
+            ).flatMap {
               case Some(DbUpdateSucceeded) =>
                 for {
-                  _ <- endPartialAuth(arn, partialAuth, mNino, mtdItId)
+                  _ <- endPartialAuth(
+                    arn,
+                    partialAuth,
+                    mNino,
+                    mtdItId
+                  )
                   _ <- itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-                         partialAuth,
-                         arn.value,
-                         Some(mtdItId.value),
-                         mNino.getOrElse(throw new Exception("nino missing")).value
-                       )
+                    partialAuth,
+                    arn.value,
+                    Some(mtdItId.value),
+                    mNino.getOrElse(throw new Exception("nino missing")).value
+                  )
                 } yield AltItsaCreateRelationshipSuccess(partialAuth)
-              case _ => Future.successful(AltItsaNotFoundOrFailed)
+              case _ =>
+                Future.successful(AltItsaNotFoundOrFailed)
             }
           else
             Future.successful(NotFound)
         )
 
       createRelResult <-
-        if (isEligibleForCopyAcross(createFromPartialAuthRes, mService, mPartialAuth))
-          checkCesaAndCopy(arn, mtdItId, mNino)
+        if (
+          isEligibleForCopyAcross(
+            createFromPartialAuthRes,
+            mService,
+            mPartialAuth
+          )
+        )
+          checkCesaAndCopy(
+            arn,
+            mtdItId,
+            mNino
+          )
         else
           Future.successful(createFromPartialAuthRes)
     } yield createRelResult
@@ -283,19 +354,25 @@ with Logging {
     mService: Option[String],
     mPartialAuth: Option[String]
   ): Boolean =
-    List(AltItsaNotFoundOrFailed, NotFound).contains(createFromPartialAuthRes) && !mService.contains(
-      HMRCMTDITSUPP
-    ) && mPartialAuth.isEmpty
+    List(AltItsaNotFoundOrFailed, NotFound).contains(createFromPartialAuthRes) && !mService.contains(HMRCMTDITSUPP) &&
+      mPartialAuth.isEmpty
 
   private def findOrCreateRelationshipCopyRecordAndCopy(
     references: Set[RelationshipReference],
     maybeRelationshipCopyRecord: Option[RelationshipCopyRecord],
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader, auditData: AuditData): Future[Option[DbUpdateStatus]] =
+  )(implicit
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Option[DbUpdateStatus]] =
     maybeRelationshipCopyRecord match {
       case Some(relationshipCopyRecord) =>
-        createRelationshipsService.resumeRelationshipCreation(relationshipCopyRecord, arn, enrolmentKey)
+        createRelationshipsService.resumeRelationshipCreation(
+          relationshipCopyRecord,
+          arn,
+          enrolmentKey
+        )
       case None =>
         createRelationshipsService.createRelationship(
           arn,
@@ -306,7 +383,10 @@ with Logging {
         )
     }
 
-  private def checkESForOldRelationshipAndCopyForMtdVat(arn: Arn, vrn: Vrn)(implicit
+  private def checkESForOldRelationshipAndCopyForMtdVat(
+    arn: Arn,
+    vrn: Vrn
+  )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
@@ -361,15 +441,20 @@ with Logging {
       }
   }
 
-  private def checkVrnExistsInEtmp(vrn: Vrn)(implicit request: RequestHeader, auditData: AuditData): Future[Boolean] =
-    des
-      .vrnIsKnownInEtmp(vrn)
-      .map { result =>
-        auditData.set("vrnExistsInEtmp", result)
-        result
-      }
+  private def checkVrnExistsInEtmp(vrn: Vrn)(implicit
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Boolean] = des
+    .vrnIsKnownInEtmp(vrn)
+    .map { result =>
+      auditData.set("vrnExistsInEtmp", result)
+      result
+    }
 
-  def lookupCesaForOldRelationship(arn: Arn, nino: Nino)(implicit
+  def lookupCesaForOldRelationship(
+    arn: Arn,
+    nino: Nino
+  )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[Set[SaAgentReference]] = {
@@ -389,7 +474,10 @@ with Logging {
     }
   }
 
-  def hasPartialAuthOrLegacyRelationshipInCesa(arn: Arn, nino: Nino)(implicit
+  def hasPartialAuthOrLegacyRelationshipInCesa(
+    arn: Arn,
+    nino: Nino
+  )(implicit
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
@@ -402,11 +490,15 @@ with Logging {
           auditService.sendCheckCesaAndPartialAuthAuditEvent()
           optPartialAuth.nonEmpty
         }
-    } else
+    }
+    else
       Future successful true
   )
 
-  def lookupESForOldRelationship(arn: Arn, clientVrn: Vrn)(implicit
+  def lookupESForOldRelationship(
+    arn: Arn,
+    clientVrn: Vrn
+  )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[Set[AgentCode]] = {
@@ -416,14 +508,16 @@ with Logging {
       agentGroupIds <- es.getDelegatedGroupIdsForHMCEVATDECORG(clientVrn)
       groupInfos = agentGroupIds.map(ugs.getGroupInfo)
       agentCodes <- Future
-                      .sequence(groupInfos)
-                      .map { setOptions: Set[Option[GroupInfo]] =>
-                        setOptions
-                          .flatMap { maybeGroup =>
-                            maybeGroup.map(_.agentCode)
-                          }
-                          .collect { case Some(ac) => ac }
-                      }
+        .sequence(groupInfos)
+        .map { setOptions: Set[Option[GroupInfo]] =>
+          setOptions
+            .flatMap { maybeGroup =>
+              maybeGroup.map(_.agentCode)
+            }
+            .collect { case Some(ac) =>
+              ac
+            }
+        }
       matching <-
         intersection[AgentCode](agentCodes.toSeq) {
           mapping.getAgentCodesFor(arn)
@@ -440,7 +534,8 @@ with Logging {
     if (referenceIdSet.isEmpty) {
       // logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
       returnValue(Set.empty)
-    } else
+    }
+    else
       mappingServiceCall.map { mappingServiceIds =>
         val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
         logger.info(
@@ -454,7 +549,10 @@ with Logging {
       }
   }
 
-  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Future[Unit] = relationshipCopyRepository
+  def cleanCopyStatusRecord(
+    arn: Arn,
+    mtdItId: MtdItId
+  ): Future[Unit] = relationshipCopyRepository
     .remove(arn, EnrolmentKey(Service.MtdIt, mtdItId))
     .flatMap { n =>
       if (n == 0)
@@ -464,4 +562,5 @@ with Logging {
         Future.successful(())
       }
     }
+
 }

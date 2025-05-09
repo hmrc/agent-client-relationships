@@ -41,12 +41,12 @@ extends UnitSpec {
         )
 
         val expectedJson = Json.obj(
-          "name"                       -> "Ilkay Gundo",
-          "status"                     -> "Insolvent",
-          "isOverseas"                 -> true,
-          "knownFacts"                 -> Json.arr("test@email.com"),
-          "knownFactType"              -> "Email",
-          "hasPendingInvitation"       -> true,
+          "name" -> "Ilkay Gundo",
+          "status" -> "Insolvent",
+          "isOverseas" -> true,
+          "knownFacts" -> Json.arr("test@email.com"),
+          "knownFactType" -> "Email",
+          "hasPendingInvitation" -> true,
           "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
         )
 
@@ -54,12 +54,18 @@ extends UnitSpec {
       }
 
       "optional fields are not present" in {
-        val model = ClientDetailsResponse("Ilkay Gundo", None, isOverseas = Some(true), Seq(), None)
+        val model = ClientDetailsResponse(
+          "Ilkay Gundo",
+          None,
+          isOverseas = Some(true),
+          Seq(),
+          None
+        )
 
         val expectedJson = Json.obj(
-          "name"                 -> "Ilkay Gundo",
-          "isOverseas"           -> true,
-          "knownFacts"           -> Json.arr(),
+          "name" -> "Ilkay Gundo",
+          "isOverseas" -> true,
+          "knownFacts" -> Json.arr(),
           "hasPendingInvitation" -> false
         )
 

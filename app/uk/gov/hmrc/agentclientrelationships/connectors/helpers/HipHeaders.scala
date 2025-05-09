@@ -20,10 +20,16 @@ import play.api.http.HeaderNames
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 
-import java.time.{Clock, Instant}
+import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 
-class HipHeaders @Inject() (correlationIdGenerator: CorrelationIdGenerator, appConfig: AppConfig, clock: Clock) {
+class HipHeaders @Inject() (
+  correlationIdGenerator: CorrelationIdGenerator,
+  appConfig: AppConfig,
+  clock: Clock
+) {
+
   private val correlationIdHeader: String = "correlationId"
   private val xOriginatingSystemHeader: String = "X-Originating-System"
   private val xReceiptDateHeader: String = "X-Receipt-Date"
@@ -52,4 +58,5 @@ class HipHeaders @Inject() (correlationIdGenerator: CorrelationIdGenerator, appC
     (xMessageType, "TaxpayerDisplay"),
     (xRegimeType, itsa)
   )
+
 }

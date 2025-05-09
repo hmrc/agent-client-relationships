@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.util
 
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 object DateTimeHelper {
+
   def formatISOInstantSeconds(now: Instant): String = DateTimeFormatter
     .ISO_INSTANT
     .format(now.truncatedTo(ChronoUnit.SECONDS))
@@ -34,4 +37,5 @@ object DateTimeHelper {
     .atZone(ZoneId.of("Europe/London"))
     .toLocalDate
     .format(dateFormatter)
+
 }

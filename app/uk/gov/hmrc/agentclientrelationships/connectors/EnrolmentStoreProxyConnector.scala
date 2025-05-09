@@ -18,7 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json.{Format, JsObject, Json, OWrites}
+import play.api.libs.json.Format
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
+import play.api.libs.json.OWrites
 import play.api.mvc.RequestHeader
 import sttp.model.Uri.UriContext
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -31,14 +34,21 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case class ES8Request(userId: String, `type`: String)
+case class ES8Request(
+  userId: String,
+  `type`: String
+)
 object ES8Request {
   implicit val writes: OWrites[ES8Request] = Json.writes[ES8Request]
 }
@@ -53,16 +63,23 @@ object ES19Request {
   implicit val format: Format[ES19Request] = Json.format[ES19Request]
 }
 // Note: knownFacts accepts identifier or verifier (key/value object), but we only need by identifier
-case class ES20Request(service: String, knownFacts: Seq[Identifier])
+case class ES20Request(
+  service: String,
+  knownFacts: Seq[Identifier]
+)
 object ES20Request {
+
   implicit val format: Format[ES20Request] = Json.format[ES20Request]
   def forCbcId(cbcId: String): ES20Request = ES20Request("HMRC-CBC-ORG", Seq(Identifier("cbcId", cbcId)))
+
 }
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject() (httpClient: HttpClientV2, val metrics: Metrics, appConfig: AppConfig)(
-  implicit val ec: ExecutionContext
-)
+class EnrolmentStoreProxyConnector @Inject() (
+  httpClient: HttpClientV2,
+  val metrics: Metrics,
+  appConfig: AppConfig
+)(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
 with Logging {
 
@@ -85,7 +102,8 @@ with Logging {
             // - NO_CONTENT suggest NotFound case
             // - OK with empty groupIds throws exception, this could be represented as None or handled by error handler if this is not expected
             // - OK with more then 1 groupId also is problematic, if there expectation is to have only one groupId
-            case Status.NO_CONTENT => throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(arn)}")
+            case Status.NO_CONTENT =>
+              throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(arn)}")
             case Status.OK =>
               val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
               if (groupIds.isEmpty)
@@ -95,7 +113,12 @@ with Logging {
                   logger.warn(s"Multiple groupIds found for ${enrolmentKey.service}")
                 groupIds.head
               }
-            case other => throw UpstreamErrorResponse(response.body, other, other)
+            case other =>
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
@@ -110,9 +133,16 @@ with Logging {
         .map { response =>
           response.status match {
             // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
-            case Status.OK         => (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
-            case Status.NO_CONTENT => Set.empty
-            case other             => throw UpstreamErrorResponse(response.body, other, other)
+            case Status.OK =>
+              (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
+            case Status.NO_CONTENT =>
+              Set.empty
+            case other =>
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
@@ -121,9 +151,10 @@ with Logging {
     getDelegatedGroupIdsFor(EnrolmentKey("HMCE-VATDEC-ORG", Seq(Identifier("VATRegNo", vrn.value))))
 
   // ES2 - delegated
-  def getEnrolmentsAssignedToUser(userId: String, service: Option[String])(implicit
-    request: RequestHeader
-  ): Future[Seq[Enrolment]] = {
+  def getEnrolmentsAssignedToUser(
+    userId: String,
+    service: Option[String]
+  )(implicit request: RequestHeader): Future[Seq[Enrolment]] = {
 
     val url: URL =
       uri"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated"
@@ -146,8 +177,14 @@ with Logging {
                 .filter(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
             // Note: Checking for activation may be redundant as EACD API documentation claims:
             // "A delegated enrolment is always activated, it can never be non-activated."
-            case Status.NO_CONTENT => Seq.empty
-            case other             => throw UpstreamErrorResponse(response.body, other, other)
+            case Status.NO_CONTENT =>
+              Seq.empty
+            case other =>
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
@@ -170,16 +207,25 @@ with Logging {
                 .headOption
                 .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
                 .map(Arn.apply)
-            case Status.NO_CONTENT => None
-            case other             => throw UpstreamErrorResponse(response.body, other, other)
+            case Status.NO_CONTENT =>
+              None
+            case other =>
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
 
   // ES8
-  def allocateEnrolmentToAgent(groupId: String, userId: String, enrolmentKey: EnrolmentKey, agentCode: AgentCode)(
-    implicit request: RequestHeader
-  ): Future[Unit] = {
+  def allocateEnrolmentToAgent(
+    groupId: String,
+    userId: String,
+    enrolmentKey: EnrolmentKey,
+    agentCode: AgentCode
+  )(implicit request: RequestHeader): Future[Unit] = {
     val url =
       url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
 
@@ -190,23 +236,28 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.CREATED  => ()
+            case Status.CREATED =>
+              ()
             case Status.CONFLICT =>
               // TODO: it should fail not just log a warning which is mostlikely to be ignored leaving user with the problem alone
-              logger.warn(
-                s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one."
-              )
+              logger.warn(s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one.")
               ()
-            case other => throw UpstreamErrorResponse(response.body, other, other)
+            case other =>
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
   }
 
   // ES9
-  def deallocateEnrolmentFromAgent(groupId: String, enrolmentKey: EnrolmentKey)(implicit
-    request: RequestHeader
-  ): Future[Unit] = {
+  def deallocateEnrolmentFromAgent(
+    groupId: String,
+    enrolmentKey: EnrolmentKey
+  )(implicit request: RequestHeader): Future[Unit] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/${enrolmentKey.tag}"
     monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKey.service}-DELETE") {
       httpClient
@@ -214,19 +265,26 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.NO_CONTENT => ()
-            case other             =>
+            case Status.NO_CONTENT =>
+              ()
+            case other =>
               // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
-              throw UpstreamErrorResponse(response.body, other, other)
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
   }
 
   // ES19 - Update an enrolment's friendly name
-  def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(implicit
-    request: RequestHeader
-  ): Future[Unit] =
+  def updateEnrolmentFriendlyName(
+    groupId: String,
+    enrolmentKey: String,
+    friendlyName: String
+  )(implicit request: RequestHeader): Future[Unit] =
     monitor(s"ConsumedAPI-ES-updateEnrolmentFriendlyName-PUT") {
       httpClient
         .put(
@@ -237,17 +295,22 @@ with Logging {
         .map { response =>
           response.status match {
             case Status.NO_CONTENT =>
-            case other             =>
+            case other =>
               // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
-              throw UpstreamErrorResponse(response.body, other, other)
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
 
   // ES20 - query known facts by verifiers or identifiers
-  def queryKnownFacts(service: Service, knownFacts: Seq[Identifier])(implicit
-    request: RequestHeader
-  ): Future[Option[Seq[Identifier]]] =
+  def queryKnownFacts(
+    service: Service,
+    knownFacts: Seq[Identifier]
+  )(implicit request: RequestHeader): Future[Option[Seq[Identifier]]] =
     monitor("ConsumedAPI-ES-queryKnownFactsByIdentifiersOrVerifiers-POST") {
       httpClient
         .post(url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments")
@@ -261,9 +324,16 @@ with Logging {
                 .headOption
                 .map(obj => (obj \ "identifiers").as[Seq[Identifier]])
             // TODO: The endpoint shoulud return OK with empty list for that case
-            case Status.NO_CONTENT => None
-            case other             => throw UpstreamErrorResponse(response.body, other, other)
+            case Status.NO_CONTENT =>
+              None
+            case other =>
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }
+
 }

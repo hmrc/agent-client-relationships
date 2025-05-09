@@ -17,20 +17,27 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.model.{CustomerStatus, EnrolmentsWithNino, Pending}
+import uk.gov.hmrc.agentclientrelationships.model.CustomerStatus
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentsWithNino
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services.{FindRelationshipsService, InvitationService}
+import uk.gov.hmrc.agentclientrelationships.services.FindRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class CustomerStatusController @Inject() (
@@ -55,18 +62,23 @@ with AuthActions {
         invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
         partialAuthRecords <-
           authResponse.getNino match {
-            case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
-            case None     => Future.successful(None)
+            case Some(ni) =>
+              partialAuthRepository.findByNino(Nino(ni))
+            case None =>
+              Future.successful(None)
           }
         irvRelationshipExists <-
           authResponse.getNino match {
-            case Some(nino) => agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
-            case None       => Future.successful(false)
+            case Some(nino) =>
+              agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
+            case None =>
+              Future.successful(false)
           }
         existingRelationships <-
           if (partialAuthRecords.exists(_.active) || irvRelationshipExists) {
             Future.successful(true)
-          } else {
+          }
+          else {
             findRelationshipsService
               .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
               .map(_.nonEmpty)
@@ -82,4 +94,5 @@ with AuthActions {
       )
     }
   }
+
 }

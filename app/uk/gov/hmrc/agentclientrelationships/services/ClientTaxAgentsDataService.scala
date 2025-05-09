@@ -19,19 +19,27 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import cats.implicits._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, AgentFiRelationshipConnector, IfOrHipConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import play.api.mvc.RequestHeader
 
-import java.time.{LocalDate, ZoneId}
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class ClientTaxAgentsDataService @Inject() (
@@ -42,7 +50,10 @@ class ClientTaxAgentsDataService @Inject() (
   findRelationshipsService: FindRelationshipsService,
   partialAuthRepository: PartialAuthRepository,
   ifOrHipConnector: IfOrHipConnector
-)(implicit ec: ExecutionContext, appConfig: AppConfig) {
+)(implicit
+  ec: ExecutionContext,
+  appConfig: AppConfig
+) {
 
   val supportedServices = appConfig.supportedServices
 
@@ -53,19 +64,21 @@ class ClientTaxAgentsDataService @Inject() (
     val identifiers: Map[String, TaxIdentifier] = authResponse.getIdentifierKeyMap(supportedServices)
     val nino: Option[String] = authResponse.getNino
     val allClientIds: Seq[String] = nino.fold(clientIds)(n => clientIds ++ Seq(n))
-    (for {
-      allInvitations    <- getAllInvitationsForAllServices(allClientIds)
-      allAuthorisations <- getAllAuthorisationsForAllServices(identifiers)
-      activePartialAuth <- getActivePartialAuth(nino)
-      allAuth = allAuthorisations ++ activePartialAuth
-      agentsAuthorisations <- getAgentDateForRelationships(allAuth)
-      agentsInvitations    <- getAgentDataForInvitation(allInvitations)
-      authorisationEvents  <- getAuthorisationEvent(allInvitations, allAuth)
-    } yield ClientTaxAgentsData(
-      agentsInvitations = AgentsInvitationsResponse(agentsInvitations),
-      agentsAuthorisations = AgentsAuthorisationsResponse(agentsAuthorisations),
-      authorisationEvents = AuthorisationEventsResponse(authorisationEvents)
-    )).value
+    (
+      for {
+        allInvitations <- getAllInvitationsForAllServices(allClientIds)
+        allAuthorisations <- getAllAuthorisationsForAllServices(identifiers)
+        activePartialAuth <- getActivePartialAuth(nino)
+        allAuth = allAuthorisations ++ activePartialAuth
+        agentsAuthorisations <- getAgentDateForRelationships(allAuth)
+        agentsInvitations <- getAgentDataForInvitation(allInvitations)
+        authorisationEvents <- getAuthorisationEvent(allInvitations, allAuth)
+      } yield ClientTaxAgentsData(
+        agentsInvitations = AgentsInvitationsResponse(agentsInvitations),
+        agentsAuthorisations = AgentsAuthorisationsResponse(agentsAuthorisations),
+        authorisationEvents = AuthorisationEventsResponse(authorisationEvents)
+      )
+    ).value
   }
 
   private def getAuthorisationEvent(
@@ -74,7 +87,11 @@ class ClientTaxAgentsDataService @Inject() (
   )(implicit
     request: RequestHeader,
     ec: ExecutionContext
-  ): EitherT[Future, RelationshipFailureResponse, Seq[AuthorisationEvent]] = {
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[AuthorisationEvent]
+  ] = {
 
     final case class AuthorisationEventWithoutAgentName(
       arn: String,
@@ -84,7 +101,13 @@ class ClientTaxAgentsDataService @Inject() (
     )
 
     val invitationEvents = invitations
-      .filter(invitation => Seq(Expired, Rejected, Cancelled).contains(invitation.status))
+      .filter(invitation =>
+        Seq(
+          Expired,
+          Rejected,
+          Cancelled
+        ).contains(invitation.status)
+      )
       .map(invitation =>
         AuthorisationEventWithoutAgentName(
           invitation.arn,
@@ -150,9 +173,11 @@ class ClientTaxAgentsDataService @Inject() (
     EitherT(result)
   }
 
-  private def getActivePartialAuth(
-    nino: Option[String]
-  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
+  private def getActivePartialAuth(nino: Option[String]): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[ClientAuthorisationForTaxId]
+  ] =
     nino match {
       case Some(n) =>
         EitherT.right[RelationshipFailureResponse](
@@ -175,48 +200,61 @@ class ClientTaxAgentsDataService @Inject() (
               )
             )
         )
-      case _ => EitherT.right[RelationshipFailureResponse](Future.successful(Seq.empty[ClientAuthorisationForTaxId]))
+      case _ =>
+        EitherT.right[RelationshipFailureResponse](Future.successful(Seq.empty[ClientAuthorisationForTaxId]))
     }
 
-  private def getAllAuthorisationsForAllServices(
-    identifiers: Map[String, TaxIdentifier]
-  )(implicit request: RequestHeader): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
-    identifiers
-      .map { case (service, taxIdentifier) =>
-        for {
-          relationshipsWithAuthProfile <- findAllRelationshipForTaxId(taxIdentifier, Service.forId(service))
-        } yield relationshipsWithAuthProfile
-      }
-      .toSeq
-      .sequence
-      .map(_.flatten)
-
-  private def findAllRelationshipForTaxId(taxIdentifier: TaxIdentifier, service: Service)(implicit
+  private def getAllAuthorisationsForAllServices(identifiers: Map[String, TaxIdentifier])(implicit
     request: RequestHeader
-  ): EitherT[Future, RelationshipFailureResponse, Seq[ClientAuthorisationForTaxId]] =
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[ClientAuthorisationForTaxId]
+  ] = identifiers
+    .map { case (service, taxIdentifier) =>
+      for {
+        relationshipsWithAuthProfile <- findAllRelationshipForTaxId(taxIdentifier, Service.forId(service))
+      } yield relationshipsWithAuthProfile
+    }
+    .toSeq
+    .sequence
+    .map(_.flatten)
+
+  private def findAllRelationshipForTaxId(
+    taxIdentifier: TaxIdentifier,
+    service: Service
+  )(implicit
+    request: RequestHeader
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[ClientAuthorisationForTaxId]
+  ] =
     taxIdentifier match {
       case Nino(_) =>
         for {
           irvActiveRelationship <- EitherT(
-                                     agentFiRelationshipConnector.findIrvActiveRelationshipForClient(
-                                       taxIdentifier.value
-                                     )
-                                   ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
+            agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value)
+          ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
           irvInactiveRelationship <- EitherT(agentFiRelationshipConnector.findIrvInactiveRelationshipForClient)
-                                       .leftFlatMap(recoverNotFoundRelationship)
+            .leftFlatMap(recoverNotFoundRelationship)
           irvAllRelationship = irvActiveRelationship ++ irvInactiveRelationship
         } yield irvAllRelationship.map(r =>
-          ClientAuthorisationForTaxId(r.arn, service, taxIdentifier.value, r.dateTo, r.dateFrom, r.isActive)
+          ClientAuthorisationForTaxId(
+            r.arn,
+            service,
+            taxIdentifier.value,
+            r.dateTo,
+            r.dateFrom,
+            r.isActive
+          )
         )
 
       case _ =>
         for {
           relationshipsWithAuthProfile <- EitherT(
-                                            findRelationshipsService.getAllRelationshipsForClient(
-                                              taxIdentifier = taxIdentifier,
-                                              activeOnly = false
-                                            )
-                                          )
+            findRelationshipsService.getAllRelationshipsForClient(taxIdentifier = taxIdentifier, activeOnly = false)
+          )
         } yield relationshipsWithAuthProfile.map { cr =>
           val adjustedService =
             cr.authProfile match {
@@ -225,33 +263,50 @@ class ClientTaxAgentsDataService @Inject() (
                   Service.MtdItSupp
                 else
                   service
-              case None => service
+              case None =>
+                service
             }
 
-          ClientAuthorisationForTaxId(cr.arn, adjustedService, taxIdentifier.value, cr.dateTo, cr.dateFrom, cr.isActive)
+          ClientAuthorisationForTaxId(
+            cr.arn,
+            adjustedService,
+            taxIdentifier.value,
+            cr.dateTo,
+            cr.dateFrom,
+            cr.isActive
+          )
         }
     }
 
-  private def recoverNotFoundRelationship(
-    relationshipFailureResponse: RelationshipFailureResponse
-  )(implicit ec: ExecutionContext): EitherT[Future, RelationshipFailureResponse, Seq[ClientRelationship]] =
+  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
+    ec: ExecutionContext
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[ClientRelationship]
+  ] =
     relationshipFailureResponse match {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
-      case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+      case otherError =>
+        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
 
     }
 
   private def getAgentDateForRelationships(relationshipsWithAuthProfile: Seq[ClientAuthorisationForTaxId])(implicit
     request: RequestHeader,
     ec: ExecutionContext
-  ): EitherT[Future, RelationshipFailureResponse, Seq[AgentAuthorisations]] = {
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[AgentAuthorisations]
+  ] = {
     val result = relationshipsWithAuthProfile
       .filter(_.isActive)
       .groupBy(_.arn)
       .map { case (arn, relationships) =>
         for {
-          agentDetails   <- EitherT(findAgentDetailsByArn(arn))
+          agentDetails <- EitherT(findAgentDetailsByArn(arn))
           authorisations <- getAuthorisations(relationships, agentDetails.agencyDetails.agencyName)
         } yield AgentAuthorisations(
           agentName = agentDetails.agencyDetails.agencyName,
@@ -269,16 +324,23 @@ class ClientTaxAgentsDataService @Inject() (
 
   }
 
-  private def getAuthorisations(relationships: Seq[ClientAuthorisationForTaxId], agentName: String)(implicit
+  private def getAuthorisations(
+    relationships: Seq[ClientAuthorisationForTaxId],
+    agentName: String
+  )(implicit
     ec: ExecutionContext
-  ): EitherT[Future, RelationshipFailureResponse, Seq[Authorisation]] =
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[Authorisation]
+  ] =
     relationships
       .map { ar =>
         for {
           dateFrom <- EitherT.fromOption[Future](
-                        ar.dateFrom,
-                        RelationshipFailureResponse.RelationshipStartDateMissing: RelationshipFailureResponse
-                      )
+            ar.dateFrom,
+            RelationshipFailureResponse.RelationshipStartDateMissing: RelationshipFailureResponse
+          )
         } yield Authorisation(
           uid = UUID.randomUUID().toString,
           service = ar.service.id,
@@ -290,9 +352,11 @@ class ClientTaxAgentsDataService @Inject() (
       }
       .sequence
 
-  private def getAllInvitationsForAllServices(
-    clientIds: Seq[String]
-  ): EitherT[Future, RelationshipFailureResponse, Seq[Invitation]] =
+  private def getAllInvitationsForAllServices(clientIds: Seq[String]): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[Invitation]
+  ] =
     for {
       invitations <- EitherT.right[RelationshipFailureResponse](invitationsRepository.findAllBy(clientIds = clientIds))
     } yield invitations
@@ -300,7 +364,11 @@ class ClientTaxAgentsDataService @Inject() (
   private def getAgentDataForInvitation(invitations: Seq[Invitation])(implicit
     request: RequestHeader,
     ec: ExecutionContext
-  ): EitherT[Future, RelationshipFailureResponse, Seq[AgentInvitations]] = {
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    Seq[AgentInvitations]
+  ] = {
     val result = invitations
       .filter(_.status == Pending)
       .groupBy(_.arn)
@@ -309,9 +377,13 @@ class ClientTaxAgentsDataService @Inject() (
           agentDetails <- EitherT(findAgentDetailsByArn(Arn(arn)))
           normalizedName = invitationLinkService.normaliseAgentName(agentDetails.agencyDetails.agencyName)
           agentReference <- EitherT.right[RelationshipFailureResponse](
-                              invitationLinkService.getAgentReferenceRecordByArn(Arn(arn), normalizedName)
-                            )
-        } yield AgentInvitations(agentReference.uid, agentDetails.agencyDetails.agencyName, invitations)
+            invitationLinkService.getAgentReferenceRecordByArn(Arn(arn), normalizedName)
+          )
+        } yield AgentInvitations(
+          agentReference.uid,
+          agentDetails.agencyDetails.agencyName,
+          invitations
+        )
       }
       .toSeq
       .map(x => filterOutSuspendedAgent(x))
@@ -335,20 +407,29 @@ class ClientTaxAgentsDataService @Inject() (
       else
         Right(agentRecord)
     }
-    .recover { case ex: Throwable => Left(RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage)) }
+    .recover { case ex: Throwable =>
+      Left(RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage))
+    }
 
   private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord
     .suspensionDetails
     .exists(_.suspensionStatus)
 
   private def filterOutSuspendedAgent[A](
-    myEitherT: EitherT[Future, RelationshipFailureResponse, A]
+    myEitherT: EitherT[
+      Future,
+      RelationshipFailureResponse,
+      A
+    ]
   ): Future[Option[Either[RelationshipFailureResponse, A]]] = myEitherT
     .value
     .map {
-      case r @ Right(_)                                                           => Some(r)
-      case l @ Left(error) if error != RelationshipFailureResponse.AgentSuspended => Some(l)
-      case Left(_)                                                                => None
+      case r @ Right(_) =>
+        Some(r)
+      case l @ Left(error) if error != RelationshipFailureResponse.AgentSuspended =>
+        Some(l)
+      case Left(_) =>
+        None
 
     }
 

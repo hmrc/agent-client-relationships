@@ -26,10 +26,25 @@ extends UnitSpec {
 
     "read from JSON" in {
 
-      val json = Json.obj("uid" -> "1234567", "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-NI", "HMRC-PT"))
+      val json = Json.obj(
+        "uid" -> "1234567",
+        "serviceKeys" ->
+          Json.arr(
+            "HMRC-MTD-IT",
+            "HMRC-NI",
+            "HMRC-PT"
+          )
+      )
 
       json.as[ValidateInvitationRequest] shouldBe
-        ValidateInvitationRequest("1234567", Seq("HMRC-MTD-IT", "HMRC-NI", "HMRC-PT"))
+        ValidateInvitationRequest(
+          "1234567",
+          Seq(
+            "HMRC-MTD-IT",
+            "HMRC-NI",
+            "HMRC-PT"
+          )
+        )
     }
   }
 }

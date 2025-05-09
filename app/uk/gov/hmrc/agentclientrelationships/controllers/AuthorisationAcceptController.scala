@@ -16,21 +16,29 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import play.api.{Logger, Logging}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
+import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending}
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdType
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class AuthorisationAcceptController @Inject() (
@@ -60,20 +68,24 @@ with Logging {
 
           for {
             enrolment <- validationService
-                           .validateForEnrolmentKey(
-                             invitation.service,
-                             ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                             invitation.clientId
-                           )
-                           .map(either =>
-                             either.getOrElse(
-                               throw new RuntimeException(
-                                 s"Could not parse invitation details into enrolment reason: ${either.left}"
-                               )
-                             )
-                           )
+              .validateForEnrolmentKey(
+                invitation.service,
+                ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                invitation.clientId
+              )
+              .map(either =>
+                either.getOrElse(
+                  throw new RuntimeException(
+                    s"Could not parse invitation details into enrolment reason: ${either.left}"
+                  )
+                )
+              )
             result <-
-              authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { implicit currentUser =>
+              authorisedUser(
+                None,
+                enrolment.oneTaxIdentifier(),
+                strideRoles
+              ) { implicit currentUser =>
                 authorisationAcceptService
                   .accept(invitation, enrolment)
                   .map { _ =>
@@ -85,8 +97,10 @@ with Logging {
                     NoContent
                   }
                   .recoverWith {
-                    case CreateRelationshipLocked => Future.successful(Locked)
-                    case err                      => throw err
+                    case CreateRelationshipLocked =>
+                      Future.successful(Locked)
+                    case err =>
+                      throw err
                   }
               }
             _ <-

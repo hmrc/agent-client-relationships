@@ -31,16 +31,17 @@ extends UnitSpec {
       "the data indicates the client is an individual" in {
 
         val json = Json.obj(
-          "legalEntityDetails" -> Json.obj(
-            "dateOfApplication" -> "2020-01-01",
-            "customerDetails" -> Json.obj(
-              "customerType"      -> "Individual",
-              "individualDetails" -> Json.obj("firstName" -> "Bernard", "lastName" -> "Silver")
-            )
-          ),
-          "changeOfCircumstanceDetails" -> Json.obj(
-            "deregistrationDetails" -> Json.obj("deregistrationDate" -> "2030-01-01")
-          )
+          "legalEntityDetails" ->
+            Json.obj(
+              "dateOfApplication" -> "2020-01-01",
+              "customerDetails" ->
+                Json.obj(
+                  "customerType" -> "Individual",
+                  "individualDetails" -> Json.obj("firstName" -> "Bernard", "lastName" -> "Silver")
+                )
+            ),
+          "changeOfCircumstanceDetails" ->
+            Json.obj("deregistrationDetails" -> Json.obj("deregistrationDate" -> "2030-01-01"))
         )
 
         val expectedModel = PptSubscriptionDetails(
@@ -55,16 +56,17 @@ extends UnitSpec {
       "the data indicates the client is an organisation" in {
 
         val json = Json.obj(
-          "legalEntityDetails" -> Json.obj(
-            "dateOfApplication" -> "2020-01-01",
-            "customerDetails" -> Json.obj(
-              "customerType"        -> "Organisation",
-              "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
-            )
-          ),
-          "changeOfCircumstanceDetails" -> Json.obj(
-            "deregistrationDetails" -> Json.obj("deregistrationDate" -> "2030-01-01")
-          )
+          "legalEntityDetails" ->
+            Json.obj(
+              "dateOfApplication" -> "2020-01-01",
+              "customerDetails" ->
+                Json.obj(
+                  "customerType" -> "Organisation",
+                  "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
+                )
+            ),
+          "changeOfCircumstanceDetails" ->
+            Json.obj("deregistrationDetails" -> Json.obj("deregistrationDate" -> "2030-01-01"))
         )
 
         val expectedModel = PptSubscriptionDetails(
@@ -79,16 +81,22 @@ extends UnitSpec {
       "optional fields are missing" in {
 
         val json = Json.obj(
-          "legalEntityDetails" -> Json.obj(
-            "dateOfApplication" -> "2020-01-01",
-            "customerDetails" -> Json.obj(
-              "customerType"        -> "Organisation",
-              "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
+          "legalEntityDetails" ->
+            Json.obj(
+              "dateOfApplication" -> "2020-01-01",
+              "customerDetails" ->
+                Json.obj(
+                  "customerType" -> "Organisation",
+                  "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
+                )
             )
-          )
         )
 
-        val expectedModel = PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), None)
+        val expectedModel = PptSubscriptionDetails(
+          "CFG Solutions",
+          LocalDate.parse("2020-01-01"),
+          None
+        )
 
         json.as[PptSubscriptionDetails] shouldBe expectedModel
       }

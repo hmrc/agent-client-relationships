@@ -17,19 +17,31 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import play.api.mvc.{Request, RequestHeader}
+import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{arnKey, credIdKey}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.arnKey
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
-import uk.gov.hmrc.agentclientrelationships.support.{AdminNotFound, Monitoring, RelationshipDeletePending, RelationshipNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.UserId
+import uk.gov.hmrc.agentclientrelationships.support.AdminNotFound
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipDeletePending
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
@@ -47,9 +59,13 @@ class CheckRelationshipsOrchestratorService @Inject() (
 extends Monitoring
 with Logging {
 
-  def checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String, userId: Option[String])(
-    implicit request: RequestHeader
-  ): Future[CheckRelationshipResult] = {
+  def checkForRelationship(
+    arn: Arn,
+    service: String,
+    clientIdType: String,
+    clientId: String,
+    userId: Option[String]
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
     val tUserId = userId.map(UserId)
 
     (service, clientIdType, clientId) match {
@@ -61,45 +77,78 @@ with Logging {
       // MTD ITSA uses nino as supplied clientId while the actual clientId is MTDITID
       case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO", _) if Nino.isValid(clientId) =>
         withMtdItId(clientId) { mtdItId =>
-          checkWithTaxIdentifier(arn, tUserId, EnrolmentKey(service, mtdItId))
+          checkWithTaxIdentifier(
+            arn,
+            tUserId,
+            EnrolmentKey(service, mtdItId)
+          )
         }
       // Legacy VAT enrolment check
-      case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
+      case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) =>
+        checkWithVrn(arn, Vrn(clientId))
       // PIR relationships are done through agent-fi-relationships
-      case (Service.PersonalIncomeRecord.id, _, _) => checkAgentFiRelationship(arn, service, clientId)
+      case (Service.PersonalIncomeRecord.id, _, _) =>
+        checkAgentFiRelationship(
+          arn,
+          service,
+          clientId
+        )
       // "normal" cases
       case (svc, idType, id) =>
-        withValidEnrolment(service, clientIdType, clientId) { enrolmentKey =>
-          checkWithTaxIdentifier(arn, tUserId, enrolmentKey)
+        withValidEnrolment(
+          service,
+          clientIdType,
+          clientId
+        ) { enrolmentKey =>
+          checkWithTaxIdentifier(
+            arn,
+            tUserId,
+            enrolmentKey
+          )
         }
     }
   }
 
-  private def withValidEnrolment(service: String, clientIdType: String, clientId: String)(
+  private def withValidEnrolment(
+    service: String,
+    clientIdType: String,
+    clientId: String
+  )(
     proceed: EnrolmentKey => Future[CheckRelationshipResult]
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = validationService
-    .validateForEnrolmentKey(service, clientIdType, clientId)
+    .validateForEnrolmentKey(
+      service,
+      clientIdType,
+      clientId
+    )
     .flatMap {
-      case Right(enrolmentKey) => proceed(enrolmentKey)
+      case Right(enrolmentKey) =>
+        proceed(enrolmentKey)
       case Left(validationError) =>
         logger.warn(s"Invalid parameters: $validationError")
         Future.successful(CheckRelationshipInvalidRequest)
     }
 
-  private def checkWithTaxIdentifier(arn: Arn, maybeUserId: Option[UserId], enrolmentKey: EnrolmentKey)(implicit
-    request: RequestHeader
-  ): Future[CheckRelationshipResult] = {
+  private def checkWithTaxIdentifier(
+    arn: Arn,
+    maybeUserId: Option[UserId],
+    enrolmentKey: EnrolmentKey
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
     maybeUserId.foreach(auditData.set(credIdKey, _))
 
     val result =
       for {
-        _       <- agentUserService.getAgentAdminAndSetAuditData(arn)
+        _ <- agentUserService.getAgentAdminAndSetAuditData(arn)
         isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
         res <-
           if (isClear)
-            checkService.checkForRelationship(arn, maybeUserId, enrolmentKey)
+            checkService.checkForRelationship(
+              arn,
+              maybeUserId,
+              enrolmentKey
+            )
           else
             Future.failed(RelationshipDeletePending())
       } yield
@@ -109,15 +158,29 @@ with Logging {
           throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
 
     result.recoverWith {
-      case RelationshipNotFound(errorCode) => checkOldRelationship(arn, enrolmentKey, errorCode)
-      case AdminNotFound(errorCode)        => checkOldRelationship(arn, enrolmentKey, errorCode)
+      case RelationshipNotFound(errorCode) =>
+        checkOldRelationship(
+          arn,
+          enrolmentKey,
+          errorCode
+        )
+      case AdminNotFound(errorCode) =>
+        checkOldRelationship(
+          arn,
+          enrolmentKey,
+          errorCode
+        )
       case e @ RelationshipDeletePending() =>
         logger.warn("Denied access because relationship removal is pending.")
         Future.successful(CheckRelationshipNotFound(e.getMessage))
     }
   }
 
-  private def checkOldRelationship(arn: Arn, enrolmentKey: EnrolmentKey, errorCode: String)(implicit
+  private def checkOldRelationship(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    errorCode: String
+  )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[CheckRelationshipResult] = checkOldAndCopyService
@@ -132,59 +195,73 @@ with Logging {
           CheckRelationshipNotFound()
     }
     .recover {
-      case upS: UpstreamErrorResponse => throw upS
+      case upS: UpstreamErrorResponse =>
+        throw upS
       case NonFatal(ex) =>
         val taxIdentifier = enrolmentKey.oneTaxIdentifier()
-        logger.warn(
-          s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier
-              .value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
-        )
+        logger.warn(s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}")
         CheckRelationshipNotFound(errorCode)
     }
 
-  private def checkAgentFiRelationship(arn: Arn, service: String, clientId: String)(implicit request: RequestHeader) =
-    agentFiRelationshipConnector
-      .getRelationship(arn, service, clientId)
-      .map {
-        case Some(_) => CheckRelationshipFound
-        case None    => CheckRelationshipNotFound()
-      }
+  private def checkAgentFiRelationship(
+    arn: Arn,
+    service: String,
+    clientId: String
+  )(implicit request: RequestHeader) = agentFiRelationshipConnector
+    .getRelationship(
+      arn,
+      service,
+      clientId
+    )
+    .map {
+      case Some(_) =>
+        CheckRelationshipFound
+      case None =>
+        CheckRelationshipNotFound()
+    }
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = ifOrHipConnector
     .getMtdIdFor(Nino(clientId))
     .flatMap {
-      case Some(mtdItId) => proceed(mtdItId)
-      case None          => Future.successful(CheckRelationshipNotFound())
+      case Some(mtdItId) =>
+        proceed(mtdItId)
+      case None =>
+        Future.successful(CheckRelationshipNotFound())
     }
 
-  private def withIrSaSuspensionCheck(
-    arn: Arn
-  )(proceed: => Future[CheckRelationshipResult])(implicit request: RequestHeader): Future[CheckRelationshipResult] =
-    desConnector
-      .getAgentRecord(arn)
-      .flatMap {
-        case None => Future.successful(CheckRelationshipInvalidRequest)
-        case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
-          logger.warn(s"agent with id : ${arn.value} is suspended for regime ITSA")
-          Future.successful(CheckRelationshipInvalidRequest)
-        case _ => proceed
-      }
+  private def withIrSaSuspensionCheck(arn: Arn)(
+    proceed: => Future[CheckRelationshipResult]
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = desConnector
+    .getAgentRecord(arn)
+    .flatMap {
+      case None =>
+        Future.successful(CheckRelationshipInvalidRequest)
+      case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
+        logger.warn(s"agent with id : ${arn.value} is suspended for regime ITSA")
+        Future.successful(CheckRelationshipInvalidRequest)
+      case _ =>
+        proceed
+    }
 
-  private def checkLegacyWithNinoOrPartialAuth(arn: Arn, nino: Nino)(implicit
-    request: RequestHeader
-  ): Future[CheckRelationshipResult] = {
+  private def checkLegacyWithNinoOrPartialAuth(
+    arn: Arn,
+    nino: Nino
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
 
     checkOldAndCopyService
       .hasPartialAuthOrLegacyRelationshipInCesa(arn, nino)
       .map {
-        case true  => CheckRelationshipFound
-        case false => CheckRelationshipNotFound()
+        case true =>
+          CheckRelationshipFound
+        case false =>
+          CheckRelationshipNotFound()
       }
       .recover {
-        case error: UpstreamErrorResponse => throw error
+        case error: UpstreamErrorResponse =>
+          throw error
         case NonFatal(ex) =>
           logger.warn(
             s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}"
@@ -193,23 +270,30 @@ with Logging {
       }
   }
 
-  private def checkWithVrn(arn: Arn, vrn: Vrn)(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
+  private def checkWithVrn(
+    arn: Arn,
+    vrn: Vrn
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
 
     checkOldAndCopyService
       .lookupESForOldRelationship(arn, vrn)
       .map {
-        case references if references.nonEmpty => CheckRelationshipFound
-        case _                                 => CheckRelationshipNotFound()
+        case references if references.nonEmpty =>
+          CheckRelationshipFound
+        case _ =>
+          CheckRelationshipNotFound()
       }
       .recover {
-        case upS: UpstreamErrorResponse => throw upS
+        case upS: UpstreamErrorResponse =>
+          throw upS
         case NonFatal(_) =>
           logger.warn("checkWithVrn: lookupESForOldRelationship failed")
           CheckRelationshipNotFound()
       }
   }
+
 }
 
 sealed trait CheckRelationshipResult

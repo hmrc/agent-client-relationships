@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -25,16 +26,18 @@ import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import play.api.mvc.RequestHeader
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 trait MockCheckRelationshipsService {
   this: ResettingMockitoSugar =>
 
   val mockCheckRelationshipsService: CheckRelationshipsService = resettingMock[CheckRelationshipsService]
 
-  def mockCheckForRelationshipAgencyLevel(arn: Arn, enrolment: EnrolmentKey)(
-    response: Future[(Boolean, String)]
-  ): OngoingStubbing[Future[(Boolean, String)]] = when(
+  def mockCheckForRelationshipAgencyLevel(
+    arn: Arn,
+    enrolment: EnrolmentKey
+  )(response: Future[(Boolean, String)]): OngoingStubbing[Future[(Boolean, String)]] = when(
     mockCheckRelationshipsService.checkForRelationshipAgencyLevel(eqs(arn), eqs(enrolment))(any[RequestHeader])
   ).thenReturn(response)
 

@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, InvitationStatus}
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 
@@ -31,10 +33,15 @@ trait MockInvitationsRepository {
 
   val mockInvitationsRepository: InvitationsRepository = resettingMock[InvitationsRepository]
 
-  def mockUpdateStatus(invitationId: String, status: InvitationStatus)(
-    response: Future[Invitation]
-  ): OngoingStubbing[Future[Invitation]] = when(
-    mockInvitationsRepository.updateStatus(eqs(invitationId), eqs(status), any[Option[Instant]])
+  def mockUpdateStatus(
+    invitationId: String,
+    status: InvitationStatus
+  )(response: Future[Invitation]): OngoingStubbing[Future[Invitation]] = when(
+    mockInvitationsRepository.updateStatus(
+      eqs(invitationId),
+      eqs(status),
+      any[Option[Instant]]
+    )
   ).thenReturn(response)
 
   def mockFindAllBy(
@@ -43,18 +50,30 @@ trait MockInvitationsRepository {
     clientIds: Seq[String],
     status: Option[InvitationStatus]
   )(response: Future[Seq[Invitation]]): OngoingStubbing[Future[Seq[Invitation]]] = when(
-    mockInvitationsRepository.findAllBy(eqs(arn), eqs(services), eqs(clientIds), eqs(status))
+    mockInvitationsRepository.findAllBy(
+      eqs(arn),
+      eqs(services),
+      eqs(clientIds),
+      eqs(status)
+    )
   ).thenReturn(response)
 
-  def mockDeauthInvitation(invitationId: String, endedBy: String)(
-    response: Future[Option[Invitation]]
-  ): OngoingStubbing[Future[Option[Invitation]]] = when(
-    mockInvitationsRepository.deauthInvitation(eqs(invitationId), eqs("Client"), any[Option[Instant]])
+  def mockDeauthInvitation(
+    invitationId: String,
+    endedBy: String
+  )(response: Future[Option[Invitation]]): OngoingStubbing[Future[Option[Invitation]]] = when(
+    mockInvitationsRepository.deauthInvitation(
+      eqs(invitationId),
+      eqs("Client"),
+      any[Option[Instant]]
+    )
   ).thenReturn(response)
 
-  def mockFindAllPendingForClient(clientId: String, services: Seq[String])(
-    response: Seq[Invitation]
-  ): OngoingStubbing[Future[Seq[Invitation]]] = when(
+  def mockFindAllPendingForClient(
+    clientId: String,
+    services: Seq[String]
+  )(response: Seq[Invitation]): OngoingStubbing[Future[Seq[Invitation]]] = when(
     mockInvitationsRepository.findAllPendingForSuppliedClient(clientId, services)
   ).thenReturn(Future.successful(response))
+
 }

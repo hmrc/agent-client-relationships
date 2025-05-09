@@ -27,24 +27,36 @@ import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-case class RecoveryRecord(uid: String, runAt: LocalDateTime)
+case class RecoveryRecord(
+  uid: String,
+  runAt: LocalDateTime
+)
 
 object RecoveryRecord {
 
   implicit val localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
   implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
+
 }
 
 @ImplementedBy(classOf[MongoRecoveryScheduleRepository])
 trait RecoveryScheduleRepository {
+
   def read: Future[RecoveryRecord]
-  def write(nextUid: String, nextRunAt: LocalDateTime): Future[Unit]
+  def write(
+    nextUid: String,
+    nextRunAt: LocalDateTime
+  ): Future[Unit]
+
 }
 
 @Singleton
@@ -63,7 +75,8 @@ with Logging {
     .find()
     .headOption()
     .flatMap {
-      case Some(record) => Future successful record
+      case Some(record) =>
+        Future successful record
       case None =>
         {
           val record = RecoveryRecord(
@@ -77,7 +90,10 @@ with Logging {
         }
     }
 
-  override def write(newUid: String, newRunAt: LocalDateTime): Future[Unit] = collection
+  override def write(
+    newUid: String,
+    newRunAt: LocalDateTime
+  ): Future[Unit] = collection
     .findOneAndUpdate(
       Filters.exists("uid"),
       Updates.combine(set("uid", newUid), set("runAt", newRunAt)),

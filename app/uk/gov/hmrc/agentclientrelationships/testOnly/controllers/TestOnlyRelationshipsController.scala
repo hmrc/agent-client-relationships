@@ -16,10 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.testOnly.controllers
 
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -31,10 +34,15 @@ class TestOnlyRelationshipsController @Inject() (
 )(implicit ec: ExecutionContext)
 extends BackendController(controllerComponents) {
 
-  def cleanCopyStatusRecord(arn: Arn, mtdItId: MtdItId): Action[AnyContent] = Action.async { _ =>
+  def cleanCopyStatusRecord(
+    arn: Arn,
+    mtdItId: MtdItId
+  ): Action[AnyContent] = Action.async { _ =>
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
-      .recover { case ex: RelationshipNotFound => NotFound(ex.getMessage) }
+      .recover { case ex: RelationshipNotFound =>
+        NotFound(ex.getMessage)
+      }
   }
 }

@@ -18,7 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.util
 
 import play.api.mvc.Result
 import play.api.mvc.Results._
-import play.api.{Configuration, Environment, Mode}
+import play.api.Configuration
+import play.api.Environment
+import play.api.Mode
 import uk.gov.hmrc.http.SessionKeys
 
 trait AuthRedirects {
@@ -37,10 +39,10 @@ trait AuthRedirects {
       config.getOptional[String]("run.mode").getOrElse("Dev")
 
   private val hostDefaults: Map[String, String] = Map(
-    "Dev.external-url.bas-gateway-frontend.host"           -> "http://localhost:9553",
-    "Dev.external-url.citizen-auth-frontend.host"          -> "http://localhost:9029",
+    "Dev.external-url.bas-gateway-frontend.host" -> "http://localhost:9553",
+    "Dev.external-url.citizen-auth-frontend.host" -> "http://localhost:9029",
     "Dev.external-url.identity-verification-frontend.host" -> "http://localhost:9938",
-    "Dev.external-url.stride-auth-frontend.host"           -> "http://localhost:9041"
+    "Dev.external-url.stride-auth-frontend.host" -> "http://localhost:9041"
   )
 
   private def host(service: String): String = {
@@ -69,15 +71,17 @@ trait AuthRedirects {
   )
 
   def toVerifyLogin(continueUrl: String): Result = Redirect(verifyLoginUrl).withSession(
-    SessionKeys.redirect    -> continueUrl,
+    SessionKeys.redirect -> continueUrl,
     SessionKeys.loginOrigin -> origin
   )
 
-  def toStrideLogin(successUrl: String, failureUrl: Option[String] = None): Result = Redirect(
+  def toStrideLogin(
+    successUrl: String,
+    failureUrl: Option[String] = None
+  ): Result = Redirect(
     strideLoginUrl,
-    Map("successURL" -> Seq(successUrl), "origin" -> Seq(origin)) ++ failureUrl
-      .map(f => Map("failureURL" -> Seq(f)))
-      .getOrElse(Map())
+    Map("successURL" -> Seq(successUrl), "origin" -> Seq(origin)) ++
+      failureUrl.map(f => Map("failureURL" -> Seq(f))).getOrElse(Map())
   )
 
 }

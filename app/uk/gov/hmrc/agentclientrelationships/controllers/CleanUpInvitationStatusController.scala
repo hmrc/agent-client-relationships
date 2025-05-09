@@ -19,15 +19,22 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import cats.data.EitherT
 import play.api.Logger
 import play.api.libs.json.JsValue
-import play.api.mvc.{Action, ControllerComponents, Result}
+import play.api.mvc.Action
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Result
 import uk.gov.hmrc.agentclientrelationships.model.CleanUpInvitationStatusRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvalidClientId, InvitationNotFound, UnsupportedService, UpdateStatusFailed}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UpdateStatusFailed
 import uk.gov.hmrc.agentclientrelationships.services.CleanUpInvitationStatusService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class CleanUpInvitationStatusController @Inject() (
@@ -48,16 +55,16 @@ extends BackendController(cc) {
               for {
                 service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
                 clientId <- EitherT.fromEither[Future](
-                              setRelationshipEndedService.validateClientId(service, payload.clientId)
-                            )
+                  setRelationshipEndedService.validateClientId(service, payload.clientId)
+                )
                 result <- EitherT(
-                            setRelationshipEndedService.deauthoriseInvitation(
-                              arn = payload.arn,
-                              clientId = clientId.value,
-                              service = service.id,
-                              relationshipEndedBy = "HMRC"
-                            )
-                          )
+                  setRelationshipEndedService.deauthoriseInvitation(
+                    arn = payload.arn,
+                    clientId = clientId.value,
+                    service = service.id,
+                    relationshipEndedBy = "HMRC"
+                  )
+                )
               } yield result
 
             responseT
@@ -93,11 +100,14 @@ extends BackendController(cc) {
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
-      case InvitationNotFound => InvitationNotFound.getResult("")
+      case InvitationNotFound =>
+        InvitationNotFound.getResult("")
 
-      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
+      case updateStatusFailed @ UpdateStatusFailed(_) =>
+        updateStatusFailed.getResult("")
 
-      case _ => BadRequest
+      case _ =>
+        BadRequest
     }
 
 }

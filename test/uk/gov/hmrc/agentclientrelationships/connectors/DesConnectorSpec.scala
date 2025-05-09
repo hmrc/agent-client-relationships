@@ -29,22 +29,30 @@ import scala.concurrent.ExecutionContext
 class DesConnectorSpec
 extends UnitSpec
 with MockitoSugar {
+
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   val appConfig: AppConfig = mock[AppConfig]
   val httpClient: HttpClientV2 = mock[HttpClientV2]
   val correlationIdGenerator: CorrelationIdGenerator = mock[CorrelationIdGenerator]
   val metrics: Metrics = mock[Metrics]
 
-  val underTest = new DesConnector(httpClient, correlationIdGenerator, appConfig)(metrics, ec)
+  val underTest =
+    new DesConnector(
+      httpClient,
+      correlationIdGenerator,
+      appConfig
+    )(metrics, ec)
 
   "desHeaders" should {
     "contain correct headers" in {
       when(correlationIdGenerator.makeCorrelationId()).thenReturn("testCorrelationId")
-      underTest.desHeaders(authToken = "testAuthToken", env = "testEnv").toMap shouldBe Map(
-        "Authorization" -> "Bearer testAuthToken",
-        "Environment"   -> "testEnv",
-        "CorrelationId" -> "testCorrelationId"
-      )
+      underTest.desHeaders(authToken = "testAuthToken", env = "testEnv").toMap shouldBe
+        Map(
+          "Authorization" -> "Bearer testAuthToken",
+          "Environment" -> "testEnv",
+          "CorrelationId" -> "testCorrelationId"
+        )
     }
   }
+
 }

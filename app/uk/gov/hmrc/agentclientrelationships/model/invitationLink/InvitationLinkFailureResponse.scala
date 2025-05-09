@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 sealed trait InvitationLinkFailureResponse
 
 object InvitationLinkFailureResponse {
+
   case object AgentReferenceDataNotFound
   extends InvitationLinkFailureResponse
 
@@ -27,4 +28,5 @@ object InvitationLinkFailureResponse {
 
   case object AgentSuspended
   extends InvitationLinkFailureResponse
+
 }

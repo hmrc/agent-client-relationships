@@ -19,28 +19,38 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import scala.concurrent.Future
 
 trait RelationshipConnector {
 
-  def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit rh: RequestHeader): Future[Unit]
+  def createAgentRelationship(
+    enrolmentKey: EnrolmentKey,
+    arn: Arn
+  )(implicit rh: RequestHeader): Future[Unit]
 
-  def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit rh: RequestHeader): Future[Unit]
+  def deleteAgentRelationship(
+    enrolmentKey: EnrolmentKey,
+    arn: Arn
+  )(implicit rh: RequestHeader): Future[Unit]
 
-  def getActiveClientRelationship(taxIdentifier: TaxIdentifier, service: Service)(implicit
-    rh: RequestHeader
-  ): Future[Option[ActiveRelationship]]
+  def getActiveClientRelationship(
+    taxIdentifier: TaxIdentifier,
+    service: Service
+  )(implicit rh: RequestHeader): Future[Option[ActiveRelationship]]
 
-  def getAllRelationships(taxIdentifier: TaxIdentifier, activeOnly: Boolean)(implicit
-    rh: RequestHeader
-  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]]
+  def getAllRelationships(
+    taxIdentifier: TaxIdentifier,
+    activeOnly: Boolean
+  )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]]
 
-  def getInactiveClientRelationships(taxIdentifier: TaxIdentifier, service: Service)(implicit
-    rh: RequestHeader
-  ): Future[Seq[InactiveRelationship]]
+  def getInactiveClientRelationships(
+    taxIdentifier: TaxIdentifier,
+    service: Service
+  )(implicit rh: RequestHeader): Future[Seq[InactiveRelationship]]
 
   def getInactiveRelationships(arn: Arn)(implicit rh: RequestHeader): Future[Seq[InactiveRelationship]]
 

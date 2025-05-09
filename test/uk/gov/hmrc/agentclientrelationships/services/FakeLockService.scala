@@ -21,15 +21,18 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class FakeLockService
 extends MongoLockService {
+
   val locked: mutable.Set[(Arn, EnrolmentKey)] = mutable.Set.empty[(Arn, EnrolmentKey)]
 
-  override def recoveryLock[T](arn: Arn, enrolmentKey: EnrolmentKey)(
-    body: => Future[T]
-  )(implicit ec: ExecutionContext): Future[Option[T]] =
+  override def recoveryLock[T](
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  )(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
     if (locked.contains((arn, enrolmentKey)))
       Future.successful(None)
     else {
@@ -42,11 +45,13 @@ extends MongoLockService {
         }
     }
 
-  override def schedulerLock[T](
-    jobName: String
-  )(body: => Future[T])(implicit ec: ExecutionContext, appConfig: AppConfig): Future[Option[T]] = body
+  override def schedulerLock[T](jobName: String)(body: => Future[T])(implicit
+    ec: ExecutionContext,
+    appConfig: AppConfig
+  ): Future[Option[T]] = body
     .map(Some.apply)
     .map { result =>
       result
     }
+
 }

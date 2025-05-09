@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.Logging
-import play.api.http.Status.{NOT_FOUND, OK}
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -32,35 +33,43 @@ import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderNames, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 //TODO SRP violation, this connector aggregates too many endpoints from DES, IF, and EIS. Split it into separate connectors.
 @Singleton
-class ClientDetailsConnector @Inject() (appConfig: AppConfig, httpClient: HttpClientV2, val metrics: Metrics)(implicit
-  val ec: ExecutionContext
-)
+class ClientDetailsConnector @Inject() (
+  appConfig: AppConfig,
+  httpClient: HttpClientV2,
+  val metrics: Metrics
+)(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
 with Logging {
 
   private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
     "Environment" -> appConfig.desEnv,
     // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId"           -> UUID.randomUUID().toString,
+    "CorrelationId" -> UUID.randomUUID().toString,
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 
   private def ifHeaders(authToken: String): Seq[(String, String)] = Seq(
     "Environment" -> appConfig.ifEnvironment,
     // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId"           -> UUID.randomUUID().toString,
+    "CorrelationId" -> UUID.randomUUID().toString,
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 
@@ -74,9 +83,11 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK => Right(response.json.as[ItsaDesignatoryDetails])
+            case OK =>
+              Right(response.json.as[ItsaDesignatoryDetails])
             // TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getItsaDesignatoryDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaDesignatoryDetails'"))
@@ -94,8 +105,10 @@ with Logging {
         .map { response =>
           response.status match {
             // TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
-            case OK        => Right(response.json.as[ItsaCitizenDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case OK =>
+              Right(response.json.as[ItsaCitizenDetails])
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getItsaCitizenDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaCitizenDetails'"))
@@ -118,8 +131,10 @@ with Logging {
         // but not suer if the Left(ErrorRetrievingClientDetail) is used anywhere. Analyse and simplify
         .map { response =>
           response.status match {
-            case OK        => Right(response.json.as[VatCustomerDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case OK =>
+              Right(response.json.as[VatCustomerDetails])
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getVatCustomerInfo', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getVatCustomerInfo'"))
@@ -146,8 +161,10 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => Right((response.json \ "trustDetails" \ "trustName").as[String])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case OK =>
+              Right((response.json \ "trustDetails" \ "trustName").as[String])
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getTrustName', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getTrustName'"))
@@ -166,8 +183,10 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => Right(response.json.as[CgtSubscriptionDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case OK =>
+              Right(response.json.as[CgtSubscriptionDetails])
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getCgtSubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCgtSubscriptionDetails'"))
@@ -186,8 +205,10 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => Right(response.json.as[PptSubscriptionDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case OK =>
+              Right(response.json.as[PptSubscriptionDetails])
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getPptSubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPptSubscriptionDetails'"))
@@ -201,8 +222,8 @@ with Logging {
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {
     val conversationId = hc.sessionId.map(_.value.drop(8)).getOrElse(UUID.randomUUID().toString)
 
-    val request = DisplaySubscriptionForCBCRequest(
-      displaySubscriptionForCBCRequest = DisplaySubscriptionDetails(
+    val request = DisplaySubscriptionForCBCRequest(displaySubscriptionForCBCRequest =
+      DisplaySubscriptionDetails(
         requestCommon = RequestCommonForSubscription().copy(conversationID = Some(conversationId)),
         requestDetail = ReadSubscriptionRequestDetail(IDType = "CBC", IDNumber = cbcId)
       )
@@ -210,13 +231,13 @@ with Logging {
 
     val httpHeaders = Seq(
       HeaderNames.authorisation -> s"Bearer ${appConfig.eisAuthToken}",
-      "x-forwarded-host"        -> "mdtp",
-      "x-correlation-id"        -> UUID.randomUUID().toString,
-      "x-conversation-id"       -> conversationId,
-      "date"         -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
+      "x-forwarded-host" -> "mdtp",
+      "x-correlation-id" -> UUID.randomUUID().toString,
+      "x-conversation-id" -> conversationId,
+      "date" -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
       "content-type" -> "application/json",
-      "accept"       -> "application/json",
-      "Environment"  -> appConfig.eisEnvironment
+      "accept" -> "application/json",
+      "Environment" -> appConfig.eisEnvironment
     )
 
     monitor(s"ConsumedAPI-EIS-GetCbcSubscriptionDetails-POST") {
@@ -227,8 +248,10 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => Right(response.json.as[SimpleCbcSubscription])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case OK =>
+              Right(response.json.as[SimpleCbcSubscription])
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getCbcSubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCbcSubscriptionDetails'"))
@@ -248,8 +271,10 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => Right(response.json.as[Pillar2Record])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
+            case OK =>
+              Right(response.json.as[Pillar2Record])
+            case NOT_FOUND =>
+              Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getPillar2SubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPillar2SubscriptionDetails'"))
@@ -257,4 +282,5 @@ with Logging {
         }
     }
   }
+
 }

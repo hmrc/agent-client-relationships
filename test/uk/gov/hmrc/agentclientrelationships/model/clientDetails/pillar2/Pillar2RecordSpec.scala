@@ -29,27 +29,41 @@ extends UnitSpec {
       "all optional fields are present" in {
 
         val json = Json.obj(
-          "success" -> Json.obj(
-            "upeDetails" -> Json.obj("organisationName" -> "CFG Solutions", "registrationDate" -> "2020-01-01"),
-            "upeCorrespAddressDetails" -> Json.obj("countryCode" -> "GB"),
-            "accountStatus"            -> Json.obj("inactive" -> true)
-          )
+          "success" ->
+            Json.obj(
+              "upeDetails" -> Json.obj("organisationName" -> "CFG Solutions", "registrationDate" -> "2020-01-01"),
+              "upeCorrespAddressDetails" -> Json.obj("countryCode" -> "GB"),
+              "accountStatus" -> Json.obj("inactive" -> true)
+            )
         )
 
-        json.as[Pillar2Record] shouldBe Pillar2Record("CFG Solutions", "2020-01-01", "GB", inactive = true)
+        json.as[Pillar2Record] shouldBe
+          Pillar2Record(
+            "CFG Solutions",
+            "2020-01-01",
+            "GB",
+            inactive = true
+          )
       }
     }
 
     "all optional fields are missing" in {
 
       val json = Json.obj(
-        "success" -> Json.obj(
-          "upeDetails" -> Json.obj("organisationName" -> "CFG Solutions", "registrationDate" -> "2020-01-01"),
-          "upeCorrespAddressDetails" -> Json.obj("countryCode" -> "GB")
-        )
+        "success" ->
+          Json.obj(
+            "upeDetails" -> Json.obj("organisationName" -> "CFG Solutions", "registrationDate" -> "2020-01-01"),
+            "upeCorrespAddressDetails" -> Json.obj("countryCode" -> "GB")
+          )
       )
 
-      json.as[Pillar2Record] shouldBe Pillar2Record("CFG Solutions", "2020-01-01", "GB", inactive = false)
+      json.as[Pillar2Record] shouldBe
+        Pillar2Record(
+          "CFG Solutions",
+          "2020-01-01",
+          "GB",
+          inactive = false
+        )
     }
   }
 }

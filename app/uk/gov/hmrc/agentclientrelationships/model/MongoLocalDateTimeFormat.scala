@@ -16,9 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Format, Reads, Writes, __}
+import play.api.libs.json.Format
+import play.api.libs.json.Reads
+import play.api.libs.json.Writes
+import play.api.libs.json.__
 
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 object MongoLocalDateTimeFormat {
 
@@ -52,13 +58,14 @@ object MongoLocalDateTimeFormat {
     .at[String](__ \ "$date" \ "$numberLong")
     .contramap(_.toInstant(ZoneOffset.UTC).toEpochMilli.toString)
 
-  final implicit val localDateTimeFormat: Format[LocalDateTime] = Format(
+  implicit final val localDateTimeFormat: Format[LocalDateTime] = Format(
     localDateTimeReads.orElse(legacyDateTimeReads),
     localDateTimeWrites
   )
 
-  final implicit val localDateFormat: Format[LocalDate] = Format(
+  implicit final val localDateFormat: Format[LocalDate] = Format(
     localDateReads.orElse(legacyDateReads),
     localDateWrites
   )
+
 }

@@ -19,24 +19,33 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import com.google.inject.ImplementedBy
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Updates.{combine, inc, set}
+import org.mongodb.scala.model.Updates.combine
+import org.mongodb.scala.model.Updates.inc
+import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
 import play.api.Logging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, MongoLocalDateTimeFormat}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
+import uk.gov.hmrc.http.Authorization
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.SessionId
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.temporal.ChronoUnit.MILLIS
-import java.time.{Instant, LocalDateTime, ZoneOffset}
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 case class DeleteRecord(
@@ -61,6 +70,7 @@ case class DeleteRecord(
   def needToDeleteEtmpRecord: Boolean = !(syncToETMPStatus.contains(Success) || syncToETMPStatus.contains(InProgress))
 
   def needToDeleteEsRecord: Boolean = !(syncToESStatus.contains(Success) || syncToESStatus.contains(InProgress))
+
 }
 
 object DeleteRecord {
@@ -73,35 +83,68 @@ object DeleteRecord {
       override def writes(hc: HeaderCarrier): JsObject = JsObject(
         Seq(
           "authorization" -> hc.authorization.map(_.value),
-          "sessionId"     -> hc.sessionId.map(_.value),
-          "gaToken"       -> hc.gaToken
-        ).collect { case (key, Some(value)) => (key, JsString(value)) }
+          "sessionId" -> hc.sessionId.map(_.value),
+          "gaToken" -> hc.gaToken
+        ).collect { case (key, Some(value)) =>
+          (key, JsString(value))
+        }
       )
     }
 
   import play.api.libs.functional.syntax._
 
   implicit val reads: Reads[HeaderCarrier] =
-    ((JsPath \ "authorization").readNullable[String].map(_.map(Authorization.apply)) and
-      (JsPath \ "sessionId").readNullable[String].map(_.map(SessionId.apply)) and
-      (JsPath \ "gaToken").readNullable[String])((a, s, g) =>
-      HeaderCarrier(authorization = a, sessionId = s, gaToken = g)
+    (
+      (JsPath \ "authorization").readNullable[String].map(_.map(Authorization.apply)) and
+        (JsPath \ "sessionId").readNullable[String].map(_.map(SessionId.apply)) and
+        (JsPath \ "gaToken").readNullable[String]
+    )(
+      (
+        a,
+        s,
+        g
+      ) =>
+        HeaderCarrier(
+          authorization = a,
+          sessionId = s,
+          gaToken = g
+        )
     )
 
   implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
+
 }
 
 @ImplementedBy(classOf[MongoDeleteRecordRepository])
 trait DeleteRecordRepository {
+
   def create(record: DeleteRecord): Future[Int]
-  def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]]
-  def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int]
-  def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int]
-  def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit]
-  def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int]
+  def findBy(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Option[DeleteRecord]]
+  def updateEtmpSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  ): Future[Int]
+  def updateEsSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  ): Future[Int]
+  def markRecoveryAttempt(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Unit]
+  def remove(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Int]
   def selectNextToRecover(): Future[Option[DeleteRecord]]
 
   def terminateAgent(arn: Arn): Future[Either[String, Int]]
+
 }
 
 @Singleton
@@ -114,7 +157,11 @@ extends PlayMongoRepository[DeleteRecord](
     // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
     // The situation will be simplified after a migration of the legacy documents.
     IndexModel(
-      Indexes.ascending("arn", "clientIdentifier", "clientIdentifierType"),
+      Indexes.ascending(
+        "arn",
+        "clientIdentifier",
+        "clientIdentifierType"
+      ),
       IndexOptions()
         .partialFilterExpression(Filters.exists("clientIdentifier"))
         .unique(true)
@@ -147,12 +194,21 @@ with Logging {
       }
     )
 
-  override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[DeleteRecord]] = collection
-    .find(filter(arn, enrolmentKey))
-    .headOption()
+  override def findBy(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Option[DeleteRecord]] = collection.find(filter(arn, enrolmentKey)).headOption()
 
-  override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = collection
-    .updateOne(filter(arn, enrolmentKey), set("syncToETMPStatus", status.toString), UpdateOptions().upsert(false))
+  override def updateEtmpSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  ): Future[Int] = collection
+    .updateOne(
+      filter(arn, enrolmentKey),
+      set("syncToETMPStatus", status.toString),
+      UpdateOptions().upsert(false)
+    )
     .toFuture()
     .map { updateResult =>
       if (updateResult.getModifiedCount != 1L)
@@ -160,8 +216,16 @@ with Logging {
       updateResult.getModifiedCount.toInt
     }
 
-  override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = collection
-    .updateOne(filter(arn, enrolmentKey), set("syncToESStatus", status.toString), UpdateOptions().upsert(false))
+  override def updateEsSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  ): Future[Int] = collection
+    .updateOne(
+      filter(arn, enrolmentKey),
+      set("syncToESStatus", status.toString),
+      UpdateOptions().upsert(false)
+    )
     .toFuture()
     .map { updateResult =>
       if (updateResult.getModifiedCount != 1L)
@@ -169,7 +233,10 @@ with Logging {
       updateResult.getModifiedCount.toInt
     }
 
-  override def markRecoveryAttempt(arn: Arn, enrolmentKey: EnrolmentKey): Future[Unit] = collection
+  override def markRecoveryAttempt(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Unit] = collection
     .findOneAndUpdate(
       filter(arn, enrolmentKey),
       combine(
@@ -180,7 +247,10 @@ with Logging {
     .toFuture()
     .map(_ => ())
 
-  override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] = collection
+  override def remove(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Int] = collection
     .deleteOne(filter(arn, enrolmentKey))
     .toFuture()
     .map(deleteResult => deleteResult.getDeletedCount.toInt)
@@ -194,9 +264,14 @@ with Logging {
     .deleteMany(equal("arn", arn.value))
     .toFuture()
     .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
-    .recover { case e: MongoWriteException => Left(e.getMessage) }
+    .recover { case e: MongoWriteException =>
+      Left(e.getMessage)
+    }
 
-  private def filter(arn: Arn, enrolmentKey: EnrolmentKey) = {
+  private def filter(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ) = {
     val identifierType: String = enrolmentKey.identifiers.head.key
     val identifier: String = enrolmentKey.identifiers.head.value
     Filters.or(
@@ -208,4 +283,5 @@ with Logging {
       )
     )
   }
+
 }

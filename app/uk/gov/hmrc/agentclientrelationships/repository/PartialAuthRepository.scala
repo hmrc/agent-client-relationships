@@ -17,27 +17,37 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.{and, equal, in}
+import org.mongodb.scala.model.Filters.and
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.in
 import org.mongodb.scala.model.Updates._
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.IndexOptions
+import org.mongodb.scala.model.Indexes
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.Instant
-import javax.inject.{Inject, Named, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
+  @Named("aes")
+  crypto: Encrypter
     with Decrypter
 )
 extends PlayMongoRepository[PartialAuthRelationship](
@@ -45,9 +55,21 @@ extends PlayMongoRepository[PartialAuthRelationship](
   collectionName = "partial-auth",
   domainFormat = PartialAuthRelationship.mongoFormat,
   indexes = Seq(
-    IndexModel(Indexes.ascending("service", "nino", "arn", "active"), IndexOptions().name("allRelationshipsIndex")),
     IndexModel(
-      Indexes.ascending("service", "nino", "arn"),
+      Indexes.ascending(
+        "service",
+        "nino",
+        "arn",
+        "active"
+      ),
+      IndexOptions().name("allRelationshipsIndex")
+    ),
+    IndexModel(
+      Indexes.ascending(
+        "service",
+        "nino",
+        "arn"
+      ),
       IndexOptions()
         .partialFilterExpression(BsonDocument("active" -> true))
         .unique(true)
@@ -62,7 +84,12 @@ with Logging {
   // Permanent store of alt itsa authorisations
   override lazy val requiresTtlIndex: Boolean = false
 
-  def create(created: Instant, arn: Arn, service: String, nino: Nino): Future[Unit] = {
+  def create(
+    created: Instant,
+    arn: Arn,
+    service: String,
+    nino: Nino
+  ): Future[Unit] = {
     require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
     val partialAuth = PartialAuthRelationship(
       created,
@@ -75,10 +102,17 @@ with Logging {
     collection.insertOne(partialAuth).toFuture().map(_ => ())
   }
 
-  def findActive(nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] = collection
+  def findActive(
+    nino: Nino,
+    arn: Arn
+  ): Future[Option[PartialAuthRelationship]] = collection
     .find(
       and(
-        in("service", HMRCMTDIT, HMRCMTDITSUPP),
+        in(
+          "service",
+          HMRCMTDIT,
+          HMRCMTDITSUPP
+        ),
         equal("nino", encryptedString(nino.value)),
         equal("arn", arn.value),
         equal("active", true)
@@ -94,7 +128,11 @@ with Logging {
     .find(and(equal("nino", encryptedString(nino.value)), equal("active", true)))
     .toFuture()
 
-  def findActive(serviceId: String, nino: Nino, arn: Arn): Future[Option[PartialAuthRelationship]] = collection
+  def findActive(
+    serviceId: String,
+    nino: Nino,
+    arn: Arn
+  ): Future[Option[PartialAuthRelationship]] = collection
     .find(
       and(
         equal("service", serviceId),
@@ -111,10 +149,21 @@ with Logging {
 
   /* this will only find partially authorised ITSA main agents for a given nino string */
   def findMainAgent(nino: String): Future[Option[PartialAuthRelationship]] = collection
-    .find(and(equal("service", HMRCMTDIT), equal("nino", encryptedString(nino)), equal("active", true)))
+    .find(
+      and(
+        equal("service", HMRCMTDIT),
+        equal("nino", encryptedString(nino)),
+        equal("active", true)
+      )
+    )
     .headOption()
 
-  def deauthorise(serviceId: String, nino: Nino, arn: Arn, updated: Instant): Future[Boolean] = collection
+  def deauthorise(
+    serviceId: String,
+    nino: Nino,
+    arn: Arn,
+    updated: Instant
+  ): Future[Boolean] = collection
     .updateOne(
       and(
         equal("service", serviceId),
@@ -128,7 +177,11 @@ with Logging {
     .map(_.getModifiedCount > 0)
 
   // for example when a partialAuth becomes a MTD relationship we want to delete the partialAuth
-  def deleteActivePartialAuth(serviceId: String, nino: Nino, arn: Arn): Future[Boolean] = collection
+  def deleteActivePartialAuth(
+    serviceId: String,
+    nino: Nino,
+    arn: Arn
+  ): Future[Boolean] = collection
     .deleteOne(
       and(
         equal("service", serviceId),
@@ -161,4 +214,5 @@ with Logging {
       )
     )
     .toFuture()
+
 }

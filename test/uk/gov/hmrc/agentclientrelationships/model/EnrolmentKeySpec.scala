@@ -25,10 +25,8 @@ with Matchers {
 
   "EnrolmentKey" should "toString with mixed case" in {
     val enrolmentKeyStr =
-      EnrolmentKey(
-        "HMRC-CBC-ORG",
-        Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890"))
-      ).toString
+      EnrolmentKey("HMRC-CBC-ORG", Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890")))
+        .toString
 
     enrolmentKeyStr shouldBe "HMRC-CBC-ORG~UTR~1234567890~cbcId~XCBCX1234567890"
   }
@@ -65,9 +63,10 @@ with Matchers {
   }
 
   it should "throw an exception if unknown key" in {
-    an[Exception] shouldBe thrownBy(
-      EnrolmentKey("HMRC-UNKNOWN", Seq(Identifier("ReferenceNumber", "123456789"))).oneIdentifier(Some("bad key"))
-    )
+    an[Exception] shouldBe
+      thrownBy(
+        EnrolmentKey("HMRC-UNKNOWN", Seq(Identifier("ReferenceNumber", "123456789"))).oneIdentifier(Some("bad key"))
+      )
   }
 
 }

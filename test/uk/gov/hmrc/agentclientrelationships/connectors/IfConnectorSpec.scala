@@ -30,6 +30,7 @@ import scala.concurrent.ExecutionContext
 class IfConnectorSpec
 extends UnitSpec
 with MockitoSugar {
+
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   val appConfig: AppConfig = mock[AppConfig]
   val request: RequestHeader = mock[RequestHeader]
@@ -37,16 +38,23 @@ with MockitoSugar {
   val metrics: Metrics = mock[Metrics]
   val correlationIdGenerator: CorrelationIdGenerator = mock[CorrelationIdGenerator]
 
-  val underTest = new IfConnector(httpClient, correlationIdGenerator, appConfig)(metrics, ec)
+  val underTest =
+    new IfConnector(
+      httpClient,
+      correlationIdGenerator,
+      appConfig
+    )(metrics, ec)
 
   "ifHeaders" should {
     "contain correct headers" in {
       when(correlationIdGenerator.makeCorrelationId()).thenReturn("testCorrelationId")
-      underTest.ifHeaders("testAuthToken", "testEnv").toMap shouldBe Map(
-        "Authorization" -> "Bearer testAuthToken",
-        "Environment"   -> "testEnv",
-        "CorrelationId" -> "testCorrelationId"
-      )
+      underTest.ifHeaders("testAuthToken", "testEnv").toMap shouldBe
+        Map(
+          "Authorization" -> "Bearer testAuthToken",
+          "Environment" -> "testEnv",
+          "CorrelationId" -> "testCorrelationId"
+        )
     }
   }
+
 }

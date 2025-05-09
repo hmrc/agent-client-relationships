@@ -24,25 +24,34 @@ import play.api.mvc.RequestHeader
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ErrorRetrievingClientDetails}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 import java.net.URL
-import java.time.{Instant, LocalDate, ZoneOffset}
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Try
 
 @Singleton
@@ -51,7 +60,10 @@ class HipConnector @Inject() (
   agentCacheProvider: AgentCacheProvider,
   headers: HipHeaders,
   appConfig: AppConfig
-)(implicit val metrics: Metrics, val ec: ExecutionContext)
+)(implicit
+  val metrics: Metrics,
+  val ec: ExecutionContext
+)
 extends HttpApiMonitor
 with Logging {
 
@@ -59,16 +71,27 @@ with Logging {
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
   // HIP API #EPID1521 Create/Update Agent Relationship
-  def createAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    request: RequestHeader
-  ): Future[Option[RegistrationRelationshipResponse]] = {
+  def createAgentRelationship(
+    enrolmentKey: EnrolmentKey,
+    arn: Arn
+  )(implicit request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
-    val requestBody = createAgentRelationshipHipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
+    val requestBody = createAgentRelationshipHipInputJson(
+      enrolmentKey,
+      arn.value,
+      isExclusiveAgent
+    )
 
-    postWithHipHeaders("CreateAgentRelationship", url, requestBody, headers.subscriptionHeaders).map {
-      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
+    postWithHipHeaders(
+      "CreateAgentRelationship",
+      url,
+      requestBody,
+      headers.subscriptionHeaders
+    ).map {
+      case Right(response) =>
+        Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
         errorResponse.statusCode match {
           case _ =>
@@ -79,16 +102,27 @@ with Logging {
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
-  def deleteAgentRelationship(enrolmentKey: EnrolmentKey, arn: Arn)(implicit
-    request: RequestHeader
-  ): Future[Option[RegistrationRelationshipResponse]] = {
+  def deleteAgentRelationship(
+    enrolmentKey: EnrolmentKey,
+    arn: Arn
+  )(implicit request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
-    val requestBody = deleteAgentRelationshipInputJson(enrolmentKey, arn.value, isExclusiveAgent)
+    val requestBody = deleteAgentRelationshipInputJson(
+      enrolmentKey,
+      arn.value,
+      isExclusiveAgent
+    )
 
-    postWithHipHeaders("DeleteAgentRelationship", url, requestBody, headers.subscriptionHeaders).map {
-      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
+    postWithHipHeaders(
+      "DeleteAgentRelationship",
+      url,
+      requestBody,
+      headers.subscriptionHeaders
+    ).map {
+      case Right(response) =>
+        Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
         logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
         throw errorResponse
@@ -96,9 +130,10 @@ with Logging {
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
-  def getActiveClientRelationships(taxIdentifier: TaxIdentifier, service: Service)(implicit
-    request: RequestHeader
-  ): Future[Option[ActiveRelationship]] = {
+  def getActiveClientRelationships(
+    taxIdentifier: TaxIdentifier,
+    service: Service
+  )(implicit request: RequestHeader): Future[Option[ActiveRelationship]] = {
     val authProfile = getAuthProfile(service.id)
     val url = relationshipHipUrl(
       taxIdentifier = taxIdentifier,
@@ -108,13 +143,21 @@ with Logging {
 
     implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
 
-    getWithHipHeaders(s"GetActiveClientRelationships", url, headers.subscriptionHeaders).map {
-      case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
+    getWithHipHeaders(
+      s"GetActiveClientRelationships",
+      url,
+      headers.subscriptionHeaders
+    ).map {
+      case Right(response) =>
+        (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.BAD_REQUEST | Status.NOT_FOUND                                         => None
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => None
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => None
+          case Status.BAD_REQUEST | Status.NOT_FOUND =>
+            None
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
+            None
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
+            None
           case _ =>
             logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
             // TODO WG - check - that looks so wrong to rerun any value, should be an exception
@@ -124,18 +167,29 @@ with Logging {
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship //url and error handling is different to getActiveClientRelationships
-  def getAllRelationships(taxIdentifier: TaxIdentifier, activeOnly: Boolean)(implicit
-    request: RequestHeader
-  ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
-    val url = relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)
+  def getAllRelationships(
+    taxIdentifier: TaxIdentifier,
+    activeOnly: Boolean
+  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
+    val url = relationshipHipUrl(
+      taxIdentifier = taxIdentifier,
+      None,
+      activeOnly = activeOnly
+    )
 
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.hipReads
 
-    EitherT(getWithHipHeaders(s"GetAllActiveClientRelationships", url, headers.subscriptionHeaders))
-      .map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
+    EitherT(
+      getWithHipHeaders(
+        s"GetAllActiveClientRelationships",
+        url,
+        headers.subscriptionHeaders
+      )
+    ).map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND => RelationshipFailureResponse.RelationshipNotFound
+          case Status.NOT_FOUND =>
+            RelationshipFailureResponse.RelationshipNotFound
           case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
             RelationshipFailureResponse.RelationshipNotFound
           case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
@@ -155,9 +209,10 @@ with Logging {
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
-  def getInactiveClientRelationships(taxIdentifier: TaxIdentifier, service: Service)(implicit
-    request: RequestHeader
-  ): Future[Seq[InactiveRelationship]] = {
+  def getInactiveClientRelationships(
+    taxIdentifier: TaxIdentifier,
+    service: Service
+  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = {
 
     val authProfile = getAuthProfile(service.id)
     val url = relationshipHipUrl(
@@ -167,14 +222,21 @@ with Logging {
     )
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
-    getWithHipHeaders(s"GetInactiveClientRelationships", url, headers.subscriptionHeaders).map {
+    getWithHipHeaders(
+      s"GetInactiveClientRelationships",
+      url,
+      headers.subscriptionHeaders
+    ).map {
       case Right(response) =>
         (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
+          case Status.BAD_REQUEST | Status.NOT_FOUND =>
+            Nil
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
+            Nil
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
+            Nil
           case _ =>
             logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
             Seq.empty[InactiveRelationship]
@@ -199,14 +261,21 @@ with Logging {
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
-      getWithHipHeaders(s"GetInactiveRelationships", url, headers.subscriptionHeaders).map {
+      getWithHipHeaders(
+        s"GetInactiveRelationships",
+        url,
+        headers.subscriptionHeaders
+      ).map {
         case Right(response) =>
           (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
         case Left(errorResponse) =>
           errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
+            case Status.BAD_REQUEST | Status.NOT_FOUND =>
+              Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
+              Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
+              Nil
             case _ =>
               logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
               Seq.empty[InactiveRelationship]
@@ -221,11 +290,17 @@ with Logging {
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
 
-    getWithHipHeaders(s"GetBusinessDetailsByMtdId", url, headers.subscriptionBusinessDetailsHeaders).map {
-      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+    getWithHipHeaders(
+      s"GetBusinessDetailsByMtdId",
+      url,
+      headers.subscriptionBusinessDetailsHeaders
+    ).map {
+      case Right(response) =>
+        Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND => None
+          case Status.NOT_FOUND =>
+            None
           case Status.UNPROCESSABLE_ENTITY
               if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
             None
@@ -242,11 +317,17 @@ with Logging {
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
-    getWithHipHeaders(s"GetBusinessDetailsByNino", url, headers.subscriptionBusinessDetailsHeaders).map {
-      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+    getWithHipHeaders(
+      s"GetBusinessDetailsByNino",
+      url,
+      headers.subscriptionBusinessDetailsHeaders
+    ).map {
+      case Right(response) =>
+        Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND => None
+          case Status.NOT_FOUND =>
+            None
           case Status.UNPROCESSABLE_ENTITY
               if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
             None
@@ -266,7 +347,11 @@ with Logging {
     val encodedNino = UriEncoding.encodePathSegment(nino, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
-    getWithHipHeaders(s"ConsumedAPI-IF-GetBusinessDetails-GET", url, headers.subscriptionBusinessDetailsHeaders).map {
+    getWithHipHeaders(
+      s"ConsumedAPI-IF-GetBusinessDetails-GET",
+      url,
+      headers.subscriptionBusinessDetailsHeaders
+    ).map {
       case Right(response) =>
         Try(response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData")
           .map(_(0))
@@ -278,14 +363,13 @@ with Logging {
           }
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND => Left(ClientDetailsNotFound)
+          case Status.NOT_FOUND =>
+            Left(ClientDetailsNotFound)
           case Status.UNPROCESSABLE_ENTITY
               if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
             Left(ClientDetailsNotFound)
           case status =>
-            logger.warn(
-              s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}"
-            )
+            logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}")
             Left(
               ErrorRetrievingClientDetails(
                 status,
@@ -296,15 +380,21 @@ with Logging {
     }
   }
 
-  private def getWithHipHeaders(apiName: String, url: URL, getHeaders: () => Seq[(String, String)])(implicit
-    request: RequestHeader
-  ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
+  private def getWithHipHeaders(
+    apiName: String,
+    url: URL,
+    getHeaders: () => Seq[(String, String)]
+  )(implicit request: RequestHeader): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-GET") {
       httpClient.get(url).setHeader(getHeaders(): _*).execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
 
-  private def postWithHipHeaders(apiName: String, url: URL, body: JsValue, getHeaders: () => Seq[(String, String)])(
-    implicit
+  private def postWithHipHeaders(
+    apiName: String,
+    url: URL,
+    body: JsValue,
+    getHeaders: () => Seq[(String, String)]
+  )(implicit
     request: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
@@ -318,17 +408,19 @@ with Logging {
 
   private[connectors] def isActive(r: ActiveRelationship): Boolean =
     r.dateTo match {
-      case None    => true
-      case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
+      case None =>
+        true
+      case Some(d) =>
+        d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 
   private[connectors] def isNotActive(r: InactiveRelationship): Boolean =
     r.dateTo match {
-      case None => false
+      case None =>
+        false
       case Some(d) =>
-        d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) || d.equals(
-          Instant.now().atZone(ZoneOffset.UTC).toLocalDate
-        )
+        d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) ||
+        d.equals(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 
   private def relationshipHipUrl(
@@ -384,24 +476,38 @@ with Logging {
         new URL(
           s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams"
         )
-      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
+      case _ =>
+        throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
     }
   }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {
-      case MtdItId(_) => "ITSA"
-      case Vrn(_)     => "VATC"
-      case Utr(_)     => "TRS"
-      case Urn(_)     => "TRS"
-      case CgtRef(_)  => "CGT"
-      case PptRef(_)  => "PPT"
-      case CbcId(_)   => "CBC"
-      case PlrId(_)   => "PLR"
-      case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
+      case MtdItId(_) =>
+        "ITSA"
+      case Vrn(_) =>
+        "VATC"
+      case Utr(_) =>
+        "TRS"
+      case Urn(_) =>
+        "TRS"
+      case CgtRef(_) =>
+        "CGT"
+      case PptRef(_) =>
+        "PPT"
+      case CbcId(_) =>
+        "CBC"
+      case PlrId(_) =>
+        "PLR"
+      case _ =>
+        throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
-  private def createAgentRelationshipHipInputJson(enrolmentKey: EnrolmentKey, arn: String, isExclusiveAgent: Boolean) =
+  private def createAgentRelationshipHipInputJson(
+    enrolmentKey: EnrolmentKey,
+    arn: String,
+    isExclusiveAgent: Boolean
+  ) =
     includeIdTypeIfNeeded(enrolmentKey)(
       Json
         .parse(s"""{
@@ -414,7 +520,11 @@ with Logging {
         .as[JsObject]
     )
 
-  private def deleteAgentRelationshipInputJson(enrolmentKey: EnrolmentKey, arn: String, isExclusiveAgent: Boolean) =
+  private def deleteAgentRelationshipInputJson(
+    enrolmentKey: EnrolmentKey,
+    arn: String,
+    isExclusiveAgent: Boolean
+  ) =
     includeIdTypeIfNeeded(enrolmentKey)(
       Json
         .parse(s"""{
@@ -429,14 +539,18 @@ with Logging {
 
   private def getAuthProfile(service: String): String =
     service match {
-      case HMRCMTDITSUPP => "ITSAS001"
-      case _             => "ALL00001"
+      case HMRCMTDITSUPP =>
+        "ITSAS001"
+      case _ =>
+        "ALL00001"
     }
 
   private def getIsExclusiveAgent(service: String): Boolean =
     service match {
-      case HMRCMTDITSUPP => false
-      case _             => true
+      case HMRCMTDITSUPP =>
+        false
+      case _ =>
+        true
     }
 
   private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject =
@@ -456,9 +570,12 @@ with Logging {
             ((authProfile, JsString(authProfileForService)))
         case Some("TRS") =>
           clientId match {
-            case Utr(_) => request + ((idType, JsString("UTR")))
-            case Urn(_) => request + ((idType, JsString("URN")))
-            case e      => throw new Exception(s"unsupported tax identifier $e for regime TRS")
+            case Utr(_) =>
+              request + ((idType, JsString("UTR")))
+            case Urn(_) =>
+              request + ((idType, JsString("URN")))
+            case e =>
+              throw new Exception(s"unsupported tax identifier $e for regime TRS")
           }
         case Some("CGT") =>
           request +
@@ -476,14 +593,14 @@ with Logging {
             ((authProfile, JsString(authProfileForService))) +
             ((idType, JsString("MTDBSA")))
         case Some("CBC") =>
-          request +
-            ((idType, JsString("CBC")))
+          request + ((idType, JsString("CBC")))
         case Some("PLR") =>
           request +
             ((relationshipType, JsString("ZA01"))) +
             ((authProfile, JsString(authProfileForService))) +
             ((idType, JsString("ZPLR")))
-        case _ => request
+        case _ =>
+          request
       }
     }
 

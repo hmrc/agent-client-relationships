@@ -16,13 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.util
 
-import uk.gov.hmrc.http.{HttpReads, HttpReadsInstances, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HttpReads
+import uk.gov.hmrc.http.HttpReadsInstances
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 object HttpReadsImplicits
-extends HttpReadsInstances { self: HttpReadsInstances =>
+extends HttpReadsInstances {
+  self: HttpReadsInstances =>
 
   private val r: HttpReads[Either[UpstreamErrorResponse, Unit]] = readEitherOf[Unit](self.readUnit)
 
   // Shadows readUnit with instance which throws exception when the http response code is non 2xx
   override implicit val readUnit: HttpReads[Unit] = throwOnFailure(r)
+
 }

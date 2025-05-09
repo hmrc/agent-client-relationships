@@ -17,22 +17,29 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.Logger
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
-import uk.gov.hmrc.agentclientrelationships.services.{InvitationService, ValidationService}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Trust, TrustNT}
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentclientrelationships.services.ValidationService
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class InvitationController @Inject() (
@@ -70,15 +77,13 @@ with AuthActions {
 
                     case InvalidClientId =>
                       val msg =
-                        s"""Invalid clientId "${createInvitationRequest
-                            .clientId}", for service type "${createInvitationRequest.service}""""
+                        s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
                       Logger(getClass).warn(msg)
                       InvalidClientId.getResult(msg)
 
                     case UnsupportedClientIdType =>
                       val msg =
-                        s"""Unsupported clientIdType "${createInvitationRequest
-                            .suppliedClientIdType}", for service type "${createInvitationRequest.service}""""
+                        s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}""""
                           .stripMargin
                       Logger(getClass).warn(msg)
                       UnsupportedClientIdType.getResult(msg)
@@ -107,7 +112,8 @@ with AuthActions {
                       Logger(getClass).warn(msg)
                       DuplicateInvitationError.getResult(msg)
 
-                    case _ => BadRequest
+                    case _ =>
+                      BadRequest
                   },
                   invitation => {
                     auditService.sendCreateInvitationAuditEvent(invitation)
@@ -125,20 +131,24 @@ with AuthActions {
         case Some(invitation) if invitation.status == Pending =>
           for {
             enrolment <- validationService
-                           .validateForEnrolmentKey(
-                             invitation.service,
-                             ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                             invitation.clientId
-                           )
-                           .map(either =>
-                             either.getOrElse(
-                               throw new RuntimeException(
-                                 s"Could not parse invitation details into enrolment reason: ${either.left}"
-                               )
-                             )
-                           )
+              .validateForEnrolmentKey(
+                invitation.service,
+                ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                invitation.clientId
+              )
+              .map(either =>
+                either.getOrElse(
+                  throw new RuntimeException(
+                    s"Could not parse invitation details into enrolment reason: ${either.left}"
+                  )
+                )
+              )
             result <-
-              authorisedUser(None, enrolment.oneTaxIdentifier(), strideRoles) { currentUser =>
+              authorisedUser(
+                None,
+                enrolment.oneTaxIdentifier(),
+                strideRoles
+              ) { currentUser =>
                 invitationService
                   .rejectInvitation(invitationId)
                   .map { _ =>
@@ -163,10 +173,19 @@ with AuthActions {
     Action.async(parse.json) { implicit request =>
       val utr = (request.body \ "utr").as[String]
       invitationService
-        .updateInvitation(TrustNT.enrolmentKey, urn, UrnType.id, Trust.enrolmentKey, utr, UtrType.id)
+        .updateInvitation(
+          TrustNT.enrolmentKey,
+          urn,
+          UrnType.id,
+          Trust.enrolmentKey,
+          utr,
+          UtrType.id
+        )
         .map {
-          case true  => NoContent
-          case false => NotFound
+          case true =>
+            NoContent
+          case false =>
+            NotFound
         }
     }
 

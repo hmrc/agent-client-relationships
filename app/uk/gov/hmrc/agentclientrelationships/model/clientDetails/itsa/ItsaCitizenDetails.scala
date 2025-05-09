@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 
-import play.api.libs.json.{JsPath, Reads}
+import play.api.libs.json.JsPath
+import play.api.libs.json.Reads
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -28,7 +29,11 @@ case class ItsaCitizenDetails(
   saUtr: Option[String]
 ) {
   lazy val name: Option[String] = {
-    val n = Seq(firstName, lastName).collect { case Some(x) => x }.mkString(" ")
+    val n = Seq(firstName, lastName)
+      .collect { case Some(x) =>
+        x
+      }
+      .mkString(" ")
     if (n.isEmpty)
       None
     else
@@ -43,10 +48,16 @@ object ItsaCitizenDetails {
   implicit val reads: Reads[ItsaCitizenDetails] =
     for {
       firstName <- (JsPath \ "name" \ "current" \ "firstName").readNullable[String]
-      lastName  <- (JsPath \ "name" \ "current" \ "lastName").readNullable[String]
+      lastName <- (JsPath \ "name" \ "current" \ "lastName").readNullable[String]
       dateOfBirth <- (JsPath \ "dateOfBirth")
-                       .readNullable[String]
-                       .map(_.map(date => LocalDate.parse(date, citizenDateFormatter)))
+        .readNullable[String]
+        .map(_.map(date => LocalDate.parse(date, citizenDateFormatter)))
       saUtr <- (JsPath \ "ids" \ "sautr").readNullable[String]
-    } yield ItsaCitizenDetails(firstName, lastName, dateOfBirth, saUtr)
+    } yield ItsaCitizenDetails(
+      firstName,
+      lastName,
+      dateOfBirth,
+      saUtr
+    )
+
 }

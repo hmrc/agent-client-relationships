@@ -16,10 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 
-case class AuthorisationRequestInfoForClient(agentName: String, service: String, status: InvitationStatus)
+case class AuthorisationRequestInfoForClient(
+  agentName: String,
+  service: String,
+  status: InvitationStatus
+)
 
 object AuthorisationRequestInfoForClient {
   implicit val format: Format[AuthorisationRequestInfoForClient] = Json.format[AuthorisationRequestInfoForClient]

@@ -16,9 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.module
 
-import play.api.inject.{Binding, Module}
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainBytes, PlainContent, PlainText, SymmetricCryptoFactory}
+import play.api.inject.Binding
+import play.api.inject.Module
+import play.api.Configuration
+import play.api.Environment
+import uk.gov.hmrc.crypto.Crypted
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainBytes
+import uk.gov.hmrc.crypto.PlainContent
+import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -33,12 +41,16 @@ extends Module {
     else
       NoCrypto
 
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
+  override def bindings(
+    environment: Environment,
+    configuration: Configuration
+  ): Seq[Binding[_]] = Seq(
     bind[
       Encrypter
         with Decrypter
     ].qualifiedWith("aes").toInstance(aesCryptoInstance(configuration))
   )
+
 }
 
 /** Encrypter/decrypter that does nothing (i.e. leaves content in plaintext). Only to be used for debugging.
@@ -46,13 +58,17 @@ extends Module {
 trait NoCrypto
 extends Encrypter
 with Decrypter {
+
   def encrypt(plain: PlainContent): Crypted =
     plain match {
-      case PlainText(text)   => Crypted(text)
-      case PlainBytes(bytes) => Crypted(new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8))
+      case PlainText(text) =>
+        Crypted(text)
+      case PlainBytes(bytes) =>
+        Crypted(new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8))
     }
   def decrypt(notEncrypted: Crypted): PlainText = PlainText(notEncrypted.value)
   def decryptAsBytes(nullEncrypted: Crypted): PlainBytes = PlainBytes(Base64.getDecoder.decode(nullEncrypted.value))
+
 }
 
 object NoCrypto

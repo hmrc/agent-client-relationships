@@ -17,12 +17,19 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, ClientIdentifier, Identifier, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdType
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.TaxIdentifier
 
 /** An implementation of EnrolmentKey with some extra features to make life easier.
   */
-case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
+case class EnrolmentKey(
+  service: String,
+  identifiers: Seq[Identifier]
+) {
+
   lazy val tag = // note: we intentionally do not use the Identifier's toString below because it upper cases everything!
     s"$service~${identifiers.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
 
@@ -38,12 +45,14 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
     */
   def oneIdentifier(key: Option[String] = None): Identifier = identifiers
     .find(i =>
-      i.key == key.getOrElse(
-        if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
-          Service.forId(service).supportedClientIdType.enrolmentId
-        } else
-          identifiers.head.key // fallback to old behaviour
-      )
+      i.key ==
+        key.getOrElse(
+          if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
+            Service.forId(service).supportedClientIdType.enrolmentId
+          }
+          else
+            identifiers.head.key // fallback to old behaviour
+        )
     )
     .getOrElse(throw new IllegalArgumentException(s"No identifier for $key with $service"))
 
@@ -61,9 +70,15 @@ object EnrolmentKey {
     throw new IllegalArgumentException("Invalid enrolment key: " + s)
   )
 
-  def apply(service: Service, taxIdentifier: TaxIdentifier): EnrolmentKey = EnrolmentKey(service.id, taxIdentifier)
+  def apply(
+    service: Service,
+    taxIdentifier: TaxIdentifier
+  ): EnrolmentKey = EnrolmentKey(service.id, taxIdentifier)
 
-  def apply(serviceKey: String, taxIdentifier: TaxIdentifier): EnrolmentKey = EnrolmentKey(
+  def apply(
+    serviceKey: String,
+    taxIdentifier: TaxIdentifier
+  ): EnrolmentKey = EnrolmentKey(
     serviceKey,
     Seq(Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value))
   )
@@ -74,7 +89,8 @@ object EnrolmentKey {
       val service = parts.head
       val identifiers = parts.tail.sliding(2, 2).map(a => Identifier(a(0), a(1))).toSeq
       Some(EnrolmentKey(service, identifiers))
-    } else
+    }
+    else
       None
   }
 
@@ -89,7 +105,9 @@ object EnrolmentKey {
         json match {
           case JsString(value) =>
             parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
-          case _ => JsError("STRING_VALUE_EXPECTED")
+          case _ =>
+            JsError("STRING_VALUE_EXPECTED")
         }
     }
+
 }

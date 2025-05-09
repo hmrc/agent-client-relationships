@@ -20,14 +20,21 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Span}
+import org.scalatest.time.Millis
+import org.scalatest.time.Span
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.mvc.{AnyContentAsEmpty, RequestHeader}
+import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.{AgentCode, Nino}
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, RequestId, SessionId}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.Authorization
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.RequestId
+import uk.gov.hmrc.http.SessionId
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -46,8 +53,8 @@ with Eventually {
   )
 
   val request: RequestHeader = FakeRequest("GET", "/path").withHeaders(
-    HeaderNames.xSessionId    -> "dummy session id",
-    HeaderNames.xRequestId    -> "dummy request id",
+    HeaderNames.xSessionId -> "dummy session id",
+    HeaderNames.xRequestId -> "dummy request id",
     HeaderNames.authorisation -> "dummy auth"
   )
 
@@ -70,9 +77,7 @@ with Eventually {
       auditData.set("enrolmentDelegated", true)
       auditData.set("howRelationshipCreated", "CopyExistingCESARelationship")
 
-      await(
-        service.sendCreateRelationshipAuditEvent()(request, auditData)
-      )
+      await(service.sendCreateRelationshipAuditEvent()(request, auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

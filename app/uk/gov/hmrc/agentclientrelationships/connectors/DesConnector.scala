@@ -28,23 +28,31 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, SaAgentReference, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderNames, HttpResponse}
+import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class DesConnector @Inject() (
   httpClient: HttpClientV2,
   randomUuidGenerator: CorrelationIdGenerator,
   appConfig: AppConfig
-)(implicit val metrics: Metrics, val ec: ExecutionContext)
+)(implicit
+  val metrics: Metrics,
+  val ec: ExecutionContext
+)
 extends HttpApiMonitor
 with Logging {
 
@@ -77,7 +85,8 @@ with Logging {
   def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] =
     getWithDesHeaders("GetAgentRecord", new URL(getAgentRecordUrl(agentId))).map { response =>
       response.status match {
-        case Status.OK => Option(response.json.as[AgentRecord])
+        case Status.OK =>
+          Option(response.json.as[AgentRecord])
         case status =>
           logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
           None
@@ -92,17 +101,26 @@ with Logging {
       case Utr(utr) =>
         val encodedUtr = UriEncoding.encodePathSegment(utr, "UTF-8")
         s"$desBaseUrl/registration/personal-details/utr/$encodedUtr"
-      case _ => throw new Exception(s"The client identifier $agentId is not supported.")
+      case _ =>
+        throw new Exception(s"The client identifier $agentId is not supported.")
     }
 
   // DES API #1363  Get Vat Customer Information
   def vrnIsKnownInEtmp(vrn: Vrn)(implicit request: RequestHeader): Future[Boolean] = {
     val url = new URL(s"$desBaseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information")
-    getWithDesHeaders("GetVatCustomerInformation", url, desAuthToken, desEnv).map { response =>
+    getWithDesHeaders(
+      "GetVatCustomerInformation",
+      url,
+      desAuthToken,
+      desEnv
+    ).map { response =>
       response.status match {
-        case Status.OK if response.json.as[JsObject].fields.isEmpty => false
-        case Status.OK                                              => true
-        case Status.NOT_FOUND                                       => false
+        case Status.OK if response.json.as[JsObject].fields.isEmpty =>
+          false
+        case Status.OK =>
+          true
+        case Status.NOT_FOUND =>
+          false
         case other: Int =>
           logger.error(s"Error in GetVatCustomerInformation. $other, ${response.body}")
           false
@@ -110,15 +128,21 @@ with Logging {
     }
   }
 
-  def desHeaders(authToken: String, env: String): Seq[(String, String)] = Seq(
-    Environment               -> env,
+  def desHeaders(
+    authToken: String,
+    env: String
+  ): Seq[(String, String)] = Seq(
+    Environment -> env,
     HeaderNames.authorisation -> s"Bearer $authToken",
-    CorrelationId             -> randomUuidGenerator.makeCorrelationId()
+    CorrelationId -> randomUuidGenerator.makeCorrelationId()
   )
 
-  private def getWithDesHeaders(apiName: String, url: URL, authToken: String = desAuthToken, env: String = desEnv)(
-    implicit request: RequestHeader
-  ): Future[HttpResponse] = {
+  private def getWithDesHeaders(
+    apiName: String,
+    url: URL,
+    authToken: String = desAuthToken,
+    env: String = desEnv
+  )(implicit request: RequestHeader): Future[HttpResponse] = {
 
     val isInternalHost = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
 
@@ -127,4 +151,5 @@ with Logging {
 
     }
   }
+
 }

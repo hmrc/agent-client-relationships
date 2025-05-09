@@ -19,21 +19,32 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import org.mongodb.scala.MongoWriteException
 import play.api.Logger
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgentReferenceRecord, ValidateInvitationRequest, ValidateInvitationResponse}
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, Pending}
-import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsService, InvitationLinkService, InvitationService}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateInvitationRequest
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateInvitationResponse
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class InvitationLinkController @Inject() (
@@ -49,7 +60,10 @@ with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def validateLink(uid: String, normalizedAgentName: String): Action[AnyContent] = Action.async { implicit request =>
+  def validateLink(
+    uid: String,
+    normalizedAgentName: String
+  ): Action[AnyContent] = Action.async { implicit request =>
     agentReferenceService
       .validateLink(uid, normalizedAgentName)
       .map { response =>
@@ -75,13 +89,19 @@ with AuthActions {
   // TODO: this is a duplicate of what's used in the ClientDetailsController - we really want centralised config
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
-  private def servicesToSearchInvitationsFor(enrolments: Seq[EnrolmentKey], serviceKeys: Seq[String]): Set[String] = {
+  private def servicesToSearchInvitationsFor(
+    enrolments: Seq[EnrolmentKey],
+    serviceKeys: Seq[String]
+  ): Set[String] = {
     val suppServices = serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
     (enrolments.map(_.service) ++ suppServices)
       .map {
-        case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
-        case "HMRC-NI" | "HMRC-PT"                                        => "PERSONAL-INCOME-RECORD"
-        case serviceKey                                                   => serviceKey
+        case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") =>
+          "HMRC-MTD-IT"
+        case "HMRC-NI" | "HMRC-PT" =>
+          "PERSONAL-INCOME-RECORD"
+        case serviceKey =>
+          serviceKey
       }
       .toSet
   }
@@ -96,12 +116,14 @@ with AuthActions {
               val servicesToSearch = servicesToSearchInvitationsFor(enrolments, request.body.serviceKeys)
               val clientIdsToSearch = enrolments.map(e => e.oneTaxIdentifier()).map(_.value)
               invitationService
-                .findAllForAgent(validateLinkResponse.arn.value, servicesToSearch, clientIdsToSearch)
+                .findAllForAgent(
+                  validateLinkResponse.arn.value,
+                  servicesToSearch,
+                  clientIdsToSearch
+                )
                 .flatMap {
                   case Nil =>
-                    Logger(getClass).warn(
-                      s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
-                    )
+                    Logger(getClass).warn(s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}")
                     Future.successful(NotFound)
                   case invitations: Seq[Invitation] =>
                     val invitation = invitations
@@ -113,9 +135,9 @@ with AuthActions {
                       )
                     for {
                       existingRelationship <- checkRelationshipsService.findCurrentMainAgent(
-                                                invitation,
-                                                enrolments.find(_.service == invitation.service)
-                                              )
+                        invitation,
+                        enrolments.find(_.service == invitation.service)
+                      )
                     } yield Ok(
                       Json.toJson(
                         ValidateInvitationResponse(
@@ -148,11 +170,10 @@ with AuthActions {
       .map(_ => NoContent)
       .recoverWith {
         case e: MongoWriteException if e.getError.getCode.equals(11000) =>
-          logger.warn(
-            s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion"
-          )
+          logger.warn(s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion")
           Future(NoContent)
-        case other => Future.failed(other)
+        case other =>
+          Future.failed(other)
       }
   }
 

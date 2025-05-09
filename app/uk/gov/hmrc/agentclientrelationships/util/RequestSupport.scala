@@ -17,8 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.util
 
 import play.api.libs.typedmap.TypedMap
-import play.api.mvc.request.{RemoteConnection, RequestTarget}
-import play.api.mvc.{Headers, Request, RequestHeader}
+import play.api.mvc.request.RemoteConnection
+import play.api.mvc.request.RequestTarget
+import play.api.mvc.Headers
+import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendHeaderCarrierProvider
@@ -47,4 +50,5 @@ object RequestSupport {
   }
 
   val thereIsNoRequest: RequestHeader = NoRequest
+
 }

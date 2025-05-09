@@ -22,20 +22,27 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
-import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpErrorFunctions
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 
 import java.net.URL
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 @Singleton
-class EmailConnector @Inject() (appConfig: AppConfig, httpClient: HttpClientV2, val metrics: Metrics)(implicit
-  val ec: ExecutionContext
-)
+class EmailConnector @Inject() (
+  appConfig: AppConfig,
+  httpClient: HttpClientV2,
+  val metrics: Metrics
+)(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
 with HttpErrorFunctions
 with Logging {
@@ -50,11 +57,13 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case status if is2xx(status) => true
+            case status if is2xx(status) =>
+              true
             case other =>
               logger.warn(s"unexpected status from email service, status: $other")
               false
           }
         }
     }
+
 }

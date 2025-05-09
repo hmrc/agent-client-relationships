@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.ClientStatus
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.KnownFactType
 

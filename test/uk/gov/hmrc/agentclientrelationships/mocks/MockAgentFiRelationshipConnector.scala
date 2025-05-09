@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
@@ -33,10 +34,17 @@ trait MockAgentFiRelationshipConnector {
 
   val mockAgentFiRelationshipConnector: AgentFiRelationshipConnector = resettingMock[AgentFiRelationshipConnector]
 
-  def mockCreateFiRelationship(arn: Arn, service: String, clientId: String): OngoingStubbing[Future[Unit]] = when(
-    mockAgentFiRelationshipConnector.createRelationship(eqs(arn), eqs(service), eqs(clientId), any[LocalDateTime])(
-      any[RequestHeader]
-    )
+  def mockCreateFiRelationship(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ): OngoingStubbing[Future[Unit]] = when(
+    mockAgentFiRelationshipConnector.createRelationship(
+      eqs(arn),
+      eqs(service),
+      eqs(clientId),
+      any[LocalDateTime]
+    )(any[RequestHeader])
   ).thenReturn(Future.unit)
 
   def mockFindRelationshipForClient(

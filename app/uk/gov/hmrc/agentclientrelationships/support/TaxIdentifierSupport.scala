@@ -25,16 +25,21 @@ object TaxIdentifierSupport {
 
   def identifierNickname(taxIdentifier: TaxIdentifier): String =
     taxIdentifier match {
-      case _: Arn => "ARN"
+      case _: Arn =>
+        "ARN"
       case taxId =>
         Try(ClientIdentifier(taxId).enrolmentId).getOrElse(
           throw new IllegalArgumentException("unsupported tax identifier: " + taxId)
         )
     }
 
-  def from(value: String, `type`: String): TaxIdentifier =
+  def from(
+    value: String,
+    `type`: String
+  ): TaxIdentifier =
     `type` match {
-      case "AgentReferenceNumber" => Arn(value)
+      case "AgentReferenceNumber" =>
+        Arn(value)
       case _ =>
         ClientIdType
           .supportedTypes
@@ -42,4 +47,5 @@ object TaxIdentifierSupport {
           .map(_.createUnderlying(value))
           .getOrElse(throw new IllegalArgumentException("unsupported tax identifier type: " + `type`))
     }
+
 }

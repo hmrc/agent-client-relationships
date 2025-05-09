@@ -17,18 +17,24 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import play.api.i18n.{Lang, Langs, MessagesApi}
+import play.api.i18n.Lang
+import play.api.i18n.Langs
+import play.api.i18n.MessagesApi
 import uk.gov.hmrc.agentclientrelationships.connectors.EmailConnector
-import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation}
+import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 import play.api.mvc.RequestHeader
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class EmailService @Inject() (emailConnector: EmailConnector, messagesApi: MessagesApi, langs: Langs)(implicit
-  ec: ExecutionContext
-)
+class EmailService @Inject() (
+  emailConnector: EmailConnector,
+  messagesApi: MessagesApi,
+  langs: Langs
+)(implicit ec: ExecutionContext)
 extends Logging {
 
   // TODO: Currently, the language defaults to English by selecting the first available language.
@@ -48,10 +54,10 @@ extends Logging {
         to = Seq(invitations.head.agencyEmail),
         templateId = templateId,
         parameters = Map(
-          "agencyName"          -> invitations.head.agencyName,
+          "agencyName" -> invitations.head.agencyName,
           "numberOfInvitations" -> numberOfInvitations.toString,
-          "createdDate"         -> DateTimeHelper.displayDate(invitations.head.created),
-          "expiryDate"          -> DateTimeHelper.displayDate(invitations.head.expiryDate)
+          "createdDate" -> DateTimeHelper.displayDate(invitations.head.created),
+          "expiryDate" -> DateTimeHelper.displayDate(invitations.head.expiryDate)
         )
       )
     )
@@ -66,7 +72,10 @@ extends Logging {
   def sendRejectedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
     .sendEmail(emailInformation("client_rejected_authorisation_request", invitation))
 
-  private def emailInformation(templateId: String, invitation: Invitation) = {
+  private def emailInformation(
+    templateId: String,
+    invitation: Invitation
+  ) = {
     val altItsaParam =
       if (invitation.isAltItsa)
         Map("additionalInfo" -> s"You must now sign ${invitation.clientName} up to Making Tax Digital for Income Tax.")
@@ -80,8 +89,9 @@ extends Logging {
         "agencyName" -> invitation.agencyName,
         "clientName" -> invitation.clientName,
         "expiryDate" -> DateTimeHelper.displayDate(invitation.expiryDate),
-        "service"    -> messagesApi(s"service.${invitation.service}")
+        "service" -> messagesApi(s"service.${invitation.service}")
       ) ++ altItsaParam
     )
   }
+
 }

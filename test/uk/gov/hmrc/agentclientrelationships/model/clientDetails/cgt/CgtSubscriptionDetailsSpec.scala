@@ -28,39 +28,58 @@ extends UnitSpec {
 
       "the data indicates the client is an individual" in {
         val json = Json.obj(
-          "subscriptionDetails" -> Json.obj(
-            "typeOfPersonDetails" -> Json.obj(
-              "typeOfPerson" -> "Individual",
-              "firstName"    -> "Erling",
-              "lastName"     -> "Haal"
-            ),
-            "addressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
-          )
+          "subscriptionDetails" ->
+            Json.obj(
+              "typeOfPersonDetails" ->
+                Json.obj(
+                  "typeOfPerson" -> "Individual",
+                  "firstName" -> "Erling",
+                  "lastName" -> "Haal"
+                ),
+              "addressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
+            )
         )
 
-        json.as[CgtSubscriptionDetails] shouldBe CgtSubscriptionDetails("Erling Haal", Some("AA1 1AA"), "GB")
+        json.as[CgtSubscriptionDetails] shouldBe
+          CgtSubscriptionDetails(
+            "Erling Haal",
+            Some("AA1 1AA"),
+            "GB"
+          )
       }
 
       "the data indicates the client is an organisation" in {
         val json = Json.obj(
-          "subscriptionDetails" -> Json.obj(
-            "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
-            "addressDetails"      -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
-          )
+          "subscriptionDetails" ->
+            Json.obj(
+              "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
+              "addressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
+            )
         )
 
-        json.as[CgtSubscriptionDetails] shouldBe CgtSubscriptionDetails("CFG Solutions", Some("AA1 1AA"), "GB")
+        json.as[CgtSubscriptionDetails] shouldBe
+          CgtSubscriptionDetails(
+            "CFG Solutions",
+            Some("AA1 1AA"),
+            "GB"
+          )
       }
 
       "the optional fields are missing" in {
         val json = Json.obj(
-          "subscriptionDetails" -> Json.obj(
-            "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
-            "addressDetails"      -> Json.obj("countryCode" -> "GB")
-          )
+          "subscriptionDetails" ->
+            Json.obj(
+              "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
+              "addressDetails" -> Json.obj("countryCode" -> "GB")
+            )
         )
 
-        json.as[CgtSubscriptionDetails] shouldBe CgtSubscriptionDetails("CFG Solutions", None, "GB")
+        json.as[CgtSubscriptionDetails] shouldBe
+          CgtSubscriptionDetails(
+            "CFG Solutions",
+            None,
+            "GB"
+          )
       }
     }
   }

@@ -20,5 +20,8 @@ sealed trait ClientDetailsFailureResponse
 
 case object ClientDetailsNotFound
 extends ClientDetailsFailureResponse
-case class ErrorRetrievingClientDetails(status: Int, message: String)
+case class ErrorRetrievingClientDetails(
+  status: Int,
+  message: String
+)
 extends ClientDetailsFailureResponse

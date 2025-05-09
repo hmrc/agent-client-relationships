@@ -16,12 +16,21 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Format, JsResult, JsString, JsValue, Json, OFormat}
+import play.api.libs.json.Format
+import play.api.libs.json.JsResult
+import play.api.libs.json.JsString
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-case class ValidateLinkResponse(arn: Arn, name: String)
+case class ValidateLinkResponse(
+  arn: Arn,
+  name: String
+)
 
 object ValidateLinkResponse {
+
   implicit val arnFormat: Format[Arn] =
     new Format[Arn] {
       def writes(arn: Arn): JsValue = JsString(arn.value)
@@ -29,4 +38,5 @@ object ValidateLinkResponse {
     }
 
   implicit val format: OFormat[ValidateLinkResponse] = Json.format[ValidateLinkResponse]
+
 }

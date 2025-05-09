@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.config
 
 import java.net.URLDecoder
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import play.api.Configuration
 import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
@@ -30,7 +31,10 @@ case class ConfigNotFoundException(message: String)
 extends RuntimeException(message)
 
 @Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
+class AppConfig @Inject() (
+  config: Configuration,
+  servicesConfig: ServicesConfig
+) {
 
   val appName = servicesConfig.getString("appName")
 
@@ -136,4 +140,5 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val emailSchedulerWarningCronExp: String = servicesConfig.getString("emailScheduler.warningEmailCronExpression")
   val emailSchedulerExpiredCronExp: String = servicesConfig.getString("emailScheduler.expiredEmailCronExpression")
   val emailSchedulerLockTTL: Int = servicesConfig.getInt("emailScheduler.lockDurationInSeconds")
+
 }

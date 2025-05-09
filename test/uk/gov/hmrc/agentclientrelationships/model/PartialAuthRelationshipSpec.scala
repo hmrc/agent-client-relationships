@@ -16,10 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, SymmetricCryptoFactory}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 import java.time.Instant
 
@@ -27,9 +30,7 @@ class PartialAuthRelationshipSpec
 extends UnitSpec {
 
   implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto(
-    "edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g="
-  )
+    with Decrypter = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val activeTestModel: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),
@@ -41,11 +42,11 @@ extends UnitSpec {
   )
 
   val testJsonResponse: JsObject = Json.obj(
-    "created"     -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-    "arn"         -> "XARN1234567",
-    "service"     -> "HMRC-MTD-VAT",
-    "nino"        -> encryptedString("123456789"),
-    "active"      -> true,
+    "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
+    "arn" -> "XARN1234567",
+    "service" -> "HMRC-MTD-VAT",
+    "nino" -> encryptedString("123456789"),
+    "active" -> true,
     "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000"))
   )
 
@@ -65,4 +66,5 @@ extends UnitSpec {
       }
     }
   }
+
 }

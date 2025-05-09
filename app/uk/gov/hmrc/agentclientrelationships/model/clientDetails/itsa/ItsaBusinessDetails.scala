@@ -16,9 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 
-import play.api.libs.json.{JsPath, Reads}
+import play.api.libs.json.JsPath
+import play.api.libs.json.Reads
 
-case class ItsaBusinessDetails(name: String, postcode: Option[String], countryCode: String) {
+case class ItsaBusinessDetails(
+  name: String,
+  postcode: Option[String],
+  countryCode: String
+) {
   def isOverseas: Boolean = !countryCode.toUpperCase.contains("GB")
 }
 
@@ -26,8 +31,12 @@ object ItsaBusinessDetails {
 
   implicit val reads: Reads[ItsaBusinessDetails] =
     for {
-      name        <- (JsPath \ "tradingName").read[String]
-      postcode    <- (JsPath \ "businessAddressDetails" \ "postalCode").readNullable[String]
+      name <- (JsPath \ "tradingName").read[String]
+      postcode <- (JsPath \ "businessAddressDetails" \ "postalCode").readNullable[String]
       countryCode <- (JsPath \ "businessAddressDetails" \ "countryCode").read[String]
-    } yield ItsaBusinessDetails(name, postcode, countryCode)
+    } yield ItsaBusinessDetails(
+      name,
+      postcode,
+      countryCode
+    )
 }

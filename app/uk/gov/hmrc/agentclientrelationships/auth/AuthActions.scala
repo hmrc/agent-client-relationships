@@ -21,21 +21,29 @@ import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey, _}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment => _, _}
-import uk.gov.hmrc.auth.core.AffinityGroup.{Individual, Organisation}
-import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
+import uk.gov.hmrc.auth.core.AffinityGroup.Individual
+import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
+import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
-import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
+import uk.gov.hmrc.auth.core.retrieve.Credentials
+import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderNames
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.matching.Regex
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
-case class CurrentUser(credentials: Option[Credentials], affinityGroup: Option[AffinityGroup]) {
+case class CurrentUser(
+  credentials: Option[Credentials],
+  affinityGroup: Option[AffinityGroup]
+) {
   def isStride: Boolean = credentials.map(_.providerType).contains("PrivilegedApplication")
 }
 
@@ -50,14 +58,21 @@ with Logging {
 
   val supportedServices: Seq[Service]
 
-  def authorisedUser(arn: Option[Arn], clientId: TaxIdentifier, strideRoles: Seq[String])(
-    body: CurrentUser => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  def authorisedUser(
+    arn: Option[Arn],
+    clientId: TaxIdentifier,
+    strideRoles: Seq[String]
+  )(body: CurrentUser => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
       optCreds
         .collect {
           case creds @ Credentials(_, "GovernmentGateway")
-              if hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, arn, clientId) =>
+              if hasRequiredEnrolmentMatchingIdentifier(
+                enrolments,
+                affinity,
+                arn,
+                clientId
+              ) =>
             creds
           case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
             creds
@@ -68,14 +83,21 @@ with Logging {
         .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
-  def authorisedClientOrStrideUserOrAgent(clientId: TaxIdentifier, strideRoles: Seq[String])(
-    body: CurrentUser => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  def authorisedClientOrStrideUserOrAgent(
+    clientId: TaxIdentifier,
+    strideRoles: Seq[String]
+  )(body: CurrentUser => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
       optCreds
         .collect {
           case creds @ Credentials(_, "GovernmentGateway")
-              if isAgent(affinity) | hasRequiredEnrolmentMatchingIdentifier(enrolments, affinity, None, clientId) =>
+              if isAgent(affinity) |
+                hasRequiredEnrolmentMatchingIdentifier(
+                  enrolments,
+                  affinity,
+                  None,
+                  clientId
+                ) =>
             creds
           case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
             creds
@@ -93,8 +115,10 @@ with Logging {
     clientId: TaxIdentifier
   ): Boolean = affinity
     .flatMap {
-      case AffinityGroup.Agent => arn
-      case _                   => Some(clientId)
+      case AffinityGroup.Agent =>
+        arn
+      case _ =>
+        Some(clientId)
     }
     .exists { requiredIdentifier =>
       // check that among the identifiers that the user has, there is one that matches the clientId provided
@@ -104,9 +128,8 @@ with Logging {
           enrolments
             .enrolments
             .exists(enrolment =>
-              enrolment.key == "HMRC-AS-AGENT" && enrolment
-                .identifiers
-                .contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
+              enrolment.key == "HMRC-AS-AGENT" &&
+                enrolment.identifiers.contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
             )
         case taxId: TaxIdentifier =>
           val requiredTaxIdType = ClientIdentifier(taxId).enrolmentId
@@ -114,17 +137,16 @@ with Logging {
             .enrolments
             .flatMap(_.identifiers)
             .filter(_.key == requiredTaxIdType)
-            .exists(
-              _.value.replace(" ", "") == requiredIdentifier.value.replace(" ", "")
-            ) // In case NINO comes back without spaces
+            .exists(_.value.replace(" ", "") == requiredIdentifier.value.replace(" ", "")) // In case NINO comes back without spaces
       }
     }
 
   private def isAgent(affinity: Option[AffinityGroup]): Boolean = affinity.contains(AffinityGroup.Agent)
 
-  def hasRequiredStrideRole(enrolments: Enrolments, strideRoles: Seq[String]): Boolean = strideRoles.exists(s =>
-    enrolments.enrolments.exists(_.key == s)
-  )
+  def hasRequiredStrideRole(
+    enrolments: Enrolments,
+    strideRoles: Seq[String]
+  ): Boolean = strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
 
   private def typedIdentifier(enrolment: Enrolment): Option[TaxIdentifier] = {
     val service = Service.forId(enrolment.key)
@@ -143,19 +165,26 @@ with Logging {
           val id =
             if (supportedServices.exists(_.id == serviceKey)) {
               enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
-            } else
+            }
+            else
               None
 
           id match {
-            case Some(i) => body(i)
-            case _       => Future.successful(NoPermissionToPerformOperation)
+            case Some(i) =>
+              body(i)
+            case _ =>
+              Future.successful(NoPermissionToPerformOperation)
           }
-        case _ => Future.successful(NoPermissionToPerformOperation)
+        case _ =>
+          Future.successful(NoPermissionToPerformOperation)
       }
     }
 
   // Authorisation request response is a special case where we need to check for multiple services
-  def withAuthorisedClientForServiceKeys[A, T](
+  def withAuthorisedClientForServiceKeys[
+    A,
+    T
+  ](
     serviceKeys: Seq[String]
   )(body: Seq[LocalEnrolmentKey] => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
@@ -163,30 +192,35 @@ with Logging {
         val requiredEnrolments =
           for {
             serviceKey <- serviceKeys
-            enrolment  <- enrolments.getEnrolment(serviceKey)
+            enrolment <- enrolments.getEnrolment(serviceKey)
           } yield LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value)))
 
         requiredEnrolments match {
-          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _              => body(requiredEnrolments)
+          case s if s.isEmpty =>
+            Future.successful(NoPermissionToPerformOperation)
+          case _ =>
+            body(requiredEnrolments)
         }
     }
 
-  def withAuthorisedAsClient[A, T](
-    body: Map[Service, TaxIdentifier] => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  def withAuthorisedAsClient[
+    A,
+    T
+  ](body: Map[Service, TaxIdentifier] => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
       enrolments =>
         val identifiers =
           for {
             supportedService <- supportedServices
-            enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
-            clientId         <- enrolment.identifiers.headOption
+            enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
+            clientId <- enrolment.identifiers.headOption
           } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
         identifiers match {
-          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _              => body(identifiers.toMap)
+          case s if s.isEmpty =>
+            Future.successful(NoPermissionToPerformOperation)
+          case _ =>
+            body(identifiers.toMap)
         }
     }
 
@@ -194,16 +228,20 @@ with Logging {
     body: EnrolmentsWithNino => Future[Result]
   )(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments and nino) {
-      case enrolments ~ nino => body(new EnrolmentsWithNino(enrolments, nino))
+      case enrolments ~ nino =>
+        body(new EnrolmentsWithNino(enrolments, nino))
     }
 
-  protected def authorisedWithStride(oldStrideRole: String, newStrideRole: String)(
-    body: String => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  protected def authorisedWithStride(
+    oldStrideRole: String,
+    newStrideRole: String
+  )(body: String => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
-        case Some(Credentials(strideId, _)) => body(strideId)
-        case _                              => Future.successful(NoPermissionToPerformOperation)
+        case Some(Credentials(strideId, _)) =>
+          body(strideId)
+        case _ =>
+          Future.successful(NoPermissionToPerformOperation)
       }
 
   val basicAuthHeader: Regex = "Basic (.+)".r
@@ -212,7 +250,8 @@ with Logging {
   private def decodeFromBase64(encodedString: String): String =
     try new String(Base64.getDecoder.decode(encodedString), UTF_8)
     catch {
-      case _: Throwable => ""
+      case _: Throwable =>
+        ""
     }
 
   def withBasicAuth(
@@ -224,7 +263,8 @@ with Logging {
           case decodedAuth(username, password) =>
             if (BasicAuthentication(username, password) == expectedAuth) {
               body
-            } else {
+            }
+            else {
               logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
             }
@@ -239,24 +279,34 @@ with Logging {
 
   protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(implicit request: RequestHeader): Future[Result] =
     withEnrolledAsAgent {
-      case Some(arn) => body(Arn(arn))
-      case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
-    } recoverWith { case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments()) }
+      case Some(arn) =>
+        body(Arn(arn))
+      case None =>
+        Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
+    } recoverWith { case _: InsufficientEnrolments =>
+      Future.failed(InsufficientEnrolments())
+    }
 
   protected def withEnrolledAsAgent[A](
     body: Option[String] => Future[Result]
   )(implicit request: RequestHeader): Future[Result] =
-    authorised(
-      Enrolment("HMRC-AS-AGENT")
-        and AuthProviders(GovernmentGateway)
-    ).retrieve(authorisedEnrolments) { enrolments =>
-      val id = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
-      body(id)
+    authorised(Enrolment("HMRC-AS-AGENT") and AuthProviders(GovernmentGateway)).retrieve(authorisedEnrolments) {
+      enrolments =>
+        val id = getEnrolmentValue(
+          enrolments,
+          "HMRC-AS-AGENT",
+          "AgentReferenceNumber"
+        )
+        body(id)
     }
 
-  private def getEnrolmentValue(enrolments: Enrolments, serviceName: String, identifierKey: String) =
+  private def getEnrolmentValue(
+    enrolments: Enrolments,
+    serviceName: String,
+    identifierKey: String
+  ) =
     for {
-      enrolment  <- enrolments.getEnrolment(serviceName)
+      enrolment <- enrolments.getEnrolment(serviceName)
       identifier <- enrolment.getIdentifier(identifierKey)
     } yield identifier.value
 

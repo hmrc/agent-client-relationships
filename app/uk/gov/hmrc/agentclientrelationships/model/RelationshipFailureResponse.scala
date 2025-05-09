@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 sealed trait RelationshipFailureResponse
 object RelationshipFailureResponse {
+
   case object RelationshipNotFound
   extends RelationshipFailureResponse
   case object RelationshipSuspended
@@ -32,10 +33,17 @@ object RelationshipFailureResponse {
   extends RelationshipFailureResponse
   case object RelationshipStartDateMissing
   extends RelationshipFailureResponse
-  case class ErrorRetrievingClientDetails(status: Int, message: String)
+  case class ErrorRetrievingClientDetails(
+    status: Int,
+    message: String
+  )
   extends RelationshipFailureResponse
   case class ErrorRetrievingAgentDetails(message: String)
   extends RelationshipFailureResponse
-  case class ErrorRetrievingRelationship(status: Int, message: String)
+  case class ErrorRetrievingRelationship(
+    status: Int,
+    message: String
+  )
   extends RelationshipFailureResponse
+
 }

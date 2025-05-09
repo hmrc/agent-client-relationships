@@ -16,13 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
-import play.api.libs.json.{Format, Json, __}
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax.unlift
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import play.api.libs.json.__
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 case class PartialAuthRelationship(
   created: Instant,
@@ -63,6 +68,7 @@ case class PartialAuthRelationship(
 }
 
 object PartialAuthRelationship {
+
   implicit val format: Format[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
 
   def mongoFormat(implicit
@@ -70,11 +76,14 @@ object PartialAuthRelationship {
       with Decrypter
   ): Format[PartialAuthRelationship] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-    ((__ \ "created").format[Instant] and
-      (__ \ "arn").format[String] and
-      (__ \ "service").format[String] and
-      (__ \ "nino").format[String](stringEncrypterDecrypter) and
-      (__ \ "active").format[Boolean] and
-      (__ \ "lastUpdated").format[Instant])(PartialAuthRelationship.apply, unlift(PartialAuthRelationship.unapply))
+    (
+      (__ \ "created").format[Instant] and
+        (__ \ "arn").format[String] and
+        (__ \ "service").format[String] and
+        (__ \ "nino").format[String](stringEncrypterDecrypter) and
+        (__ \ "active").format[Boolean] and
+        (__ \ "lastUpdated").format[Instant]
+    )(PartialAuthRelationship.apply, unlift(PartialAuthRelationship.unapply))
   }
+
 }

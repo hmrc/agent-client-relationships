@@ -17,9 +17,15 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.{JsValue, Json, Writes}
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.libs.json.Writes
 import play.api.mvc.Result
-import play.api.mvc.Results.{BadRequest, Forbidden, InternalServerError, NotFound, NotImplemented}
+import play.api.mvc.Results.BadRequest
+import play.api.mvc.Results.Forbidden
+import play.api.mvc.Results.InternalServerError
+import play.api.mvc.Results.NotFound
+import play.api.mvc.Results.NotImplemented
 
 sealed trait InvitationFailureResponse {
   def getResult(message: String): Result
@@ -27,7 +33,10 @@ sealed trait InvitationFailureResponse {
 
 object InvitationFailureResponse {
 
-  case class ErrorBody(code: String, message: String)
+  case class ErrorBody(
+    code: String,
+    message: String
+  )
 
   implicit val errorBodyWrites: Writes[ErrorBody] =
     new Writes[ErrorBody] {
@@ -116,4 +125,5 @@ object InvitationFailureResponse {
   extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
+
 }

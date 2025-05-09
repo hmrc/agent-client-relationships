@@ -20,9 +20,14 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 class UriPathEncodingSpec
 extends UnitSpec {
+
   "encodePathSegments" should {
     "separate segments with forward slashes" in {
-      UriPathEncoding.encodePathSegments("one", "two", "three") shouldBe "/one/two/three"
+      UriPathEncoding.encodePathSegments(
+        "one",
+        "two",
+        "three"
+      ) shouldBe "/one/two/three"
     }
 
     "escape spaces using URL path encoding not form encoding" in {
@@ -43,4 +48,5 @@ extends UnitSpec {
       UriPathEncoding.encodePathSegment("../bad") shouldBe "..%2Fbad"
     }
   }
+
 }

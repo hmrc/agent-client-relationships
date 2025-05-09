@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import java.net.URL
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json._
@@ -30,11 +31,21 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpClient
+import uk.gov.hmrc.http.HttpErrorFunctions
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case class GroupInfo(groupId: String, affinityGroup: Option[String], agentCode: Option[AgentCode])
+case class GroupInfo(
+  groupId: String,
+  affinityGroup: Option[String],
+  agentCode: Option[AgentCode]
+)
 
 object GroupInfo {
   implicit val formats: Format[GroupInfo] = Json.format[GroupInfo]
@@ -48,14 +59,20 @@ object CredentialRole {
 
 /** Cut down version of UserDetails from users-groups-search, with only the data we are interested in
   */
-case class UserDetails(userId: Option[String] = None, credentialRole: Option[String] = None)
+case class UserDetails(
+  userId: Option[String] = None,
+  credentialRole: Option[String] = None
+)
 
 object UserDetails {
   implicit val formats: Format[UserDetails] = Json.format
 }
 
 @Singleton
-class UsersGroupsSearchConnector @Inject() (httpClient: HttpClientV2, appConfig: AppConfig)(implicit
+class UsersGroupsSearchConnector @Inject() (
+  httpClient: HttpClientV2,
+  appConfig: AppConfig
+)(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
 )
@@ -81,4 +98,5 @@ with Logging {
         .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
         .execute[Option[GroupInfo]]
     }
+
 }

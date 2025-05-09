@@ -19,22 +19,27 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.addToSet
-import org.mongodb.scala.model.{IndexModel, IndexOptions}
-import play.api.{Logger, Logging}
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.IndexOptions
+import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import javax.inject._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
+  @Named("aes")
+  crypto: Encrypter
     with Decrypter
 )
 extends PlayMongoRepository[AgentReferenceRecord](
@@ -62,7 +67,10 @@ with Logging {
 
   def findByArn(arn: Arn): Future[Option[AgentReferenceRecord]] = collection.find(equal("arn", arn.value)).headOption()
 
-  def updateAgentName(uid: String, newAgentName: String): Future[Unit] = collection
+  def updateAgentName(
+    uid: String,
+    newAgentName: String
+  ): Future[Unit] = collection
     .updateOne(equal("uid", uid), addToSet("normalisedAgentNames", encryptedString(newAgentName)))
     .toFuture()
     .map { updateOneResult =>
@@ -80,4 +88,5 @@ with Logging {
         localLogger.error("could not delete agent reference record, no matching ARN found.")
       ()
     }
+
 }

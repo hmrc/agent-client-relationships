@@ -45,8 +45,7 @@ extends UnitSpec {
     }
 
     "return IllegalArgumentException when tax identifier is not supported" in {
-      an[IllegalArgumentException] should be thrownBy
-        identifierNickname(Eori("foo"))
+      an[IllegalArgumentException] should be thrownBy identifierNickname(Eori("foo"))
     }
   }
 
@@ -62,9 +61,11 @@ extends UnitSpec {
     }
 
     "throw an exception when tax identifier type is not supported" in {
-      an[Exception] shouldBe thrownBy {
-        TaxIdentifierSupport.from("foo", "UNSUPPORTED")
-      }
+      an[Exception] shouldBe
+        thrownBy {
+          TaxIdentifierSupport.from("foo", "UNSUPPORTED")
+        }
     }
   }
+
 }

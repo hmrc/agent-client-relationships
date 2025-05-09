@@ -28,20 +28,20 @@ import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
-
-trait T1
-trait T2
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
-class AgentAssuranceConnector @Inject() (httpClient: HttpClientV2, val metrics: Metrics)(implicit
+class AgentAssuranceConnector @Inject() (
+  httpClient: HttpClientV2,
+  val metrics: Metrics
+)(implicit
   appConfig: AppConfig,
   val ec: ExecutionContext
 )
-extends HttpApiMonitor
-with T1
-with T2 {
+extends HttpApiMonitor {
 
   // TODO: why agent-assurance uses internal-auth.token?
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken

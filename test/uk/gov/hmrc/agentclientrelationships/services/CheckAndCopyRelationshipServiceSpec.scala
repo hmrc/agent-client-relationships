@@ -18,33 +18,48 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito._
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
-import play.api.mvc.{Request, RequestHeader}
+import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.{ConfigLoader, Configuration}
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import play.api.ConfigLoader
+import play.api.Configuration
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship, RegistrationRelationshipResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.domain._
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class CheckAndCopyRelationshipServiceSpec
 extends UnitSpec
@@ -63,7 +78,14 @@ with ResettingMockitoSugar {
   val agentGroupId = "testGroupId"
   val agentCodeForVatDecAgent: AgentCode = AgentCode("oldAgentCode")
   val agentCodeForAsAgent: AgentCode = AgentCode("ABC1234")
-  val agentUserForAsAgent = Right(AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn))
+  val agentUserForAsAgent = Right(
+    AgentUser(
+      agentUserId,
+      agentGroupId,
+      agentCodeForAsAgent,
+      arn
+    )
+  )
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,
@@ -104,11 +126,20 @@ with ResettingMockitoSugar {
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
   when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]])).thenReturn(
-    Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$")
+    Seq(
+      "^.*\\.service$",
+      "^.*\\.mdtp$",
+      "^localhost$"
+    )
   )
   val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
-  val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
+  val needsRetryStatuses = Seq[Option[SyncStatus]](
+    None,
+    Some(InProgress),
+    Some(IncompleteInputParams),
+    Some(Failed)
+  )
 
   val ec = implicitly[ExecutionContext]
 
@@ -212,9 +243,11 @@ with ResettingMockitoSugar {
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
 
-          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-            relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
-          })
+          val maybeCheck: Option[CheckAndCopyResult] = await(
+            lockService.recoveryLock(arn, mtdItEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -280,12 +313,12 @@ with ResettingMockitoSugar {
           val lockService = new FakeLockService
           when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
           when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
-          when(
-            agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])
-          ).thenReturn(Future.successful(agentUserForAsAgent))
-          when(
-            agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])
-          ).thenReturn(Future.successful(agentUserForAsAgent))
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+            Future.successful(agentUserForAsAgent)
+          )
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+            Future.successful(agentUserForAsAgent)
+          )
           sendCreateRelationshipAuditEvent()()
           deleteSameAgentOtherItsaService()
 
@@ -381,9 +414,11 @@ with ResettingMockitoSugar {
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
 
-          val maybeCheck = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-            relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
-          })
+          val maybeCheck = await(
+            lockService.recoveryLock(arn, mtdItEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -782,9 +817,11 @@ with ResettingMockitoSugar {
         cesaRelationshipExists()
         metricsStub()
 
-        val check = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-          relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
-        })
+        val check = await(
+          lockService.recoveryLock(arn, mtdItEnrolmentKey) {
+            relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+          }
+        )
 
         check.value shouldBe FoundButLockedCouldNotCopy
 
@@ -833,9 +870,11 @@ with ResettingMockitoSugar {
         metricsStub()
         auditStub()
 
-        val check = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
-          relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
-        })
+        val check = await(
+          lockService.recoveryLock(arn, vatEnrolmentKey) {
+            relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+          }
+        )
 
         check.value shouldBe FoundButLockedCouldNotCopy
 
@@ -1040,9 +1079,11 @@ with ResettingMockitoSugar {
           metricsStub()
           auditStub()
 
-          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
-            relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
-          })
+          val maybeCheck: Option[CheckAndCopyResult] = await(
+            lockService.recoveryLock(arn, vatEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -1150,9 +1191,9 @@ with ResettingMockitoSugar {
           val lockService = new FakeLockService
           when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
           when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
-          when(
-            agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])
-          ).thenReturn(Future.successful(agentUserForAsAgent))
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+            Future.successful(agentUserForAsAgent)
+          )
 
           val relationshipsService =
             new CheckAndCopyRelationshipsService(
@@ -1246,9 +1287,11 @@ with ResettingMockitoSugar {
           metricsStub()
           auditStub()
 
-          val maybeCheck = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
-            relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
-          })
+          val maybeCheck = await(
+            lockService.recoveryLock(arn, vatEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -1654,7 +1697,10 @@ with ResettingMockitoSugar {
 
     behave like copyHasBeenDisabled(vatEnrolmentKey, appConfig)
 
-    def copyHasBeenDisabled(enrolmentKey: EnrolmentKey, appConfig: AppConfig) =
+    def copyHasBeenDisabled(
+      enrolmentKey: EnrolmentKey,
+      appConfig: AppConfig
+    ) =
       s"not attempt to copy relationship for ${enrolmentKey.service} " +
         s"and return CopyRelationshipNotEnabled if feature flag is disabled (set to false)" in {
           val relationshipCopyRepository = mock[RelationshipCopyRecordRepository]
@@ -1693,7 +1739,14 @@ with ResettingMockitoSugar {
 
           await(check) shouldBe CopyRelationshipNotEnabled
 
-          verifyNoInteractions(des, mapping, relationshipCopyRepository, lockService, auditService, es)
+          verifyNoInteractions(
+            des,
+            mapping,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            es
+          )
         }
   }
 
@@ -1716,7 +1769,12 @@ with ResettingMockitoSugar {
       Future successful Seq(saAgentRef)
     )
     when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
-      Future failed UpstreamErrorResponse("Error, no response", 502, 502)
+      Future failed
+        UpstreamErrorResponse(
+          "Error, no response",
+          502,
+          502
+        )
     )
   }
 
@@ -1725,10 +1783,22 @@ with ResettingMockitoSugar {
       Future successful Set(agentGroupId)
     )
     when(ugs.getGroupInfo(eqs(agentGroupId))(any[RequestHeader]())).thenReturn(
-      Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent)))
+      Future successful
+        Some(
+          GroupInfo(
+            agentGroupId,
+            Some("Agent"),
+            Some(agentCodeForVatDecAgent)
+          )
+        )
     )
     when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
-      Future failed UpstreamErrorResponse("Error, no response", 502, 502)
+      Future failed
+        UpstreamErrorResponse(
+          "Error, no response",
+          502,
+          502
+        )
     )
   }
 
@@ -1740,16 +1810,34 @@ with ResettingMockitoSugar {
     partialAuthRepository.findActive(eqs(nino), eqs(arn))
   ).thenReturn(
     Future.successful(
-      Some(PartialAuthRelationship(Instant.now(), arn.value, service, nino.value, active = true, Instant.now()))
+      Some(
+        PartialAuthRelationship(
+          Instant.now(),
+          arn.value,
+          service,
+          nino.value,
+          active = true,
+          Instant.now()
+        )
+      )
     )
   )
 
   private def partialAuthDeleted(service: String): OngoingStubbing[Future[Boolean]] = when(
-    partialAuthRepository.deleteActivePartialAuth(eqs(service), eqs(nino), eqs(arn))
+    partialAuthRepository.deleteActivePartialAuth(
+      eqs(service),
+      eqs(nino),
+      eqs(arn)
+    )
   ).thenReturn(Future.successful(true))
 
   private def partialAuthStatusUpdatedToAccepted(service: String): OngoingStubbing[Future[Boolean]] = when(
-    invitationsRepository.updatePartialAuthToAcceptedStatus(eqs(arn), eqs(service), eqs(nino), eqs(mtdItId))
+    invitationsRepository.updatePartialAuthToAcceptedStatus(
+      eqs(arn),
+      eqs(service),
+      eqs(nino),
+      eqs(mtdItId)
+    )
   ).thenReturn(Future.successful(true))
 
   private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
@@ -1766,19 +1854,53 @@ with ResettingMockitoSugar {
 
   private def oldESRelationshipExists(): OngoingStubbing[Future[Seq[AgentCode]]] = {
     when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]())).thenReturn(
-      Future successful Set("test2", "foo", agentGroupId, "ABC-123")
+      Future successful
+        Set(
+          "test2",
+          "foo",
+          agentGroupId,
+          "ABC-123"
+        )
     )
     when(ugs.getGroupInfo(eqs(agentGroupId))(any[RequestHeader]())).thenReturn(
-      Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent)))
+      Future successful
+        Some(
+          GroupInfo(
+            agentGroupId,
+            Some("Agent"),
+            Some(agentCodeForVatDecAgent)
+          )
+        )
     )
     when(ugs.getGroupInfo(eqs("foo"))(any[RequestHeader]())).thenReturn(
-      Future successful Some(GroupInfo("foo", Some("Agent"), Some(AgentCode("foo"))))
+      Future successful
+        Some(
+          GroupInfo(
+            "foo",
+            Some("Agent"),
+            Some(AgentCode("foo"))
+          )
+        )
     )
     when(ugs.getGroupInfo(eqs("ABC-123"))(any[RequestHeader]())).thenReturn(
-      Future successful Some(GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123"))))
+      Future successful
+        Some(
+          GroupInfo(
+            "ABC-123",
+            Some("Agent"),
+            Some(AgentCode("ABC-123"))
+          )
+        )
     )
     when(ugs.getGroupInfo(eqs("test2"))(any[RequestHeader]())).thenReturn(
-      Future successful Some(GroupInfo("test2", Some("Agent"), None))
+      Future successful
+        Some(
+          GroupInfo(
+            "test2",
+            Some("Agent"),
+            None
+          )
+        )
     )
     when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
       Future.successful(Seq(agentCodeForVatDecAgent))
@@ -1808,18 +1930,24 @@ with ResettingMockitoSugar {
     )
   }
 
-  private def vrnIsKnownInETMP(vrn: Vrn, isKnown: Boolean): OngoingStubbing[Future[Boolean]] = when(
-    des.vrnIsKnownInEtmp(eqs(vrn))(any[RequestHeader]())
-  ).thenReturn(Future successful isKnown)
+  private def vrnIsKnownInETMP(
+    vrn: Vrn,
+    isKnown: Boolean
+  ): OngoingStubbing[Future[Boolean]] = when(des.vrnIsKnownInEtmp(eqs(vrn))(any[RequestHeader]())).thenReturn(
+    Future successful isKnown
+  )
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
     when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(any[RequestHeader]())).thenReturn(
       Future successful Some(RegistrationRelationshipResponse("processing date"))
     )
     when(
-      es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
-        any[RequestHeader]()
-      )
+      es.allocateEnrolmentToAgent(
+        eqs(agentGroupId),
+        eqs(agentUserId),
+        eqs(enrolmentKey),
+        eqs(agentCodeForAsAgent)
+      )(any[RequestHeader]())
     ).thenReturn(Future.successful(()))
     when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful (()))
   }
@@ -1864,9 +1992,7 @@ with ResettingMockitoSugar {
       eqs(agentUserId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(
-      any[RequestHeader]()
-    )
+    )(any[RequestHeader]())
 
   def verifyEsRecordNotCreated(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
@@ -1874,9 +2000,7 @@ with ResettingMockitoSugar {
       eqs(agentGroupId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(
-      any[RequestHeader]()
-    )
+    )(any[RequestHeader]())
 
   def verifyEsRecordCreatedForMtdVat(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(
@@ -1884,9 +2008,7 @@ with ResettingMockitoSugar {
       eqs(agentUserId),
       eqs(vatEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(
-      any[RequestHeader]()
-    )
+    )(any[RequestHeader]())
 
   def verifyEsRecordNotCreatedMtdVat(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
@@ -1894,9 +2016,7 @@ with ResettingMockitoSugar {
       eqs(agentGroupId),
       eqs(vatEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(
-      any[RequestHeader]()
-    )
+    )(any[RequestHeader]())
 
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
@@ -1918,4 +2038,5 @@ with ResettingMockitoSugar {
     auditDetails("ESRelationship") shouldBe true
     auditDetails
   }
+
 }

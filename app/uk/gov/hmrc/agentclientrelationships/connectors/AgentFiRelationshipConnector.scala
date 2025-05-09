@@ -17,41 +17,63 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import cats.data.EitherT
-import play.api.http.Status.{CREATED, NOT_FOUND, OK}
-import play.api.libs.json.{Json, Reads}
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
+import play.api.libs.json.Json
+import play.api.libs.json.Reads
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship, RelationshipFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpReadsImplicits._
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-import uk.gov.hmrc.agentclientrelationships.util.HttpReadsImplicits._
+
 import java.net.URL
 import java.time.LocalDateTime
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
-class AgentFiRelationshipConnector @Inject() (appConfig: AppConfig, httpClient: HttpClientV2, val metrics: Metrics)(
-  implicit val ec: ExecutionContext
-)
+class AgentFiRelationshipConnector @Inject() (
+  appConfig: AppConfig,
+  httpClient: HttpClientV2,
+  val metrics: Metrics
+)(implicit val ec: ExecutionContext)
 extends HttpApiMonitor {
 
-  private def afiRelationshipUrl(arn: Arn, service: String, clientId: String): URL =
+  private def afiRelationshipUrl(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ): URL =
     url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"
 
-  def getRelationship(arn: Arn, service: String, clientId: String)(implicit
-    rh: RequestHeader
-  ): Future[Option[ActiveRelationship]] =
+  def getRelationship(
+    arn: Arn,
+    service: String,
+    clientId: String
+  )(implicit rh: RequestHeader): Future[Option[ActiveRelationship]] =
     monitor(s"ConsumedAPI-AgentFiRelationship-$service-GET") {
       implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
       httpClient
-        .get(afiRelationshipUrl(arn, service, clientId))
+        .get(
+          afiRelationshipUrl(
+            arn,
+            service,
+            clientId
+          )
+        )
         .execute[Option[Seq[ActiveRelationship]]]
         .map(_.flatMap(_.headOption))
     }
@@ -66,27 +88,49 @@ extends HttpApiMonitor {
         .map(_.fold(Seq[InactiveRelationship]())(identity))
     }
 
-  def createRelationship(arn: Arn, service: String, clientId: String, acceptedDate: LocalDateTime)(implicit
-    rh: RequestHeader
-  ): Future[Unit] = {
+  def createRelationship(
+    arn: Arn,
+    service: String,
+    clientId: String,
+    acceptedDate: LocalDateTime
+  )(implicit rh: RequestHeader): Future[Unit] = {
     val body = Json.obj("startDate" -> acceptedDate.toString)
     monitor(s"ConsumedAPI-AgentFiRelationship-$service-PUT") {
-      httpClient.put(afiRelationshipUrl(arn, service, clientId)).withBody(body).execute[Unit]
+      httpClient
+        .put(
+          afiRelationshipUrl(
+            arn,
+            service,
+            clientId
+          )
+        )
+        .withBody(body)
+        .execute[Unit]
     }
   }
 
-  def deleteRelationship(arn: Arn, service: String, clientId: String)(implicit
-    rh: RequestHeader
-  ): Future[Boolean] // TODO: Verify the boolean is really needed. It seems that NotFound is transformed into false, which is then transformed into NotFound ...
+  def deleteRelationship(
+    arn: Arn,
+    service: String,
+    clientId: String
+  )(implicit rh: RequestHeader): Future[Boolean] // TODO: Verify the boolean is really needed. It seems that NotFound is transformed into false, which is then transformed into NotFound ...
   =
     monitor(s"ConsumedAPI-AgentFiRelationship-$service-DELETE") {
       httpClient
-        .delete(afiRelationshipUrl(arn, service, clientId))
+        .delete(
+          afiRelationshipUrl(
+            arn,
+            service,
+            clientId
+          )
+        )
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => true
-            case NOT_FOUND => false
+            case OK =>
+              true
+            case NOT_FOUND =>
+              false
             case status =>
               throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
           }
@@ -124,8 +168,10 @@ extends HttpApiMonitor {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => Right(response.json.as[List[ClientRelationship]])
-            case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
+            case OK =>
+              Right(response.json.as[List[ClientRelationship]])
+            case NOT_FOUND =>
+              Left(RelationshipFailureResponse.RelationshipNotFound)
             case status =>
               Left(
                 RelationshipFailureResponse.ErrorRetrievingRelationship(

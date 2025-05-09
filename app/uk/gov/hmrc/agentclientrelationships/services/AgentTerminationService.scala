@@ -18,12 +18,16 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data._
 import cats.implicits._
-import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecordRepository, RelationshipCopyRecordRepository}
+import javax.inject.Inject
+import javax.inject.Singleton
+import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
+import uk.gov.hmrc.agentclientrelationships.model.TerminationResponse
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class AgentTerminationService @Inject() (
@@ -31,22 +35,34 @@ class AgentTerminationService @Inject() (
   relationshipCopyRecordRepository: RelationshipCopyRecordRepository
 )(implicit ec: ExecutionContext) {
 
-  def terminateAgent(arn: Arn): EitherT[Future, String, TerminationResponse] = {
+  def terminateAgent(arn: Arn): EitherT[
+    Future,
+    String,
+    TerminationResponse
+  ] = {
     val drr = deleteRecordRepository.terminateAgent(arn)
     val rcrr = relationshipCopyRecordRepository.terminateAgent(arn)
     for {
-      drrResult  <- EitherT(drr)
+      drrResult <- EitherT(drr)
       rcrrResult <- EitherT(rcrr)
       result <- EitherT.fromEither[Future](
-                  Right(
-                    TerminationResponse(
-                      Seq(
-                        DeletionCount("agent-client-relationships", "delete-record", drrResult),
-                        DeletionCount("agent-client-relationships", "relationship-copy-record", rcrrResult)
-                      )
-                    )
-                  )
-                )
+        Right(
+          TerminationResponse(
+            Seq(
+              DeletionCount(
+                "agent-client-relationships",
+                "delete-record",
+                drrResult
+              ),
+              DeletionCount(
+                "agent-client-relationships",
+                "relationship-copy-record",
+                rcrrResult
+              )
+            )
+          )
+        )
+      )
     } yield result
   }
 

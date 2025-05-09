@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt
 
-import play.api.libs.json.{JsError, JsSuccess, Reads}
+import play.api.libs.json.JsError
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.Reads
 
 import java.time.LocalDate
 
@@ -38,14 +40,27 @@ object PptSubscriptionDetails {
         val firstName = (json \ "legalEntityDetails" \ "customerDetails" \ "individualDetails" \ "firstName").as[String]
         val lastName = (json \ "legalEntityDetails" \ "customerDetails" \ "individualDetails" \ "lastName").as[String]
 
-        JsSuccess(PptSubscriptionDetails(s"$firstName $lastName", dateOfApplication, deregistrationDate))
+        JsSuccess(
+          PptSubscriptionDetails(
+            s"$firstName $lastName",
+            dateOfApplication,
+            deregistrationDate
+          )
+        )
 
       case "Organisation" =>
         val organisationName =
           (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
-        JsSuccess(PptSubscriptionDetails(organisationName, dateOfApplication, deregistrationDate))
+        JsSuccess(
+          PptSubscriptionDetails(
+            organisationName,
+            dateOfApplication,
+            deregistrationDate
+          )
+        )
 
-      case e => JsError(s"Unknown customerType $e")
+      case e =>
+        JsError(s"Unknown customerType $e")
     }
   }
 }

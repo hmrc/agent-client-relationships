@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import play.api.mvc.Request
@@ -36,10 +37,16 @@ trait MockDeleteRelationshipsService {
 
   val mockDeleteRelationshipsService: DeleteRelationshipsService = resettingMock[DeleteRelationshipsService]
 
-  def mockDeleteRelationship(arn: Arn, enrolment: EnrolmentKey, affinityGroup: Option[AffinityGroup])(
-    response: Future[Unit] = Future.unit
-  ): OngoingStubbing[Future[Unit]] = when(
-    mockDeleteRelationshipsService.deleteRelationship(eqs(arn), eqs(enrolment), eqs(affinityGroup))(
+  def mockDeleteRelationship(
+    arn: Arn,
+    enrolment: EnrolmentKey,
+    affinityGroup: Option[AffinityGroup]
+  )(response: Future[Unit] = Future.unit): OngoingStubbing[Future[Unit]] = when(
+    mockDeleteRelationshipsService.deleteRelationship(
+      eqs(arn),
+      eqs(enrolment),
+      eqs(affinityGroup)
+    )(
       any[RequestHeader],
       any[CurrentUser],
       any[AuditData]

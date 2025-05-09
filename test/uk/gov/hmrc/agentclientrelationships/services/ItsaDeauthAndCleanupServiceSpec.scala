@@ -17,24 +17,33 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{times, verify}
-import play.api.mvc.{AnyContentAsEmpty, Request}
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
+import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.Request
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.mocks._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
 
-import java.time.{Instant, LocalDate}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
+import java.time.LocalDate
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class ItsaDeauthAndCleanupServiceSpec
 extends UnitSpec
@@ -104,25 +113,49 @@ with MockAuditService {
   "deleteSameAgentRelationship" when {
     "called with non ITSA service" should {
       "return false" in {
-        await(TestService.deleteSameAgentRelationship(Vat.id, testArn.value, None, testNino.nino)) shouldBe false
+        await(
+          TestService.deleteSameAgentRelationship(
+            Vat.id,
+            testArn.value,
+            None,
+            testNino.nino
+          )
+        ) shouldBe false
       }
     }
     "called for a user with an existing partial auth" should {
       "check for partial auth and relationships, remove partial auth and update old alt itsa invitation then return true" in {
-        mockDeauthorisePartialAuth(MtdItSupp.id, testNino, testArn)(Future.successful(true))
+        mockDeauthorisePartialAuth(
+          MtdItSupp.id,
+          testNino,
+          testArn
+        )(Future.successful(true))
         mockCheckForRelationshipAgencyLevel(testArn, itsaSuppEnrolment)(Future.successful((false, "groupId")))
-        mockFindAllBy(Some(testArn.value), Seq(MtdItSupp.id), Seq(testNino.value), Some(PartialAuth))(
-          Future.successful(Seq(oldAltItsaInvitation))
-        )
+        mockFindAllBy(
+          Some(testArn.value),
+          Seq(MtdItSupp.id),
+          Seq(testNino.value),
+          Some(PartialAuth)
+        )(Future.successful(Seq(oldAltItsaInvitation)))
         mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
           Future.successful(Some(oldAltItsaInvitation.copy(status = DeAuthorised)))
         )
 
         await(
-          TestService.deleteSameAgentRelationship(MtdIt.id, testArn.value, Some(testMtdItId.value), testNino.nino)
+          TestService.deleteSameAgentRelationship(
+            MtdIt.id,
+            testArn.value,
+            Some(testMtdItId.value),
+            testNino.nino
+          )
         ) shouldBe true
 
-        verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
+        verify(mockPartialAuthRepository, times(1)).deauthorise(
+          any[String],
+          any[Nino],
+          any[Arn],
+          any[Instant]
+        )
         verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
           any[RequestHeader]()
         )
@@ -141,26 +174,51 @@ with MockAuditService {
           any[Seq[String]],
           any[Option[InvitationStatus]]
         )
-        verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
+        verify(mockInvitationsRepository, times(1)).deauthInvitation(
+          any[String],
+          any[String],
+          any[Option[Instant]]
+        )
       }
     }
     "called for a user with an existing relationship" should {
       "check for partial auth and relationships, remove relationship and update old itsa invitation then return true" in {
-        mockDeauthorisePartialAuth(MtdItSupp.id, testNino, testArn)(Future.successful(false))
+        mockDeauthorisePartialAuth(
+          MtdItSupp.id,
+          testNino,
+          testArn
+        )(Future.successful(false))
         mockCheckForRelationshipAgencyLevel(testArn, itsaSuppEnrolment)(Future.successful((true, "groupId")))
-        mockDeleteRelationship(testArn, itsaSuppEnrolment, currentUser.affinityGroup)()
-        mockFindAllBy(Some(testArn.value), Seq(MtdItSupp.id), Seq(testMtdItId.value), Some(Accepted))(
-          Future.successful(Seq(oldItsaInvitation))
-        )
+        mockDeleteRelationship(
+          testArn,
+          itsaSuppEnrolment,
+          currentUser.affinityGroup
+        )()
+        mockFindAllBy(
+          Some(testArn.value),
+          Seq(MtdItSupp.id),
+          Seq(testMtdItId.value),
+          Some(Accepted)
+        )(Future.successful(Seq(oldItsaInvitation)))
         mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
           Future.successful(Some(oldItsaInvitation.copy(status = DeAuthorised)))
         )
 
         await(
-          TestService.deleteSameAgentRelationship(MtdIt.id, testArn.value, Some(testMtdItId.value), testNino.nino)
+          TestService.deleteSameAgentRelationship(
+            MtdIt.id,
+            testArn.value,
+            Some(testMtdItId.value),
+            testNino.nino
+          )
         ) shouldBe true
 
-        verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
+        verify(mockPartialAuthRepository, times(1)).deauthorise(
+          any[String],
+          any[Nino],
+          any[Arn],
+          any[Instant]
+        )
         verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
           any[RequestHeader]()
         )
@@ -179,16 +237,36 @@ with MockAuditService {
           any[Seq[String]],
           any[Option[InvitationStatus]]
         )
-        verify(mockInvitationsRepository, times(1)).deauthInvitation(any[String], any[String], any[Option[Instant]])
+        verify(mockInvitationsRepository, times(1)).deauthInvitation(
+          any[String],
+          any[String],
+          any[Option[Instant]]
+        )
       }
     }
     "called for a user without an mtd id" should {
       "check only for partial auth" in {
-        mockDeauthorisePartialAuth(MtdIt.id, testNino, testArn)(Future.successful(false))
+        mockDeauthorisePartialAuth(
+          MtdIt.id,
+          testNino,
+          testArn
+        )(Future.successful(false))
 
-        await(TestService.deleteSameAgentRelationship(MtdItSupp.id, testArn.value, None, testNino.nino)) shouldBe false
+        await(
+          TestService.deleteSameAgentRelationship(
+            MtdItSupp.id,
+            testArn.value,
+            None,
+            testNino.nino
+          )
+        ) shouldBe false
 
-        verify(mockPartialAuthRepository, times(1)).deauthorise(any[String], any[Nino], any[Arn], any[Instant])
+        verify(mockPartialAuthRepository, times(1)).deauthorise(
+          any[String],
+          any[Nino],
+          any[Arn],
+          any[Instant]
+        )
         verify(mockCheckRelationshipsService, times(0)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
           any[RequestHeader]()
         )
@@ -207,8 +285,13 @@ with MockAuditService {
           any[Seq[String]],
           any[Option[InvitationStatus]]
         )
-        verify(mockInvitationsRepository, times(0)).deauthInvitation(any[String], any[String], any[Option[Instant]])
+        verify(mockInvitationsRepository, times(0)).deauthInvitation(
+          any[String],
+          any[String],
+          any[Option[Instant]]
+        )
       }
     }
   }
+
 }

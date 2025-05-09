@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json._
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 
 case class TrackRequestsResult(
   pageNumber: Int,
@@ -35,6 +36,7 @@ object TrackRequestsResult {
 
 case class MongoClientNames(clientNames: Seq[String])
 object MongoClientNames {
+
   def mongoFormat(implicit
     crypto: Encrypter
       with Decrypter
@@ -43,6 +45,7 @@ object MongoClientNames {
     Json.format[MongoClientNames]
   }
   implicit val format: Format[MongoClientNames] = Json.format[MongoClientNames]
+
 }
 case class MongoAvailableFilters(availableFilters: Seq[String])
 object MongoAvailableFilters {

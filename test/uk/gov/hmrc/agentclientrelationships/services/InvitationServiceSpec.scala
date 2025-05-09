@@ -16,19 +16,26 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.mocks._
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
-import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDVAT, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, SuspensionDetails, Vrn}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDVAT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 
 import java.time.LocalDate
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class InvitationServiceSpec
 extends UnitSpec
@@ -101,8 +108,19 @@ with MockEmailService {
 
   "findNonSuspendedClientInvitations" should {
     "retrieve invitations from the repository and return ones from non suspended agents" in {
-      mockFindAllBy(None, Seq(HMRCMTDVAT), Seq(testVrn.value), None)(
-        Future.successful(Seq(invitation1, invitation2, invitation3))
+      mockFindAllBy(
+        None,
+        Seq(HMRCMTDVAT),
+        Seq(testVrn.value),
+        None
+      )(
+        Future.successful(
+          Seq(
+            invitation1,
+            invitation2,
+            invitation3
+          )
+        )
       )
       mockGetAgentRecordWithChecks(Arn(testArn1))(testSuspendedAgentDetailsDesResponse)
       mockGetAgentRecordWithChecks(Arn(testArn2))(testAgentDetailsDesResponse)
@@ -113,4 +131,5 @@ with MockEmailService {
       result shouldBe Seq(invitation2)
     }
   }
+
 }

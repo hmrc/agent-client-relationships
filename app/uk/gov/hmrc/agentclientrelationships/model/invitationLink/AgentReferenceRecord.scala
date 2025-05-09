@@ -16,26 +16,38 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
-import play.api.libs.json.{Format, Json, __}
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax.unlift
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import play.api.libs.json.__
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 
 import scala.collection.Seq
 
-case class AgentReferenceRecord(uid: String, arn: Arn, normalisedAgentNames: Seq[String])
+case class AgentReferenceRecord(
+  uid: String,
+  arn: Arn,
+  normalisedAgentNames: Seq[String]
+)
 
 object AgentReferenceRecord {
+
   implicit val formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
 
   def mongoFormat(implicit
     crypto: Encrypter
       with Decrypter
   ): Format[AgentReferenceRecord] =
-    ((__ \ "uid").format[String] and
-      (__ \ "arn").format[Arn] and {
-        implicit val cryptoFormat: Format[String] = stringEncrypterDecrypter
-        (__ \ "normalisedAgentNames").format[Seq[String]]
-      })(AgentReferenceRecord.apply, unlift(AgentReferenceRecord.unapply))
+    (
+      (__ \ "uid").format[String] and
+        (__ \ "arn").format[Arn] and {
+          implicit val cryptoFormat: Format[String] = stringEncrypterDecrypter
+          (__ \ "normalisedAgentNames").format[Seq[String]]
+        }
+    )(AgentReferenceRecord.apply, unlift(AgentReferenceRecord.unapply))
+
 }

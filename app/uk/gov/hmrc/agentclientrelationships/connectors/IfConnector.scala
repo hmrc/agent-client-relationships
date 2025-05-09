@@ -17,35 +17,48 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.Logging
-import play.api.http.Status.{NOT_FOUND, OK}
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ErrorRetrievingClientDetails}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{Authorization, HeaderNames, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.Authorization
+import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.HttpReads
+import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.http.client.HttpClientV2
 
 import java.net.URL
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 @Singleton
 class IfConnector @Inject() (
   httpClient: HttpClientV2,
   randomUuidGenerator: CorrelationIdGenerator,
   appConfig: AppConfig
-)(implicit val metrics: Metrics, val ec: ExecutionContext)
+)(implicit
+  val metrics: Metrics,
+  val ec: ExecutionContext
+)
 extends HttpApiMonitor
 with Logging {
 
@@ -61,10 +74,17 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
   def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] = {
     val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
 
-    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
+    getWithIFHeaders(
+      "GetBusinessDetailsByMtdId",
+      url,
+      ifAPI1171Token,
+      ifEnv
+    ).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
-        case NOT_FOUND => None
+        case OK =>
+          Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case NOT_FOUND =>
+          None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
           None
@@ -79,10 +99,17 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
   def getMtdIdFor(nino: Nino)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
     val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
 
-    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
+    getWithIFHeaders(
+      "GetBusinessDetailsByNino",
+      url,
+      ifAPI1171Token,
+      ifEnv
+    ).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
-        case NOT_FOUND => None
+        case OK =>
+          Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case NOT_FOUND =>
+          None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
           None
@@ -98,17 +125,24 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
 
     val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino)}")
 
-    getWithIFHeaders("ConsumedAPI-IF-GetBusinessDetails-GET", url, ifAPI1171Token, ifEnv).map { result =>
+    getWithIFHeaders(
+      "ConsumedAPI-IF-GetBusinessDetails-GET",
+      url,
+      ifAPI1171Token,
+      ifEnv
+    ).map { result =>
       result.status match {
         case OK =>
           val optionalData = Try(result.json \ "taxPayerDisplayResponse" \ "businessData").map(_(0))
           optionalData match {
-            case Success(businessData) => Right(businessData.as[ItsaBusinessDetails])
+            case Success(businessData) =>
+              Right(businessData.as[ItsaBusinessDetails])
             case Failure(_) =>
               logger.warn("Unable to retrieve relevant details as the businessData array was empty")
               Left(ClientDetailsNotFound)
           }
-        case NOT_FOUND => Left(ClientDetailsNotFound)
+        case NOT_FOUND =>
+          Left(ClientDetailsNotFound)
         case status =>
           logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
           Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
@@ -124,7 +158,12 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     .internalHostPatterns
     .exists(_.pattern.matcher(url.getHost).matches())
 
-  private[connectors] def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
+  private[connectors] def getWithIFHeaders(
+    apiName: String,
+    url: URL,
+    authToken: String,
+    env: String
+  )(implicit
     request: RequestHeader,
     ec: ExecutionContext
   ): Future[HttpResponse] =
@@ -132,8 +171,13 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       httpClient.get(url).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
     }
 
-  private[connectors] def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
-    implicit
+  private[connectors] def postWithIFHeaders(
+    apiName: String,
+    url: URL,
+    body: JsValue,
+    authToken: String,
+    env: String
+  )(implicit
     request: RequestHeader,
     ec: ExecutionContext
   ): Future[HttpResponse] =
@@ -141,9 +185,12 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       httpClient.post(url).withBody(body).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
     }
 
-  def ifHeaders(authToken: String, env: String): Seq[(String, String)] = Seq(
-    Environment               -> env,
-    CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
+  def ifHeaders(
+    authToken: String,
+    env: String
+  ): Seq[(String, String)] = Seq(
+    Environment -> env,
+    CorrelationId -> randomUuidGenerator.makeCorrelationId(),
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 

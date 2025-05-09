@@ -16,20 +16,22 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, SymmetricCryptoFactory}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 class WarningEmailAggregationResultSpec
 extends UnitSpec {
 
   implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto(
-    "edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g="
-  )
+    with Decrypter = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val invitation: Invitation = Invitation(
     "123",
@@ -60,48 +62,49 @@ extends UnitSpec {
 
   val json: JsObject = Json.obj(
     "_id" -> "XARN1234567",
-    "invitations" -> Json.arr(
-      Json.obj(
-        "invitationId"         -> "123",
-        "arn"                  -> "XARN1234567",
-        "service"              -> "HMRC-MTD-VAT",
-        "clientId"             -> encryptedString("123456789"),
-        "clientIdType"         -> "vrn",
-        "suppliedClientId"     -> encryptedString("234567890"),
-        "suppliedClientIdType" -> "vrn",
-        "clientName"           -> encryptedString("Macrosoft"),
-        "agencyName"           -> encryptedString("testAgentName"),
-        "agencyEmail"          -> encryptedString("agent@email.com"),
-        "warningEmailSent"     -> false,
-        "expiredEmailSent"     -> false,
-        "status"               -> "Pending",
-        "relationshipEndedBy"  -> "Me",
-        "clientType"           -> "personal",
-        "expiryDate"           -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
-        "created"              -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-        "lastUpdated"          -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
-      ),
-      Json.obj(
-        "invitationId"         -> "456",
-        "arn"                  -> "XARN1234567",
-        "service"              -> "HMRC-MTD-VAT",
-        "clientId"             -> encryptedString("999999999"),
-        "clientIdType"         -> "vrn",
-        "suppliedClientId"     -> encryptedString("888888888"),
-        "suppliedClientIdType" -> "vrn",
-        "clientName"           -> encryptedString("Macrosoft"),
-        "agencyName"           -> encryptedString("testAgentName"),
-        "agencyEmail"          -> encryptedString("agent@email.com"),
-        "warningEmailSent"     -> false,
-        "expiredEmailSent"     -> false,
-        "status"               -> "Pending",
-        "relationshipEndedBy"  -> "Me",
-        "clientType"           -> "personal",
-        "expiryDate"           -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
-        "created"              -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-        "lastUpdated"          -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
+    "invitations" ->
+      Json.arr(
+        Json.obj(
+          "invitationId" -> "123",
+          "arn" -> "XARN1234567",
+          "service" -> "HMRC-MTD-VAT",
+          "clientId" -> encryptedString("123456789"),
+          "clientIdType" -> "vrn",
+          "suppliedClientId" -> encryptedString("234567890"),
+          "suppliedClientIdType" -> "vrn",
+          "clientName" -> encryptedString("Macrosoft"),
+          "agencyName" -> encryptedString("testAgentName"),
+          "agencyEmail" -> encryptedString("agent@email.com"),
+          "warningEmailSent" -> false,
+          "expiredEmailSent" -> false,
+          "status" -> "Pending",
+          "relationshipEndedBy" -> "Me",
+          "clientType" -> "personal",
+          "expiryDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
+          "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
+          "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
+        ),
+        Json.obj(
+          "invitationId" -> "456",
+          "arn" -> "XARN1234567",
+          "service" -> "HMRC-MTD-VAT",
+          "clientId" -> encryptedString("999999999"),
+          "clientIdType" -> "vrn",
+          "suppliedClientId" -> encryptedString("888888888"),
+          "suppliedClientIdType" -> "vrn",
+          "clientName" -> encryptedString("Macrosoft"),
+          "agencyName" -> encryptedString("testAgentName"),
+          "agencyEmail" -> encryptedString("agent@email.com"),
+          "warningEmailSent" -> false,
+          "expiredEmailSent" -> false,
+          "status" -> "Pending",
+          "relationshipEndedBy" -> "Me",
+          "clientType" -> "personal",
+          "expiryDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
+          "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
+          "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
+        )
       )
-    )
   )
 
   val model: WarningEmailAggregationResult = WarningEmailAggregationResult("XARN1234567", Seq(invitation, invitation2))
@@ -112,4 +115,5 @@ extends UnitSpec {
       json.as[WarningEmailAggregationResult] shouldBe model
     }
   }
+
 }

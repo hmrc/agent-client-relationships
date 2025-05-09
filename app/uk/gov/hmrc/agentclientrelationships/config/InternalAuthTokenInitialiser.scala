@@ -22,11 +22,16 @@ import play.api.http.Status.CREATED
 import play.api.libs.json.Json
 import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.StringContextOps
 
-import javax.inject.{Inject, Singleton}
+import java.time.Clock
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 abstract class InternalAuthTokenInitialiser {
   val initialised: Future[Done]
@@ -39,8 +44,12 @@ extends InternalAuthTokenInitialiser {
 }
 
 @Singleton
-class InternalAuthTokenInitialiserImpl @Inject() (appConfig: AppConfig, httpClient: HttpClientV2)(implicit
-  ec: ExecutionContext
+class InternalAuthTokenInitialiserImpl @Inject() (
+  appConfig: AppConfig,
+  httpClient: HttpClientV2
+)(implicit
+  ec: ExecutionContext,
+  clock: Clock
 )
 extends InternalAuthTokenInitialiser
 with Logging {
@@ -56,7 +65,8 @@ with Logging {
     if (isValid) {
       logger.info("Auth token is already valid")
       Future.successful(Done)
-    } else {
+    }
+    else {
       createClientAuthToken()
     }
   }
@@ -67,15 +77,16 @@ with Logging {
       .post(url"${appConfig.internalAuthBaseUrl}/test-only/token")(HeaderCarrier())
       .withBody(
         Json.obj(
-          "token"     -> appConfig.internalAuthToken,
+          "token" -> appConfig.internalAuthToken,
           "principal" -> appConfig.appName,
-          "permissions" -> Seq(
-            Json.obj(
-              "resourceType"     -> "agent-assurance",
-              "resourceLocation" -> "agent-record-with-checks/arn",
-              "actions"          -> Seq("WRITE")
+          "permissions" ->
+            Seq(
+              Json.obj(
+                "resourceType" -> "agent-assurance",
+                "resourceLocation" -> "agent-record-with-checks/arn",
+                "actions" -> Seq("WRITE")
+              )
             )
-          )
         )
       )
       .execute
@@ -83,7 +94,8 @@ with Logging {
         if (response.status == CREATED) {
           logger.info("Auth token initialised")
           Future.successful(Done)
-        } else {
+        }
+        else {
           Future.failed(new RuntimeException("Unable to initialise internal-auth token"))
         }
       }

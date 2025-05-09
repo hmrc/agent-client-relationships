@@ -17,16 +17,24 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Format, Json, Reads, __}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import play.api.libs.json.Reads
+import play.api.libs.json.__
 import uk.gov.hmrc.agentclientrelationships.model.transitional.StatusChangeEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{InvitationId, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.InvitationId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-import java.time.{Instant, LocalDate, ZoneOffset}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 case class Invitation(
   invitationId: String,
@@ -49,12 +57,12 @@ case class Invitation(
   lastUpdated: Instant
 ) {
   def isAltItsa: Boolean =
-    (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(this.service) &&
-      this.clientId == this.suppliedClientId) ||
+    (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(this.service) && this.clientId == this.suppliedClientId) ||
       this.status == PartialAuth
 }
 
 object Invitation {
+
   implicit val format: Format[Invitation] = Json.format[Invitation]
 
   def mongoFormat(implicit
@@ -63,24 +71,26 @@ object Invitation {
   ): Format[Invitation] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     implicit val mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
-    ((__ \ "invitationId").format[String] and
-      (__ \ "arn").format[String] and
-      (__ \ "service").format[String] and
-      (__ \ "clientId").format[String](stringEncrypterDecrypter) and
-      (__ \ "clientIdType").format[String] and
-      (__ \ "suppliedClientId").format[String](stringEncrypterDecrypter) and
-      (__ \ "suppliedClientIdType").format[String] and
-      (__ \ "clientName").format[String](stringEncrypterDecrypter) and
-      (__ \ "agencyName").format[String](stringEncrypterDecrypter) and
-      (__ \ "agencyEmail").format[String](stringEncrypterDecrypter) and
-      (__ \ "warningEmailSent").format[Boolean] and
-      (__ \ "expiredEmailSent").format[Boolean] and
-      (__ \ "status").format[InvitationStatus] and
-      (__ \ "relationshipEndedBy").formatNullable[String] and
-      (__ \ "clientType").formatNullable[String] and
-      (__ \ "expiryDate").format[LocalDate] and
-      (__ \ "created").format[Instant] and
-      (__ \ "lastUpdated").format[Instant])(Invitation.apply, unlift(Invitation.unapply))
+    (
+      (__ \ "invitationId").format[String] and
+        (__ \ "arn").format[String] and
+        (__ \ "service").format[String] and
+        (__ \ "clientId").format[String](stringEncrypterDecrypter) and
+        (__ \ "clientIdType").format[String] and
+        (__ \ "suppliedClientId").format[String](stringEncrypterDecrypter) and
+        (__ \ "suppliedClientIdType").format[String] and
+        (__ \ "clientName").format[String](stringEncrypterDecrypter) and
+        (__ \ "agencyName").format[String](stringEncrypterDecrypter) and
+        (__ \ "agencyEmail").format[String](stringEncrypterDecrypter) and
+        (__ \ "warningEmailSent").format[Boolean] and
+        (__ \ "expiredEmailSent").format[Boolean] and
+        (__ \ "status").format[InvitationStatus] and
+        (__ \ "relationshipEndedBy").formatNullable[String] and
+        (__ \ "clientType").formatNullable[String] and
+        (__ \ "expiryDate").format[LocalDate] and
+        (__ \ "created").format[Instant] and
+        (__ \ "lastUpdated").format[Instant]
+    )(Invitation.apply, unlift(Invitation.unapply))
   }
 
   // scalastyle:off parameter.number
@@ -95,7 +105,13 @@ object Invitation {
     expiryDate: LocalDate,
     clientType: Option[String]
   ): Invitation = Invitation(
-    InvitationId.create(arn, clientId.value, service.id)(service.invitationIdPrefix).value,
+    InvitationId
+      .create(
+        arn,
+        clientId.value,
+        service.id
+      )(service.invitationIdPrefix)
+      .value,
     arn,
     service.id,
     clientId.value,
@@ -116,20 +132,22 @@ object Invitation {
   )
 
   val acaReads: Reads[Invitation] =
-    ((__ \ "invitationId").read[String] and
-      (__ \ "arn").read[String] and
-      (__ \ "clientType").readNullable[String] and
-      (__ \ "service").read[String] and
-      (__ \ "clientId").read[String] and
-      (__ \ "clientIdType").read[String] and
-      (__ \ "suppliedClientId").read[String] and
-      (__ \ "suppliedClientIdType").read[String] and
-      (__ \ "expiryDate").read[LocalDate] and
-      (__ \ "relationshipEndedBy").readNullable[String] and
-      (__ \ "detailsForEmail" \ "clientName").readWithDefault[String]("") and
-      (__ \ "detailsForEmail" \ "agencyName").readWithDefault[String]("") and
-      (__ \ "detailsForEmail" \ "agencyEmail").readWithDefault[String]("") and
-      (__ \ "events").read[List[StatusChangeEvent]]) {
+    (
+      (__ \ "invitationId").read[String] and
+        (__ \ "arn").read[String] and
+        (__ \ "clientType").readNullable[String] and
+        (__ \ "service").read[String] and
+        (__ \ "clientId").read[String] and
+        (__ \ "clientIdType").read[String] and
+        (__ \ "suppliedClientId").read[String] and
+        (__ \ "suppliedClientIdType").read[String] and
+        (__ \ "expiryDate").read[LocalDate] and
+        (__ \ "relationshipEndedBy").readNullable[String] and
+        (__ \ "detailsForEmail" \ "clientName").readWithDefault[String]("") and
+        (__ \ "detailsForEmail" \ "agencyName").readWithDefault[String]("") and
+        (__ \ "detailsForEmail" \ "agencyEmail").readWithDefault[String]("") and
+        (__ \ "events").read[List[StatusChangeEvent]]
+    ) {
       (
         invitationId,
         arn,
@@ -167,4 +185,5 @@ object Invitation {
           suppliedClientIdType = suppliedClientIdType
         )
     }
+
 }

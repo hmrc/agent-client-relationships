@@ -26,9 +26,11 @@ import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import play.api.mvc.RequestHeader
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.collection.Seq
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class InvitationLinkService @Inject() (
@@ -43,19 +45,20 @@ extends Logging {
     .create(record)
     .map(_ => ())
 
-  def validateLink(uid: String, normalizedAgentName: String)(implicit
-    request: RequestHeader
-  ): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
+  def validateLink(
+    uid: String,
+    normalizedAgentName: String
+  )(implicit request: RequestHeader): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
 
     val agencyNameT =
       for {
         agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
         _ <- EitherT.fromEither[Future](
-               validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
-             )
+          validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
+        )
         agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-        _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
-        agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
+        _ <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agencyName <- EitherT(getAgencyName(agentDetailsResponse))
       } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
     agencyNameT.value
@@ -84,8 +87,8 @@ extends Logging {
       for {
         agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
         agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-        _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
-        agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
+        _ <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agencyName <- EitherT(getAgencyName(agentDetailsResponse))
       } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
     responseT.value
@@ -97,18 +100,27 @@ extends Logging {
     .findBy(uid)
     .map(_.toRight(InvitationLinkFailureResponse.AgentReferenceDataNotFound))
 
-  def getAgentReferenceRecordByArn(arn: Arn, newNormaliseAgentName: String): Future[AgentReferenceRecord] =
-    agentReferenceRepository
-      .findByArn(arn)
-      .flatMap {
-        case Some(value) => Future.successful(value)
-        case None        => createAgentReferenceRecord(arn, newNormaliseAgentName)
-      }
+  def getAgentReferenceRecordByArn(
+    arn: Arn,
+    newNormaliseAgentName: String
+  ): Future[AgentReferenceRecord] = agentReferenceRepository
+    .findByArn(arn)
+    .flatMap {
+      case Some(value) =>
+        Future.successful(value)
+      case None =>
+        createAgentReferenceRecord(arn, newNormaliseAgentName)
+    }
 
-  private def updateAgentReferenceRecord(uid: String, normalisedAgentNames: String): Future[Unit] =
-    agentReferenceRepository.updateAgentName(uid, normalisedAgentNames)
+  private def updateAgentReferenceRecord(
+    uid: String,
+    normalisedAgentNames: String
+  ): Future[Unit] = agentReferenceRepository.updateAgentName(uid, normalisedAgentNames)
 
-  def createAgentReferenceRecord(arn: Arn, normalisedAgentNames: String): Future[AgentReferenceRecord] = {
+  def createAgentReferenceRecord(
+    arn: Arn,
+    normalisedAgentNames: String
+  ): Future[AgentReferenceRecord] = {
     val agentReferenceRecord = AgentReferenceRecord(
       uid = RandomStringUtils.random(8, codetable),
       arn = arn,

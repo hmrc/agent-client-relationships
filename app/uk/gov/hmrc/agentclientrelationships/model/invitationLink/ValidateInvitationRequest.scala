@@ -16,9 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json.{Json, Reads}
+import play.api.libs.json.Json
+import play.api.libs.json.Reads
 
-case class ValidateInvitationRequest(uid: String, serviceKeys: Seq[String])
+case class ValidateInvitationRequest(
+  uid: String,
+  serviceKeys: Seq[String]
+)
 
 object ValidateInvitationRequest {
   implicit val reads: Reads[ValidateInvitationRequest] = Json.reads[ValidateInvitationRequest]

@@ -15,7 +15,9 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.model
-import play.api.libs.json.{JsPath, Reads}
+
+import play.api.libs.json.JsPath
+import play.api.libs.json.Reads
 
 case class RegistrationRelationshipResponse(processingDate: String)
 

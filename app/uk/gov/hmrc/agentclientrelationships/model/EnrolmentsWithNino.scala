@@ -20,7 +20,10 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.Enrolments
 import uk.gov.hmrc.domain.TaxIdentifier
 
-case class EnrolmentsWithNino(enrolments: Enrolments, nino: Option[String]) {
+case class EnrolmentsWithNino(
+  enrolments: Enrolments,
+  nino: Option[String]
+) {
 
   private val ptNino: Option[String] = enrolments
     .enrolments
@@ -33,8 +36,8 @@ case class EnrolmentsWithNino(enrolments: Enrolments, nino: Option[String]) {
     val identifiers =
       for {
         supportedService <- supportedServices
-        enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
-        clientId         <- enrolment.identifiers.headOption
+        enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
+        clientId <- enrolment.identifiers.headOption
       } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
     identifiers.toMap
@@ -43,10 +46,11 @@ case class EnrolmentsWithNino(enrolments: Enrolments, nino: Option[String]) {
     val identifiers =
       for {
         supportedService <- supportedServices
-        enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
-        clientId         <- enrolment.identifiers.headOption
+        enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
+        clientId <- enrolment.identifiers.headOption
       } yield (supportedService.id, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
     identifiers.toMap
   }
+
 }

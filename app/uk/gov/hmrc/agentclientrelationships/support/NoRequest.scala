@@ -15,20 +15,28 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.support
+
 import java.net.URI
 
 import play.api.libs.typedmap.TypedMap
-import play.api.mvc.request.{RemoteConnection, RequestTarget}
-import play.api.mvc.{Headers, Request}
+import play.api.mvc.request.RemoteConnection
+import play.api.mvc.request.RequestTarget
+import play.api.mvc.Headers
+import play.api.mvc.Request
 
 object NoRequest
 extends Request[Any] {
+
   override def body: Any = ""
   override def method: String = ""
   override def version: String = ""
   override def headers: Headers = Headers.create()
 
-  override def connection: RemoteConnection = RemoteConnection("", false, None)
+  override def connection: RemoteConnection = RemoteConnection(
+    "",
+    false,
+    None
+  )
 
   override def target: RequestTarget =
     new RequestTarget {
@@ -42,4 +50,5 @@ extends Request[Any] {
     }
 
   override def attrs: TypedMap = TypedMap.empty
+
 }

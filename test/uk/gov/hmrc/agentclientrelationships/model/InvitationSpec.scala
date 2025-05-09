@@ -16,22 +16,24 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, SymmetricCryptoFactory}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 class InvitationSpec
 extends UnitSpec {
 
   implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto(
-    "edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g="
-  )
+    with Decrypter = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val fullModel: Invitation = Invitation(
     "123",
@@ -55,24 +57,24 @@ extends UnitSpec {
   )
 
   val fullJson: JsObject = Json.obj(
-    "invitationId"         -> "123",
-    "arn"                  -> "XARN1234567",
-    "service"              -> "HMRC-MTD-VAT",
-    "clientId"             -> encryptedString("123456789"),
-    "clientIdType"         -> "vrn",
-    "suppliedClientId"     -> encryptedString("234567890"),
+    "invitationId" -> "123",
+    "arn" -> "XARN1234567",
+    "service" -> "HMRC-MTD-VAT",
+    "clientId" -> encryptedString("123456789"),
+    "clientIdType" -> "vrn",
+    "suppliedClientId" -> encryptedString("234567890"),
     "suppliedClientIdType" -> "vrn",
-    "clientName"           -> encryptedString("Macrosoft"),
-    "agencyName"           -> encryptedString("testAgentName"),
-    "agencyEmail"          -> encryptedString("agent@email.com"),
-    "warningEmailSent"     -> false,
-    "expiredEmailSent"     -> false,
-    "status"               -> "Pending",
-    "relationshipEndedBy"  -> "Me",
-    "clientType"           -> "personal",
-    "expiryDate"           -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
-    "created"              -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-    "lastUpdated"          -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
+    "clientName" -> encryptedString("Macrosoft"),
+    "agencyName" -> encryptedString("testAgentName"),
+    "agencyEmail" -> encryptedString("agent@email.com"),
+    "warningEmailSent" -> false,
+    "expiredEmailSent" -> false,
+    "status" -> "Pending",
+    "relationshipEndedBy" -> "Me",
+    "clientType" -> "personal",
+    "expiryDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
+    "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
+    "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
   )
 
   val optionalJson: JsObject = fullJson.-("relationshipEndedBy").-("clientType")
@@ -122,4 +124,5 @@ extends UnitSpec {
       newModel shouldBe expectedModel
     }
   }
+
 }

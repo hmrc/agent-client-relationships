@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.stride
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-import java.time.{LocalDate, LocalDateTime, ZoneId}
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 //for helpdesk auth journey
 case class InvitationWithAgentName(
@@ -39,6 +42,7 @@ case class InvitationWithAgentName(
 )
 
 object InvitationWithAgentName {
+
   implicit val formats: OFormat[InvitationWithAgentName] = Json.format[InvitationWithAgentName]
 
   def fromInvitationAndAgentRecord(
@@ -57,4 +61,5 @@ object InvitationWithAgentName {
     agentIsSuspended = agentRecord.suspensionDetails.exists(_.suspensionStatus),
     isAltItsa = invitation.isAltItsa
   )
+
 }

@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import org.scalatest.{Assertion, OptionValues}
+import org.scalatest.Assertion
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.JsValue
 import play.api.mvc.Result
@@ -34,6 +37,7 @@ extends AnyWordSpecLike
 with Matchers
 with OptionValues
 with ScalaFutures {
+
   // the following is a collection of useful methods that should minimise
   // the changes required when migrating away from hmrctest, which is now deprecated.
   def status(result: Result): Int = result.header.status
@@ -46,8 +50,10 @@ with ScalaFutures {
 
   def charset(result: Result): Option[String] =
     result.body.contentType match {
-      case Some(s) if s.contains("charset=") => Some(s.split("; *charset=").drop(1).mkString.trim)
-      case _                                 => None
+      case Some(s) if s.contains("charset=") =>
+        Some(s.split("; *charset=").drop(1).mkString.trim)
+      case _ =>
+        None
     }
 
   def verifySideEffectsOccur(assertion: Unit => Any*): Seq[Assertion] =
@@ -56,4 +62,5 @@ with ScalaFutures {
         noException should be thrownBy func
       }
     }
+
 }

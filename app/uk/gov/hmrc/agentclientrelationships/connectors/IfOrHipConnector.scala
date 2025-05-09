@@ -23,13 +23,17 @@ import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
-class IfOrHipConnector @Inject() (hipConnector: HipConnector, ifConnector: IfConnector, appConfig: AppConfig)(implicit
-  executionContext: ExecutionContext
-) {
+class IfOrHipConnector @Inject() (
+  hipConnector: HipConnector,
+  ifConnector: IfConnector,
+  appConfig: AppConfig
+)(implicit executionContext: ExecutionContext) {
 
   private val hipBusinessDetailsEnabled: Boolean = appConfig.hipBusinessDetailsEnabled
 
@@ -52,4 +56,5 @@ class IfOrHipConnector @Inject() (hipConnector: HipConnector, ifConnector: IfCon
       hipConnector.getItsaBusinessDetails(nino)
     else
       ifConnector.getItsaBusinessDetails(nino)
+
 }

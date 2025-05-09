@@ -17,19 +17,26 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
-import play.api.libs.json.{Reads, Writes}
+import play.api.libs.json.Reads
+import play.api.libs.json.Writes
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Logging}
-import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
+import javax.inject.Inject
+import javax.inject.Singleton
+import play.api.Configuration
+import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
+import uk.gov.hmrc.agentclientrelationships.connectors.UserDetails
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.mongo.cache.CacheIdType.SimpleCacheId
-import uk.gov.hmrc.mongo.cache.{DataKey, MongoCacheRepository}
-import uk.gov.hmrc.mongo.{CurrentTimestampSupport, MongoComponent}
+import uk.gov.hmrc.mongo.cache.DataKey
+import uk.gov.hmrc.mongo.cache.MongoCacheRepository
+import uk.gov.hmrc.mongo.CurrentTimestampSupport
+import uk.gov.hmrc.mongo.MongoComponent
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Success
 
 trait KenshooCacheMetrics
@@ -41,6 +48,7 @@ extends Logging {
     kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
     logger.debug(s"kenshoo-event::meter::$name::recorded")
   }
+
 }
 
 trait Cache[T] {
@@ -53,10 +61,14 @@ extends Cache[T] {
 }
 
 @Singleton
-class CacheRepositoryFactory @Inject() (mongoComponent: MongoComponent, configuration: Configuration)(implicit
-  ec: ExecutionContext
-) {
-  def apply(collectionName: String, ttlConfigKey: String): MongoCacheRepository[String] =
+class CacheRepositoryFactory @Inject() (
+  mongoComponent: MongoComponent,
+  configuration: Configuration
+)(implicit ec: ExecutionContext) {
+  def apply(
+    collectionName: String,
+    ttlConfigKey: String
+  ): MongoCacheRepository[String] =
     new MongoCacheRepository[String](
       mongoComponent = mongoComponent,
       collectionName = collectionName,
@@ -70,7 +82,11 @@ class MongoCache[T] @Inject() (
   cacheRepositoryFactory: CacheRepositoryFactory,
   collectionName: String,
   ttlConfigKey: String
-)(implicit metrics: Metrics, reads: Reads[T], writes: Writes[T])
+)(implicit
+  metrics: Metrics,
+  reads: Reads[T],
+  writes: Writes[T]
+)
 extends KenshooCacheMetrics
 with Cache[T] {
 
@@ -95,12 +111,14 @@ with Cache[T] {
           }
       }
   }
+
 }
 
 @Singleton
-class AgentCacheProvider @Inject() (configuration: Configuration, cacheRepositoryFactory: CacheRepositoryFactory)(
-  implicit metrics: Metrics
-) {
+class AgentCacheProvider @Inject() (
+  configuration: Configuration,
+  cacheRepositoryFactory: CacheRepositoryFactory
+)(implicit metrics: Metrics) {
 
   implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
   implicit val readsOptionalUserDetails: Reads[Option[UserDetails]] = _.validateOpt[UserDetails]
@@ -108,12 +126,20 @@ class AgentCacheProvider @Inject() (configuration: Configuration, cacheRepositor
   private val cacheEnabled: Boolean = configuration.underlying.getBoolean("agent.cache.enabled")
   private val agentTrackPageCacheEnabled: Boolean = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
 
-  private def createCache[T](enabled: Boolean, collectionName: String, ttlConfigKey: String)(implicit
+  private def createCache[T](
+    enabled: Boolean,
+    collectionName: String,
+    ttlConfigKey: String
+  )(implicit
     reads: Reads[T],
     writes: Writes[T]
   ): Cache[T] =
     if (enabled)
-      new MongoCache[T](cacheRepositoryFactory, collectionName, ttlConfigKey)
+      new MongoCache[T](
+        cacheRepositoryFactory,
+        collectionName,
+        ttlConfigKey
+      )
     else
       new DoNotCache[T]
 
@@ -140,4 +166,5 @@ class AgentCacheProvider @Inject() (configuration: Configuration, cacheRepositor
     "agent-trackPage-cache",
     "agent.trackPage.cache.expires"
   )
+
 }

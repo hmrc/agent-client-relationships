@@ -17,23 +17,30 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-import org.mockito.ArgumentMatchers.{any, eq => equ}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => equ}
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, UserId}
-import uk.gov.hmrc.agentclientrelationships.repository.{PartialAuthRepository, SyncStatus => _}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.UserId
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.domain._
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class CheckRelationshipServiceSpec
 extends AnyFreeSpecLike
@@ -93,7 +100,13 @@ with ResettingMockitoSugar {
             mockAgentFiConnector,
             metrics
           )
-        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
+        crs
+          .checkForRelationship(
+            arn,
+            Some(userId),
+            enrolmentKey
+          )
+          .futureValue shouldBe true
       }
       "should return 404 if the client is in at least an access groups but the user has not been assigned the client" in {
         val es = mock[EnrolmentStoreProxyConnector]
@@ -124,7 +137,13 @@ with ResettingMockitoSugar {
             mockAgentFiConnector,
             metrics
           )
-        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
+        crs
+          .checkForRelationship(
+            arn,
+            Some(userId),
+            enrolmentKey
+          )
+          .futureValue shouldBe false
       }
       "should return 200 if the client is in at least an access groups and the user has been assigned the client" in {
         val es = mock[EnrolmentStoreProxyConnector]
@@ -155,7 +174,13 @@ with ResettingMockitoSugar {
             mockAgentFiConnector,
             metrics
           )
-        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe true
+        crs
+          .checkForRelationship(
+            arn,
+            Some(userId),
+            enrolmentKey
+          )
+          .futureValue shouldBe true
       }
     }
     "when relationship does not exist between client and agent" - {
@@ -182,7 +207,13 @@ with ResettingMockitoSugar {
             mockAgentFiConnector,
             metrics
           )
-        relationshipsService.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
+        relationshipsService
+          .checkForRelationship(
+            arn,
+            Some(userId),
+            enrolmentKey
+          )
+          .futureValue shouldBe false
       }
     }
     "when user does not belong to the agent's group" - {
@@ -213,7 +244,13 @@ with ResettingMockitoSugar {
             mockAgentFiConnector,
             metrics
           )
-        crs.checkForRelationship(arn, Some(userId), enrolmentKey).futureValue shouldBe false
+        crs
+          .checkForRelationship(
+            arn,
+            Some(userId),
+            enrolmentKey
+          )
+          .futureValue shouldBe false
       }
     }
   }
@@ -243,7 +280,13 @@ with ResettingMockitoSugar {
             mockAgentFiConnector,
             metrics
           )
-        crs.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe true
+        crs
+          .checkForRelationship(
+            arn,
+            None,
+            enrolmentKey
+          )
+          .futureValue shouldBe true
       }
     }
     "when relationship does not exist between client and agent" - {
@@ -270,8 +313,15 @@ with ResettingMockitoSugar {
             mockAgentFiConnector,
             metrics
           )
-        relationshipsService.checkForRelationship(arn, None, enrolmentKey).futureValue shouldBe false
+        relationshipsService
+          .checkForRelationship(
+            arn,
+            None,
+            enrolmentKey
+          )
+          .futureValue shouldBe false
       }
     }
   }
+
 }

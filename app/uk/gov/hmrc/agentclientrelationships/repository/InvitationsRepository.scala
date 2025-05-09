@@ -17,11 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.Observable
-import org.mongodb.scala.bson.{BsonValue, conversions}
+import org.mongodb.scala.bson.BsonValue
+import org.mongodb.scala.bson.conversions
 import org.mongodb.scala.model.Accumulators.addToSet
 import org.mongodb.scala.model.Aggregates.facet
 import org.mongodb.scala.model.Filters._
-import org.mongodb.scala.model.Updates.{combine, set}
+import org.mongodb.scala.model.Updates.combine
+import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
 import org.mongodb.scala.result.InsertOneResult
 import play.api.Logging
@@ -30,19 +32,28 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.mongo.play.json.Codecs
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.net.URLDecoder
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 import java.util.concurrent.TimeUnit
-import javax.inject.{Inject, Named, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 object FieldKeys {
+
   val arnKey: String = "arn"
   val invitationIdKey: String = "invitationId"
   val clientIdKey: String = "clientId"
@@ -53,12 +64,17 @@ object FieldKeys {
   val expiryDateKey: String = "expiryDate"
   val warningEmaiSentKey: String = "warningEmailSent"
   val expiredEmailSentKey: String = "expiredEmailSent"
+
 }
 
 @Singleton
-class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig: AppConfig)(implicit
+class InvitationsRepository @Inject() (
+  mongoComponent: MongoComponent,
+  appConfig: AppConfig
+)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
+  @Named("aes")
+  crypto: Encrypter
     with Decrypter
 )
 extends PlayMongoRepository[Invitation](
@@ -69,7 +85,11 @@ extends PlayMongoRepository[Invitation](
     IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
     IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
     IndexModel(
-      Indexes.ascending(arnKey, serviceKey, suppliedClientIdKey),
+      Indexes.ascending(
+        arnKey,
+        serviceKey,
+        suppliedClientIdKey
+      ),
       IndexOptions()
         .partialFilterExpression(equal(statusKey, Codecs.toBson[InvitationStatus](Pending)))
         .name("uniquePendingIndex")
@@ -123,11 +143,17 @@ with Logging {
     .insertOne(invitation)
     .toFuture()
 
-  def findOneByIdForAgent(arn: String, invitationId: String): Future[Option[Invitation]] = collection
+  def findOneByIdForAgent(
+    arn: String,
+    invitationId: String
+  ): Future[Option[Invitation]] = collection
     .find(combine(equal(arnKey, arn), equal(invitationIdKey, invitationId)))
     .headOption()
 
-  def cancelByIdForAgent(arn: String, invitationId: String): Future[Unit] = collection
+  def cancelByIdForAgent(
+    arn: String,
+    invitationId: String
+  ): Future[Unit] = collection
     .updateOne(
       and(
         equal(arnKey, arn),
@@ -220,7 +246,11 @@ with Logging {
   ): Future[Boolean] = collection
     .updateOne(
       filter = and(
-        in("status", "Accepted", "Partialauth"),
+        in(
+          "status",
+          "Accepted",
+          "Partialauth"
+        ),
         equal("service", service),
         equal("clientId", encryptedString(clientId)),
         equal("arn", arn)
@@ -270,24 +300,28 @@ with Logging {
     )
     .toFutureOption()
 
-  def updatePartialAuthToAcceptedStatus(arn: Arn, service: String, nino: Nino, mtdItId: MtdItId): Future[Boolean] =
-    collection
-      .updateOne(
-        and(
-          equal(arnKey, arn.value),
-          equal("clientId", encryptedString(nino.value)),
-          equal("service", service),
-          equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
-        ),
-        combine(
-          set("status", Codecs.toBson[InvitationStatus](Accepted)),
-          set("lastUpdated", Instant.now),
-          set("clientId", encryptedString(mtdItId.value)),
-          set("clientIdType", "MTDITID")
-        )
+  def updatePartialAuthToAcceptedStatus(
+    arn: Arn,
+    service: String,
+    nino: Nino,
+    mtdItId: MtdItId
+  ): Future[Boolean] = collection
+    .updateOne(
+      and(
+        equal(arnKey, arn.value),
+        equal("clientId", encryptedString(nino.value)),
+        equal("service", service),
+        equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
+      ),
+      combine(
+        set("status", Codecs.toBson[InvitationStatus](Accepted)),
+        set("lastUpdated", Instant.now),
+        set("clientId", encryptedString(mtdItId.value)),
+        set("clientIdType", "MTDITID")
       )
-      .toFuture()
-      .map(_.getModifiedCount == 1L)
+    )
+    .toFuture()
+    .map(_.getModifiedCount == 1L)
 
   def updateInvitation(
     service: String,
@@ -339,7 +373,10 @@ with Logging {
     )
     .toFutureOption()
 
-  def findAllPendingForSuppliedClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] = collection
+  def findAllPendingForSuppliedClient(
+    clientId: String,
+    services: Seq[String]
+  ): Future[Seq[Invitation]] = collection
     .find(
       and(
         equal(suppliedClientIdKey, encryptedString(clientId)),
@@ -349,7 +386,10 @@ with Logging {
     )
     .toFuture()
 
-  def findAllForClient(clientId: String, services: Seq[String]): Future[Seq[Invitation]] = collection
+  def findAllForClient(
+    clientId: String,
+    services: Seq[String]
+  ): Future[Seq[Invitation]] = collection
     .find(and(equal(clientIdKey, encryptedString(clientId)), in(serviceKey, services: _*)))
     .toFuture()
 
@@ -375,22 +415,24 @@ with Logging {
     )
     .toFutureOption()
 
-  private def makeTrackRequestsFilters(statusFilter: Option[String], clientName: Option[String]): conversions.Bson =
-    Aggregates.filter(
-      and(
-        statusFilter
-          .map(status =>
-            if (status == "Accepted")
-              or(equal(statusKey, status), equal(statusKey, PartialAuth.toString))
-            else
-              equal(statusKey, status)
-          )
-          .getOrElse(Filters.exists(statusKey)),
-        clientName
-          .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name))))
-          .getOrElse(Filters.exists(clientNameKey))
-      )
+  private def makeTrackRequestsFilters(
+    statusFilter: Option[String],
+    clientName: Option[String]
+  ): conversions.Bson = Aggregates.filter(
+    and(
+      statusFilter
+        .map(status =>
+          if (status == "Accepted")
+            or(equal(statusKey, status), equal(statusKey, PartialAuth.toString))
+          else
+            equal(statusKey, status)
+        )
+        .getOrElse(Filters.exists(statusKey)),
+      clientName
+        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name))))
+        .getOrElse(Filters.exists(clientNameKey))
     )
+  )
 
   def trackRequests(
     arn: String,
@@ -405,7 +447,11 @@ with Logging {
       facet(
         Facet("clientNamesFacet", Aggregates.group(null, addToSet("clientNames", "$clientName"))),
         Facet("availableFiltersFacet", Aggregates.group(null, addToSet("availableFilters", "$status"))),
-        Facet("totalResultsFacet", filters, Aggregates.count("count")),
+        Facet(
+          "totalResultsFacet",
+          filters,
+          Aggregates.count("count")
+        ),
         Facet(
           "requests",
           filters,
@@ -417,9 +463,9 @@ with Logging {
     )
     for {
       results <- collection
-                   .aggregate[MongoTrackRequestsResult](fullAggregatePipeline)
-                   .toFuture()
-                   .map(_.headOption.getOrElse(MongoTrackRequestsResult()))
+        .aggregate[MongoTrackRequestsResult](fullAggregatePipeline)
+        .toFuture()
+        .map(_.headOption.getOrElse(MongoTrackRequestsResult()))
     } yield TrackRequestsResult(
       requests = results.requests,
       clientNames = results.clientNamesFacet.headOption.map(_.clientNames.sorted).getOrElse(Nil),
@@ -428,10 +474,14 @@ with Logging {
       pageNumber = pageNumber,
       filtersApplied =
         (statusFilter, clientName) match {
-          case (Some(f), Some(c)) => Some(Map("statusFilter" -> f, "clientFilter" -> c))
-          case (Some(f), None)    => Some(Map("statusFilter" -> f))
-          case (None, Some(c))    => Some(Map("clientFilter" -> c))
-          case _                  => None
+          case (Some(f), Some(c)) =>
+            Some(Map("statusFilter" -> f, "clientFilter" -> c))
+          case (Some(f), None) =>
+            Some(Map("statusFilter" -> f))
+          case (None, Some(c)) =>
+            Some(Map("clientFilter" -> c))
+          case _ =>
+            None
         }
     )
   }
@@ -470,10 +520,13 @@ with Logging {
     .updateOne(equal(invitationIdKey, invitationId), set(expiredEmailSentKey, true))
     .toFuture()
     .map(_.getModifiedCount == 1L)
+
 }
 
 object InvitationsRepository {
+
   val endedByClient = "Client"
   val endedByHMRC = "HMRC"
   val endedByAgent = "Agent"
+
 }
