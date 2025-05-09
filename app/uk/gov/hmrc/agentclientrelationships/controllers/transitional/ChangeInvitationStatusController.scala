@@ -109,8 +109,7 @@ extends BackendController(cc) {
           suppliedClientId = suppliedClientId,
           changeRequest = changeRequest
         )
-      case _ =>
-        Future.successful(Left(UnsupportedStatusChange))
+      case _ => Future.successful(Left(UnsupportedStatusChange))
     }
 
   private def invitationErrorHandler(
@@ -129,17 +128,13 @@ extends BackendController(cc) {
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
-      case UnsupportedStatusChange =>
-        UnsupportedStatusChange.getResult("")
+      case UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
 
-      case InvitationNotFound =>
-        InvitationNotFound.getResult("")
+      case InvitationNotFound => InvitationNotFound.getResult("")
 
-      case updateStatusFailed @ UpdateStatusFailed(_) =>
-        updateStatusFailed.getResult("")
+      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
 
-      case _ =>
-        BadRequest
+      case _ => BadRequest
     }
 
 }

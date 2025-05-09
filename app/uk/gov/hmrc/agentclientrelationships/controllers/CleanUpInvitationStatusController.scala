@@ -100,14 +100,11 @@ extends BackendController(cc) {
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
-      case InvitationNotFound =>
-        InvitationNotFound.getResult("")
+      case InvitationNotFound => InvitationNotFound.getResult("")
 
-      case updateStatusFailed @ UpdateStatusFailed(_) =>
-        updateStatusFailed.getResult("")
+      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
 
-      case _ =>
-        BadRequest
+      case _ => BadRequest
     }
 
 }

@@ -62,17 +62,14 @@ with AuthActions {
         clientId
       )
       .flatMap {
-        case Left(error) =>
-          Future.successful(BadRequest(error))
+        case Left(error) => Future.successful(BadRequest(error))
         case Right(validKey) =>
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
             strideClientDetailsService
               .getClientDetailsWithChecks(validKey)
               .map {
-                case Some(clientDetails) =>
-                  Ok(Json.toJson(clientDetails))
-                case None =>
-                  NotFound
+                case Some(clientDetails) => Ok(Json.toJson(clientDetails))
+                case None => NotFound
               }
           }
       }
@@ -84,25 +81,17 @@ with AuthActions {
         strideClientDetailsService
           .findAllActiveRelationship(request.body)
           .map {
-            case Right(activeRelationships) =>
-              Ok(Json.toJson(ActiveClientsRelationshipResponse(activeRelationships)))
+            case Right(activeRelationships) => Ok(Json.toJson(ActiveClientsRelationshipResponse(activeRelationships)))
 
             case Left(error) =>
               error match {
-                case RelationshipFailureResponse.RelationshipBadRequest =>
-                  BadRequest
-                case RelationshipFailureResponse.TaxIdentifierError =>
-                  BadRequest
-                case RelationshipFailureResponse.ClientDetailsNotFound =>
-                  NotFound
-                case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) =>
-                  InternalServerError(message)
-                case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) =>
-                  InternalServerError(message)
-                case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) =>
-                  InternalServerError(message)
-                case _ =>
-                  InternalServerError
+                case RelationshipFailureResponse.RelationshipBadRequest => BadRequest
+                case RelationshipFailureResponse.TaxIdentifierError => BadRequest
+                case RelationshipFailureResponse.ClientDetailsNotFound => NotFound
+                case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) => InternalServerError(message)
+                case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) => InternalServerError(message)
+                case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) => InternalServerError(message)
+                case _ => InternalServerError
               }
 
           }

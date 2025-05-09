@@ -61,10 +61,8 @@ with AuthActions {
     service: String
   ): String =
     service match {
-      case `HMRCCBCORG` if clientDetails.isOverseas.contains(true) =>
-        HMRCCBCNONUKORG
-      case service =>
-        service
+      case `HMRCCBCORG` if clientDetails.isOverseas.contains(true) => HMRCCBCNONUKORG
+      case service => service
     }
 
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
@@ -119,8 +117,7 @@ with AuthActions {
                 )
               )
             )
-          case Left(ClientDetailsNotFound) =>
-            Future.successful(NotFound)
+          case Left(ClientDetailsNotFound) => Future.successful(NotFound)
           case Left(ErrorRetrievingClientDetails(status, message)) =>
             throw new RuntimeException(s"Client details lookup failed - status: '$status', error: '$message''")
         }
@@ -141,12 +138,9 @@ with AuthActions {
       None
     )
     .map {
-      case CheckRelationshipFound =>
-        Some(service)
-      case CheckRelationshipNotFound(_) =>
-        None
-      case CheckRelationshipInvalidRequest =>
-        throw new RuntimeException("Unexpected error during relationship check")
+      case CheckRelationshipFound => Some(service)
+      case CheckRelationshipNotFound(_) => None
+      case CheckRelationshipInvalidRequest => throw new RuntimeException("Unexpected error during relationship check")
     }
     .flatMap {
       case None if Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(service) =>
@@ -157,8 +151,7 @@ with AuthActions {
             arn
           )
           .map(_.map(_ => service))
-      case result =>
-        Future.successful(result)
+      case result => Future.successful(result)
     }
 
   private def pendingInvitation(

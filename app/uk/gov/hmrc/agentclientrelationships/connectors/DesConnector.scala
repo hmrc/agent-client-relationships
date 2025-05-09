@@ -82,16 +82,17 @@ with Logging {
     }
   }
 
-  def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] =
-    getWithDesHeaders("GetAgentRecord", new URL(getAgentRecordUrl(agentId))).map { response =>
-      response.status match {
-        case Status.OK =>
-          Option(response.json.as[AgentRecord])
-        case status =>
-          logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
-          None
-      }
+  def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] = getWithDesHeaders(
+    "GetAgentRecord",
+    new URL(getAgentRecordUrl(agentId))
+  ).map { response =>
+    response.status match {
+      case Status.OK => Option(response.json.as[AgentRecord])
+      case status =>
+        logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
+        None
     }
+  }
 
   private def getAgentRecordUrl(agentId: TaxIdentifier) =
     agentId match {
@@ -101,8 +102,7 @@ with Logging {
       case Utr(utr) =>
         val encodedUtr = UriEncoding.encodePathSegment(utr, "UTF-8")
         s"$desBaseUrl/registration/personal-details/utr/$encodedUtr"
-      case _ =>
-        throw new Exception(s"The client identifier $agentId is not supported.")
+      case _ => throw new Exception(s"The client identifier $agentId is not supported.")
     }
 
   // DES API #1363  Get Vat Customer Information
@@ -115,12 +115,9 @@ with Logging {
       desEnv
     ).map { response =>
       response.status match {
-        case Status.OK if response.json.as[JsObject].fields.isEmpty =>
-          false
-        case Status.OK =>
-          true
-        case Status.NOT_FOUND =>
-          false
+        case Status.OK if response.json.as[JsObject].fields.isEmpty => false
+        case Status.OK => true
+        case Status.NOT_FOUND => false
         case other: Int =>
           logger.error(s"Error in GetVatCustomerInformation. $other, ${response.body}")
           false

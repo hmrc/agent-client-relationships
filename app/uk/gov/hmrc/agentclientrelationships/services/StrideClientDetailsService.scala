@@ -159,8 +159,7 @@ class StrideClientDetailsService @Inject() (
             } yield itsaActiveRelationships ++ irvActiveRelationship ++ partialAuthAuthorisations
           ).value
 
-        case _ =>
-          findRelationshipsService.getAllRelationshipsForClient(taxIdentifier = taxIdentifier, activeOnly = true)
+        case _ => findRelationshipsService.getAllRelationshipsForClient(taxIdentifier = taxIdentifier, activeOnly = true)
 
       }
     ).map(_.map(_.filter(_.isActive))) // additional filtering for IF
@@ -175,8 +174,7 @@ class StrideClientDetailsService @Inject() (
     relationshipFailureResponse match {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
-      case otherError =>
-        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+      case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
 
     }
 
@@ -198,8 +196,7 @@ class StrideClientDetailsService @Inject() (
               )
             )
           )
-      case _ =>
-        Future.successful(Seq.empty[ClientRelationship])
+      case _ => Future.successful(Seq.empty[ClientRelationship])
     }
 
   private def findAgentNameForActiveRelationships(
@@ -251,10 +248,8 @@ class StrideClientDetailsService @Inject() (
     .map(
       _.left
         .map {
-          case ClientDetailsNotFound =>
-            RelationshipFailureResponse.ClientDetailsNotFound
-          case ErrorRetrievingClientDetails(status, msg) =>
-            RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg)
+          case ClientDetailsNotFound => RelationshipFailureResponse.ClientDetailsNotFound
+          case ErrorRetrievingClientDetails(status, msg) => RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg)
         }
     )
 

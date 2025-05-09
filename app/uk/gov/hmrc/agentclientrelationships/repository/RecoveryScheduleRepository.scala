@@ -75,8 +75,7 @@ with Logging {
     .find()
     .headOption()
     .flatMap {
-      case Some(record) =>
-        Future successful record
+      case Some(record) => Future successful record
       case None =>
         {
           val record = RecoveryRecord(

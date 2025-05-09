@@ -516,8 +516,7 @@ extends UnitSpec {
         await(repo.create(deleteRecord))
         givenETMPDeAuthFails
 
-        val exceptionMessage: String =
-          intercept[Exception](await(underTest.resumeRelationshipRemoval(deleteRecord))).getMessage
+        val exceptionMessage: String = intercept[Exception](await(underTest.resumeRelationshipRemoval(deleteRecord))).getMessage
         exceptionMessage shouldBe "RELATIONSHIP_DELETE_FAILED_ETMP"
 
         verifyESDeAllocateHasNOTBeenPerformed
@@ -541,8 +540,7 @@ extends UnitSpec {
         givenRelationshipBetweenAgentAndClientExists
         when(es.deallocateEnrolmentFromAgent("group0001", mtdItEnrolmentKey)).thenReturn(Future.failed(new Exception()))
 
-        val exceptionMessage: String =
-          intercept[Exception](await(underTest.resumeRelationshipRemoval(deleteRecord))).getMessage
+        val exceptionMessage: String = intercept[Exception](await(underTest.resumeRelationshipRemoval(deleteRecord))).getMessage
         exceptionMessage shouldBe "RELATIONSHIP_DELETE_FAILED_ES"
 
         verifyESDeAllocateHasBeenPerformed
@@ -795,8 +793,7 @@ extends UnitSpec {
       hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
     ).thenReturn(Future.failed(new Exception))
 
-    val noRelationshipFoundErrorMessage =
-      """{"errors":{"processingDate":"2020-01-01T11:11:11Z","code":"014","text":"No active relationship found"}}"""
+    val noRelationshipFoundErrorMessage = """{"errors":{"processingDate":"2020-01-01T11:11:11Z","code":"014","text":"No active relationship found"}}"""
 
     def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] = when(
       hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
@@ -834,11 +831,9 @@ extends UnitSpec {
       aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader])
     ).thenReturn(Future.successful(()))
 
-    def verifyESDeAllocateHasBeenPerformed: Future[Unit] =
-      verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+    def verifyESDeAllocateHasBeenPerformed: Future[Unit] = verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
 
-    def verifyESDeAllocateHasNOTBeenPerformed: Future[Unit] =
-      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+    def verifyESDeAllocateHasNOTBeenPerformed: Future[Unit] = verify(es, never).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
 
     def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
       verify(hipConnector, times(1)).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])

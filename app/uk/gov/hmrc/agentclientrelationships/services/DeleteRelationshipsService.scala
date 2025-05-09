@@ -197,8 +197,7 @@ with Logging {
             reportAs
           )
         )
-      case NonFatal(ex) =>
-        recoverFromException(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ETMP"))
+      case NonFatal(ex) => recoverFromException(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ETMP"))
     }
 
   }
@@ -257,8 +256,7 @@ with Logging {
     }
 
     lazy val recoverUnauthorized: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case ex: UpstreamErrorResponse if ex.statusCode == 401 =>
-        logAndMaybeFail(ex, ex)
+      case ex: UpstreamErrorResponse if ex.statusCode == 401 => logAndMaybeFail(ex, ex)
     }
 
     lazy val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = { case NonFatal(ex) =>
@@ -278,10 +276,8 @@ with Logging {
             enrolmentKey
           )
           .flatMap {
-            case true =>
-              es.deallocateEnrolmentFromAgent(agentUser.groupId, enrolmentKey)
-            case false =>
-              throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+            case true => es.deallocateEnrolmentFromAgent(agentUser.groupId, enrolmentKey)
+            case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
           }
         _ = auditData.set(enrolmentDeallocatedKey, true)
         _ <- agentUserClientDetailsConnector.cacheRefresh(arn)
@@ -354,8 +350,7 @@ with Logging {
                 auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
                 removeDeleteRecord(arn, enrolmentKey).map(_ => true)
               }
-            case None =>
-              Future.successful(true)
+            case None => Future.successful(true)
           }
       } yield isComplete
     ).recoverWith {
@@ -366,8 +361,7 @@ with Logging {
         auditData.set("abandonmentReason", "unauthorised")
         auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
         removeDeleteRecord(arn, enrolmentKey).map(_ => true)
-      case NonFatal(_) =>
-        Future.successful(false)
+      case NonFatal(_) => Future.successful(false)
     }
 
   def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(implicit
@@ -445,12 +439,9 @@ with Logging {
 
   def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
     maybeGroup match {
-      case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) =>
-        Some("Client")
-      case Some(AffinityGroup.Agent) =>
-        Some("Agent")
-      case _ =>
-        Some("HMRC")
+      case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => Some("Client")
+      case Some(AffinityGroup.Agent) => Some("Agent")
+      case _ => Some("HMRC")
     }
 
   def setRelationshipEnded(

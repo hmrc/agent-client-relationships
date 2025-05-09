@@ -146,8 +146,7 @@ class ClientTaxAgentsDataService @Inject() (
           }
       }
 
-    val authorisationEventWithoutAgentName =
-      invitationEvents ++ authorisationsAcceptedEvents ++ authorisationsDeAuthorisedEvents
+    val authorisationEventWithoutAgentName = invitationEvents ++ authorisationsAcceptedEvents ++ authorisationsDeAuthorisedEvents
 
     val result = authorisationEventWithoutAgentName
       .groupBy(_.arn)
@@ -200,8 +199,7 @@ class ClientTaxAgentsDataService @Inject() (
               )
             )
         )
-      case _ =>
-        EitherT.right[RelationshipFailureResponse](Future.successful(Seq.empty[ClientAuthorisationForTaxId]))
+      case _ => EitherT.right[RelationshipFailureResponse](Future.successful(Seq.empty[ClientAuthorisationForTaxId]))
     }
 
   private def getAllAuthorisationsForAllServices(identifiers: Map[String, TaxIdentifier])(implicit
@@ -263,8 +261,7 @@ class ClientTaxAgentsDataService @Inject() (
                   Service.MtdItSupp
                 else
                   service
-              case None =>
-                service
+              case None => service
             }
 
           ClientAuthorisationForTaxId(
@@ -288,8 +285,7 @@ class ClientTaxAgentsDataService @Inject() (
     relationshipFailureResponse match {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
-      case otherError =>
-        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+      case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
 
     }
 
@@ -407,9 +403,7 @@ class ClientTaxAgentsDataService @Inject() (
       else
         Right(agentRecord)
     }
-    .recover { case ex: Throwable =>
-      Left(RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage))
-    }
+    .recover { case ex: Throwable => Left(RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage)) }
 
   private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord
     .suspensionDetails
@@ -424,12 +418,9 @@ class ClientTaxAgentsDataService @Inject() (
   ): Future[Option[Either[RelationshipFailureResponse, A]]] = myEitherT
     .value
     .map {
-      case r @ Right(_) =>
-        Some(r)
-      case l @ Left(error) if error != RelationshipFailureResponse.AgentSuspended =>
-        Some(l)
-      case Left(_) =>
-        None
+      case r @ Right(_) => Some(r)
+      case l @ Left(error) if error != RelationshipFailureResponse.AgentSuspended => Some(l)
+      case Left(_) => None
 
     }
 

@@ -41,8 +41,6 @@ extends BackendController(controllerComponents) {
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
-      .recover { case ex: RelationshipNotFound =>
-        NotFound(ex.getMessage)
-      }
+      .recover { case ex: RelationshipNotFound => NotFound(ex.getMessage) }
   }
 }

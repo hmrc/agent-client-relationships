@@ -168,19 +168,18 @@ extends Logging {
     "abandonmentReason"
   )
 
-  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit request: RequestHeader): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CreateInvitation,
-      "create-invitation",
-      Seq(
-        arnKey -> invitation.arn,
-        serviceKey -> invitation.service,
-        clientIdKey -> invitation.clientId,
-        clientIdTypeKey -> invitation.clientIdType,
-        invitationIdKey -> invitation.invitationId,
-        suppliedClientIdKey -> invitation.suppliedClientId
-      )
+  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit request: RequestHeader): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CreateInvitation,
+    "create-invitation",
+    Seq(
+      arnKey -> invitation.arn,
+      serviceKey -> invitation.service,
+      clientIdKey -> invitation.clientId,
+      clientIdTypeKey -> invitation.clientIdType,
+      invitationIdKey -> invitation.invitationId,
+      suppliedClientIdKey -> invitation.suppliedClientId
     )
+  )
 
   def sendRespondToInvitationAuditEvent(
     invitation: Invitation,
@@ -275,14 +274,10 @@ extends Logging {
       auditData.set(
         howRelationshipTerminatedKey,
         currentUser.affinityGroup match {
-          case _ if currentUser.isStride =>
-            hmrcLedTermination
-          case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) =>
-            clientLedTermination
-          case Some(AffinityGroup.Agent) =>
-            agentLedTermination
-          case _ =>
-            "unknown"
+          case _ if currentUser.isStride => hmrcLedTermination
+          case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => clientLedTermination
+          case Some(AffinityGroup.Agent) => agentLedTermination
+          case _ => "unknown"
         }
       )
     }
@@ -344,14 +339,10 @@ extends Logging {
       auditData.set(
         howPartialAuthTerminatedKey,
         currentUser.affinityGroup match {
-          case _ if currentUser.isStride =>
-            hmrcLedTermination
-          case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) =>
-            clientLedTermination
-          case Some(AffinityGroup.Agent) =>
-            agentLedTermination
-          case _ =>
-            "unknown"
+          case _ if currentUser.isStride => hmrcLedTermination
+          case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => clientLedTermination
+          case Some(AffinityGroup.Agent) => agentLedTermination
+          case _ => "unknown"
         }
       )
     }
@@ -396,10 +387,8 @@ extends Logging {
 
     def toString(x: Any): String =
       x match {
-        case t: TaxIdentifier =>
-          t.value
-        case _ =>
-          x.toString
+        case t: TaxIdentifier => t.value
+        case _ => x.toString
       }
     val hc = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)

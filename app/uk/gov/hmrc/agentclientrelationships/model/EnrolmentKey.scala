@@ -40,8 +40,8 @@ case class EnrolmentKey(
 
   /** Note: unsafe (i.e. can throw exceptions)
     *
-    * Supplying no key assumes the service has a single 'supported' identifier! For other enrolments with multiple
-    * identifiers you should try and specify which one, or it will grab the first.
+    * Supplying no key assumes the service has a single 'supported' identifier! For other enrolments with multiple identifiers you should try and specify which
+    * one, or it will grab the first.
     */
   def oneIdentifier(key: Option[String] = None): Identifier = identifiers
     .find(i =>
@@ -103,10 +103,8 @@ object EnrolmentKey {
     new Reads[EnrolmentKey] {
       override def reads(json: JsValue): JsResult[EnrolmentKey] =
         json match {
-          case JsString(value) =>
-            parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
-          case _ =>
-            JsError("STRING_VALUE_EXPECTED")
+          case JsString(value) => parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
+          case _ => JsError("STRING_VALUE_EXPECTED")
         }
     }
 

@@ -148,9 +148,7 @@ with AuthActions {
             else
               Left(RelationshipNotFound)
           }
-          .recover { case error: UpstreamErrorResponse =>
-            Left(RelationshipDeleteFailed(error.getMessage))
-          }
+          .recover { case error: UpstreamErrorResponse => Left(RelationshipDeleteFailed(error.getMessage)) }
       case (Service.MtdIt | Service.MtdItSupp, Nino(_)) => // Alt ITSA
         (
           for {
@@ -186,8 +184,7 @@ with AuthActions {
             )
           } yield deauthResult
         ).value
-      case _ =>
-        deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
+      case _ => deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
     }
   // scalastyle:on method.length
 
@@ -229,12 +226,9 @@ with AuthActions {
     )
     .map(_ => Right(true))
     .recover {
-      case RelationshipNotFoundEx(_) =>
-        Left(RelationshipNotFound)
-      case upS: UpstreamErrorResponse =>
-        Left(RelationshipDeleteFailed(upS.getMessage))
-      case NonFatal(ex) =>
-        Left(RelationshipDeleteFailed(ex.getMessage))
+      case RelationshipNotFoundEx(_) => Left(RelationshipNotFound)
+      case upS: UpstreamErrorResponse => Left(RelationshipDeleteFailed(upS.getMessage))
+      case NonFatal(ex) => Left(RelationshipDeleteFailed(ex.getMessage))
     }
 
   private def invitationErrorHandler(
@@ -265,11 +259,9 @@ with AuthActions {
         Logger(getClass).warn(s"Could not delete relationship: $msg")
         relationshipDeleteFailed.getResult("")
 
-      case RelationshipNotFound =>
-        RelationshipNotFound.getResult("")
+      case RelationshipNotFound => RelationshipNotFound.getResult("")
 
-      case _ =>
-        BadRequest
+      case _ => BadRequest
     }
 
 }

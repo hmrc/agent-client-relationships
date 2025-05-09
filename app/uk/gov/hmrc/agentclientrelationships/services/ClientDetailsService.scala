@@ -51,24 +51,15 @@ extends Logging {
     taxIdentifier: TaxIdentifier
   )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     taxIdentifier match {
-      case Nino(nino) =>
-        EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
-      case Vrn(vrn) =>
-        getVatClientDetails(vrn)
-      case Utr(utr) =>
-        getTrustClientDetails(utr)
-      case Urn(urn) =>
-        getTrustClientDetails(urn)
-      case CgtRef(cgtRef) =>
-        getCgtClientDetails(cgtRef)
-      case PptRef(pptRef) =>
-        getPptClientDetails(pptRef)
-      case CbcId(cbcId) =>
-        getCbcClientDetails(cbcId)
-      case PlrId(plrId) =>
-        getPillar2ClientDetails(plrId)
-      case _ =>
-        Future.successful(Left(ClientDetailsNotFound))
+      case Nino(nino) => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
+      case Vrn(vrn) => getVatClientDetails(vrn)
+      case Utr(utr) => getTrustClientDetails(utr)
+      case Urn(urn) => getTrustClientDetails(urn)
+      case CgtRef(cgtRef) => getCgtClientDetails(cgtRef)
+      case PptRef(pptRef) => getPptClientDetails(pptRef)
+      case CbcId(cbcId) => getCbcClientDetails(cbcId)
+      case PlrId(plrId) => getPillar2ClientDetails(plrId)
+      case _ => Future.successful(Left(ClientDetailsNotFound))
     }
 
   def findClientDetails(
@@ -76,22 +67,14 @@ extends Logging {
     clientId: String
   )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     service.toUpperCase match {
-      case "HMRC-MTD-IT" =>
-        getItsaClientDetails(clientId)
-      case "HMRC-MTD-VAT" | "HMCE-VATDEC-ORG" =>
-        getVatClientDetails(clientId)
-      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" =>
-        getTrustClientDetails(clientId)
-      case "PERSONAL-INCOME-RECORD" =>
-        getIrvClientDetails(clientId)
-      case "HMRC-CGT-PD" =>
-        getCgtClientDetails(clientId)
-      case "HMRC-PPT-ORG" =>
-        getPptClientDetails(clientId)
-      case "HMRC-CBC-ORG" =>
-        getCbcClientDetails(clientId)
-      case "HMRC-PILLAR2-ORG" =>
-        getPillar2ClientDetails(clientId)
+      case "HMRC-MTD-IT" => getItsaClientDetails(clientId)
+      case "HMRC-MTD-VAT" | "HMCE-VATDEC-ORG" => getVatClientDetails(clientId)
+      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" => getTrustClientDetails(clientId)
+      case "PERSONAL-INCOME-RECORD" => getIrvClientDetails(clientId)
+      case "HMRC-CGT-PD" => getCgtClientDetails(clientId)
+      case "HMRC-PPT-ORG" => getPptClientDetails(clientId)
+      case "HMRC-CBC-ORG" => getCbcClientDetails(clientId)
+      case "HMRC-PILLAR2-ORG" => getPillar2ClientDetails(clientId)
     }
 
   private def getItsaClientDetails(nino: String)(implicit
@@ -130,22 +113,20 @@ extends Logging {
             optPostcode = designatoryDetails.postCode
           } yield (optName, optSaUtr, optPostcode)
         ).subflatMap {
-            case (Some(name), Some(_), Some(postcode)) =>
-              Right(
-                ClientDetailsResponse(
-                  name,
-                  None,
-                  None,
-                  Seq(postcode.replaceAll("\\s", "")),
-                  Some(PostalCode)
-                )
+          case (Some(name), Some(_), Some(postcode)) =>
+            Right(
+              ClientDetailsResponse(
+                name,
+                None,
+                None,
+                Seq(postcode.replaceAll("\\s", "")),
+                Some(PostalCode)
               )
-            case _ =>
-              Left(ClientDetailsNotFound)
-          }
+            )
+          case _ => Left(ClientDetailsNotFound)
+        }
           .value
-      case Left(err) =>
-        Future.successful(Left(err))
+      case Left(err) => Future.successful(Left(err))
     }
 
   private def getVatClientDetails(vrn: String)(implicit
@@ -191,8 +172,7 @@ extends Logging {
       case Right(_) =>
         logger.warn("[getVatClientDetails] - No registration date was returned by the API")
         Left(ClientDetailsNotFound)
-      case Left(err) =>
-        Left(err)
+      case Left(err) => Left(err)
     }
 
   private def getTrustClientDetails(trustTaxIdentifier: String)(implicit
@@ -210,8 +190,7 @@ extends Logging {
             None
           )
         )
-      case Left(err) =>
-        Left(err)
+      case Left(err) => Left(err)
     }
 
   private def getIrvClientDetails(nino: String)(implicit
@@ -245,8 +224,7 @@ extends Logging {
       case Right(_) =>
         logger.warn("[getIrvClientDetails] - No date of birth was returned by the API")
         Left(ClientDetailsNotFound)
-      case Left(err) =>
-        Left(err)
+      case Left(err) => Left(err)
     }
 
   private def getCgtClientDetails(cgtRef: String)(implicit
@@ -286,8 +264,7 @@ extends Logging {
             Some(CountryCode)
           )
         )
-      case Left(err) =>
-        Left(err)
+      case Left(err) => Left(err)
     }
 
   private def getPptClientDetails(pptRef: String)(implicit
@@ -311,8 +288,7 @@ extends Logging {
             Some(Date)
           )
         )
-      case Left(err) =>
-        Left(err)
+      case Left(err) => Left(err)
     }
 
   private def getCbcClientDetails(cbcId: String)(implicit
@@ -336,8 +312,7 @@ extends Logging {
             logger.warn("[getCbcClientDetails] - Necessary client name and/or email data was missing")
             Left(ClientDetailsNotFound)
         }
-      case Left(err) =>
-        Left(err)
+      case Left(err) => Left(err)
     }
 
   private def getPillar2ClientDetails(plrId: String)(implicit
@@ -361,8 +336,7 @@ extends Logging {
             Some(Date)
           )
         )
-      case Left(err) =>
-        Left(err)
+      case Left(err) => Left(err)
     }
 
 }

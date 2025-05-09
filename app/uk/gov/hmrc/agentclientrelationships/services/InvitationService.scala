@@ -211,8 +211,7 @@ extends Logging {
               Right(ClientIdentifier(mdtId))
             )
           )
-      case _ =>
-        Future successful Right(suppliedClientId)
+      case _ => Future successful Right(suppliedClientId)
     }
 
   private def create(
@@ -243,8 +242,7 @@ extends Logging {
         Right(invitation)
       }
     ).recover {
-      case e: MongoException if e.getMessage.contains("E11000 duplicate key error") =>
-        Left(DuplicateInvitationError)
+      case e: MongoException if e.getMessage.contains("E11000 duplicate key error") => Left(DuplicateInvitationError)
     }
   }
 

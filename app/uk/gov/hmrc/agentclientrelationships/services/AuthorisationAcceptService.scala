@@ -167,9 +167,7 @@ extends Logging {
             service = invitation.service,
             nino = Nino(invitation.clientId)
           )
-          .andThen { case Success(_) =>
-            auditService.sendCreatePartialAuthAuditEvent()
-          }
+          .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
       case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
         deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
           partialAuthRepository
@@ -179,9 +177,7 @@ extends Logging {
               service = invitation.service,
               nino = Nino(invitation.clientId)
             )
-            .andThen { case Success(_) =>
-              auditService.sendCreatePartialAuthAuditEvent()
-            }
+            .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
         }
       case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
         deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
@@ -203,9 +199,7 @@ extends Logging {
             clientId = invitation.clientId,
             acceptedDate = LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
           )
-          .andThen { case Success(_) =>
-            auditService.sendCreateRelationshipAuditEvent()
-          }
+          .andThen { case Success(_) => auditService.sendCreateRelationshipAuditEvent() }
       case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
         createRelationshipsService
           .createRelationship(
@@ -245,8 +239,7 @@ extends Logging {
             }
             result
           }
-      case None =>
-        Future.successful(false)
+      case None => Future.successful(false)
     }
 
   private def deauthAcceptedInvitations(

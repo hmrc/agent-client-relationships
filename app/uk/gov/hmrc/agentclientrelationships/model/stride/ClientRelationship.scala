@@ -37,12 +37,9 @@ object RelationshipSource {
   extends RelationshipSource
 
   implicit val writes: Writes[RelationshipSource] = Writes {
-    case HipOrIfApi =>
-      JsString("HipOrIfApi")
-    case AfrRelationshipRepo =>
-      JsString("AfrRelationshipRepo")
-    case AcrPartialAuthRepo =>
-      JsString("AcrPartialAuthRepo")
+    case HipOrIfApi => JsString("HipOrIfApi")
+    case AfrRelationshipRepo => JsString("AfrRelationshipRepo")
+    case AcrPartialAuthRepo => JsString("AcrPartialAuthRepo")
   }
 
 }
@@ -134,10 +131,8 @@ object ClientRelationship {
 
   def isActive(dateTo: Option[LocalDate]): Boolean =
     dateTo match {
-      case None =>
-        true
-      case Some(d) =>
-        d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
+      case None => true
+      case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 
 }

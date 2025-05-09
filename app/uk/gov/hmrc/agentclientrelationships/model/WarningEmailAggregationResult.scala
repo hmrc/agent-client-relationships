@@ -31,8 +31,7 @@ object WarningEmailAggregationResult {
   implicit def reads(implicit
     crypto: Encrypter
       with Decrypter
-  ): Reads[WarningEmailAggregationResult] =
-    ((__ \ "_id").read[String] and (__ \ "invitations").read[Seq[Invitation]](Reads.seq(Invitation.mongoFormat))).apply(
-      WarningEmailAggregationResult.apply _
-    )
+  ): Reads[WarningEmailAggregationResult] = ((__ \ "_id").read[String] and (__ \ "invitations").read[Seq[Invitation]](Reads.seq(Invitation.mongoFormat))).apply(
+    WarningEmailAggregationResult.apply _
+  )
 }

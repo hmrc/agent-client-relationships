@@ -61,10 +61,8 @@ object RelationshipReference {
     __.read[SaRef].map(x => x: RelationshipReference) orElse __.read[VatRef].map(x => x: RelationshipReference)
 
   implicit val relationshipReferenceWrites: Writes[RelationshipReference] = Writes[RelationshipReference] {
-    case saRef: SaRef =>
-      SaRef.saWrites.writes(saRef)
-    case vatRef: VatRef =>
-      VatRef.vatWrites.writes(vatRef)
+    case saRef: SaRef => SaRef.saWrites.writes(saRef)
+    case vatRef: VatRef => VatRef.vatWrites.writes(vatRef)
   }
 
 }

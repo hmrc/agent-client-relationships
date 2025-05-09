@@ -57,8 +57,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case status if is2xx(status) =>
-              true
+            case status if is2xx(status) => true
             case other =>
               logger.warn(s"unexpected status from email service, status: $other")
               false

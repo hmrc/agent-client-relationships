@@ -33,14 +33,13 @@ extends DeleteRecordRepository {
   private val data: mutable.Map[(Arn, EnrolmentKey), DeleteRecord] = mutable.Map()
 
   // the provided DeleteCopyRecord must use an enrolment key
-  override def create(record: DeleteRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get).map(
-    result =>
-      if (result.isDefined)
-        throw new MongoException("duplicate key error collection")
-      else {
-        data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
-        1
-      }
+  override def create(record: DeleteRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get).map(result =>
+    if (result.isDefined)
+      throw new MongoException("duplicate key error collection")
+    else {
+      data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
+      1
+    }
   )
 
   override def findBy(

@@ -79,8 +79,7 @@ extends Logging {
           Nino(clientId.value),
           arn
         )
-      case _ =>
-        Future.successful(None)
+      case _ => Future.successful(None)
     }
 
   private def deauthPartialAuth(
@@ -95,10 +94,8 @@ extends Logging {
       Instant.now
     )
     .map {
-      case true =>
-        Right(())
-      case false =>
-        Left(UpdateStatusFailed("Update status for PartialAuth invitation failed."))
+      case true => Right(())
+      case false => Left(UpdateStatusFailed("Update status for PartialAuth invitation failed."))
     }
 
   private def updateInvitationStore(
@@ -116,9 +113,7 @@ extends Logging {
       lastUpdated = lastUpdated
     )
     .map(
-      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(
-        _ => Right(())
-      )
+      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(_ => Right(()))
     )
 
   private def findAllMatchingInvitations(
@@ -157,8 +152,7 @@ extends Logging {
                   None,
               lastUpdated = None
             )
-          case None =>
-            Future.successful(Left(InvitationNotFound))
+          case None => Future.successful(Left(InvitationNotFound))
         }
 
       partialStoreResults <-
@@ -175,20 +169,15 @@ extends Logging {
                   suppliedClientId,
                   service
                 )
-              case None =>
-                Future.successful(Left(InvitationNotFound))
+              case None => Future.successful(Left(InvitationNotFound))
             }
-          case _ =>
-            Future.successful(Left(InvitationNotFound))
+          case _ => Future.successful(Left(InvitationNotFound))
         }
 
     } yield invitationStoreResults match {
-      case Left(value: UpdateStatusFailed) =>
-        Left(value)
-      case Left(_: InvitationFailureResponse) =>
-        partialStoreResults
-      case Right(value) =>
-        Right(value)
+      case Left(value: UpdateStatusFailed) => Left(value)
+      case Left(_: InvitationFailureResponse) => partialStoreResults
+      case Right(value) => Right(value)
     }
 
 }

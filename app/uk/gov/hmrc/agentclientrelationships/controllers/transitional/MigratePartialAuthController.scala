@@ -48,8 +48,7 @@ with Logging {
           case e: MongoWriteException if e.getError.getCode.equals(11000) =>
             logger.warn(s"Duplicate found for invitationId ${invitation.invitationId} so record already there and continuing with deletion")
             Future(NoContent)
-          case other =>
-            Future.failed(other)
+          case other => Future.failed(other)
         }
     else
       Future.successful(BadRequest)

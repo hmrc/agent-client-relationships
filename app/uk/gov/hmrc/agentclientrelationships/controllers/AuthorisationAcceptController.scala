@@ -97,10 +97,8 @@ with Logging {
                     NoContent
                   }
                   .recoverWith {
-                    case CreateRelationshipLocked =>
-                      Future.successful(Locked)
-                    case err =>
-                      throw err
+                    case CreateRelationshipLocked => Future.successful(Locked)
+                    case err => throw err
                   }
               }
             _ <-

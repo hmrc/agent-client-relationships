@@ -56,8 +56,7 @@ object CgtSubscriptionDetails {
           )
         )
 
-      case e =>
-        JsError(s"Unexpected typeOfPerson from DES for CGT: $e")
+      case e => JsError(s"Unexpected typeOfPerson from DES for CGT: $e")
     }
   }
 }

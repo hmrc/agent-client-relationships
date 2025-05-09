@@ -83,11 +83,9 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              Right(response.json.as[ItsaDesignatoryDetails])
+            case OK => Right(response.json.as[ItsaDesignatoryDetails])
             // TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getItsaDesignatoryDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaDesignatoryDetails'"))
@@ -105,10 +103,8 @@ with Logging {
         .map { response =>
           response.status match {
             // TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
-            case OK =>
-              Right(response.json.as[ItsaCitizenDetails])
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case OK => Right(response.json.as[ItsaCitizenDetails])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getItsaCitizenDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaCitizenDetails'"))
@@ -131,10 +127,8 @@ with Logging {
         // but not suer if the Left(ErrorRetrievingClientDetail) is used anywhere. Analyse and simplify
         .map { response =>
           response.status match {
-            case OK =>
-              Right(response.json.as[VatCustomerDetails])
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case OK => Right(response.json.as[VatCustomerDetails])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getVatCustomerInfo', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getVatCustomerInfo'"))
@@ -161,10 +155,8 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              Right((response.json \ "trustDetails" \ "trustName").as[String])
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case OK => Right((response.json \ "trustDetails" \ "trustName").as[String])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getTrustName', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getTrustName'"))
@@ -183,10 +175,8 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              Right(response.json.as[CgtSubscriptionDetails])
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case OK => Right(response.json.as[CgtSubscriptionDetails])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getCgtSubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCgtSubscriptionDetails'"))
@@ -205,10 +195,8 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              Right(response.json.as[PptSubscriptionDetails])
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case OK => Right(response.json.as[PptSubscriptionDetails])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getPptSubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPptSubscriptionDetails'"))
@@ -248,10 +236,8 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              Right(response.json.as[SimpleCbcSubscription])
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case OK => Right(response.json.as[SimpleCbcSubscription])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getCbcSubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCbcSubscriptionDetails'"))
@@ -271,10 +257,8 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              Right(response.json.as[Pillar2Record])
-            case NOT_FOUND =>
-              Left(ClientDetailsNotFound)
+            case OK => Right(response.json.as[Pillar2Record])
+            case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getPillar2SubscriptionDetails', statusCode=$status")
               Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPillar2SubscriptionDetails'"))

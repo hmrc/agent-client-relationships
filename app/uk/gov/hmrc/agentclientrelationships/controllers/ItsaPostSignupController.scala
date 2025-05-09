@@ -70,10 +70,8 @@ with Logging {
                 mNino = Some(nino)
               )
               .map {
-                case AltItsaCreateRelationshipSuccess(service) =>
-                  Created(Json.parse(s"""{"service": "$service"}"""))
-                case FoundAndCopied =>
-                  Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
+                case AltItsaCreateRelationshipSuccess(service) => Created(Json.parse(s"""{"service": "$service"}"""))
+                case FoundAndCopied => Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
                 case AltItsaNotFoundOrFailed =>
                   val msg = s"itsa-post-signup create relationship failed: no partial auth"
                   logger.warn(msg)

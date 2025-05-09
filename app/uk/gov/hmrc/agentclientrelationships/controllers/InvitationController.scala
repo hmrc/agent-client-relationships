@@ -76,8 +76,7 @@ with AuthActions {
                       UnsupportedService.getResult(msg)
 
                     case InvalidClientId =>
-                      val msg =
-                        s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
+                      val msg = s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
                       Logger(getClass).warn(msg)
                       InvalidClientId.getResult(msg)
 
@@ -112,8 +111,7 @@ with AuthActions {
                       Logger(getClass).warn(msg)
                       DuplicateInvitationError.getResult(msg)
 
-                    case _ =>
-                      BadRequest
+                    case _ => BadRequest
                   },
                   invitation => {
                     auditService.sendCreateInvitationAuditEvent(invitation)
@@ -182,10 +180,8 @@ with AuthActions {
           UtrType.id
         )
         .map {
-          case true =>
-            NoContent
-          case false =>
-            NotFound
+          case true => NoContent
+          case false => NotFound
         }
     }
 

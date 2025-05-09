@@ -159,8 +159,7 @@ with Logging {
             headers
           )
         )
-      case NonFatal(ex) =>
-        recoverFromException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_IF"))
+      case NonFatal(ex) => recoverFromException(ex, new Exception(s"RELATIONSHIP_CREATE_FAILED_IF"))
     }
   }
 
@@ -287,8 +286,7 @@ with Logging {
               _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)
               _ <-
                 maybeArn match {
-                  case None =>
-                    Future successful (())
+                  case None => Future successful (())
                   case Some(removedArn) =>
                     deleteRecordRepository
                       .remove(removedArn, enrolmentKey)
@@ -309,9 +307,7 @@ with Logging {
                       }
                 }
             } yield ()
-          ).recover { case NonFatal(ex) =>
-            logger.error(s"Could not deallocate previous relationship because of: $ex. Will try later.")
-          }
+          ).recover { case NonFatal(ex) => logger.error(s"Could not deallocate previous relationship because of: $ex. Will try later.") }
         }
       )
     } yield ()

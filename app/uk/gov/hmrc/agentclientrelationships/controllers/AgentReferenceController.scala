@@ -56,8 +56,7 @@ with AuthorisedFunctions {
               agentReferenceRepository
                 .findByArn(arn)
                 .flatMap {
-                  case Some(record) if record.normalisedAgentNames.contains(normalisedAgentName) =>
-                    Future.successful(Ok(Json.toJson(record)))
+                  case Some(record) if record.normalisedAgentNames.contains(normalisedAgentName) => Future.successful(Ok(Json.toJson(record)))
                   case Some(record) =>
                     agentReferenceRepository
                       .updateAgentName(record.uid, normalisedAgentName)
@@ -81,10 +80,8 @@ with AuthorisedFunctions {
     agentReferenceRepository
       .findBy(uid)
       .map {
-        case Some(record) =>
-          Ok(Json.toJson(record))
-        case None =>
-          NotFound
+        case Some(record) => Ok(Json.toJson(record))
+        case None => NotFound
       }
   }
 

@@ -61,10 +61,8 @@ with Decrypter {
 
   def encrypt(plain: PlainContent): Crypted =
     plain match {
-      case PlainText(text) =>
-        Crypted(text)
-      case PlainBytes(bytes) =>
-        Crypted(new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8))
+      case PlainText(text) => Crypted(text)
+      case PlainBytes(bytes) => Crypted(new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8))
     }
   def decrypt(notEncrypted: Crypted): PlainText = PlainText(notEncrypted.value)
   def decryptAsBytes(nullEncrypted: Crypted): PlainBytes = PlainBytes(Base64.getDecoder.decode(nullEncrypted.value))

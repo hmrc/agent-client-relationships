@@ -84,8 +84,7 @@ with Logging {
           )
         }
       // Legacy VAT enrolment check
-      case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) =>
-        checkWithVrn(arn, Vrn(clientId))
+      case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // PIR relationships are done through agent-fi-relationships
       case (Service.PersonalIncomeRecord.id, _, _) =>
         checkAgentFiRelationship(
@@ -122,8 +121,7 @@ with Logging {
       clientId
     )
     .flatMap {
-      case Right(enrolmentKey) =>
-        proceed(enrolmentKey)
+      case Right(enrolmentKey) => proceed(enrolmentKey)
       case Left(validationError) =>
         logger.warn(s"Invalid parameters: $validationError")
         Future.successful(CheckRelationshipInvalidRequest)
@@ -186,8 +184,7 @@ with Logging {
   ): Future[CheckRelationshipResult] = checkOldAndCopyService
     .checkForOldRelationshipAndCopy(arn, enrolmentKey)
     .map {
-      case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
-        CheckRelationshipNotFound(errorCode)
+      case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented => CheckRelationshipNotFound(errorCode)
       case cesaResult =>
         if (cesaResult.grantAccess)
           CheckRelationshipFound
@@ -195,8 +192,7 @@ with Logging {
           CheckRelationshipNotFound()
     }
     .recover {
-      case upS: UpstreamErrorResponse =>
-        throw upS
+      case upS: UpstreamErrorResponse => throw upS
       case NonFatal(ex) =>
         val taxIdentifier = enrolmentKey.oneTaxIdentifier()
         logger.warn(s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}")
@@ -214,20 +210,16 @@ with Logging {
       clientId
     )
     .map {
-      case Some(_) =>
-        CheckRelationshipFound
-      case None =>
-        CheckRelationshipNotFound()
+      case Some(_) => CheckRelationshipFound
+      case None => CheckRelationshipNotFound()
     }
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = ifOrHipConnector
     .getMtdIdFor(Nino(clientId))
     .flatMap {
-      case Some(mtdItId) =>
-        proceed(mtdItId)
-      case None =>
-        Future.successful(CheckRelationshipNotFound())
+      case Some(mtdItId) => proceed(mtdItId)
+      case None => Future.successful(CheckRelationshipNotFound())
     }
 
   private def withIrSaSuspensionCheck(arn: Arn)(
@@ -235,13 +227,11 @@ with Logging {
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = desConnector
     .getAgentRecord(arn)
     .flatMap {
-      case None =>
-        Future.successful(CheckRelationshipInvalidRequest)
+      case None => Future.successful(CheckRelationshipInvalidRequest)
       case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
         logger.warn(s"agent with id : ${arn.value} is suspended for regime ITSA")
         Future.successful(CheckRelationshipInvalidRequest)
-      case _ =>
-        proceed
+      case _ => proceed
     }
 
   private def checkLegacyWithNinoOrPartialAuth(
@@ -254,14 +244,11 @@ with Logging {
     checkOldAndCopyService
       .hasPartialAuthOrLegacyRelationshipInCesa(arn, nino)
       .map {
-        case true =>
-          CheckRelationshipFound
-        case false =>
-          CheckRelationshipNotFound()
+        case true => CheckRelationshipFound
+        case false => CheckRelationshipNotFound()
       }
       .recover {
-        case error: UpstreamErrorResponse =>
-          throw error
+        case error: UpstreamErrorResponse => throw error
         case NonFatal(ex) =>
           logger.warn(
             s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}"
@@ -280,14 +267,11 @@ with Logging {
     checkOldAndCopyService
       .lookupESForOldRelationship(arn, vrn)
       .map {
-        case references if references.nonEmpty =>
-          CheckRelationshipFound
-        case _ =>
-          CheckRelationshipNotFound()
+        case references if references.nonEmpty => CheckRelationshipFound
+        case _ => CheckRelationshipNotFound()
       }
       .recover {
-        case upS: UpstreamErrorResponse =>
-          throw upS
+        case upS: UpstreamErrorResponse => throw upS
         case NonFatal(_) =>
           logger.warn("checkWithVrn: lookupESForOldRelationship failed")
           CheckRelationshipNotFound()

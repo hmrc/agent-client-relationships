@@ -64,8 +64,7 @@ with AuthActions {
             for {
               agentLink <- invitationLinkService.createLink(arn)
             } yield Ok(Json.toJson(AuthorisationRequestInfo(invitation, agentLink)))
-          case _ =>
-            Future.successful(NotFound)
+          case _ => Future.successful(NotFound)
         }
     }
   }
@@ -90,8 +89,7 @@ with AuthActions {
           .map { result =>
             Ok(Json.toJson(result))
           }
-      case _ =>
-        Future.successful(Forbidden)
+      case _ => Future.successful(Forbidden)
     }
   }
 
@@ -118,8 +116,7 @@ with AuthActions {
               )
             )
           }
-        case _ =>
-          Future.successful(NotFound)
+        case _ => Future.successful(NotFound)
       }
   }
 

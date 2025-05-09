@@ -49,8 +49,7 @@ object PptSubscriptionDetails {
         )
 
       case "Organisation" =>
-        val organisationName =
-          (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
+        val organisationName = (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
         JsSuccess(
           PptSubscriptionDetails(
             organisationName,
@@ -59,8 +58,7 @@ object PptSubscriptionDetails {
           )
         )
 
-      case e =>
-        JsError(s"Unknown customerType $e")
+      case e => JsError(s"Unknown customerType $e")
     }
   }
 }

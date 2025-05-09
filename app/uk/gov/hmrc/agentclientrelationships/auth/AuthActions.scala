@@ -74,8 +74,7 @@ with Logging {
                 clientId
               ) =>
             creds
-          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-            creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
         }
         .map { creds =>
           body(CurrentUser(Option(creds), affinity))
@@ -99,8 +98,7 @@ with Logging {
                   clientId
                 ) =>
             creds
-          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-            creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
         }
         .map { creds =>
           body(CurrentUser(Option(creds), affinity))
@@ -115,10 +113,8 @@ with Logging {
     clientId: TaxIdentifier
   ): Boolean = affinity
     .flatMap {
-      case AffinityGroup.Agent =>
-        arn
-      case _ =>
-        Some(clientId)
+      case AffinityGroup.Agent => arn
+      case _ => Some(clientId)
     }
     .exists { requiredIdentifier =>
       // check that among the identifiers that the user has, there is one that matches the clientId provided
@@ -170,13 +166,10 @@ with Logging {
               None
 
           id match {
-            case Some(i) =>
-              body(i)
-            case _ =>
-              Future.successful(NoPermissionToPerformOperation)
+            case Some(i) => body(i)
+            case _ => Future.successful(NoPermissionToPerformOperation)
           }
-        case _ =>
-          Future.successful(NoPermissionToPerformOperation)
+        case _ => Future.successful(NoPermissionToPerformOperation)
       }
     }
 
@@ -196,10 +189,8 @@ with Logging {
           } yield LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value)))
 
         requiredEnrolments match {
-          case s if s.isEmpty =>
-            Future.successful(NoPermissionToPerformOperation)
-          case _ =>
-            body(requiredEnrolments)
+          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
+          case _ => body(requiredEnrolments)
         }
     }
 
@@ -217,10 +208,8 @@ with Logging {
           } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
         identifiers match {
-          case s if s.isEmpty =>
-            Future.successful(NoPermissionToPerformOperation)
-          case _ =>
-            body(identifiers.toMap)
+          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
+          case _ => body(identifiers.toMap)
         }
     }
 
@@ -228,8 +217,7 @@ with Logging {
     body: EnrolmentsWithNino => Future[Result]
   )(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments and nino) {
-      case enrolments ~ nino =>
-        body(new EnrolmentsWithNino(enrolments, nino))
+      case enrolments ~ nino => body(new EnrolmentsWithNino(enrolments, nino))
     }
 
   protected def authorisedWithStride(
@@ -238,10 +226,8 @@ with Logging {
   )(body: String => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
-        case Some(Credentials(strideId, _)) =>
-          body(strideId)
-        case _ =>
-          Future.successful(NoPermissionToPerformOperation)
+        case Some(Credentials(strideId, _)) => body(strideId)
+        case _ => Future.successful(NoPermissionToPerformOperation)
       }
 
   val basicAuthHeader: Regex = "Basic (.+)".r
@@ -250,8 +236,7 @@ with Logging {
   private def decodeFromBase64(encodedString: String): String =
     try new String(Base64.getDecoder.decode(encodedString), UTF_8)
     catch {
-      case _: Throwable =>
-        ""
+      case _: Throwable => ""
     }
 
   def withBasicAuth(
@@ -279,13 +264,9 @@ with Logging {
 
   protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(implicit request: RequestHeader): Future[Result] =
     withEnrolledAsAgent {
-      case Some(arn) =>
-        body(Arn(arn))
-      case None =>
-        Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
-    } recoverWith { case _: InsufficientEnrolments =>
-      Future.failed(InsufficientEnrolments())
-    }
+      case Some(arn) => body(Arn(arn))
+      case None => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
+    } recoverWith { case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments()) }
 
   protected def withEnrolledAsAgent[A](
     body: Option[String] => Future[Result]

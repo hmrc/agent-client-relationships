@@ -102,8 +102,7 @@ with Logging {
             // - NO_CONTENT suggest NotFound case
             // - OK with empty groupIds throws exception, this could be represented as None or handled by error handler if this is not expected
             // - OK with more then 1 groupId also is problematic, if there expectation is to have only one groupId
-            case Status.NO_CONTENT =>
-              throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(arn)}")
+            case Status.NO_CONTENT => throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(arn)}")
             case Status.OK =>
               val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
               if (groupIds.isEmpty)
@@ -133,10 +132,8 @@ with Logging {
         .map { response =>
           response.status match {
             // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
-            case Status.OK =>
-              (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
-            case Status.NO_CONTENT =>
-              Set.empty
+            case Status.OK => (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
+            case Status.NO_CONTENT => Set.empty
             case other =>
               throw UpstreamErrorResponse(
                 response.body,
@@ -147,8 +144,10 @@ with Logging {
         }
     }
 
-  def getDelegatedGroupIdsForHMCEVATDECORG(vrn: Vrn)(implicit request: RequestHeader): Future[Set[String]] =
-    getDelegatedGroupIdsFor(EnrolmentKey("HMCE-VATDEC-ORG", Seq(Identifier("VATRegNo", vrn.value))))
+  def getDelegatedGroupIdsForHMCEVATDECORG(vrn: Vrn)(implicit request: RequestHeader): Future[Set[String]] = getDelegatedGroupIdsFor(EnrolmentKey(
+    "HMCE-VATDEC-ORG",
+    Seq(Identifier("VATRegNo", vrn.value))
+  ))
 
   // ES2 - delegated
   def getEnrolmentsAssignedToUser(
@@ -177,8 +176,7 @@ with Logging {
                 .filter(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
             // Note: Checking for activation may be redundant as EACD API documentation claims:
             // "A delegated enrolment is always activated, it can never be non-activated."
-            case Status.NO_CONTENT =>
-              Seq.empty
+            case Status.NO_CONTENT => Seq.empty
             case other =>
               throw UpstreamErrorResponse(
                 response.body,
@@ -207,8 +205,7 @@ with Logging {
                 .headOption
                 .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
                 .map(Arn.apply)
-            case Status.NO_CONTENT =>
-              None
+            case Status.NO_CONTENT => None
             case other =>
               throw UpstreamErrorResponse(
                 response.body,
@@ -226,8 +223,7 @@ with Logging {
     enrolmentKey: EnrolmentKey,
     agentCode: AgentCode
   )(implicit request: RequestHeader): Future[Unit] = {
-    val url =
-      url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
+    val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
 
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKey.service}-POST") {
       httpClient
@@ -236,8 +232,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.CREATED =>
-              ()
+            case Status.CREATED => ()
             case Status.CONFLICT =>
               // TODO: it should fail not just log a warning which is mostlikely to be ignored leaving user with the problem alone
               logger.warn(s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one.")
@@ -265,8 +260,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.NO_CONTENT =>
-              ()
+            case Status.NO_CONTENT => ()
             case other =>
               // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
               throw UpstreamErrorResponse(
@@ -324,8 +318,7 @@ with Logging {
                 .headOption
                 .map(obj => (obj \ "identifiers").as[Seq[Identifier]])
             // TODO: The endpoint shoulud return OK with empty list for that case
-            case Status.NO_CONTENT =>
-              None
+            case Status.NO_CONTENT => None
             case other =>
               throw UpstreamErrorResponse(
                 response.body,

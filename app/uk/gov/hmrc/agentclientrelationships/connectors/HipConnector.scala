@@ -90,8 +90,7 @@ with Logging {
       requestBody,
       headers.subscriptionHeaders
     ).map {
-      case Right(response) =>
-        Option(response.json.as[RegistrationRelationshipResponse])
+      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
         errorResponse.statusCode match {
           case _ =>
@@ -121,8 +120,7 @@ with Logging {
       requestBody,
       headers.subscriptionHeaders
     ).map {
-      case Right(response) =>
-        Option(response.json.as[RegistrationRelationshipResponse])
+      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
         logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
         throw errorResponse
@@ -148,16 +146,12 @@ with Logging {
       url,
       headers.subscriptionHeaders
     ).map {
-      case Right(response) =>
-        (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
+      case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.BAD_REQUEST | Status.NOT_FOUND =>
-            None
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
-            None
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
-            None
+          case Status.BAD_REQUEST | Status.NOT_FOUND => None
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => None
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => None
           case _ =>
             logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
             // TODO WG - check - that looks so wrong to rerun any value, should be an exception
@@ -188,12 +182,9 @@ with Logging {
     ).map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND =>
-            RelationshipFailureResponse.RelationshipNotFound
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
-            RelationshipFailureResponse.RelationshipNotFound
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
-            RelationshipFailureResponse.RelationshipSuspended
+          case Status.NOT_FOUND => RelationshipFailureResponse.RelationshipNotFound
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => RelationshipFailureResponse.RelationshipNotFound
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => RelationshipFailureResponse.RelationshipSuspended
           case Status.BAD_REQUEST =>
             logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
             RelationshipFailureResponse.RelationshipBadRequest
@@ -227,16 +218,12 @@ with Logging {
       url,
       headers.subscriptionHeaders
     ).map {
-      case Right(response) =>
-        (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
+      case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.BAD_REQUEST | Status.NOT_FOUND =>
-            Nil
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
-            Nil
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
-            Nil
+          case Status.BAD_REQUEST | Status.NOT_FOUND => Nil
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => Nil
           case _ =>
             logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
             Seq.empty[InactiveRelationship]
@@ -266,16 +253,12 @@ with Logging {
         url,
         headers.subscriptionHeaders
       ).map {
-        case Right(response) =>
-          (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
+        case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
         case Left(errorResponse) =>
           errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND =>
-              Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
-              Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
-              Nil
+            case Status.BAD_REQUEST | Status.NOT_FOUND => Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => Nil
             case _ =>
               logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
               Seq.empty[InactiveRelationship]
@@ -295,12 +278,10 @@ with Logging {
       url,
       headers.subscriptionBusinessDetailsHeaders
     ).map {
-      case Right(response) =>
-        Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND =>
-            None
+          case Status.NOT_FOUND => None
           case Status.UNPROCESSABLE_ENTITY
               if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
             None
@@ -322,12 +303,10 @@ with Logging {
       url,
       headers.subscriptionBusinessDetailsHeaders
     ).map {
-      case Right(response) =>
-        Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND =>
-            None
+          case Status.NOT_FOUND => None
           case Status.UNPROCESSABLE_ENTITY
               if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
             None
@@ -363,8 +342,7 @@ with Logging {
           }
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.NOT_FOUND =>
-            Left(ClientDetailsNotFound)
+          case Status.NOT_FOUND => Left(ClientDetailsNotFound)
           case Status.UNPROCESSABLE_ENTITY
               if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
             Left(ClientDetailsNotFound)
@@ -408,16 +386,13 @@ with Logging {
 
   private[connectors] def isActive(r: ActiveRelationship): Boolean =
     r.dateTo match {
-      case None =>
-        true
-      case Some(d) =>
-        d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
+      case None => true
+      case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 
   private[connectors] def isNotActive(r: InactiveRelationship): Boolean =
     r.dateTo match {
-      case None =>
-        false
+      case None => false
       case Some(d) =>
         d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) ||
         d.equals(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
@@ -476,31 +451,21 @@ with Logging {
         new URL(
           s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?idType=ZPLR&refNumber=$encodedClientId&isAnAgent=false&activeOnly=$activeOnly&regime=${getRegimeFor(taxIdentifier)}$dateRangeParams"
         )
-      case _ =>
-        throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
+      case _ => throw new IllegalStateException(s"Unsupported Identifier $taxIdentifier")
     }
   }
 
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {
-      case MtdItId(_) =>
-        "ITSA"
-      case Vrn(_) =>
-        "VATC"
-      case Utr(_) =>
-        "TRS"
-      case Urn(_) =>
-        "TRS"
-      case CgtRef(_) =>
-        "CGT"
-      case PptRef(_) =>
-        "PPT"
-      case CbcId(_) =>
-        "CBC"
-      case PlrId(_) =>
-        "PLR"
-      case _ =>
-        throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
+      case MtdItId(_) => "ITSA"
+      case Vrn(_) => "VATC"
+      case Utr(_) => "TRS"
+      case Urn(_) => "TRS"
+      case CgtRef(_) => "CGT"
+      case PptRef(_) => "PPT"
+      case CbcId(_) => "CBC"
+      case PlrId(_) => "PLR"
+      case _ => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
   private def createAgentRelationshipHipInputJson(
@@ -539,18 +504,14 @@ with Logging {
 
   private def getAuthProfile(service: String): String =
     service match {
-      case HMRCMTDITSUPP =>
-        "ITSAS001"
-      case _ =>
-        "ALL00001"
+      case HMRCMTDITSUPP => "ITSAS001"
+      case _ => "ALL00001"
     }
 
   private def getIsExclusiveAgent(service: String): Boolean =
     service match {
-      case HMRCMTDITSUPP =>
-        false
-      case _ =>
-        true
+      case HMRCMTDITSUPP => false
+      case _ => true
     }
 
   private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject =
@@ -570,12 +531,9 @@ with Logging {
             ((authProfile, JsString(authProfileForService)))
         case Some("TRS") =>
           clientId match {
-            case Utr(_) =>
-              request + ((idType, JsString("UTR")))
-            case Urn(_) =>
-              request + ((idType, JsString("URN")))
-            case e =>
-              throw new Exception(s"unsupported tax identifier $e for regime TRS")
+            case Utr(_) => request + ((idType, JsString("UTR")))
+            case Urn(_) => request + ((idType, JsString("URN")))
+            case e => throw new Exception(s"unsupported tax identifier $e for regime TRS")
           }
         case Some("CGT") =>
           request +
@@ -592,15 +550,13 @@ with Logging {
             ((relationshipType, JsString("ZA01"))) +
             ((authProfile, JsString(authProfileForService))) +
             ((idType, JsString("MTDBSA")))
-        case Some("CBC") =>
-          request + ((idType, JsString("CBC")))
+        case Some("CBC") => request + ((idType, JsString("CBC")))
         case Some("PLR") =>
           request +
             ((relationshipType, JsString("ZA01"))) +
             ((authProfile, JsString(authProfileForService))) +
             ((idType, JsString("ZPLR")))
-        case _ =>
-          request
+        case _ => request
       }
     }
 

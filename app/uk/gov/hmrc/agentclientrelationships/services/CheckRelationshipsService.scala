@@ -60,8 +60,7 @@ with Logging {
     enrolmentKey: LocalEnrolmentKey
   )(implicit request: RequestHeader): Future[Boolean] =
     userId match {
-      case None =>
-        checkForRelationshipAgencyLevel(arn, enrolmentKey).map(_._1)
+      case None => checkForRelationshipAgencyLevel(arn, enrolmentKey).map(_._1)
       case Some(userId) =>
         checkForRelationshipUserLevel(
           arn,
@@ -127,10 +126,8 @@ with Logging {
       maybeGroupId <- es.getDelegatedGroupIdsFor(enrolKey)
       maybeArn <-
         maybeGroupId.headOption match {
-          case Some(groupId) =>
-            es.getAgentReferenceNumberFor(groupId)
-          case None =>
-            Future.successful(None)
+          case Some(groupId) => es.getAgentReferenceNumberFor(groupId)
+          case None => Future.successful(None)
         }
     } yield maybeArn
 
@@ -151,13 +148,10 @@ with Logging {
           .flatMap {
             case Some(mtdItId) =>
               getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
-                case Some(a) =>
-                  returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
-                case None =>
-                  Future.successful(None)
+                case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+                case None => Future.successful(None)
               }
-            case _ =>
-              Future.successful(None)
+            case _ => Future.successful(None)
           }
     }
 
@@ -173,23 +167,18 @@ with Logging {
     enrolment: Option[LocalEnrolmentKey]
   )(implicit request: RequestHeader): Future[Option[ExistingMainAgent]] =
     invitation.service match {
-      case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) =>
-        findMainAgentForNino(invitation)
+      case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
       case HMRCPIR =>
         agentFiRelationshipConnector
           .findIrvRelationshipForClient(invitation.clientId)
           .flatMap {
-            case Some(r) =>
-              returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
-            case None =>
-              Future.successful(None)
+            case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
+            case None => Future.successful(None)
           }
       case HMRCCBCORG if enrolment.isDefined =>
         getArnForDelegatedEnrolmentKey(enrolment.get).flatMap {
-          case Some(a) =>
-            returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
-          case None =>
-            Future.successful(None)
+          case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+          case None => Future.successful(None)
         }
       case _ =>
         getArnForDelegatedEnrolmentKey(
@@ -203,10 +192,8 @@ with Logging {
             )
           )
         ).flatMap {
-          case Some(a) =>
-            returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
-          case None =>
-            Future.successful(None)
+          case Some(a) => returnExistingMainAgentFromArn(a.value, a.value == invitation.arn)
+          case None => Future.successful(None)
         }
     }
 

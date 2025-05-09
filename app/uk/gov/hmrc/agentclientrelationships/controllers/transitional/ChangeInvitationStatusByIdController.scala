@@ -54,14 +54,10 @@ extends BackendController(cc) {
       .map(
         _.fold(
           {
-            case InvitationFailureResponse.UnsupportedStatusChange =>
-              UnsupportedStatusChange.getResult("")
-            case updateStatusFailed @ UpdateStatusFailed(_) =>
-              updateStatusFailed.getResult("")
-            case InvitationFailureResponse.InvitationNotFound =>
-              InvitationNotFound.getResult("")
-            case _ =>
-              BadRequest
+            case InvitationFailureResponse.UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
+            case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
+            case InvitationFailureResponse.InvitationNotFound => InvitationNotFound.getResult("")
+            case _ => BadRequest
           },
           _ => NoContent
         )

@@ -74,10 +74,8 @@ with AuthorisedFunctions {
           combined = (invitations ++ partialAuths.map(_.asInvitation)).sortBy(_.created)
           result =
             combined match {
-              case Nil =>
-                NotFound
-              case _ =>
-                Ok(Json.toJson(combined))
+              case Nil => NotFound
+              case _ => Ok(Json.toJson(combined))
             }
         } yield result
       }
@@ -89,10 +87,8 @@ with AuthorisedFunctions {
       invitationsRepository
         .findOneById(invitationId)
         .map {
-          case None =>
-            NotFound
-          case Some(invitation) =>
-            Ok(Json.toJson(invitation))
+          case None => NotFound
+          case Some(invitation) => Ok(Json.toJson(invitation))
         }
     }
   }
@@ -123,10 +119,8 @@ with AuthorisedFunctions {
       val itsaServices = services.filter(Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(_))
       val optNino = clientIds.find(Nino.isValid)
       val isActive = status.map {
-        case PartialAuth =>
-          true
-        case DeAuthorised =>
-          false
+        case PartialAuth => true
+        case DeAuthorised => false
       }
 
       partialAuthRepository

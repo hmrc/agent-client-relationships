@@ -127,8 +127,7 @@ with Logging {
                   .foreach { invitation =>
                     invitationsRepository.updateWarningEmailSent(invitation.invitationId)
                   }
-              case false =>
-                logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${aggregationResult.arn}")
+              case false => logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${aggregationResult.arn}")
             }
           ()
         }
@@ -161,8 +160,7 @@ with Logging {
           emailService
             .sendExpiredEmail(invitation)(NoRequest)
             .map {
-              case true =>
-                invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
+              case true => invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
               case false =>
                 // TODO: Improve error handling to provide clearer insights into why the email was not sent.
                 // Throw an exception in EmailConnector so it can fail properly.

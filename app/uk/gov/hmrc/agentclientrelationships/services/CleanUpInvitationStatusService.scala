@@ -67,10 +67,8 @@ extends Logging {
       relationshipEndedBy = relationshipEndedBy
     )
     .map {
-      case true =>
-        Right(())
-      case false =>
-        Left(InvitationNotFound)
+      case true => Right(())
+      case false => Left(InvitationNotFound)
     }
 
 }

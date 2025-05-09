@@ -56,8 +56,7 @@ extends HttpApiMonitor {
     arn: Arn,
     service: String,
     clientId: String
-  ): URL =
-    url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"
+  ): URL = url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"
 
   def getRelationship(
     arn: Arn,
@@ -127,12 +126,9 @@ extends HttpApiMonitor {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              true
-            case NOT_FOUND =>
-              false
-            case status =>
-              throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
+            case OK => true
+            case NOT_FOUND => false
+            case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
           }
         }
     }
@@ -142,9 +138,7 @@ extends HttpApiMonitor {
   )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, ClientRelationship]] = EitherT
     .fromOptionF(fopt = findIrvRelationshipForClient(nino), ifNone = RelationshipFailureResponse.RelationshipNotFound)
     .value
-    .recover { case ex: UpstreamErrorResponse =>
-      Left(RelationshipFailureResponse.ErrorRetrievingRelationship(ex.statusCode, ex.getMessage))
-    }
+    .recover { case ex: UpstreamErrorResponse => Left(RelationshipFailureResponse.ErrorRetrievingRelationship(ex.statusCode, ex.getMessage)) }
 
   def findIrvRelationshipForClient(clientId: String)(implicit rh: RequestHeader): Future[Option[ClientRelationship]] = {
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = true)
@@ -168,10 +162,8 @@ extends HttpApiMonitor {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK =>
-              Right(response.json.as[List[ClientRelationship]])
-            case NOT_FOUND =>
-              Left(RelationshipFailureResponse.RelationshipNotFound)
+            case OK => Right(response.json.as[List[ClientRelationship]])
+            case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
             case status =>
               Left(
                 RelationshipFailureResponse.ErrorRetrievingRelationship(

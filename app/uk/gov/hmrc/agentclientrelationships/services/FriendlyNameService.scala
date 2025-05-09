@@ -41,12 +41,9 @@ extends Logging {
     enrolment: EnrolmentKey
   )(implicit request: RequestHeader): Future[Unit] =
     invitation.service match {
-      case `HMRCPIR` =>
-        Future.unit
-      case `HMRCMTDITSUPP` | `HMRCMTDIT` if invitation.isAltItsa =>
-        Future.unit
-      case _ =>
-        doUpdateFriendlyName(invitation, enrolment)
+      case `HMRCPIR` => Future.unit
+      case `HMRCMTDITSUPP` | `HMRCMTDIT` if invitation.isAltItsa => Future.unit
+      case _ => doUpdateFriendlyName(invitation, enrolment)
     }
 
   private def doUpdateFriendlyName(
@@ -59,9 +56,7 @@ extends Logging {
       for {
         groupId <- enrolmentStoreProxyConnector
           .getPrincipalGroupIdFor(Arn(invitation.arn))
-          .recover { case _ =>
-            throw GroupIdError
-          }
+          .recover { case _ => throw GroupIdError }
         _ <- enrolmentStoreProxyConnector.updateEnrolmentFriendlyName(
           groupId,
           enrolment.toString,
@@ -71,8 +66,7 @@ extends Logging {
     ).recover {
       case GroupIdError =>
         logger.warn(s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${invitation.clientId}, agent ${invitation.arn}")
-      case exception =>
-        logger.warn(s"updateFriendlyName failed due to ES19 error for client ${invitation.clientId}, agent ${invitation.arn}: $exception")
+      case exception => logger.warn(s"updateFriendlyName failed due to ES19 error for client ${invitation.clientId}, agent ${invitation.arn}: $exception")
     }
   }
 

@@ -81,10 +81,8 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       ifEnv
     ).map { result =>
       result.status match {
-        case OK =>
-          Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
-        case NOT_FOUND =>
-          None
+        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
           None
@@ -106,10 +104,8 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       ifEnv
     ).map { result =>
       result.status match {
-        case OK =>
-          Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
-        case NOT_FOUND =>
-          None
+        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
           None
@@ -135,14 +131,12 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
         case OK =>
           val optionalData = Try(result.json \ "taxPayerDisplayResponse" \ "businessData").map(_(0))
           optionalData match {
-            case Success(businessData) =>
-              Right(businessData.as[ItsaBusinessDetails])
+            case Success(businessData) => Right(businessData.as[ItsaBusinessDetails])
             case Failure(_) =>
               logger.warn("Unable to retrieve relevant details as the businessData array was empty")
               Left(ClientDetailsNotFound)
           }
-        case NOT_FOUND =>
-          Left(ClientDetailsNotFound)
+        case NOT_FOUND => Left(ClientDetailsNotFound)
         case status =>
           logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status")
           Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))

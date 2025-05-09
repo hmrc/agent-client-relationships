@@ -106,10 +106,8 @@ extends Logging {
   ): Future[AgentReferenceRecord] = agentReferenceRepository
     .findByArn(arn)
     .flatMap {
-      case Some(value) =>
-        Future.successful(value)
-      case None =>
-        createAgentReferenceRecord(arn, newNormaliseAgentName)
+      case Some(value) => Future.successful(value)
+      case None => createAgentReferenceRecord(arn, newNormaliseAgentName)
     }
 
   private def updateAgentReferenceRecord(
@@ -143,8 +141,9 @@ extends Logging {
     else
       Left(InvitationLinkFailureResponse.NormalizedAgentNameNotMatched)
 
-  private def getAgentDetails(arn: Arn)(implicit request: RequestHeader): Future[AgentDetailsDesResponse] =
-    agentAssuranceConnector.getAgentRecordWithChecks(arn)
+  private def getAgentDetails(
+    arn: Arn
+  )(implicit request: RequestHeader): Future[AgentDetailsDesResponse] = agentAssuranceConnector.getAgentRecordWithChecks(arn)
 
   private def checkSuspensionDetails(
     agentDetailsDesResponse: AgentDetailsDesResponse

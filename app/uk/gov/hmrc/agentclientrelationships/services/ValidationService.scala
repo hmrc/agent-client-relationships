@@ -52,16 +52,12 @@ extends Logging {
   )(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
-      case ("IR-SA", "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
+      case ("IR-SA", "ni" | "NI" | "NINO") if Nino.isValid(clientId) => Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
       case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
-      case (Service.PersonalIncomeRecord.id, "NINO") =>
-        Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
-      case (Service.Cbc.id, CbcIdType.enrolmentId) =>
-        makeSanitisedCbcEnrolmentKey(CbcId(clientId))
+      case (Service.PersonalIncomeRecord.id, "NINO") => Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) => Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
+      case (Service.Cbc.id, CbcIdType.enrolmentId) => makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>
         if (appConfig.supportedServicesWithoutPir.exists(_.id == serviceKey))
@@ -74,10 +70,9 @@ extends Logging {
           Future.successful(Left(s"Unknown service $serviceKey"))
     }
 
-  /** This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be
-    * HMRC-CBC-NONUK-ORG (if the caller has no way of knowing). We check and correct the enrolment key as needed. Also,
-    * if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId) as required by specs. First,
-    * query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
+  /** This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be HMRC-CBC-NONUK-ORG (if the caller has no way
+    * of knowing). We check and correct the enrolment key as needed. Also, if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId)
+    * as required by specs. First, query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
     */
   def makeSanitisedCbcEnrolmentKey(cbcId: CbcId)(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     // Try as HMRC-CBC-ORG (UK version)
@@ -89,13 +84,10 @@ extends Logging {
           esConnector
             .queryKnownFacts(Service.CbcNonUk, Seq(Identifier("cbcId", cbcId.value)))
             .map {
-              case Some(_) =>
-                Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
-              case None =>
-                Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
+              case Some(_) => Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
+              case None => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
             }
-        case Some(identifiers) =>
-          Future.successful(Right(EnrolmentKey(Service.Cbc.id, identifiers)))
+        case Some(identifiers) => Future.successful(Right(EnrolmentKey(Service.Cbc.id, identifiers)))
       }
 
   def validateForTaxIdentifier(
@@ -117,31 +109,21 @@ extends Logging {
   )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Service]] =
     service.fold {
       (taxIdentifier, authProfile, relationshipSource) match {
-        case (Nino(_), Some("ALL00001"), HipOrIfApi) =>
-          Future.successful(Right(Service.MtdIt))
-        case (Nino(_), Some("ITSAS001"), HipOrIfApi) =>
-          Future.successful(Right(Service.MtdItSupp))
-        case (Nino(_), None, HipOrIfApi) =>
-          Future.successful(Right(Service.MtdIt))
-        case (Nino(_), _, AfrRelationshipRepo) =>
-          Future.successful(Right(Service.PersonalIncomeRecord))
-        case (Vrn(_), _, _) =>
-          Future.successful(Right(Service.Vat))
-        case (Utr(_), _, _) =>
-          Future.successful(Right(Service.Trust))
-        case (CgtRef(_), _, _) =>
-          Future.successful(Right(Service.CapitalGains))
-        case (PptRef(_), _, _) =>
-          Future.successful(Right(Service.Ppt))
-        case (Urn(_), _, _) =>
-          Future.successful(Right(Service.TrustNT))
+        case (Nino(_), Some("ALL00001"), HipOrIfApi) => Future.successful(Right(Service.MtdIt))
+        case (Nino(_), Some("ITSAS001"), HipOrIfApi) => Future.successful(Right(Service.MtdItSupp))
+        case (Nino(_), None, HipOrIfApi) => Future.successful(Right(Service.MtdIt))
+        case (Nino(_), _, AfrRelationshipRepo) => Future.successful(Right(Service.PersonalIncomeRecord))
+        case (Vrn(_), _, _) => Future.successful(Right(Service.Vat))
+        case (Utr(_), _, _) => Future.successful(Right(Service.Trust))
+        case (CgtRef(_), _, _) => Future.successful(Right(Service.CapitalGains))
+        case (PptRef(_), _, _) => Future.successful(Right(Service.Ppt))
+        case (Urn(_), _, _) => Future.successful(Right(Service.TrustNT))
         case (CbcId(_), _, _) =>
           EitherT(makeSanitisedCbcEnrolmentKey(CbcId(taxIdentifier.value)))
             .map(x => Service(x.service))
             .leftMap(_ => RelationshipFailureResponse.TaxIdentifierError)
             .value
-        case (PlrId(_), _, _) =>
-          Future.successful(Right(Service.Pillar2))
+        case (PlrId(_), _, _) => Future.successful(Right(Service.Pillar2))
         case _ =>
           logger.warn("[validateAuthProfileToService] - could not match authProfile to Service")
           Future.successful(Left(RelationshipFailureResponse.TaxIdentifierError))

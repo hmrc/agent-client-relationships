@@ -62,17 +62,13 @@ with AuthActions {
         invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
         partialAuthRecords <-
           authResponse.getNino match {
-            case Some(ni) =>
-              partialAuthRepository.findByNino(Nino(ni))
-            case None =>
-              Future.successful(None)
+            case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
+            case None => Future.successful(None)
           }
         irvRelationshipExists <-
           authResponse.getNino match {
-            case Some(nino) =>
-              agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
-            case None =>
-              Future.successful(false)
+            case Some(nino) => agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
+            case None => Future.successful(false)
           }
         existingRelationships <-
           if (partialAuthRecords.exists(_.active) || irvRelationshipExists) {

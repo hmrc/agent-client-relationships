@@ -106,8 +106,7 @@ class ItsaDeauthAndCleanupService @Inject() (
                         currentUser.affinityGroup
                       )
                       .map(_ => true)
-                  case _ =>
-                    Future.successful(false)
+                  case _ => Future.successful(false)
                 }
             }
           // Clean up accepted invitations
@@ -138,8 +137,7 @@ class ItsaDeauthAndCleanupService @Inject() (
             }
           )
         } yield altItsa || itsa
-      case _ =>
-        Future.successful(false)
+      case _ => Future.successful(false)
     }
 
   private def deauthAcceptedInvitations(

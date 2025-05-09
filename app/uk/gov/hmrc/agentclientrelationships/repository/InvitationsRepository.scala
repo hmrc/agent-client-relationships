@@ -474,14 +474,10 @@ with Logging {
       pageNumber = pageNumber,
       filtersApplied =
         (statusFilter, clientName) match {
-          case (Some(f), Some(c)) =>
-            Some(Map("statusFilter" -> f, "clientFilter" -> c))
-          case (Some(f), None) =>
-            Some(Map("statusFilter" -> f))
-          case (None, Some(c)) =>
-            Some(Map("clientFilter" -> c))
-          case _ =>
-            None
+          case (Some(f), Some(c)) => Some(Map("statusFilter" -> f, "clientFilter" -> c))
+          case (Some(f), None) => Some(Map("statusFilter" -> f))
+          case (None, Some(c)) => Some(Map("clientFilter" -> c))
+          case _ => None
         }
     )
   }

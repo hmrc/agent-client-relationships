@@ -50,10 +50,8 @@ with ScalaFutures {
 
   def charset(result: Result): Option[String] =
     result.body.contentType match {
-      case Some(s) if s.contains("charset=") =>
-        Some(s.split("; *charset=").drop(1).mkString.trim)
-      case _ =>
-        None
+      case Some(s) if s.contains("charset=") => Some(s.split("; *charset=").drop(1).mkString.trim)
+      case _ => None
     }
 
   def verifySideEffectsOccur(assertion: Unit => Any*): Seq[Assertion] =

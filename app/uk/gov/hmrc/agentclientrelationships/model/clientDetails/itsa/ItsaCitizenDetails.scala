@@ -30,9 +30,7 @@ case class ItsaCitizenDetails(
 ) {
   lazy val name: Option[String] = {
     val n = Seq(firstName, lastName)
-      .collect { case Some(x) =>
-        x
-      }
+      .collect { case Some(x) => x }
       .mkString(" ")
     if (n.isEmpty)
       None

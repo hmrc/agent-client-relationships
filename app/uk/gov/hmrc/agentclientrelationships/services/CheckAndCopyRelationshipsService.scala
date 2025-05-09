@@ -152,11 +152,9 @@ with Logging {
             mNino = None
           )
         )
-      case vrn @ Vrn(_) =>
-        ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
+      case vrn @ Vrn(_) => ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
 
-      case _ =>
-        Future.successful(CheckAndCopyNotImplemented)
+      case _ => Future.successful(CheckAndCopyNotImplemented)
     }
   }
 
@@ -193,24 +191,24 @@ with Logging {
                   arn,
                   EnrolmentKey(Service.MtdIt, mtdItId)
                 ).flatMap {
-                    case Some(_) =>
-                      for {
-                        _ <-
-                          nino.fold[Future[Boolean]](Future.failed(new RuntimeException("nino not found")))(ni =>
-                            itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-                              HMRCMTDIT,
-                              arn.value,
-                              Some(mtdItId.value),
-                              ni.value
-                            )
+                  case Some(_) =>
+                    for {
+                      _ <-
+                        nino.fold[Future[Boolean]](Future.failed(new RuntimeException("nino not found")))(ni =>
+                          itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+                            HMRCMTDIT,
+                            arn.value,
+                            Some(mtdItId.value),
+                            ni.value
                           )
-                        _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
-                      } yield FoundAndCopied
-                    case None =>
-                      mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
-                      logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
-                      Future.successful(FoundButLockedCouldNotCopy)
-                  }
+                        )
+                      _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
+                    } yield FoundAndCopied
+                  case None =>
+                    mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
+                    logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
+                    Future.successful(FoundButLockedCouldNotCopy)
+                }
                   .recover { case NonFatal(ex) =>
                     logger.warn(
                       s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})",
@@ -324,8 +322,7 @@ with Logging {
                     mNino.getOrElse(throw new Exception("nino missing")).value
                   )
                 } yield AltItsaCreateRelationshipSuccess(partialAuth)
-              case _ =>
-                Future.successful(AltItsaNotFoundOrFailed)
+              case _ => Future.successful(AltItsaNotFoundOrFailed)
             }
           else
             Future.successful(NotFound)
@@ -412,16 +409,16 @@ with Logging {
                       arn,
                       EnrolmentKey(Service.Vat, vrn)
                     ).map {
-                        case Some(_) =>
-                          auditService.sendCreateRelationshipAuditEventForMtdVat()
-                          mark("Count-CopyRelationship-VAT-FoundAndCopied")
-                          FoundAndCopied
-                        case None =>
-                          auditService.sendCreateRelationshipAuditEventForMtdVat()
-                          mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
-                          logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
-                          FoundButLockedCouldNotCopy
-                      }
+                      case Some(_) =>
+                        auditService.sendCreateRelationshipAuditEventForMtdVat()
+                        mark("Count-CopyRelationship-VAT-FoundAndCopied")
+                        FoundAndCopied
+                      case None =>
+                        auditService.sendCreateRelationshipAuditEventForMtdVat()
+                        mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
+                        logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
+                        FoundButLockedCouldNotCopy
+                    }
                       .recover { case NonFatal(ex) =>
                         logger.warn(
                           s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
@@ -514,9 +511,7 @@ with Logging {
             .flatMap { maybeGroup =>
               maybeGroup.map(_.agentCode)
             }
-            .collect { case Some(ac) =>
-              ac
-            }
+            .collect { case Some(ac) => ac }
         }
       matching <-
         intersection[AgentCode](agentCodes.toSeq) {

@@ -85,9 +85,7 @@ object DeleteRecord {
           "authorization" -> hc.authorization.map(_.value),
           "sessionId" -> hc.sessionId.map(_.value),
           "gaToken" -> hc.gaToken
-        ).collect { case (key, Some(value)) =>
-          (key, JsString(value))
-        }
+        ).collect { case (key, Some(value)) => (key, JsString(value)) }
       )
     }
 
@@ -264,9 +262,7 @@ with Logging {
     .deleteMany(equal("arn", arn.value))
     .toFuture()
     .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
-    .recover { case e: MongoWriteException =>
-      Left(e.getMessage)
-    }
+    .recover { case e: MongoWriteException => Left(e.getMessage) }
 
   private def filter(
     arn: Arn,

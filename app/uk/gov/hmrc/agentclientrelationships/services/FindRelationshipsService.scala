@@ -118,32 +118,26 @@ with Logging {
       case RelationshipFailureResponse.RelationshipNotFound | RelationshipFailureResponse.RelationshipSuspended |
           RelationshipFailureResponse.TaxIdentifierError =>
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
-      case otherError =>
-        EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
+      case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
     }
 
-  def getInactiveRelationshipsForAgent(arn: Arn)(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] =
-    hipConnector.getInactiveRelationships(arn)
+  def getInactiveRelationshipsForAgent(
+    arn: Arn
+  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = hipConnector.getInactiveRelationships(arn)
 
   def getActiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
   )(implicit request: RequestHeader): Future[Map[Service, Seq[Arn]]] = Future
     .traverse(appConfig.supportedServicesWithoutPir) { service =>
       identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
-        case Some(taxId) =>
-          getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
-        case None =>
-          Future.successful(None)
+        case Some(taxId) => getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
+        case None => Future.successful(None)
       }
     }
     .map(
-      _.collect { case Some(x) =>
-          x
-        }
+      _.collect { case Some(x) => x }
         .groupBy(_._1)
-        .map { case (k, v) =>
-          (k, v.map(_._2))
-        }
+        .map { case (k, v) => (k, v.map(_._2)) }
     )
 
   def getInactiveRelationshipsForClient(
@@ -151,10 +145,8 @@ with Logging {
   )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = Future
     .traverse(appConfig.supportedServicesWithoutPir) { service =>
       identifiers.get(service) match {
-        case Some(taxId) =>
-          getInactiveRelationshipsForClient(taxId, service)
-        case None =>
-          Future.successful(Seq.empty)
+        case Some(taxId) => getInactiveRelationshipsForClient(taxId, service)
+        case None => Future.successful(Seq.empty)
       }
     }
     .map(_.flatten)

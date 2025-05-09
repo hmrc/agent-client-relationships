@@ -78,8 +78,7 @@ extends Logging {
           Nino(clientId.value),
           arn
         )
-      case _ =>
-        Future.successful(None)
+      case _ => Future.successful(None)
     }
 
   def deauthPartialAuth(
@@ -95,8 +94,7 @@ extends Logging {
           arn,
           Instant.now
         )
-      case _ =>
-        Future.successful(false)
+      case _ => Future.successful(false)
     }
 
   def deauthAltItsaInvitation(
@@ -115,8 +113,7 @@ extends Logging {
             deleteService.determineUserTypeFromAG(affinityGroup).getOrElse("HMRC")
           )
           .map(_.fold(false)(_ => true))
-      case _ =>
-        Future.successful(false)
+      case _ => Future.successful(false)
     }
 
   def replaceEnrolmentKeyForItsa(
@@ -129,16 +126,11 @@ extends Logging {
         ifOrHipConnector
           .getMtdIdFor(Nino(suppliedClientId.value))
           .map {
-            case Some(mtdItId) =>
-              Right(EnrolmentKey(service, mtdItId))
-            case None =>
-              Right(suppliedEnrolmentKey)
+            case Some(mtdItId) => Right(EnrolmentKey(service, mtdItId))
+            case None => Right(suppliedEnrolmentKey)
           }
-          .recover { case NonFatal(_) =>
-            Left(ClientRegistrationNotFound)
-          }
-      case _ =>
-        Future successful Right(suppliedEnrolmentKey)
+          .recover { case NonFatal(_) => Left(ClientRegistrationNotFound) }
+      case _ => Future successful Right(suppliedEnrolmentKey)
     }
 
 }

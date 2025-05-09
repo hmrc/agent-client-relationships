@@ -85,12 +85,9 @@ with AuthActions {
         userId
       )
       .map {
-        case CheckRelationshipFound =>
-          Ok
-        case CheckRelationshipNotFound(message) =>
-          NotFound(toJson(message))
-        case CheckRelationshipInvalidRequest =>
-          BadRequest
+        case CheckRelationshipFound => Ok
+        case CheckRelationshipNotFound(message) => NotFound(toJson(message))
+        case CheckRelationshipInvalidRequest => BadRequest
       }
   }
 
@@ -132,8 +129,7 @@ with AuthActions {
                 failIfAllocateAgentInESFails = true
               )
               .map {
-                case Some(_) =>
-                  Created
+                case Some(_) => Created
                 case None =>
                   logger.warn(s"create relationship is currently in Locked state");
                   Locked
@@ -148,8 +144,7 @@ with AuthActions {
               }
           }
 
-        case Left(error) =>
-          Future.successful(BadRequest(error))
+        case Left(error) => Future.successful(BadRequest(error))
       }
   }
 
@@ -178,10 +173,8 @@ with AuthActions {
                 maybeEk <-
                   taxIdentifier match {
                     // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
-                    case nino @ Nino(_) =>
-                      ifOrHipConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
-                    case _ =>
-                      Future.successful(Some(enrolmentKey))
+                    case nino @ Nino(_) => ifOrHipConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
+                    case _ => Future.successful(Some(enrolmentKey))
                   }
                 _ <-
                   maybeEk.fold {
@@ -203,8 +196,7 @@ with AuthActions {
                 InternalServerError(toJson(ex.getMessage))
             }
           }
-        case Left(error) =>
-          Future.successful(BadRequest(error))
+        case Left(error) => Future.successful(BadRequest(error))
       }
   }
 
@@ -215,9 +207,7 @@ with AuthActions {
         .map(relationships =>
           Ok(
             Json.toJson(
-              relationships.map { case (k, v) =>
-                (k.id, v)
-              }
+              relationships.map { case (k, v) => (k.id, v) }
             )
           )
         )
@@ -237,10 +227,8 @@ with AuthActions {
       findService
         .getActiveRelationshipsForClient(clientId, Service(service))
         .map {
-          case Some(relationship) =>
-            Ok(Json.toJson(relationship))
-          case None =>
-            NotFound
+          case Some(relationship) => Ok(Json.toJson(relationship))
+          case None => NotFound
         }
     }
   }
@@ -268,14 +256,11 @@ with AuthActions {
                 findService.getActiveRelationshipsForClient(taxIdentifier, Service(service))
               }
             relationships.map {
-              case Some(relationship) =>
-                Ok(Json.toJson(relationship))
-              case None =>
-                NotFound
+              case Some(relationship) => Ok(Json.toJson(relationship))
+              case None => NotFound
             }
           }
-        case Left(error) =>
-          Future.successful(BadRequest(error))
+        case Left(error) => Future.successful(BadRequest(error))
       }
   }
 
@@ -340,8 +325,7 @@ with AuthActions {
                     Ok // A legacy SA relationship was found but it is not mapped to the Arn
                 }
                 .recover {
-                  case e: UpstreamErrorResponse if e.statusCode == 404 =>
-                    Ok
+                  case e: UpstreamErrorResponse if e.statusCode == 404 => Ok
                 }
             }
             else

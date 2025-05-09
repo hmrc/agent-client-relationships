@@ -96,12 +96,9 @@ with AuthActions {
     val suppServices = serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
     (enrolments.map(_.service) ++ suppServices)
       .map {
-        case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") =>
-          "HMRC-MTD-IT"
-        case "HMRC-NI" | "HMRC-PT" =>
-          "PERSONAL-INCOME-RECORD"
-        case serviceKey =>
-          serviceKey
+        case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
+        case "HMRC-NI" | "HMRC-PT" => "PERSONAL-INCOME-RECORD"
+        case serviceKey => serviceKey
       }
       .toSet
   }
@@ -172,8 +169,7 @@ with AuthActions {
         case e: MongoWriteException if e.getError.getCode.equals(11000) =>
           logger.warn(s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion")
           Future(NoContent)
-        case other =>
-          Future.failed(other)
+        case other => Future.failed(other)
       }
   }
 

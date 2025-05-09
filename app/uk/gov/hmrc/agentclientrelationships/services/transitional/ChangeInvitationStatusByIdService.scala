@@ -63,11 +63,9 @@ extends Logging {
       invitationStoreResults <- findMatchingInvitationById(invitationId)
         .map(_.find(x => validInvitationStatusActionsFrom(invitationStatusAction).contains(x.status)))
         .flatMap {
-          case Some(invitation) =>
-            updateStatus(invitation, invitationStatusAction)
+          case Some(invitation) => updateStatus(invitation, invitationStatusAction)
 
-          case None =>
-            Future.successful(Left(InvitationNotFound))
+          case None => Future.successful(Left(InvitationNotFound))
         }
     } yield invitationStoreResults
 
@@ -83,14 +81,10 @@ extends Logging {
             fromStatus = invitation.status,
             toStatus =
               invitationStatusAction match {
-                case InvitationStatusAction.Accept if invitation.isAltItsa =>
-                  PartialAuth
-                case InvitationStatusAction.Accept =>
-                  Accepted
-                case InvitationStatusAction.Cancel =>
-                  Cancelled
-                case InvitationStatusAction.Reject =>
-                  Rejected
+                case InvitationStatusAction.Accept if invitation.isAltItsa => PartialAuth
+                case InvitationStatusAction.Accept => Accepted
+                case InvitationStatusAction.Cancel => Cancelled
+                case InvitationStatusAction.Reject => Rejected
               },
             endedBy = None,
             lastUpdated = None
@@ -126,9 +120,7 @@ extends Logging {
       lastUpdated = lastUpdated
     )
     .map(
-      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(
-        _ => Right(())
-      )
+      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(_ => Right(()))
     )
 
   private def createPartialAuthRecord(

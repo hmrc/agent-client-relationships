@@ -180,9 +180,7 @@ with Logging {
     .deleteMany(Filters.equal("arn", arn.value))
     .toFuture()
     .map(res => Right(res.getDeletedCount.toInt))
-    .recover { case ex: MongoWriteException =>
-      Left(ex.getMessage)
-    }
+    .recover { case ex: MongoWriteException => Left(ex.getMessage) }
 
   private def filter(
     arn: Arn,

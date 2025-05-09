@@ -60,9 +60,7 @@ object SimpleCbcSubscription {
 
     val emails = contacts
       .map(_.email)
-      .collect { case eml =>
-        eml
-      }
+      .collect { case eml => eml }
 
     JsSuccess(
       SimpleCbcSubscription(
