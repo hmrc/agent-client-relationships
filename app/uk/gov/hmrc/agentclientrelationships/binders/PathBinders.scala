@@ -22,9 +22,9 @@ import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 
+// scalafmt: { binPack.parentConstructors = Always }
 object PathBinders {
 
-  // scalafmt: { binPack.parentConstructors = Always }
   implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
   implicit object MtdItIdBinder extends SimpleObjectBinder[MtdItId](MtdItId.apply, _.value)
   implicit object NinoBinder extends SimpleObjectBinder[Nino](Nino.apply, _.value)
@@ -82,5 +82,3 @@ object PathBinders {
   }
 
 }
-
-// scalafmt: OFF
