@@ -35,20 +35,41 @@ object SimpleCbcSubscription {
   implicit val reads: Reads[SimpleCbcSubscription] = { json =>
     val isGBUser = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "isGBUser").as[Boolean]
     val tradingName = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "tradingName").asOpt[String]
-    val primaryContact =
-      (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "primaryContact").as[Seq[CbcContact]]
-    val secondaryContact =
-      (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "secondaryContact").as[Seq[CbcContact]]
+    val primaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "primaryContact").as[Seq[
+      CbcContact
+    ]]
+    val secondaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "secondaryContact").as[Seq[
+      CbcContact
+    ]]
     val contacts = primaryContact ++ secondaryContact
 
     val otherNames: Seq[String] = contacts.collect {
-      case CbcContact(_, Some(ind: CbcIndividual), _)   => ind.name
-      case CbcContact(_, _, Some(org: CbcOrganisation)) => org.organisationName
+      case CbcContact(
+            _,
+            Some(ind: CbcIndividual),
+            _
+          ) =>
+        ind.name
+      case CbcContact(
+            _,
+            _,
+            Some(org: CbcOrganisation)
+          ) =>
+        org.organisationName
     }
 
-    val emails = contacts.map(_.email).collect { case eml => eml }
+    val emails = contacts
+      .map(_.email)
+      .collect { case eml => eml }
 
-    JsSuccess(SimpleCbcSubscription(tradingName, otherNames, isGBUser, emails))
+    JsSuccess(
+      SimpleCbcSubscription(
+        tradingName,
+        otherNames,
+        isGBUser,
+        emails
+      )
+    )
   }
 }
 
@@ -82,6 +103,7 @@ case class RequestCommonForSubscription(
 )
 
 object RequestCommonForSubscription {
+
   // Format: ISO 8601 YYYY-MM-DDTHH:mm:ssZ e.g. 2020-09-23T16:12:11Zs
   private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
 
@@ -99,11 +121,15 @@ object RequestCommonForSubscription {
       conversationID = None
     )
   }
+
 }
 
 //-----------------------------------------------------------------------------
 
-case class ReadSubscriptionRequestDetail(IDType: String, IDNumber: String)
+case class ReadSubscriptionRequestDetail(
+  IDType: String,
+  IDNumber: String
+)
 
 object ReadSubscriptionRequestDetail {
   implicit val writes: Writes[ReadSubscriptionRequestDetail] = Json.writes[ReadSubscriptionRequestDetail]
@@ -111,9 +137,24 @@ object ReadSubscriptionRequestDetail {
 
 //-----------------------------------------------------------------------------
 
-case class CbcIndividual(firstName: String, lastName: String) { def name: String = s"$firstName $lastName" }
-object CbcIndividual { implicit val reads: Reads[CbcIndividual] = Json.reads[CbcIndividual] }
+case class CbcIndividual(
+  firstName: String,
+  lastName: String
+) {
+  def name: String = s"$firstName $lastName"
+}
+object CbcIndividual {
+  implicit val reads: Reads[CbcIndividual] = Json.reads[CbcIndividual]
+}
 case class CbcOrganisation(organisationName: String)
-object CbcOrganisation { implicit val reads: Reads[CbcOrganisation] = Json.reads[CbcOrganisation] }
-case class CbcContact(email: String, individual: Option[CbcIndividual], organisation: Option[CbcOrganisation])
-object CbcContact { implicit val reads: Reads[CbcContact] = Json.reads[CbcContact] }
+object CbcOrganisation {
+  implicit val reads: Reads[CbcOrganisation] = Json.reads[CbcOrganisation]
+}
+case class CbcContact(
+  email: String,
+  individual: Option[CbcIndividual],
+  organisation: Option[CbcOrganisation]
+)
+object CbcContact {
+  implicit val reads: Reads[CbcContact] = Json.reads[CbcContact]
+}

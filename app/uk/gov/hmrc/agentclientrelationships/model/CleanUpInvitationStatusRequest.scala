@@ -16,9 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 
-case class CleanUpInvitationStatusRequest(arn: String, clientId: String, service: String)
+case class CleanUpInvitationStatusRequest(
+  arn: String,
+  clientId: String,
+  service: String
+)
 
 object CleanUpInvitationStatusRequest {
   implicit val jsonFormat: OFormat[CleanUpInvitationStatusRequest] = Json.format[CleanUpInvitationStatusRequest]

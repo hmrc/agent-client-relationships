@@ -65,10 +65,11 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         val expectedStatus = testActionData._2
         val (service, taxIdentifier) = testset
         val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
-        val suppliedClientId = taxIdentifier match {
-          case _: MtdItId => ClientIdentifier(nino)
-          case taxId      => ClientIdentifier(taxId)
-        }
+        val suppliedClientId =
+          taxIdentifier match {
+            case _: MtdItId => ClientIdentifier(nino)
+            case taxId      => ClientIdentifier(taxId)
+          }
         val clientName = "TestClientName"
         val agentName = "testAgentName"
         val agentEmail = "agent@email.com"
@@ -76,34 +77,27 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
 
         s"when no invitation record for ${service.id}" should {
           s"return 404 NOT_FOUND" in {
-            val result = doAgentPutRequest(
-              requestPath("FakeInvitationId", action),
-              ""
-            )
+            val result = doAgentPutRequest(requestPath("FakeInvitationId", action), "")
             result.status shouldBe NOT_FOUND
           }
         }
 
         s"when invitation exists with Pending status in invitationStore for ${service.id}" should {
           s"update status to " in {
-            val newInvitation: Invitation = Invitation
-              .createNew(
-                arn.value,
-                service,
-                clientId,
-                suppliedClientId,
-                clientName,
-                agentName,
-                agentEmail,
-                expiryDate,
-                None
-              )
+            val newInvitation: Invitation = Invitation.createNew(
+              arn.value,
+              service,
+              clientId,
+              suppliedClientId,
+              clientName,
+              agentName,
+              agentEmail,
+              expiryDate,
+              None
+            )
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-            doAgentPutRequest(
-              requestPath(newInvitation.invitationId, action),
-              ""
-            ).status shouldBe 204
+            doAgentPutRequest(requestPath(newInvitation.invitationId, action), "").status shouldBe 204
 
             if (!newInvitation.isAltItsa)
               await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
@@ -132,10 +126,7 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
 
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-            doAgentPutRequest(
-              requestPath(newInvitation.invitationId, action),
-              ""
-            ).status shouldBe NOT_FOUND
+            doAgentPutRequest(requestPath(newInvitation.invitationId, action), "").status shouldBe NOT_FOUND
 
             await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
           }
@@ -160,24 +151,20 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE, "strideId-1234456")
         givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
 
-        val newInvitation = Invitation
-          .createNew(
-            arn.value,
-            service,
-            clientId,
-            suppliedClientId,
-            clientName,
-            agentName,
-            agentEmail,
-            expiryDate,
-            None
-          )
+        val newInvitation = Invitation.createNew(
+          arn.value,
+          service,
+          clientId,
+          suppliedClientId,
+          clientName,
+          agentName,
+          agentEmail,
+          expiryDate,
+          None
+        )
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-        doAgentPutRequest(
-          requestPath(newInvitation.invitationId, "accept"),
-          ""
-        ).status shouldBe 204
+        doAgentPutRequest(requestPath(newInvitation.invitationId, "accept"), "").status shouldBe 204
 
         await(partialAuthRepository.findActive(service.id, nino, arn)).get.active shouldBe true
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == PartialAuth
@@ -189,10 +176,7 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
   "handle errors" should {
     "when request data are incorrect" should {
       "return BadRequest 400 status when action is not valid for service" in {
-        doAgentPutRequest(
-          requestPath("AnyInvitationId", "fakeAtion"),
-          ""
-        ).status shouldBe 400
+        doAgentPutRequest(requestPath("AnyInvitationId", "fakeAtion"), "").status shouldBe 400
       }
     }
   }

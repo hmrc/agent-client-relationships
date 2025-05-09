@@ -27,40 +27,39 @@ import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRec
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.{Http, MongoApp, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 
 class RelationshipsControllerTestOnlyISpec
-    extends UnitSpec
-    with MongoApp
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DesStubs
-    with MappingStubs
-    with DataStreamStub
-    with IntegrationPatience {
+extends UnitSpec
+with MongoApp
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DesStubs
+with MappingStubs
+with DataStreamStub
+with IntegrationPatience {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
-        "microservice.services.if.port"                    -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes",
-        "features.recovery-enable"                         -> false
-      )
-      .configure(mongoConfiguration)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure(
+      "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+      "microservice.services.tax-enrolments.port"        -> wireMockPort,
+      "microservice.services.users-groups-search.port"   -> wireMockPort,
+      "microservice.services.des.port"                   -> wireMockPort,
+      "microservice.services.if.port"                    -> wireMockPort,
+      "microservice.services.auth.port"                  -> wireMockPort,
+      "microservice.services.agent-mapping.port"         -> wireMockPort,
+      "auditing.consumer.baseUri.host"                   -> wireMockHost,
+      "auditing.consumer.baseUri.port"                   -> wireMockPort,
+      "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes",
+      "features.recovery-enable"                         -> false
+    )
+    .configure(mongoConfiguration)
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
 
   def repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 

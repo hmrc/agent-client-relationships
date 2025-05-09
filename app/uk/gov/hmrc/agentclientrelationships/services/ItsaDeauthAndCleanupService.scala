@@ -17,20 +17,32 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.mvc.Request
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{agentRoleChange, howPartialAuthTerminatedKey, howRelationshipTerminatedKey}
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.agentRoleChange
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howPartialAuthTerminatedKey
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howRelationshipTerminatedKey
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, EnrolmentKey, Invitation, PartialAuth}
+import uk.gov.hmrc.agentclientrelationships.model.Accepted
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.Instant
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 // scalastyle:off method.length
 @Singleton
@@ -49,62 +61,81 @@ class ItsaDeauthAndCleanupService @Inject() (
     nino: String,
     timestamp: Instant = Instant.now()
   )(implicit
-    hc: HeaderCarrier,
-    currentUser: CurrentUser,
-    request: Request[_]
+    request: RequestHeader,
+    currentUser: CurrentUser
   ): Future[Boolean] =
     service match {
       case `HMRCMTDIT` | `HMRCMTDITSUPP` =>
-        val serviceToCheck = Service.forId(if (service == HMRCMTDIT) HMRCMTDITSUPP else HMRCMTDIT)
+        val serviceToCheck = Service.forId(
+          if (service == HMRCMTDIT)
+            HMRCMTDITSUPP
+          else
+            HMRCMTDIT
+        )
         for {
           // Attempt to remove existing alt itsa partial auth
-          altItsa <- partialAuthRepository.deauthorise(serviceToCheck.id, Nino(nino), Arn(arn), timestamp)
-          _ = if (altItsa) {
-                implicit val auditData: AuditData = new AuditData()
-                auditData.set(howPartialAuthTerminatedKey, agentRoleChange)
-                auditService.sendTerminatePartialAuthAuditEvent(
-                  arn,
-                  serviceToCheck.id,
-                  nino
-                )
-              }
+          altItsa <- partialAuthRepository.deauthorise(
+            serviceToCheck.id,
+            Nino(nino),
+            Arn(arn),
+            timestamp
+          )
+          _ =
+            if (altItsa) {
+              implicit val auditData: AuditData = new AuditData()
+              auditData.set(howPartialAuthTerminatedKey, agentRoleChange)
+              auditService.sendTerminatePartialAuthAuditEvent(
+                arn,
+                serviceToCheck.id,
+                nino
+              )
+            }
           // Attempt to remove existing itsa relationship
-          itsa <- optMtdItId.fold(Future.successful(false)) { mtdItId =>
-                    checkRelationshipsService
-                      .checkForRelationshipAgencyLevel(
+          itsa <-
+            optMtdItId.fold(Future.successful(false)) { mtdItId =>
+              checkRelationshipsService
+                .checkForRelationshipAgencyLevel(Arn(arn), EnrolmentKey(serviceToCheck, MtdItId(mtdItId)))
+                .flatMap {
+                  case (true, _) =>
+                    implicit val auditData: AuditData = new AuditData()
+                    auditData.set(howRelationshipTerminatedKey, agentRoleChange)
+                    deleteRelationshipsService
+                      .deleteRelationship(
                         Arn(arn),
-                        EnrolmentKey(
-                          serviceToCheck,
-                          MtdItId(mtdItId)
-                        )
+                        EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
+                        currentUser.affinityGroup
                       )
-                      .flatMap {
-                        case (true, _) =>
-                          implicit val auditData: AuditData = new AuditData()
-                          auditData.set(howRelationshipTerminatedKey, agentRoleChange)
-                          deleteRelationshipsService
-                            .deleteRelationship(
-                              Arn(arn),
-                              EnrolmentKey(
-                                serviceToCheck,
-                                MtdItId(mtdItId)
-                              ),
-                              currentUser.affinityGroup
-                            )
-                            .map(_ => true)
-                        case _ => Future.successful(false)
-                      }
-                  }
+                      .map(_ => true)
+                  case _ => Future.successful(false)
+                }
+            }
           // Clean up accepted invitations
           _ <- Future.successful(
-                 if (altItsa) deauthAcceptedInvitations(serviceToCheck.id, Some(arn), nino, isAltItsa = true, timestamp)
-                 else Future.unit
-               )
-          _ <- Future.successful(optMtdItId.fold(Future.unit) { mtdItId =>
-                 if (itsa)
-                   deauthAcceptedInvitations(serviceToCheck.id, Some(arn), mtdItId, isAltItsa = false, timestamp)
-                 else Future.unit
-               })
+            if (altItsa)
+              deauthAcceptedInvitations(
+                serviceToCheck.id,
+                Some(arn),
+                nino,
+                isAltItsa = true,
+                timestamp
+              )
+            else
+              Future.unit
+          )
+          _ <- Future.successful(
+            optMtdItId.fold(Future.unit) { mtdItId =>
+              if (itsa)
+                deauthAcceptedInvitations(
+                  serviceToCheck.id,
+                  Some(arn),
+                  mtdItId,
+                  isAltItsa = false,
+                  timestamp
+                )
+              else
+                Future.unit
+            }
+          )
         } yield altItsa || itsa
       case _ => Future.successful(false)
     }
@@ -116,7 +147,11 @@ class ItsaDeauthAndCleanupService @Inject() (
     isAltItsa: Boolean,
     timestamp: Instant
   ) = {
-    val acceptedStatus = if (isAltItsa) PartialAuth else Accepted
+    val acceptedStatus =
+      if (isAltItsa)
+        PartialAuth
+      else
+        Accepted
     invitationsRepository
       .findAllBy(
         arn = optArn,
@@ -126,10 +161,13 @@ class ItsaDeauthAndCleanupService @Inject() (
       )
       .fallbackTo(Future.successful(Nil))
       .map { acceptedInvitations: Seq[Invitation] =>
-        acceptedInvitations
-          .foreach(acceptedInvitation =>
-            invitationsRepository.deauthInvitation(acceptedInvitation.invitationId, endedByClient, Some(timestamp))
+        acceptedInvitations.foreach(acceptedInvitation =>
+          invitationsRepository.deauthInvitation(
+            acceptedInvitation.invitationId,
+            endedByClient,
+            Some(timestamp)
           )
+        )
       }
   }
 

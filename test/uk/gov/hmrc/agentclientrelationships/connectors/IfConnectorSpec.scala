@@ -16,60 +16,45 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import org.mockito.Mockito.when
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HttpClient, RequestId, SessionId}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class IfConnectorSpec extends UnitSpec with MockitoSugar {
+class IfConnectorSpec
+extends UnitSpec
+with MockitoSugar {
+
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   val appConfig: AppConfig = mock[AppConfig]
-  val hc: HeaderCarrier = mock[HeaderCarrier]
-  val httpClient: HttpClient = mock[HttpClient]
+  val request: RequestHeader = mock[RequestHeader]
+  val httpClient: HttpClientV2 = mock[HttpClientV2]
   val metrics: Metrics = mock[Metrics]
+  val correlationIdGenerator: CorrelationIdGenerator = mock[CorrelationIdGenerator]
 
-  val underTest = new IfConnector(httpClient, ec)(metrics, appConfig)
+  val underTest =
+    new IfConnector(
+      httpClient,
+      correlationIdGenerator,
+      appConfig
+    )(metrics, ec)
 
   "ifHeaders" should {
-    "contain correct headers" when {
-      "internally hosted service" in {
-
-        val headersMap = underTest
-          .ifHeaders("testAuthToken", "testEnv", isInternalHost = true)(
-            HeaderCarrier(
-              authorization = Some(Authorization("auth-123")),
-              sessionId = Some(SessionId("session-123")),
-              requestId = Some(RequestId("request-123"))
-            )
-          )
-          .toMap
-
-        headersMap should contain("Environment" -> "testEnv")
-        headersMap.contains("CorrelationId") shouldBe true
-      }
-
-      "externally hosted service" in {
-
-        val headersMap = underTest
-          .ifHeaders("testAuthToken", "testEnv", isInternalHost = false)(
-            HeaderCarrier(
-              authorization = Some(Authorization("auth-123")),
-              sessionId = Some(SessionId("session-123")),
-              requestId = Some(RequestId("request-123"))
-            )
-          )
-          .toMap
-
-        headersMap should contain("Authorization" -> "Bearer testAuthToken")
-        headersMap should contain("Environment" -> "testEnv")
-        headersMap should contain("X-Session-ID" -> "session-123")
-        headersMap.contains("CorrelationId") shouldBe true
-        headersMap.contains("X-Request-ID") shouldBe true
-      }
+    "contain correct headers" in {
+      when(correlationIdGenerator.makeCorrelationId()).thenReturn("testCorrelationId")
+      underTest.ifHeaders("testAuthToken", "testEnv").toMap shouldBe
+        Map(
+          "Authorization" -> "Bearer testAuthToken",
+          "Environment" -> "testEnv",
+          "CorrelationId" -> "testCorrelationId"
+        )
     }
   }
+
 }

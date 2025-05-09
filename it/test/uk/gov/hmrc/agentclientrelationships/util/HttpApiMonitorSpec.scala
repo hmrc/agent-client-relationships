@@ -26,15 +26,16 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpAPIMonitor {
+class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpApiMonitor {
 
-  override implicit val patienceConfig: PatienceConfig =
-    PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(
+    scaled(Span(30, Seconds)),
+    scaled(Span(2, Seconds))
+  )
 
   override lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder().configure("metrics.enabled" -> true)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure("metrics.enabled" -> true)
 
   val metrics: Metrics = app.injector.instanceOf[Metrics]
   val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]

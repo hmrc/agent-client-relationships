@@ -18,35 +18,53 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito._
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
 import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.{ConfigLoader, Configuration}
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import play.api.ConfigLoader
+import play.api.Configuration
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship, RegistrationRelationshipResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.{SaRef, VatRef}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, ResettingMockitoSugar, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.domain._
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach with ResettingMockitoSugar {
+class CheckAndCopyRelationshipServiceSpec
+extends UnitSpec
+with BeforeAndAfterEach
+with ResettingMockitoSugar {
 
   val testDataGenerator = new Generator()
   val arn: Arn = Arn("AARN0000002")
@@ -60,7 +78,14 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   val agentGroupId = "testGroupId"
   val agentCodeForVatDecAgent: AgentCode = AgentCode("oldAgentCode")
   val agentCodeForAsAgent: AgentCode = AgentCode("ABC1234")
-  val agentUserForAsAgent = Right(AgentUser(agentUserId, agentGroupId, agentCodeForAsAgent, arn))
+  val agentUserForAsAgent = Right(
+    AgentUser(
+      agentUserId,
+      agentGroupId,
+      agentCodeForAsAgent,
+      arn
+    )
+  )
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord = RelationshipCopyRecord(
     arn.value,
@@ -100,14 +125,22 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-vat"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
-  when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]]))
-    .thenReturn(Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$"))
-  implicit val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
-  val appConfig1: AppConfig = new AppConfig(configuration, servicesConfig)
+  when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]])).thenReturn(
+    Seq(
+      "^.*\\.service$",
+      "^.*\\.mdtp$",
+      "^localhost$"
+    )
+  )
+  val appConfig: AppConfig = new AppConfig(configuration, servicesConfig)
 
-  val needsRetryStatuses = Seq[Option[SyncStatus]](None, Some(InProgress), Some(IncompleteInputParams), Some(Failed))
+  val needsRetryStatuses = Seq[Option[SyncStatus]](
+    None,
+    Some(InProgress),
+    Some(IncompleteInputParams),
+    Some(Failed)
+  )
 
-  val hc = HeaderCarrier()
   val ec = implicitly[ExecutionContext]
 
   "tryCreateITSARelationshipFromPartialAuthOrCopyAcross" should {
@@ -130,33 +163,34 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
 
-        val relationshipsService = new CheckAndCopyRelationshipsService(
-          es,
-          ifOrHipConnector,
-          des,
-          mapping,
-          ugs,
-          relationshipCopyRepository,
-          new CreateRelationshipsService(
+        val relationshipsService =
+          new CheckAndCopyRelationshipsService(
             es,
-            hipConnector,
+            ifOrHipConnector,
+            des,
+            mapping,
+            ugs,
             relationshipCopyRepository,
-            lockService,
+            new CreateRelationshipsService(
+              es,
+              hipConnector,
+              relationshipCopyRepository,
+              lockService,
+              auditService,
+              deleteRecordRepository,
+              agentUserService,
+              aucdConnector,
+              metrics
+            ),
+            partialAuthRepository,
+            invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
-            deleteRecordRepository,
-            agentUserService,
-            aucdConnector,
-            metrics
-          ),
-          partialAuthRepository,
-          invitationsRepository,
-          itsaDeauthAndCleanupService,
-          auditService,
-          metrics
-        )
+            metrics,
+            appConfig
+          )
 
-        val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -173,30 +207,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -207,10 +243,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
 
-          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-            relationshipsService
-              .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
-          })
+          val maybeCheck: Option[CheckAndCopyResult] = await(
+            lockService.recoveryLock(arn, mtdItEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -227,30 +264,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -259,8 +298,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           partialAuthDoesNotExist()
           cesaRelationshipDoesNotExist()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEtmpRecordNotCreated()
@@ -274,45 +312,42 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
           when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
-          when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey]))
-            .thenReturn(Future.successful(1))
-          when(
-            agentUserService
-              .getAgentAdminAndSetAuditData(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+          when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+            Future.successful(agentUserForAsAgent)
           )
-            .thenReturn(Future.successful(agentUserForAsAgent))
-          when(
-            agentUserService
-              .getAgentAdminAndSetAuditData(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+            Future.successful(agentUserForAsAgent)
           )
-            .thenReturn(Future.successful(agentUserForAsAgent))
           sendCreateRelationshipAuditEvent()()
           deleteSameAgentOtherItsaService()
 
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -325,8 +360,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -344,30 +378,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -378,10 +414,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
 
-          val maybeCheck = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-            relationshipsService
-              .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
-          })
+          val maybeCheck = await(
+            lockService.recoveryLock(arn, mtdItEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -399,30 +436,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = $status" in {
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -431,8 +470,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           partialAuthDoesNotExist()
           cesaRelationshipDoesNotExist()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -448,30 +486,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -485,8 +525,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           sendCreateRelationshipAuditEvent()()
           deleteSameAgentOtherItsaService()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -508,30 +547,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -540,8 +581,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           partialAuthDoesNotExist()
           cesaRelationshipDoesNotExist()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -552,30 +592,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     s"not create relationship if Partialauth is for $HMRCMTDITSUPP but the request is for $HMRCMTDIT" in {
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val lockService = new FakeLockService
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
-          hipConnector,
+          ifOrHipConnector,
+          des,
+          mapping,
+          ugs,
           relationshipCopyRepository,
-          lockService,
+          new CreateRelationshipsService(
+            es,
+            hipConnector,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            deleteRecordRepository,
+            agentUserService,
+            aucdConnector,
+            metrics
+          ),
+          partialAuthRepository,
+          invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
+          metrics,
+          appConfig
+        )
 
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -583,8 +625,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       ninoExists()
       partialAuthExists(HMRCMTDITSUPP)
 
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
       await(check) shouldBe NotFound
 
       verifyEsRecordNotCreated()
@@ -594,30 +635,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
-          hipConnector,
+          ifOrHipConnector,
+          des,
+          mapping,
+          ugs,
           relationshipCopyRepository,
-          lockService,
+          new CreateRelationshipsService(
+            es,
+            hipConnector,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            deleteRecordRepository,
+            agentUserService,
+            aucdConnector,
+            metrics
+          ),
+          partialAuthRepository,
+          invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
+          metrics,
+          appConfig
+        )
       val auditData = new AuditData()
       val request = FakeRequest()
 
@@ -625,8 +668,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       partialAuthDoesNotExist()
       mappingServiceUnavailable()
 
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -638,30 +680,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       await(relationshipCopyRepository.create(record))
       val lockService = new FakeLockService
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
-          hipConnector,
+          ifOrHipConnector,
+          des,
+          mapping,
+          ugs,
           relationshipCopyRepository,
-          lockService,
+          new CreateRelationshipsService(
+            es,
+            hipConnector,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            deleteRecordRepository,
+            agentUserService,
+            aucdConnector,
+            metrics
+          ),
+          partialAuthRepository,
+          invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
+          metrics,
+          appConfig
+        )
 
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -671,8 +715,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       cesaRelationshipExists()
       relationshipWillBeCreated(mtdItEnrolmentKey)
 
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -690,30 +733,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         await(relationshipCopyRepository.create(record))
         val lockService = new FakeLockService
-        val relationshipsService = new CheckAndCopyRelationshipsService(
-          es,
-          ifOrHipConnector,
-          des,
-          mapping,
-          ugs,
-          relationshipCopyRepository,
-          new CreateRelationshipsService(
+        val relationshipsService =
+          new CheckAndCopyRelationshipsService(
             es,
-            hipConnector,
+            ifOrHipConnector,
+            des,
+            mapping,
+            ugs,
             relationshipCopyRepository,
-            lockService,
+            new CreateRelationshipsService(
+              es,
+              hipConnector,
+              relationshipCopyRepository,
+              lockService,
+              auditService,
+              deleteRecordRepository,
+              agentUserService,
+              aucdConnector,
+              metrics
+            ),
+            partialAuthRepository,
+            invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
-            deleteRecordRepository,
-            agentUserService,
-            aucdConnector,
-            metrics
-          ),
-          partialAuthRepository,
-          invitationsRepository,
-          itsaDeauthAndCleanupService,
-          auditService,
-          metrics
-        )
+            metrics,
+            appConfig
+          )
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -723,8 +768,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItEnrolmentKey)
 
-        val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
         val checkAndCopyResult = await(check)
         checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -738,30 +782,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       "a relationshipCopyRecord and return FoundButLockedCouldNotCopy to any request that may arrive while copy across is in progress" in {
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
-        val relationshipsService = new CheckAndCopyRelationshipsService(
-          es,
-          ifOrHipConnector,
-          des,
-          mapping,
-          ugs,
-          relationshipCopyRepository,
-          new CreateRelationshipsService(
+        val relationshipsService =
+          new CheckAndCopyRelationshipsService(
             es,
-            hipConnector,
+            ifOrHipConnector,
+            des,
+            mapping,
+            ugs,
             relationshipCopyRepository,
-            lockService,
+            new CreateRelationshipsService(
+              es,
+              hipConnector,
+              relationshipCopyRepository,
+              lockService,
+              auditService,
+              deleteRecordRepository,
+              agentUserService,
+              aucdConnector,
+              metrics
+            ),
+            partialAuthRepository,
+            invitationsRepository,
+            itsaDeauthAndCleanupService,
             auditService,
-            deleteRecordRepository,
-            agentUserService,
-            aucdConnector,
-            metrics
-          ),
-          partialAuthRepository,
-          invitationsRepository,
-          itsaDeauthAndCleanupService,
-          auditService,
-          metrics
-        )
+            metrics,
+            appConfig
+          )
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -771,10 +817,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         cesaRelationshipExists()
         metricsStub()
 
-        val check = await(lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-          relationshipsService
-            .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
-        })
+        val check = await(
+          lockService.recoveryLock(arn, mtdItEnrolmentKey) {
+            relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+          }
+        )
 
         check.value shouldBe FoundButLockedCouldNotCopy
 
@@ -788,7 +835,60 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       "a relationshipCopyRecord and return FoundButLockedCouldNotCopy to any request that may arrive while copy across is in progress" in {
         val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
         val lockService = new FakeLockService
-        val relationshipsService = new CheckAndCopyRelationshipsService(
+        val relationshipsService =
+          new CheckAndCopyRelationshipsService(
+            es,
+            ifOrHipConnector,
+            des,
+            mapping,
+            ugs,
+            relationshipCopyRepository,
+            new CreateRelationshipsService(
+              es,
+              hipConnector,
+              relationshipCopyRepository,
+              lockService,
+              auditService,
+              deleteRecordRepository,
+              agentUserService,
+              aucdConnector,
+              metrics
+            ),
+            partialAuthRepository,
+            invitationsRepository,
+            itsaDeauthAndCleanupService,
+            auditService,
+            metrics,
+            appConfig
+          )
+
+        val auditData = new AuditData()
+        val request = FakeRequest()
+
+        oldESRelationshipExists()
+        vrnIsKnownInETMP(vrn, true)
+        metricsStub()
+        auditStub()
+
+        val check = await(
+          lockService.recoveryLock(arn, vatEnrolmentKey) {
+            relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+          }
+        )
+
+        check.value shouldBe FoundButLockedCouldNotCopy
+
+        verifyEtmpRecordNotCreated()
+        verifyEsRecordNotCreated()
+
+        await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)) shouldBe None
+      }
+
+    "create relationship when there is no legacy relationship in CESA but there is a alt-itsa authorisation in place." in {
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      val lockService = new FakeLockService
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
           ifOrHipConnector,
           des,
@@ -810,57 +910,9 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
-
-        val auditData = new AuditData()
-        val request = FakeRequest()
-
-        oldESRelationshipExists()
-        vrnIsKnownInETMP(vrn, true)
-        metricsStub()
-        auditStub()
-
-        val check = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
-          relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
-        })
-
-        check.value shouldBe FoundButLockedCouldNotCopy
-
-        verifyEtmpRecordNotCreated()
-        verifyEsRecordNotCreated()
-
-        await(relationshipCopyRepository.findBy(arn, vatEnrolmentKey)) shouldBe None
-      }
-
-    "create relationship when there is no legacy relationship in CESA but there is a alt-itsa authorisation in place." in {
-      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val lockService = new FakeLockService
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
-          es,
-          hipConnector,
-          relationshipCopyRepository,
-          lockService,
-          auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
 
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -877,66 +929,15 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       sendCreateRelationshipAuditEvent()()
       deleteSameAgentOtherItsaService()
 
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
       await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDIT)
     }
 
     "create relationship when there is an alt-itsa authorisation in place for SUPP agent type. " in {
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val lockService = new FakeLockService
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
-          es,
-          hipConnector,
-          relationshipCopyRepository,
-          lockService,
-          auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
-
-      val auditData = new AuditData()
-      val request = FakeRequest()
-
-      ninoExists()
-      partialAuthExists(HMRCMTDITSUPP)
-      adminUserExistsForArn()
-      relationshipWillBeCreated(mtdItSuppEnrolmentKey)
-      partialAuthDeleted(HMRCMTDITSUPP)
-      partialAuthStatusUpdatedToAccepted(HMRCMTDITSUPP)
-      metricsStub()
-      auditStub()
-      sendCreateRelationshipAuditEvent()()
-      deleteSameAgentOtherItsaService()
-
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(ec, hc, request, auditData)
-      await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDITSUPP)
-    }
-  }
-
-  "checkESForOldRelationshipAndCopyForMtdVat" should {
-
-    needsRetryStatuses.foreach { status =>
-      s"create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-        val lockService = new FakeLockService
-        val relationshipsService = new CheckAndCopyRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
           ifOrHipConnector,
           des,
@@ -958,8 +959,61 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      ninoExists()
+      partialAuthExists(HMRCMTDITSUPP)
+      adminUserExistsForArn()
+      relationshipWillBeCreated(mtdItSuppEnrolmentKey)
+      partialAuthDeleted(HMRCMTDITSUPP)
+      partialAuthStatusUpdatedToAccepted(HMRCMTDITSUPP)
+      metricsStub()
+      auditStub()
+      sendCreateRelationshipAuditEvent()()
+      deleteSameAgentOtherItsaService()
+
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(request, auditData)
+      await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDITSUPP)
+    }
+  }
+
+  "checkESForOldRelationshipAndCopyForMtdVat" should {
+
+    needsRetryStatuses.foreach { status =>
+      s"create ETMP relationship and return FoundAndCopied if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+        val lockService = new FakeLockService
+        val relationshipsService =
+          new CheckAndCopyRelationshipsService(
+            es,
+            ifOrHipConnector,
+            des,
+            mapping,
+            ugs,
+            relationshipCopyRepository,
+            new CreateRelationshipsService(
+              es,
+              hipConnector,
+              relationshipCopyRepository,
+              lockService,
+              auditService,
+              deleteRecordRepository,
+              agentUserService,
+              aucdConnector,
+              metrics
+            ),
+            partialAuthRepository,
+            invitationsRepository,
+            itsaDeauthAndCleanupService,
+            auditService,
+            metrics,
+            appConfig
+          )
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -971,8 +1025,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         metricsStub()
         auditStub()
 
-        val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -990,30 +1043,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -1024,10 +1079,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           metricsStub()
           auditStub()
 
-          val maybeCheck: Option[CheckAndCopyResult] = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
-            relationshipsService
-              .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
-          })
+          val maybeCheck: Option[CheckAndCopyResult] = await(
+            lockService.recoveryLock(arn, vatEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -1044,30 +1100,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = $status and syncToESStatus = None" in {
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -1075,8 +1133,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           oldESRelationshipDoesNotExist()
           auditStub()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEtmpRecordNotCreatedForMtdVat()
@@ -1086,30 +1143,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     s"return VrnNotFoundInEtmp when relationship currently exists in HMCE-VATDEC-ORG but Vrn is not known in ETMP " in {
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
       val lockService = new FakeLockService
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
-          hipConnector,
+          ifOrHipConnector,
+          des,
+          mapping,
+          ugs,
           relationshipCopyRepository,
-          lockService,
+          new CreateRelationshipsService(
+            es,
+            hipConnector,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            deleteRecordRepository,
+            agentUserService,
+            aucdConnector,
+            metrics
+          ),
+          partialAuthRepository,
+          invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
+          metrics,
+          appConfig
+        )
 
       val auditData = new AuditData()
       val request = FakeRequest()
@@ -1118,8 +1177,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       vrnIsKnownInETMP(vrn, false)
       auditStub()
 
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
       await(check) shouldBe VrnNotFoundInEtmp
 
       verifyEtmpRecordNotCreatedForMtdVat()
@@ -1132,38 +1190,37 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
           when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
-          when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey]))
-            .thenReturn(Future.successful(1))
-          when(
-            agentUserService
-              .getAgentAdminAndSetAuditData(any[Arn])(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
+          when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+            Future.successful(agentUserForAsAgent)
           )
-            .thenReturn(Future.successful(agentUserForAsAgent))
 
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -1176,8 +1233,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           metricsStub()
           auditStub()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -1195,30 +1251,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
           await(relationshipCopyRepository.create(record))
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -1229,10 +1287,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           metricsStub()
           auditStub()
 
-          val maybeCheck = await(lockService.recoveryLock(arn, vatEnrolmentKey) {
-            relationshipsService
-              .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
-          })
+          val maybeCheck = await(
+            lockService.recoveryLock(arn, vatEnrolmentKey) {
+              relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+            }
+          )
 
           maybeCheck.value shouldBe FoundButLockedCouldNotCopy
 
@@ -1250,30 +1309,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         s"even if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = $status" in {
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -1281,8 +1342,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           oldESRelationshipDoesNotExist()
           auditStub()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -1298,30 +1358,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -1332,8 +1394,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           vrnIsKnownInETMP(vrn, true)
           relationshipWillBeCreated(vatEnrolmentKey)
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -1355,30 +1416,32 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           await(relationshipCopyRepository.create(record))
           val lockService = new FakeLockService
-          val relationshipsService = new CheckAndCopyRelationshipsService(
-            es,
-            ifOrHipConnector,
-            des,
-            mapping,
-            ugs,
-            relationshipCopyRepository,
-            new CreateRelationshipsService(
+          val relationshipsService =
+            new CheckAndCopyRelationshipsService(
               es,
-              hipConnector,
+              ifOrHipConnector,
+              des,
+              mapping,
+              ugs,
               relationshipCopyRepository,
-              lockService,
+              new CreateRelationshipsService(
+                es,
+                hipConnector,
+                relationshipCopyRepository,
+                lockService,
+                auditService,
+                deleteRecordRepository,
+                agentUserService,
+                aucdConnector,
+                metrics
+              ),
+              partialAuthRepository,
+              invitationsRepository,
+              itsaDeauthAndCleanupService,
               auditService,
-              deleteRecordRepository,
-              agentUserService,
-              aucdConnector,
-              metrics
-            ),
-            partialAuthRepository,
-            invitationsRepository,
-            itsaDeauthAndCleanupService,
-            auditService,
-            metrics
-          )
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
@@ -1386,8 +1449,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           oldESRelationshipDoesNotExist()
           auditStub()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -1398,98 +1460,8 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
-          es,
-          hipConnector,
-          relationshipCopyRepository,
-          lockService,
-          auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
-      val auditData = new AuditData()
-      val request = FakeRequest()
-      mappingServiceUnavailableForMtdVat()
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
-
-      an[UpstreamErrorResponse] should be thrownBy await(check)
-
-      verifyEsRecordNotCreatedMtdVat()
-      verifyEtmpRecordNotCreatedForMtdVat()
-    }
-
-    "not create ETMP or ES relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = Success" in {
-      val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = Some(Success))
-      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      await(relationshipCopyRepository.create(record))
-      val lockService = new FakeLockService
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
-          es,
-          hipConnector,
-          relationshipCopyRepository,
-          lockService,
-          auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
-
-      val auditData = new AuditData()
-      val request = FakeRequest()
-
-      oldESRelationshipExists()
-      relationshipWillBeCreated(vatEnrolmentKey)
-
-      val check = relationshipsService
-        .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
-
-      val checkAndCopyResult = await(check)
-      checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
-      checkAndCopyResult.grantAccess shouldBe false
-
-      verifyEsRecordNotCreated()
-      verifyEtmpRecordNotCreatedForMtdVat()
-    }
-
-    "not create ES relationship if RelationshipCopyRecord exists syncToESStatus is In Progress because we can't tell " +
-      "whether the ES copy happened successfully but the the status update failed e.g. due to a container kill and in " +
-      "that case we would be re-copying a relationship that has been removed in ES. It is more important that we never " +
-      "copy to ES twice than that the synch works!" in {
-        val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = Some(InProgress))
-        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-        await(relationshipCopyRepository.create(record))
-        val lockService = new FakeLockService
-        val relationshipsService = new CheckAndCopyRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
           ifOrHipConnector,
           des,
@@ -1511,8 +1483,102 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics
+          metrics,
+          appConfig
         )
+      val auditData = new AuditData()
+      val request = FakeRequest()
+      mappingServiceUnavailableForMtdVat()
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+
+      an[UpstreamErrorResponse] should be thrownBy await(check)
+
+      verifyEsRecordNotCreatedMtdVat()
+      verifyEtmpRecordNotCreatedForMtdVat()
+    }
+
+    "not create ETMP or ES relationship if RelationshipCopyRecord exists with syncToETMPStatus = Success and syncToESStatus = Success" in {
+      val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = Some(Success))
+      val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+      await(relationshipCopyRepository.create(record))
+      val lockService = new FakeLockService
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
+          es,
+          ifOrHipConnector,
+          des,
+          mapping,
+          ugs,
+          relationshipCopyRepository,
+          new CreateRelationshipsService(
+            es,
+            hipConnector,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            deleteRecordRepository,
+            agentUserService,
+            aucdConnector,
+            metrics
+          ),
+          partialAuthRepository,
+          invitationsRepository,
+          itsaDeauthAndCleanupService,
+          auditService,
+          metrics,
+          appConfig
+        )
+
+      val auditData = new AuditData()
+      val request = FakeRequest()
+
+      oldESRelationshipExists()
+      relationshipWillBeCreated(vatEnrolmentKey)
+
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+
+      val checkAndCopyResult = await(check)
+      checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
+      checkAndCopyResult.grantAccess shouldBe false
+
+      verifyEsRecordNotCreated()
+      verifyEtmpRecordNotCreatedForMtdVat()
+    }
+
+    "not create ES relationship if RelationshipCopyRecord exists syncToESStatus is In Progress because we can't tell " +
+      "whether the ES copy happened successfully but the the status update failed e.g. due to a container kill and in " +
+      "that case we would be re-copying a relationship that has been removed in ES. It is more important that we never " +
+      "copy to ES twice than that the synch works!" in {
+        val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = Some(InProgress))
+        val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
+        await(relationshipCopyRepository.create(record))
+        val lockService = new FakeLockService
+        val relationshipsService =
+          new CheckAndCopyRelationshipsService(
+            es,
+            ifOrHipConnector,
+            des,
+            mapping,
+            ugs,
+            relationshipCopyRepository,
+            new CreateRelationshipsService(
+              es,
+              hipConnector,
+              relationshipCopyRepository,
+              lockService,
+              auditService,
+              deleteRecordRepository,
+              agentUserService,
+              aucdConnector,
+              metrics
+            ),
+            partialAuthRepository,
+            invitationsRepository,
+            itsaDeauthAndCleanupService,
+            auditService,
+            metrics,
+            appConfig
+          )
 
         val auditData = new AuditData()
         val request = FakeRequest()
@@ -1520,8 +1586,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
         oldESRelationshipExists()
         relationshipWillBeCreated(vatEnrolmentKey)
 
-        val check = relationshipsService
-          .checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(ec, hc, request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
 
         val checkAndCopyResult = await(check)
         checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -1536,35 +1601,37 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
-          hipConnector,
+          ifOrHipConnector,
+          des,
+          mapping,
+          ugs,
           relationshipCopyRepository,
-          lockService,
+          new CreateRelationshipsService(
+            es,
+            hipConnector,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            deleteRecordRepository,
+            agentUserService,
+            aucdConnector,
+            metrics
+          ),
+          partialAuthRepository,
+          invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
+          metrics,
+          appConfig
+        )
       val auditData = new AuditData()
       val request = FakeRequest()
 
       mappingServiceUnavailable()
-      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(ec, hc, request, auditData)
+      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -1576,35 +1643,37 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
     "return Upstream5xxResponse, if the mapping service is unavailable" in {
       val lockService = new FakeLockService
       val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
-      val relationshipsService = new CheckAndCopyRelationshipsService(
-        es,
-        ifOrHipConnector,
-        des,
-        mapping,
-        ugs,
-        relationshipCopyRepository,
-        new CreateRelationshipsService(
+      val relationshipsService =
+        new CheckAndCopyRelationshipsService(
           es,
-          hipConnector,
+          ifOrHipConnector,
+          des,
+          mapping,
+          ugs,
           relationshipCopyRepository,
-          lockService,
+          new CreateRelationshipsService(
+            es,
+            hipConnector,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            deleteRecordRepository,
+            agentUserService,
+            aucdConnector,
+            metrics
+          ),
+          partialAuthRepository,
+          invitationsRepository,
+          itsaDeauthAndCleanupService,
           auditService,
-          deleteRecordRepository,
-          agentUserService,
-          aucdConnector,
-          metrics
-        ),
-        partialAuthRepository,
-        invitationsRepository,
-        itsaDeauthAndCleanupService,
-        auditService,
-        metrics
-      )
+          metrics,
+          appConfig
+        )
       val auditData = new AuditData()
       val request = FakeRequest()
 
       mappingServiceUnavailableForMtdVat()
-      val check = relationshipsService.lookupESForOldRelationship(arn, vrn)(ec, hc, request, auditData)
+      val check = relationshipsService.lookupESForOldRelationship(arn, vrn)(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreatedMtdVat()
@@ -1628,7 +1697,10 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
     behave like copyHasBeenDisabled(vatEnrolmentKey, appConfig)
 
-    def copyHasBeenDisabled(enrolmentKey: EnrolmentKey, appConfig: AppConfig) =
+    def copyHasBeenDisabled(
+      enrolmentKey: EnrolmentKey,
+      appConfig: AppConfig
+    ) =
       s"not attempt to copy relationship for ${enrolmentKey.service} " +
         s"and return CopyRelationshipNotEnabled if feature flag is disabled (set to false)" in {
           val relationshipCopyRepository = mock[RelationshipCopyRecordRepository]
@@ -1656,175 +1728,263 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
               invitationsRepository,
               itsaDeauthAndCleanupService,
               auditService,
-              metrics
-            )(appConfig)
+              metrics,
+              appConfig
+            )
 
           val auditData = new AuditData()
           val request = FakeRequest()
 
-          val check = relationshipsService
-            .checkForOldRelationshipAndCopy(arn, enrolmentKey)(ec, hc, request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, enrolmentKey)(request, auditData)
 
           await(check) shouldBe CopyRelationshipNotEnabled
 
-          verifyNoInteractions(des, mapping, relationshipCopyRepository, lockService, auditService, es)
+          verifyNoInteractions(
+            des,
+            mapping,
+            relationshipCopyRepository,
+            lockService,
+            auditService,
+            es
+          )
         }
   }
 
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq())
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc))).thenReturn(Future successful Seq())
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(Future successful Seq())
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq())
   }
 
   private def oldESRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
-      .thenReturn(Future successful Set.empty[String])
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc))).thenReturn(Future.successful(Seq.empty))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]())).thenReturn(
+      Future successful Set.empty[String]
+    )
+    when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future.successful(Seq.empty))
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
-      .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
+      Future successful Seq(saAgentRef)
+    )
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
+      Future failed
+        UpstreamErrorResponse(
+          "Error, no response",
+          502,
+          502
+        )
+    )
   }
 
   private def mappingServiceUnavailableForMtdVat(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
-      .thenReturn(Future successful Set(agentGroupId))
-    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc)))
-      .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc)))
-      .thenReturn(Future failed UpstreamErrorResponse("Error, no response", 502, 502))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]())).thenReturn(
+      Future successful Set(agentGroupId)
+    )
+    when(ugs.getGroupInfo(eqs(agentGroupId))(any[RequestHeader]())).thenReturn(
+      Future successful
+        Some(
+          GroupInfo(
+            agentGroupId,
+            Some("Agent"),
+            Some(agentCodeForVatDecAgent)
+          )
+        )
+    )
+    when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
+      Future failed
+        UpstreamErrorResponse(
+          "Error, no response",
+          502,
+          502
+        )
+    )
   }
 
-  private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] =
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
+  private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] = when(
+    ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
+  ).thenReturn(Future successful Some(nino))
 
-  private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
-    when(partialAuthRepository.findActive(eqs(nino), eqs(arn)))
-      .thenReturn(
-        Future.successful(
-          Some(PartialAuthRelationship(Instant.now(), arn.value, service, nino.value, active = true, Instant.now()))
+  private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
+    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+  ).thenReturn(
+    Future.successful(
+      Some(
+        PartialAuthRelationship(
+          Instant.now(),
+          arn.value,
+          service,
+          nino.value,
+          active = true,
+          Instant.now()
         )
       )
+    )
+  )
 
-  private def partialAuthDeleted(service: String): OngoingStubbing[Future[Boolean]] =
-    when(partialAuthRepository.deleteActivePartialAuth(eqs(service), eqs(nino), eqs(arn)))
-      .thenReturn(Future.successful(true))
+  private def partialAuthDeleted(service: String): OngoingStubbing[Future[Boolean]] = when(
+    partialAuthRepository.deleteActivePartialAuth(
+      eqs(service),
+      eqs(nino),
+      eqs(arn)
+    )
+  ).thenReturn(Future.successful(true))
 
-  private def partialAuthStatusUpdatedToAccepted(service: String): OngoingStubbing[Future[Boolean]] =
-    when(invitationsRepository.updatePartialAuthToAcceptedStatus(eqs(arn), eqs(service), eqs(nino), eqs(mtdItId)))
-      .thenReturn(Future.successful(true))
+  private def partialAuthStatusUpdatedToAccepted(service: String): OngoingStubbing[Future[Boolean]] = when(
+    invitationsRepository.updatePartialAuthToAcceptedStatus(
+      eqs(arn),
+      eqs(service),
+      eqs(nino),
+      eqs(mtdItId)
+    )
+  ).thenReturn(Future.successful(true))
 
-  private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] =
-    when(partialAuthRepository.findActive(eqs(nino), eqs(arn))).thenReturn(Future.successful(None))
+  private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
+    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+  ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(eqs(hc), eqs(ec))).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(eqs(hc), eqs(ec))).thenReturn(Future successful Seq(saAgentRef))
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(eqs(hc)))
-      .thenReturn(Future successful Seq(saAgentRef))
+    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
+      Future successful Seq(saAgentRef)
+    )
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq(saAgentRef))
   }
 
   private def oldESRelationshipExists(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(eqs(hc)))
-      .thenReturn(Future successful Set("test2", "foo", agentGroupId, "ABC-123"))
-    when(ugs.getGroupInfo(eqs(agentGroupId))(eqs(hc)))
-      .thenReturn(Future successful Some(GroupInfo(agentGroupId, Some("Agent"), Some(agentCodeForVatDecAgent))))
-    when(ugs.getGroupInfo(eqs("foo"))(eqs(hc)))
-      .thenReturn(Future successful Some(GroupInfo("foo", Some("Agent"), Some(AgentCode("foo")))))
-    when(ugs.getGroupInfo(eqs("ABC-123"))(eqs(hc)))
-      .thenReturn(Future successful Some(GroupInfo("ABC-123", Some("Agent"), Some(AgentCode("ABC-123")))))
-    when(ugs.getGroupInfo(eqs("test2"))(eqs(hc)))
-      .thenReturn(Future successful Some(GroupInfo("test2", Some("Agent"), None)))
-    when(mapping.getAgentCodesFor(eqs(arn))(eqs(hc)))
-      .thenReturn(Future.successful(Seq(agentCodeForVatDecAgent)))
+    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]())).thenReturn(
+      Future successful
+        Set(
+          "test2",
+          "foo",
+          agentGroupId,
+          "ABC-123"
+        )
+    )
+    when(ugs.getGroupInfo(eqs(agentGroupId))(any[RequestHeader]())).thenReturn(
+      Future successful
+        Some(
+          GroupInfo(
+            agentGroupId,
+            Some("Agent"),
+            Some(agentCodeForVatDecAgent)
+          )
+        )
+    )
+    when(ugs.getGroupInfo(eqs("foo"))(any[RequestHeader]())).thenReturn(
+      Future successful
+        Some(
+          GroupInfo(
+            "foo",
+            Some("Agent"),
+            Some(AgentCode("foo"))
+          )
+        )
+    )
+    when(ugs.getGroupInfo(eqs("ABC-123"))(any[RequestHeader]())).thenReturn(
+      Future successful
+        Some(
+          GroupInfo(
+            "ABC-123",
+            Some("Agent"),
+            Some(AgentCode("ABC-123"))
+          )
+        )
+    )
+    when(ugs.getGroupInfo(eqs("test2"))(any[RequestHeader]())).thenReturn(
+      Future successful
+        Some(
+          GroupInfo(
+            "test2",
+            Some("Agent"),
+            None
+          )
+        )
+    )
+    when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
+      Future.successful(Seq(agentCodeForVatDecAgent))
+    )
   }
 
-  private def adminUserExistsForArn(): OngoingStubbing[Future[Either[String, AgentUser]]] =
-    when(
-      agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(any[ExecutionContext], any[HeaderCarrier], any[AuditData])
-    )
-      .thenReturn(Future.successful(agentUserForAsAgent))
+  private def adminUserExistsForArn(): OngoingStubbing[Future[Either[String, AgentUser]]] = when(
+    agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(any[RequestHeader](), any[AuditData])
+  ).thenReturn(Future.successful(agentUserForAsAgent))
 
   private def arnExistsForGroupId(): OngoingStubbing[Future[Option[Arn]]] = {
-    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc))).thenReturn(Future.successful(Some(Arn("fooArn"))))
-    when(es.getAgentReferenceNumberFor(eqs("bar"))(eqs(hc))).thenReturn(Future.successful(Some(Arn("barArn"))))
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(
+      Future.successful(Some(Arn("fooArn")))
+    )
+    when(es.getAgentReferenceNumberFor(eqs("bar"))(any[RequestHeader]())).thenReturn(
+      Future.successful(Some(Arn("barArn")))
+    )
   }
 
   private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[HeaderCarrier]()))
-      .thenReturn(Future.successful(Set("foo")))
-    when(es.getAgentReferenceNumberFor(eqs("foo"))(eqs(hc))).thenReturn(Future.successful(Some(arn)))
+
+    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(Future.successful(Set("foo")))
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(Future.successful(Some(arn)))
     when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
-    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[HeaderCarrier]()))
-      .thenReturn(Future.successful(()))
+    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(
+      Future.successful(())
+    )
   }
 
-  private def vrnIsKnownInETMP(vrn: Vrn, isKnown: Boolean): OngoingStubbing[Future[Boolean]] =
-    when(des.vrnIsKnownInEtmp(eqs(vrn))(eqs(hc), eqs(ec))).thenReturn(Future successful isKnown)
+  private def vrnIsKnownInETMP(
+    vrn: Vrn,
+    isKnown: Boolean
+  ): OngoingStubbing[Future[Boolean]] = when(des.vrnIsKnownInEtmp(eqs(vrn))(any[RequestHeader]())).thenReturn(
+    Future successful isKnown
+  )
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(eqs(hc), eqs(ec)))
-      .thenReturn(Future successful Some(RegistrationRelationshipResponse("processing date")))
-    when(
-      es.allocateEnrolmentToAgent(eqs(agentGroupId), eqs(agentUserId), eqs(enrolmentKey), eqs(agentCodeForAsAgent))(
-        eqs(hc)
-      )
+    when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(any[RequestHeader]())).thenReturn(
+      Future successful Some(RegistrationRelationshipResponse("processing date"))
     )
-      .thenReturn(Future.successful(()))
     when(
-      aucdConnector.cacheRefresh(eqs(arn))(eqs(hc), eqs(ec))
-    ).thenReturn(Future successful (()))
+      es.allocateEnrolmentToAgent(
+        eqs(agentGroupId),
+        eqs(agentUserId),
+        eqs(enrolmentKey),
+        eqs(agentCodeForAsAgent)
+      )(any[RequestHeader]())
+    ).thenReturn(Future.successful(()))
+    when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful (()))
   }
 
-  private def metricsStub(): OngoingStubbing[MetricRegistry] =
-    when(metrics.defaultRegistry).thenReturn(new MetricRegistry)
+  private def metricsStub(): OngoingStubbing[MetricRegistry] = when(metrics.defaultRegistry).thenReturn(
+    new MetricRegistry
+  )
 
-  private def auditStub(): OngoingStubbing[Future[Unit]] =
-    when(
-      auditService
-        .sendCheckEsAuditEvent()(any[HeaderCarrier], any[Request[Any]], any[AuditData], any[ExecutionContext])
-    )
-      .thenReturn(Future.successful(()))
+  private def auditStub(): OngoingStubbing[Future[Unit]] = when(
+    auditService.sendCheckEsAuditEvent()(any[RequestHeader](), any[AuditData])
+  ).thenReturn(Future.successful(()))
 
-  private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] =
-    when(
-      auditService
-        .sendCreateRelationshipAuditEvent()(
-          any[HeaderCarrier],
-          any[Request[Any]],
-          any[AuditData],
-          any[ExecutionContext]
-        )
-    )
-      .thenReturn(Future.successful(()))
+  private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] = when(
+    auditService.sendCreateRelationshipAuditEvent()(any[RequestHeader](), any[AuditData])
+  ).thenReturn(Future.successful(()))
 
-  private def deleteSameAgentOtherItsaService(): OngoingStubbing[Future[Boolean]] =
-    when(
-      itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-        any[String],
-        eqs(arn.value),
-        eqs(Some(mtdItId.value)),
-        eqs(nino.value),
-        any[Instant]
-      )(any[HeaderCarrier], any[CurrentUser], any[Request[_]])
-    )
-      .thenReturn(Future.successful(true))
+  private def deleteSameAgentOtherItsaService(): OngoingStubbing[Future[Boolean]] = when(
+    itsaDeauthAndCleanupService.deleteSameAgentRelationship(
+      any[String],
+      eqs(arn.value),
+      eqs(Some(mtdItId.value)),
+      eqs(nino.value),
+      any[Instant]
+    )(any[RequestHeader](), any[CurrentUser])
+  ).thenReturn(Future.successful(true))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEtmpRecordCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEtmpRecordNotCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(eqs(hc), eqs(ec))
+    verify(hipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEsRecordCreated(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(
@@ -1832,7 +1992,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentUserId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    )(any[RequestHeader]())
 
   def verifyEsRecordNotCreated(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
@@ -1840,7 +2000,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentGroupId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    )(any[RequestHeader]())
 
   def verifyEsRecordCreatedForMtdVat(): Future[Unit] =
     verify(es).allocateEnrolmentToAgent(
@@ -1848,7 +2008,7 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentUserId),
       eqs(vatEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    )(any[RequestHeader]())
 
   def verifyEsRecordNotCreatedMtdVat(): Future[Unit] =
     verify(es, never()).allocateEnrolmentToAgent(
@@ -1856,17 +2016,11 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
       eqs(agentGroupId),
       eqs(vatEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(eqs(hc))
+    )(any[RequestHeader]())
 
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
-    verify(auditService)
-      .sendCheckCesaAndPartialAuthAuditEvent()(
-        any[HeaderCarrier],
-        any[Request[Any]],
-        auditDataCaptor.capture(),
-        any[ExecutionContext]()
-      )
+    verify(auditService).sendCheckCesaAndPartialAuthAuditEvent()(any[RequestHeader](), auditDataCaptor.capture())
     val auditData: AuditData = auditDataCaptor.getValue
     val auditDetails = auditData.getDetails
     auditDetails("saAgentRef") shouldBe saAgentRef.value
@@ -1877,17 +2031,12 @@ class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEa
 
   def verifyESAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
-    verify(auditService)
-      .sendCheckEsAuditEvent()(
-        any[HeaderCarrier],
-        any[Request[Any]],
-        auditDataCaptor.capture(),
-        any[ExecutionContext]()
-      )
+    verify(auditService).sendCheckEsAuditEvent()(any[RequestHeader](), auditDataCaptor.capture())
     val auditData: AuditData = auditDataCaptor.getValue
     val auditDetails = auditData.getDetails
     auditDetails("vrn") shouldBe vrn
     auditDetails("ESRelationship") shouldBe true
     auditDetails
   }
+
 }

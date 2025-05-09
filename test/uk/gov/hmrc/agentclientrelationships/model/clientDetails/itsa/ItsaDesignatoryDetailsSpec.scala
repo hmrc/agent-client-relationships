@@ -19,18 +19,15 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ItsaDesignatoryDetailsSpec extends UnitSpec {
+class ItsaDesignatoryDetailsSpec
+extends UnitSpec {
 
   "ItsaDesignatoryDetails" should {
 
     "read from JSON" when {
 
       "optional fields are present" in {
-        val json = Json.obj(
-          "address" -> Json.obj(
-            "postcode" -> "AA1 1AA"
-          )
-        )
+        val json = Json.obj("address" -> Json.obj("postcode" -> "AA1 1AA"))
 
         json.as[ItsaDesignatoryDetails] shouldBe ItsaDesignatoryDetails(Some("AA1 1AA"))
       }

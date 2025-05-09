@@ -191,7 +191,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         val now = Instant.now()
 
         await(
-          invitationRepo.collection
+          invitationRepo
+            .collection
             .insertOne(
               Invitation(
                 "abc1",
@@ -218,7 +219,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         )
 
         await(
-          partialAuthRepository.collection
+          partialAuthRepository
+            .collection
             .insertOne(PartialAuthRelationship(now, arn.value, HMRCMTDIT, nino.value, active = true, now))
             .toFuture()
         )
@@ -248,7 +250,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         val now = Instant.now()
 
         await(
-          invitationRepo.collection
+          invitationRepo
+            .collection
             .insertOne(
               Invitation(
                 "abc1",
@@ -275,7 +278,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         )
 
         await(
-          partialAuthRepository.collection
+          partialAuthRepository
+            .collection
             .insertOne(PartialAuthRelationship(now, arn.value, HMRCMTDITSUPP, nino.value, active = true, now))
             .toFuture()
         )
@@ -657,13 +661,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
         "resume an ongoing de-auth if some delete record found" in new StubsForThisScenario {
           await(
-            deleteRecordRepository.create(
-              DeleteRecord(
-                arn.value,
-                Some(mtdItEnrolmentKey),
-                dateTime = LocalDateTime.now.minusMinutes(1)
-              )
-            )
+            deleteRecordRepository
+              .create(DeleteRecord(arn.value, Some(mtdItEnrolmentKey), dateTime = LocalDateTime.now.minusMinutes(1)))
           )
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
@@ -688,13 +687,8 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
 
         "try to resume unfinished de-auth and keep delete-record around" in new StubsForThisScenario {
           await(
-            deleteRecordRepository.create(
-              DeleteRecord(
-                arn.value,
-                Some(mtdItEnrolmentKey),
-                dateTime = LocalDateTime.now.minusMinutes(1)
-              )
-            )
+            deleteRecordRepository
+              .create(DeleteRecord(arn.value, Some(mtdItEnrolmentKey), dateTime = LocalDateTime.now.minusMinutes(1)))
           )
           doAgentDeleteRequest(requestPath).status shouldBe 500
           verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))

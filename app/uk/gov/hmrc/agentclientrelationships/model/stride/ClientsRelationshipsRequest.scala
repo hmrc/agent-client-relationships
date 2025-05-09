@@ -16,9 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.stride
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 
-case class ClientRelationshipRequest(clientIdType: String, clientId: String)
+case class ClientRelationshipRequest(
+  clientIdType: String,
+  clientId: String
+)
 
 object ClientRelationshipRequest {
   implicit val format: OFormat[ClientRelationshipRequest] = Json.format[ClientRelationshipRequest]

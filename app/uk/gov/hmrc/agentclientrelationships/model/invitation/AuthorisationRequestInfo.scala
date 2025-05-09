@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.CreateLinkResponse
 

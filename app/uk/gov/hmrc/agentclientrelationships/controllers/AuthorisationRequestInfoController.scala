@@ -17,18 +17,26 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{AuthorisationRequestInfo, AuthorisationRequestInfoForClient}
-import uk.gov.hmrc.agentclientrelationships.services.{InvitationLinkService, InvitationService}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, ClientIdentifier, Service}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfo
+import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfoForClient
+import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class AuthorisationRequestInfoController @Inject() (
@@ -38,22 +46,26 @@ class AuthorisationRequestInfoController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+)(implicit val executionContext: ExecutionContext)
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def get(arn: Arn, invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+  def get(
+    arn: Arn,
+    invitationId: String
+  ): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { _ =>
-      invitationService.findInvitationForAgent(arn.value, invitationId).flatMap {
-        case Some(invitation) =>
-          for {
-            agentLink <- invitationLinkService.createLink(arn)
-          } yield Ok(Json.toJson(AuthorisationRequestInfo(invitation, agentLink)))
-        case _ =>
-          Future.successful(NotFound)
-      }
+      invitationService
+        .findInvitationForAgent(arn.value, invitationId)
+        .flatMap {
+          case Some(invitation) =>
+            for {
+              agentLink <- invitationLinkService.createLink(arn)
+            } yield Ok(Json.toJson(AuthorisationRequestInfo(invitation, agentLink)))
+          case _ => Future.successful(NotFound)
+        }
     }
   }
 
@@ -77,35 +89,35 @@ class AuthorisationRequestInfoController @Inject() (
           .map { result =>
             Ok(Json.toJson(result))
           }
-      case _ =>
-        Future.successful(Forbidden)
+      case _ => Future.successful(Forbidden)
     }
   }
 
   def getForClient(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
-    invitationService.findInvitationForClient(invitationId).flatMap {
-      case Some(invitation) =>
-        authorisedUser(
-          arn = Some(Arn(invitation.arn)),
-          clientId = ClientIdentifier(invitation.clientId, invitation.clientIdType).underlying,
-          Seq.empty
-        ) { _ =>
-          val arn = Arn(invitation.arn)
-          for {
-            agentDetails <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
-          } yield Ok(
-            Json.toJson(
-              AuthorisationRequestInfoForClient(
-                agentName = agentDetails.agencyDetails.agencyName,
-                service = invitation.service,
-                status = invitation.status
+    invitationService
+      .findInvitationForClient(invitationId)
+      .flatMap {
+        case Some(invitation) =>
+          authorisedUser(
+            arn = Some(Arn(invitation.arn)),
+            clientId = ClientIdentifier(invitation.clientId, invitation.clientIdType).underlying,
+            Seq.empty
+          ) { _ =>
+            val arn = Arn(invitation.arn)
+            for {
+              agentDetails <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
+            } yield Ok(
+              Json.toJson(
+                AuthorisationRequestInfoForClient(
+                  agentName = agentDetails.agencyDetails.agencyName,
+                  service = invitation.service,
+                  status = invitation.status
+                )
               )
             )
-          )
-        }
-      case _ =>
-        Future.successful(NotFound)
-    }
+          }
+        case _ => Future.successful(NotFound)
+      }
   }
 
 }

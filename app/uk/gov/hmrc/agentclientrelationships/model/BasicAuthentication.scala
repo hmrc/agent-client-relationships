@@ -16,4 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-case class BasicAuthentication(username: String, password: String)
+case class BasicAuthentication(
+  username: String,
+  password: String
+)

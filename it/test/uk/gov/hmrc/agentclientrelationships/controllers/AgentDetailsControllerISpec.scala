@@ -50,17 +50,11 @@ class AgentDetailsControllerISpec extends BaseControllerISpec with TestData {
       givenAgentRecordFound(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result =
-        doGetRequest(testUrl)
+      val result = doGetRequest(testUrl)
       result.status shouldBe 200
       result.json shouldBe Json.obj(
-        "agencyDetails" -> Json.obj(
-          "agencyName"  -> "My Agency",
-          "agencyEmail" -> "abc@abc.com"
-        ),
-        "suspensionDetails" -> Json.obj(
-          "suspensionStatus" -> false
-        )
+        "agencyDetails"     -> Json.obj("agencyName" -> "My Agency", "agencyEmail" -> "abc@abc.com"),
+        "suspensionDetails" -> Json.obj("suspensionStatus" -> false)
       )
 
     }

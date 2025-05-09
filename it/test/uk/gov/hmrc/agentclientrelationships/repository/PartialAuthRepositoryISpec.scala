@@ -34,15 +34,14 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext
 
 class PartialAuthRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
 
-  override lazy val app: Application =
-    new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-      .build()
+  override lazy val app: Application = new GuiceApplicationBuilder()
+    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
+    .build()
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -80,24 +79,16 @@ class PartialAuthRepositoryISpec
 
     "insert a new partial auth record" in {
       await(
-        repository.create(
-          Instant.parse("2020-01-01T00:00:00.000Z"),
-          Arn("XARN1234567"),
-          "HMRC-MTD-IT",
-          Nino("SX579189D")
-        )
+        repository
+          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D"))
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }
 
     "throw an exception if invalid service passed in" in {
       an[IllegalArgumentException] shouldBe thrownBy(
-        repository.create(
-          Instant.parse("2020-01-01T00:00:00.000Z"),
-          Arn("XARN1234567"),
-          "HMRC-MTD-VAT",
-          Nino("SX579189D")
-        )
+        repository
+          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-VAT", Nino("SX579189D"))
       )
     }
 
@@ -158,25 +149,15 @@ class PartialAuthRepositoryISpec
   "deauthorise" should {
     "deauthorise PartialAuth invitation success" in {
       await(
-        repository.create(
-          Instant.parse("2020-01-01T00:00:00.000Z"),
-          Arn("XARN1234567"),
-          "HMRC-MTD-IT",
-          Nino("SX579189D")
-        )
+        repository
+          .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D"))
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
       await(
         repository
           .deauthorise("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z"))
       )
-      val result = await(
-        repository.findActive(
-          "HMRC-MTD-IT",
-          Nino("SX579189D"),
-          Arn("XARN1234567")
-        )
-      )
+      val result = await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567")))
       result.isEmpty shouldBe true
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }

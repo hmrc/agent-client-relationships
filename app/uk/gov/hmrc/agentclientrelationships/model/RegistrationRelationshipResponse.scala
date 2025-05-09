@@ -15,16 +15,16 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.model
-import play.api.libs.json.{JsPath, Reads}
+
+import play.api.libs.json.JsPath
+import play.api.libs.json.Reads
 
 case class RegistrationRelationshipResponse(processingDate: String)
 
 object RegistrationRelationshipResponse {
-  implicit val regReads: Reads[RegistrationRelationshipResponse] =
-    (JsPath \ "success" \ "processingDate")
-      .read[String]
-      .orElse(
-        (JsPath \ "processingDate").read[String]
-      )
-      .map(r => RegistrationRelationshipResponse(r))
+  // TODO: this reads is used only in one http connector but it is exposed globally. Move it to this connector
+  implicit val regReads: Reads[RegistrationRelationshipResponse] = (JsPath \ "success" \ "processingDate")
+    .read[String]
+    .orElse((JsPath \ "processingDate").read[String])
+    .map(r => RegistrationRelationshipResponse(r))
 }

@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Json, OWrites}
+import play.api.libs.json.Json
+import play.api.libs.json.OWrites
 
 case class CustomerStatus(
   hasPendingInvitations: Boolean,

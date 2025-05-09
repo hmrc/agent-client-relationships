@@ -75,21 +75,16 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result =
-        doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 200
-      result.json shouldBe Json.obj(
-        "arn"  -> arn.value,
-        "name" -> agentRecord.agencyDetails.agencyName
-      )
+      result.json shouldBe Json.obj("arn" -> arn.value, "name" -> agentRecord.agencyDetails.agencyName)
     }
 
     "return 404 status when agent reference is not found" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponse)
 
-      val result =
-        doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
     }
 
@@ -136,7 +131,9 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      val normalisedName = agentRecord.agencyDetails.agencyName
+      val normalisedName = agentRecord
+        .agencyDetails
+        .agencyName
         .toLowerCase()
         .replaceAll("\\s+", "-")
         .replaceAll("[^A-Za-z0-9-]", "")
@@ -144,13 +141,9 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
-      val result =
-        doGetRequest(s"/agent-client-relationships/agent/agent-link")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-link")
       result.status shouldBe 200
-      result.json shouldBe Json.obj(
-        "uid"                 -> agentReferenceRecord.uid,
-        "normalizedAgentName" -> normalisedName
-      )
+      result.json shouldBe Json.obj("uid" -> agentReferenceRecord.uid, "normalizedAgentName" -> normalisedName)
       agentReferenceRepo
         .findBy(agentReferenceRecord.uid)
         .futureValue
@@ -163,22 +156,21 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      val normalisedName = agentRecord.agencyDetails.agencyName
+      val normalisedName = agentRecord
+        .agencyDetails
+        .agencyName
         .toLowerCase()
         .replaceAll("\\s+", "-")
         .replaceAll("[^A-Za-z0-9-]", "")
 
       givenAgentRecordFound(arn, agentRecordResponse)
 
-      val result =
-        doGetRequest(s"/agent-client-relationships/agent/agent-link")
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-link")
       result.status shouldBe 200
 
-      agentReferenceRepo
-        .findByArn(arn)
-        .futureValue
-        .get
-        .normalisedAgentNames should contain atLeastOneElementOf Seq(normalisedName)
+      agentReferenceRepo.findByArn(arn).futureValue.get.normalisedAgentNames should contain atLeastOneElementOf Seq(
+        normalisedName
+      )
     }
   }
 
@@ -192,20 +184,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(arn, agentRecordResponse)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
-      val pendingInvitation =
-        await(
-          invitationsRepo.create(
-            arn.value,
-            MtdIt,
-            mtdItId,
-            mtdItId,
-            "Erling Haal",
-            "testAgentName",
-            "agent@email.com",
-            LocalDate.now(),
-            Some("personal")
-          )
+      val pendingInvitation = await(
+        invitationsRepo.create(
+          arn.value,
+          MtdIt,
+          mtdItId,
+          mtdItId,
+          "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          Some("personal")
         )
+      )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -232,20 +223,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
-      val pendingInvitation =
-        await(
-          invitationsRepo.create(
-            arn.value,
-            MtdIt,
-            mtdItId,
-            mtdItId,
-            "Erling Haal",
-            "testAgentName",
-            "agent@email.com",
-            LocalDate.now(),
-            Some("personal")
-          )
+      val pendingInvitation = await(
+        invitationsRepo.create(
+          arn.value,
+          MtdIt,
+          mtdItId,
+          mtdItId,
+          "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          Some("personal")
         )
+      )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -272,21 +262,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(existingAgentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = true)
-      val pendingInvitation =
-        await(
-          invitationsRepo
-            .create(
-              existingAgentArn.value,
-              MtdItSupp,
-              mtdItId,
-              nino,
-              "Erling Haal",
-              "testAgentName",
-              "agent@email.com",
-              LocalDate.now(),
-              Some("personal")
-            )
+      val pendingInvitation = await(
+        invitationsRepo.create(
+          existingAgentArn.value,
+          MtdItSupp,
+          mtdItId,
+          nino,
+          "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          Some("personal")
         )
+      )
 
       val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -313,20 +301,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
-      val pendingInvitation =
-        await(
-          invitationsRepo.create(
-            arn.value,
-            MtdIt,
-            nino,
-            nino,
-            "Erling Haal",
-            "testAgentName",
-            "agent@email.com",
-            LocalDate.now(),
-            Some("personal")
-          )
+      val pendingInvitation = await(
+        invitationsRepo.create(
+          arn.value,
+          MtdIt,
+          nino,
+          nino,
+          "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          Some("personal")
         )
+      )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-NI", "HMRC-PT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -352,21 +339,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(existingAgentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = true)
-      val pendingInvitation =
-        await(
-          invitationsRepo
-            .create(
-              existingAgentArn.value,
-              MtdItSupp,
-              nino,
-              nino,
-              "Erling Haal",
-              "testAgentName",
-              "agent@email.com",
-              LocalDate.now(),
-              Some("personal")
-            )
+      val pendingInvitation = await(
+        invitationsRepo.create(
+          existingAgentArn.value,
+          MtdItSupp,
+          nino,
+          nino,
+          "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          Some("personal")
         )
+      )
 
       val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT", "HMRC-PT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -390,20 +375,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenAgentRecordFound(arn, agentRecordResponse)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
-      val pendingInvitation =
-        await(
-          invitationsRepo.create(
-            arn.value,
-            MtdItSupp,
-            mtdItId,
-            nino,
-            "Erling Haal",
-            "testAgentName",
-            "agent@email.com",
-            LocalDate.now(),
-            Some("personal")
-          )
+      val pendingInvitation = await(
+        invitationsRepo.create(
+          arn.value,
+          MtdItSupp,
+          mtdItId,
+          nino,
+          "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          Some("personal")
         )
+      )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
@@ -429,20 +413,19 @@ class InvitationLinkControllerISpec extends BaseControllerISpec with TestData wi
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
-      val pendingInvitation =
-        await(
-          invitationsRepo.create(
-            arn.value,
-            Cbc,
-            cbcId,
-            cbcId,
-            "Erling Haal",
-            "testAgentName",
-            "agent@email.com",
-            LocalDate.now(),
-            Some("personal")
-          )
+      val pendingInvitation = await(
+        invitationsRepo.create(
+          arn.value,
+          Cbc,
+          cbcId,
+          cbcId,
+          "Erling Haal",
+          "testAgentName",
+          "agent@email.com",
+          LocalDate.now(),
+          Some("personal")
         )
+      )
 
       val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-CBC-ORG"))
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)

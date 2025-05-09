@@ -17,16 +17,20 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 @Singleton
@@ -35,17 +39,19 @@ class AgentDetailsController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+)(implicit val executionContext: ExecutionContext)
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def getAgentDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { _ =>
-      agentAssuranceConnector.getAgentRecordWithChecks(arn).map { agent =>
-        Ok(Json.toJson[AgentDetailsDesResponse](agent))
-      }
+      agentAssuranceConnector
+        .getAgentRecordWithChecks(arn)
+        .map { agent =>
+          Ok(Json.toJson[AgentDetailsDesResponse](agent))
+        }
     }
   }
 

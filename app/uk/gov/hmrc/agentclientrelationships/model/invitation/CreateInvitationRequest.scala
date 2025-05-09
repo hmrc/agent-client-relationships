@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import InvitationFailureResponse._
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 import scala.util.Try
 
@@ -30,32 +32,41 @@ case class CreateInvitationRequest(
   service: String,
   clientType: Option[String]
 ) {
-  def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(service))
-    .fold(_ => Left(UnsupportedService), Right(_))
 
-  def getSuppliedClientId: Either[InvitationFailureResponse, ClientId] = for {
-    service <- getService
-    _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.isValid(clientId),
-           clientId,
-           InvalidClientId
-         )
-    _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.id == suppliedClientIdType,
-           suppliedClientIdType,
-           UnsupportedClientIdType
-         )
-    clientId <-
-      Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
-  } yield clientId
+  def getService: Either[InvitationFailureResponse, Service] = Try(Service.forId(service)).fold(
+    _ => Left(UnsupportedService),
+    Right(_)
+  )
 
-  private val validClientTypes = Seq("personal", "business", "trust")
+  def getSuppliedClientId: Either[InvitationFailureResponse, ClientId] =
+    for {
+      service <- getService
+      _ <- Either.cond[InvitationFailureResponse, String](
+        service.supportedSuppliedClientIdType.isValid(clientId),
+        clientId,
+        InvalidClientId
+      )
+      _ <- Either.cond[InvitationFailureResponse, String](
+        service.supportedSuppliedClientIdType.id == suppliedClientIdType,
+        suppliedClientIdType,
+        UnsupportedClientIdType
+      )
+      clientId <- Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
+    } yield clientId
 
-  def getClientType: Either[InvitationFailureResponse, Option[String]] = clientType match {
-    case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
-    case Some(_)                                             => Left(UnsupportedClientType)
-    case None                                                => Right(None)
-  }
+  private val validClientTypes = Seq(
+    "personal",
+    "business",
+    "trust"
+  )
+
+  def getClientType: Either[InvitationFailureResponse, Option[String]] =
+    clientType match {
+      case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
+      case Some(_) => Left(UnsupportedClientType)
+      case None => Right(None)
+    }
+
 }
 
 object CreateInvitationRequest {

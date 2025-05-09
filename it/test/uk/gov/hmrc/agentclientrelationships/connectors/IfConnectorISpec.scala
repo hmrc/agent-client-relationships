@@ -19,59 +19,59 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, IfStub}
 import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class IFConnectorISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with IfStub
-    with DataStreamStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with IfStub
+with DataStreamStub {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
-  val httpClient: HttpClient = app.injector.instanceOf[HttpClient]
+  val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port"     -> wireMockPort,
-        "microservice.services.tax-enrolments.port"            -> wireMockPort,
-        "microservice.services.users-groups-search.port"       -> wireMockPort,
-        "microservice.services.if.port"                        -> wireMockPort,
-        "microservice.services.auth.port"                      -> wireMockPort,
-        "microservice.services.if.environment"                 -> "stub",
-        "microservice.services.if.authorization-api1171-token" -> "token",
-        "microservice.services.agent-mapping.port"             -> wireMockPort,
-        "auditing.consumer.baseUri.host"                       -> wireMockHost,
-        "auditing.consumer.baseUri.port"                       -> wireMockPort,
-        "features.copy-relationship.mtd-it"                    -> true,
-        "features.copy-relationship.mtd-vat"                   -> true,
-        "features.recovery-enable"                             -> false,
-        "agent.cache.expires"                                  -> "1 millis",
-        "agent.cache.enabled"                                  -> false,
-        "agent.trackPage.cache.expires"                        -> "1 millis",
-        "agent.trackPage.cache.enabled"                        -> false,
-        "hip.BusinessDetails.enabled"                          -> false
-      )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.enrolment-store-proxy.port"     -> wireMockPort,
+    "microservice.services.tax-enrolments.port"            -> wireMockPort,
+    "microservice.services.users-groups-search.port"       -> wireMockPort,
+    "microservice.services.if.port"                        -> wireMockPort,
+    "microservice.services.auth.port"                      -> wireMockPort,
+    "microservice.services.if.environment"                 -> "stub",
+    "microservice.services.if.authorization-api1171-token" -> "token",
+    "microservice.services.agent-mapping.port"             -> wireMockPort,
+    "auditing.consumer.baseUri.host"                       -> wireMockHost,
+    "auditing.consumer.baseUri.port"                       -> wireMockPort,
+    "features.copy-relationship.mtd-it"                    -> true,
+    "features.copy-relationship.mtd-vat"                   -> true,
+    "features.recovery-enable"                             -> false,
+    "agent.cache.expires"                                  -> "1 millis",
+    "agent.cache.enabled"                                  -> false,
+    "agent.trackPage.cache.expires"                        -> "1 millis",
+    "agent.trackPage.cache.enabled"                        -> false,
+    "hip.BusinessDetails.enabled"                          -> false
+  )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
-  val ifConnector =
-    new IfConnector(httpClient, ec)(metrics, appConfig)
+  implicit val request: RequestHeader = FakeRequest()
+  val ifConnector = new IfConnector(httpClient, app.injector.instanceOf[CorrelationIdGenerator], appConfig)(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

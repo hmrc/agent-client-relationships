@@ -38,18 +38,17 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
-  val baseInvitation: Invitation = Invitation
-    .createNew(
-      arn = arn.value,
-      service = MtdIt,
-      clientId = mtdItId,
-      suppliedClientId = nino,
-      clientName = "C Name",
-      agencyName = "A Name",
-      agencyEmail = "a@example.com",
-      expiryDate = LocalDate.now().plusDays(21),
-      clientType = None
-    )
+  val baseInvitation: Invitation = Invitation.createNew(
+    arn = arn.value,
+    service = MtdIt,
+    clientId = mtdItId,
+    suppliedClientId = nino,
+    clientName = "C Name",
+    agencyName = "A Name",
+    agencyEmail = "a@example.com",
+    expiryDate = LocalDate.now().plusDays(21),
+    clientType = None
+  )
 
   def allServices: Map[Service, TaxIdentifier] = Map(
     MtdIt                -> mtdItId,
@@ -65,34 +64,25 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
     MtdItSupp            -> mtdItId
   )
 
-  val requestPath: String =
-    "/agent-client-relationships/cleanup-invitation-status"
+  val requestPath: String = "/agent-client-relationships/cleanup-invitation-status"
 
   def requestJson(arn: String, clientId: String, service: String) = Json
-    .toJson(
-      CleanUpInvitationStatusRequest(
-        arn = arn,
-        clientId = clientId,
-        service = service
-      )
-    )
+    .toJson(CleanUpInvitationStatusRequest(arn = arn, clientId = clientId, service = service))
     .toString()
 
   allServices.foreach(testset =>
     "/agent-client-relationships/cleanup-invitation-status" should {
       val (service, taxIdentifier) = testset
       val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
-      val serviceId = service match {
-        case PersonalIncomeRecord => PersonalIncomeRecord.id
-        case s                    => s.id
-      }
+      val serviceId =
+        service match {
+          case PersonalIncomeRecord => PersonalIncomeRecord.id
+          case s                    => s.id
+        }
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
-          val result = doAgentPutRequest(
-            route = requestPath,
-            body = requestJson(arn.value, clientId.value, service.id)
-          )
+          val result = doAgentPutRequest(route = requestPath, body = requestJson(arn.value, clientId.value, service.id))
           result.status shouldBe NOT_FOUND
         }
 
@@ -100,18 +90,13 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
 
       s"when invitation exists with the status Accepted in invitationStore for ${service.id}" should {
         s"update status to DeAuthorised" in {
-          val newInvitation: Invitation = baseInvitation.copy(
-            service = serviceId,
-            clientId = clientId.value,
-            status = Accepted
-          )
+          val newInvitation: Invitation = baseInvitation
+            .copy(service = serviceId, clientId = clientId.value, status = Accepted)
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-          doAgentPutRequest(
-            route = requestPath,
-            body = requestJson(arn.value, clientId.value, serviceId)
-          ).status shouldBe 204
+          doAgentPutRequest(route = requestPath, body = requestJson(arn.value, clientId.value, serviceId))
+            .status shouldBe 204
 
           await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
         }

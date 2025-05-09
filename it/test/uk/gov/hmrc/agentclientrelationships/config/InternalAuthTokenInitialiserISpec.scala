@@ -26,10 +26,10 @@ import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 
 class InternalAuthTokenInitialiserISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DataStreamStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DataStreamStub {
 
   "when configured to run" should {
     "should initialise the internal-auth token if it is not already initialised" in {
@@ -48,15 +48,9 @@ class InternalAuthTokenInitialiserISpec
         )
       )
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(NOT_FOUND))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(NOT_FOUND)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(CREATED))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(CREATED)))
 
       new GuiceApplicationBuilder()
         .configure(
@@ -67,11 +61,7 @@ class InternalAuthTokenInitialiserISpec
         )
         .build()
 
-      verify(
-        1,
-        getRequestedFor(urlMatching("/test-only/token"))
-          .withHeader(AUTHORIZATION, equalTo(authToken))
-      )
+      verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(
         1,
         postRequestedFor(urlMatching("/test-only/token"))
@@ -94,15 +84,9 @@ class InternalAuthTokenInitialiserISpec
         )
       )
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(NOT_FOUND))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(NOT_FOUND)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(OK))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(OK)))
 
       val exception = intercept[RuntimeException] {
         new GuiceApplicationBuilder()
@@ -117,11 +101,7 @@ class InternalAuthTokenInitialiserISpec
 
       exception.getMessage should include("Unable to initialise internal-auth token")
 
-      verify(
-        1,
-        getRequestedFor(urlMatching("/test-only/token"))
-          .withHeader(AUTHORIZATION, equalTo(authToken))
-      )
+      verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(
         1,
         postRequestedFor(urlMatching("/test-only/token"))
@@ -132,15 +112,9 @@ class InternalAuthTokenInitialiserISpec
       val authToken = "authToken"
       val appName = "appName"
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(OK))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(OK)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(CREATED))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(CREATED)))
 
       val app = new GuiceApplicationBuilder()
         .configure(
@@ -153,11 +127,7 @@ class InternalAuthTokenInitialiserISpec
 
       app.injector.instanceOf[InternalAuthTokenInitialiser].initialised.futureValue
 
-      verify(
-        1,
-        getRequestedFor(urlMatching("/test-only/token"))
-          .withHeader(AUTHORIZATION, equalTo(authToken))
-      )
+      verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(0, postRequestedFor(urlMatching("/test-only/token")))
     }
   }
@@ -167,15 +137,9 @@ class InternalAuthTokenInitialiserISpec
       val authToken = "authToken"
       val appName = "appName"
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(OK))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(OK)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(CREATED))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(CREATED)))
 
       val app = new GuiceApplicationBuilder()
         .configure(

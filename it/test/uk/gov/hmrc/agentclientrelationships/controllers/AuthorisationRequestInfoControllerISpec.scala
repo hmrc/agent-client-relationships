@@ -79,10 +79,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
 
       val uid = await(agentReferenceRepo.findByArn(arn)).get.uid
       result.json shouldBe Json.obj(
-        "agentLink" -> Json.obj(
-          "uid"                 -> uid,
-          "normalizedAgentName" -> "my-agency"
-        ),
+        "agentLink" -> Json.obj("uid" -> uid, "normalizedAgentName" -> "my-agency"),
         "authorisationRequest" -> Json.obj(
           "invitationId"         -> "testInvitationId",
           "arn"                  -> "AARN0000002",
@@ -125,11 +122,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val result = doGetRequest(testClientUrl)
       result.status shouldBe 200
 
-      result.json shouldBe Json.obj(
-        "agentName" -> "My Agency",
-        "service"   -> "HMRC-MTD-VAT",
-        "status"    -> "Accepted"
-      )
+      result.json shouldBe Json.obj("agentName" -> "My Agency", "service" -> "HMRC-MTD-VAT", "status" -> "Accepted")
     }
     "return 404 status when invitation doesnt exist" in {
       val fakeRequest = FakeRequest("GET", testClientUrl)
@@ -224,8 +217,8 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val clientNameFilter = URLEncoder.encode("Find Me", "UTF-8")
       val allFiltersUrl = testTrackRequestsUrl + "&statusFilter=Accepted&clientName=" + clientNameFilter
       val fakeRequest = FakeRequest("GET", allFiltersUrl)
-      val matchingInvitation =
-        testInvitation.copy(invitationId = "testInvitationId2", status = Accepted, clientName = "Find Me")
+      val matchingInvitation = testInvitation
+        .copy(invitationId = "testInvitationId2", status = Accepted, clientName = "Find Me")
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
@@ -310,10 +303,8 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
     "respect the page number" in {
       val expectedPageNumber = 2
       val expectedPageSize = 2
-      val pageSizeUrl = testTrackRequestsUrl.replace(
-        "pageNumber=1&pageSize=10",
-        "pageNumber=" + expectedPageNumber + "&pageSize=" + expectedPageSize
-      )
+      val pageSizeUrl = testTrackRequestsUrl
+        .replace("pageNumber=1&pageSize=10", "pageNumber=" + expectedPageNumber + "&pageSize=" + expectedPageSize)
       val fakeRequest = FakeRequest("GET", pageSizeUrl)
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
@@ -330,12 +321,8 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber" -> expectedPageNumber,
-        "requests" -> Json.toJson(
-          Seq(
-            testInvitation.copy(invitationId = "testInvitationId3")
-          )
-        ),
+        "pageNumber"       -> expectedPageNumber,
+        "requests"         -> Json.toJson(Seq(testInvitation.copy(invitationId = "testInvitationId3"))),
         "clientNames"      -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
         "totalResults"     -> 3

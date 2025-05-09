@@ -16,10 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-case class SetRelationshipEndedPayload(arn: Arn, clientId: String, service: String, endedBy: Option[String])
+case class SetRelationshipEndedPayload(
+  arn: Arn,
+  clientId: String,
+  service: String,
+  endedBy: Option[String]
+)
 
 object SetRelationshipEndedPayload {
   implicit val jsonFormat: OFormat[SetRelationshipEndedPayload] = Json.format[SetRelationshipEndedPayload]

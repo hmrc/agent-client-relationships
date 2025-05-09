@@ -20,7 +20,8 @@ import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 case class InactiveRelationship(
   arn: Arn,
@@ -35,66 +36,107 @@ object InactiveRelationship {
 
   implicit val inActiveRelationshipWrites: OWrites[InactiveRelationship] = Json.writes[InactiveRelationship]
 
-  implicit val reads: Reads[InactiveRelationship] = new Reads[InactiveRelationship] {
-    override def reads(json: JsValue): JsResult[InactiveRelationship] = {
-      val arn = (json \ "agentReferenceNumber").as[Arn]
-      val dateTo = (json \ "dateTo").asOpt[LocalDate]
-      val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
-      val clientId = (json \ "referenceNumber").as[String]
-      val clientType = {
-        if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
+  implicit val reads: Reads[InactiveRelationship] =
+    new Reads[InactiveRelationship] {
+      override def reads(json: JsValue): JsResult[InactiveRelationship] = {
+        val arn = (json \ "agentReferenceNumber").as[Arn]
+        val dateTo = (json \ "dateTo").asOpt[LocalDate]
+        val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
+        val clientId = (json \ "referenceNumber").as[String]
+        val clientType =
+          if ((json \ "individual").asOpt[JsValue].isDefined)
+            "personal"
+          else
+            "business"
+        val service =
+          clientId match {
+            case _ if clientId.matches(CgtRef.cgtRegex) => Service.CapitalGains.id
+            case _ if PptRef.isValid(clientId) => Service.Ppt.id
+            case _ if CbcId.isValid(clientId) => Service.Cbc.id
+            case _ if Vrn.isValid(clientId) => Service.Vat.id
+            case _ if Utr.isValid(clientId) => Service.Trust.id
+            case _ if clientType == "business" & Urn.isValid(clientId) => Service.TrustNT.id
+            case _ if PlrId.isValid(clientId) => Service.Pillar2.id
+            case _ if MtdItId.isValid(clientId) => Service.MtdIt.id
+          }
+        JsSuccess(
+          InactiveRelationship(
+            arn,
+            dateTo,
+            dateFrom,
+            clientId,
+            clientType,
+            service
+          )
+        )
       }
-      val service = clientId match {
-        case _ if clientId.matches(CgtRef.cgtRegex)                => Service.CapitalGains.id
-        case _ if PptRef.isValid(clientId)                         => Service.Ppt.id
-        case _ if CbcId.isValid(clientId)                          => Service.Cbc.id
-        case _ if Vrn.isValid(clientId)                            => Service.Vat.id
-        case _ if Utr.isValid(clientId)                            => Service.Trust.id
-        case _ if clientType == "business" & Urn.isValid(clientId) => Service.TrustNT.id
-        case _ if PlrId.isValid(clientId)                          => Service.Pillar2.id
-        case _ if MtdItId.isValid(clientId)                        => Service.MtdIt.id
-      }
-      JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
     }
-  }
 
-  val hipReads: Reads[InactiveRelationship] = new Reads[InactiveRelationship] {
-    override def reads(json: JsValue): JsResult[InactiveRelationship] = {
-      val arn = (json \ "arn").as[Arn]
-      val dateTo = (json \ "dateTo").asOpt[LocalDate]
-      val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
-      val clientId = (json \ "refNumber").as[String]
-      val clientType = {
-        if ((json \ "individual").asOpt[JsValue].isDefined) "personal" else "business"
+  val hipReads: Reads[InactiveRelationship] =
+    new Reads[InactiveRelationship] {
+      override def reads(json: JsValue): JsResult[InactiveRelationship] = {
+        val arn = (json \ "arn").as[Arn]
+        val dateTo = (json \ "dateTo").asOpt[LocalDate]
+        val dateFrom = (json \ "dateFrom").asOpt[LocalDate]
+        val clientId = (json \ "refNumber").as[String]
+        val clientType =
+          if ((json \ "individual").asOpt[JsValue].isDefined)
+            "personal"
+          else
+            "business"
+        val service =
+          clientId match {
+            case _ if clientId.matches(CgtRef.cgtRegex) => Service.CapitalGains.id
+            case _ if PptRef.isValid(clientId) => Service.Ppt.id
+            case _ if CbcId.isValid(clientId) => Service.Cbc.id
+            case _ if Vrn.isValid(clientId) => Service.Vat.id
+            case _ if Utr.isValid(clientId) => Service.Trust.id
+            case _ if clientType == "business" & Urn.isValid(clientId) => Service.TrustNT.id
+            case _ if PlrId.isValid(clientId) => Service.Pillar2.id
+            case _ if MtdItId.isValid(clientId) => Service.MtdIt.id
+          }
+        JsSuccess(
+          InactiveRelationship(
+            arn,
+            dateTo,
+            dateFrom,
+            clientId,
+            clientType,
+            service
+          )
+        )
       }
-      val service = clientId match {
-        case _ if clientId.matches(CgtRef.cgtRegex)                => Service.CapitalGains.id
-        case _ if PptRef.isValid(clientId)                         => Service.Ppt.id
-        case _ if CbcId.isValid(clientId)                          => Service.Cbc.id
-        case _ if Vrn.isValid(clientId)                            => Service.Vat.id
-        case _ if Utr.isValid(clientId)                            => Service.Trust.id
-        case _ if clientType == "business" & Urn.isValid(clientId) => Service.TrustNT.id
-        case _ if PlrId.isValid(clientId)                          => Service.Pillar2.id
-        case _ if MtdItId.isValid(clientId)                        => Service.MtdIt.id
-      }
-      JsSuccess(InactiveRelationship(arn, dateTo, dateFrom, clientId, clientType, service))
     }
-  }
 
-  val irvReads: Reads[InactiveRelationship] = (
-    (__ \ "arn").read[Arn] and
-      (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
-      (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
-      (__ \ "clientId").read[String]
-  )((arn, validTo, validFrom, clientId) =>
-    InactiveRelationship(arn, validTo, validFrom, clientId, "personal", Service.PersonalIncomeRecord.id)
-  )
+  val irvReads: Reads[InactiveRelationship] =
+    (
+      (__ \ "arn").read[Arn] and
+        (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+        (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
+        (__ \ "clientId").read[String]
+    )(
+      (
+        arn,
+        validTo,
+        validFrom,
+        clientId
+      ) =>
+        InactiveRelationship(
+          arn,
+          validTo,
+          validFrom,
+          clientId,
+          "personal",
+          Service.PersonalIncomeRecord.id
+        )
+    )
 
 }
 
 case class InactiveRelationshipResponse(relationship: Seq[InactiveRelationship])
 
 object InactiveRelationshipResponse {
-  implicit val inActiveRelationshipResponse: OFormat[InactiveRelationshipResponse] =
-    Json.format[InactiveRelationshipResponse]
+  implicit val inActiveRelationshipResponse: OFormat[InactiveRelationshipResponse] = Json.format[
+    InactiveRelationshipResponse
+  ]
 }

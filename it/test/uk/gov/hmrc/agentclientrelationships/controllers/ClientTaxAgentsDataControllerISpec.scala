@@ -27,11 +27,11 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, ZoneOffset}
 
 class ClientTaxAgentsDataControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with HipStub
-    with TestData {
+extends BaseControllerISpec
+with ClientDetailsStub
+with AfiRelationshipStub
+with HipStub
+with TestData {
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
@@ -46,12 +46,7 @@ class ClientTaxAgentsDataControllerISpec
   val testAgentRecord1: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(
-        agencyName = Some(agentName1),
-        agencyEmail = None,
-        agencyTelephone = None,
-        agencyAddress = None
-      )
+      TestAgencyDetails(agencyName = Some(agentName1), agencyEmail = None, agencyTelephone = None, agencyAddress = None)
     ),
     suspensionDetails = None
   )
@@ -59,12 +54,7 @@ class ClientTaxAgentsDataControllerISpec
   val testAgentRecord2: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(
-        agencyName = Some(agentName2),
-        agencyEmail = None,
-        agencyTelephone = None,
-        agencyAddress = None
-      )
+      TestAgencyDetails(agencyName = Some(agentName2), agencyEmail = None, agencyTelephone = None, agencyAddress = None)
     ),
     suspensionDetails = None
   )
@@ -72,12 +62,7 @@ class ClientTaxAgentsDataControllerISpec
   val testAgentRecord3: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(
-        agencyName = Some(agentName3),
-        agencyEmail = None,
-        agencyTelephone = None,
-        agencyAddress = None
-      )
+      TestAgencyDetails(agencyName = Some(agentName3), agencyEmail = None, agencyTelephone = None, agencyAddress = None)
     ),
     suspensionDetails = None
   )
@@ -272,13 +257,9 @@ class ClientTaxAgentsDataControllerISpec
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
       givenAuditConnector()
 
-      invitationsRepo.collection
-        .insertMany(
-          Seq(
-            pendingVatInvitationAgent1,
-            pendingItsaInvitationAgent1
-          )
-        )
+      invitationsRepo
+        .collection
+        .insertMany(Seq(pendingVatInvitationAgent1, pendingItsaInvitationAgent1))
         .toFuture()
         .futureValue
 
@@ -310,14 +291,9 @@ class ClientTaxAgentsDataControllerISpec
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
       givenAuditConnector()
 
-      invitationsRepo.collection
-        .insertMany(
-          Seq(
-            pendingVatInvitationAgent1,
-            pendingVatInvitationAgent2,
-            pendingItsaInvitationAgent1
-          )
-        )
+      invitationsRepo
+        .collection
+        .insertMany(Seq(pendingVatInvitationAgent1, pendingVatInvitationAgent2, pendingItsaInvitationAgent1))
         .toFuture()
         .futureValue
 
@@ -355,14 +331,9 @@ class ClientTaxAgentsDataControllerISpec
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
       givenAuditConnector()
 
-      invitationsRepo.collection
-        .insertMany(
-          Seq(
-            pendingVatInvitationAgent1,
-            pendingVatInvitationAgent2,
-            pendingItsaInvitationAgent1
-          )
-        )
+      invitationsRepo
+        .collection
+        .insertMany(Seq(pendingVatInvitationAgent1, pendingVatInvitationAgent2, pendingItsaInvitationAgent1))
         .toFuture()
         .futureValue
 
@@ -377,9 +348,8 @@ class ClientTaxAgentsDataControllerISpec
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(
         arn2,
-        testAgentRecord2.copy(suspensionDetails =
-          Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV"))))
-        )
+        testAgentRecord2
+          .copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV")))))
       )
 
       val result = doGetRequest(testEndpoint)
@@ -451,29 +421,20 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 3 // for 3 agents data
 
       val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn.value)
-          .get
-          .authorisations
+        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
       agent1Authorisations.size shouldBe 3
       agent1Authorisations.exists(_.service == Service.MtdIt.id) shouldBe true
       agent1Authorisations.exists(_.service == Service.Vat.id) shouldBe true
       agent1Authorisations.exists(_.service == Service.Trust.id) shouldBe true
 
       val agent2Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn2.value)
-          .get
-          .authorisations
+        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn2.value).get.authorisations
       agent2Authorisations.size shouldBe 2
       agent2Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true
       agent2Authorisations.exists(_.service == Service.TrustNT.id) shouldBe true
 
       val agent3Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn3.value)
-          .get
-          .authorisations
+        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn3.value).get.authorisations
       agent3Authorisations.size shouldBe 2
       agent3Authorisations.exists(_.service == Service.Ppt.id) shouldBe true
       agent3Authorisations.exists(_.service == Service.CapitalGains.id) shouldBe true
@@ -484,9 +445,7 @@ class ClientTaxAgentsDataControllerISpec
       givenAuthorisedAsClientWithNino(fakeRequest, nino)
       givenAuditConnector()
 
-      partialAuthRepo
-        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn, Service.MtdItSupp.id, nino)
-        .futureValue
+      partialAuthRepo.create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn, Service.MtdItSupp.id, nino).futureValue
 
       givenAgentRecordFound(arn, testAgentRecord1)
       val result = doGetRequest(testEndpoint)
@@ -496,10 +455,7 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 1
 
       val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn.value)
-          .get
-          .authorisations
+        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
 
       agent1Authorisations.size shouldBe 1
       agent1Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true
@@ -528,7 +484,9 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 1
 
       val agentAuthorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
+        clientTaxAgentsData
+          .agentsAuthorisations
+          .agentsAuthorisations
           .find(x => x.agentName == agentName1)
           .get
           .authorisations
@@ -566,7 +524,9 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 2
 
       val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
+        clientTaxAgentsData
+          .agentsAuthorisations
+          .agentsAuthorisations
           .find(x => x.agentName == agentName1)
           .get
           .authorisations
@@ -574,7 +534,9 @@ class ClientTaxAgentsDataControllerISpec
       agent1Authorisations.exists(_.service == Service.MtdIt.id) shouldBe true
 
       val agent2Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
+        clientTaxAgentsData
+          .agentsAuthorisations
+          .agentsAuthorisations
           .find(x => x.agentName == agentName2)
           .get
           .authorisations
@@ -611,14 +573,18 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 1
 
       val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
+        clientTaxAgentsData
+          .agentsAuthorisations
+          .agentsAuthorisations
           .find(x => x.agentName == agentName1)
           .get
           .authorisations
       agent1Authorisations.size shouldBe 1
       agent1Authorisations.exists(_.service == Service.MtdIt.id) shouldBe true
 
-      clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
+      clientTaxAgentsData
+        .agentsAuthorisations
+        .agentsAuthorisations
         .exists(x => x.agentName == agentName2) shouldBe false
 
     }
@@ -645,7 +611,9 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 1
 
       val agentAuthorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
+        clientTaxAgentsData
+          .agentsAuthorisations
+          .agentsAuthorisations
           .find(x => x.agentName == agentName1)
           .get
           .authorisations
@@ -677,7 +645,9 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 1
 
       val agentAuthorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
+        clientTaxAgentsData
+          .agentsAuthorisations
+          .agentsAuthorisations
           .find(x => x.agentName == agentName1)
           .get
           .authorisations
@@ -809,7 +779,9 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.authorisationEvents.authorisationEvents.size shouldBe 9
 
-      val agent1Authorisations = clientTaxAgentsData.authorisationEvents.authorisationEvents
+      val agent1Authorisations = clientTaxAgentsData
+        .authorisationEvents
+        .authorisationEvents
         .filter(x => x.agentName == agentName1)
 
       agent1Authorisations.size shouldBe 4
@@ -818,30 +790,32 @@ class ClientTaxAgentsDataControllerISpec
       agent1Authorisations.exists(x => x.service == Service.Trust.id && x.eventType == Accepted) shouldBe true
       agent1Authorisations.exists(x => x.service == Service.Trust.id && x.eventType == DeAuthorised) shouldBe true
 
-      val agent2Authorisations =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName2)
+      val agent2Authorisations = clientTaxAgentsData
+        .authorisationEvents
+        .authorisationEvents
+        .filter(x => x.agentName == agentName2)
 
       agent2Authorisations.size shouldBe 2
       agent2Authorisations.exists(x => x.service == Service.MtdItSupp.id && x.eventType == Accepted) shouldBe true
       agent2Authorisations.exists(x => x.service == Service.TrustNT.id && x.eventType == Accepted) shouldBe true
 
-      val agent3Authorisations =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName3)
+      val agent3Authorisations = clientTaxAgentsData
+        .authorisationEvents
+        .authorisationEvents
+        .filter(x => x.agentName == agentName3)
       agent3Authorisations.size shouldBe 3
       agent3Authorisations.exists(x => x.service == Service.Ppt.id && x.eventType == Accepted) shouldBe true
       agent3Authorisations.exists(x => x.service == Service.CapitalGains.id && x.eventType == Accepted) shouldBe true
-      agent3Authorisations.exists(x =>
-        x.service == Service.CapitalGains.id && x.eventType == DeAuthorised
-      ) shouldBe true
+      agent3Authorisations
+        .exists(x => x.service == Service.CapitalGains.id && x.eventType == DeAuthorised) shouldBe true
     }
 
     "Authorisation events for Invitations excluding Pending, Accepted, DeAuthorised invitations" in {
       givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
       givenAuditConnector()
 
-      invitationsRepo.collection
+      invitationsRepo
+        .collection
         .insertMany(
           Seq(
             pendingVatInvitationAgent1,
@@ -871,7 +845,9 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.authorisationEvents.authorisationEvents.size shouldBe 3
 
-      val agent1AuthorisationEvents = clientTaxAgentsData.authorisationEvents.authorisationEvents
+      val agent1AuthorisationEvents = clientTaxAgentsData
+        .authorisationEvents
+        .authorisationEvents
         .filter(x => x.agentName == agentName1)
 
       agent1AuthorisationEvents.size shouldBe 1
@@ -879,15 +855,15 @@ class ClientTaxAgentsDataControllerISpec
       agent1AuthorisationEvents.exists(x => x.service == Service.Vat.id && x.eventType == Pending) shouldBe false
       agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == DeAuthorised) shouldBe false
 
-      val agent2AuthorisationEvents =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName2)
+      val agent2AuthorisationEvents = clientTaxAgentsData
+        .authorisationEvents
+        .authorisationEvents
+        .filter(x => x.agentName == agentName2)
 
       agent2AuthorisationEvents.size shouldBe 2
       agent2AuthorisationEvents.exists(x => x.service == Service.Vat.id && x.eventType == Cancelled) shouldBe true
-      agent2AuthorisationEvents.exists(x =>
-        x.service == Service.CapitalGains.id && x.eventType == Rejected
-      ) shouldBe true
+      agent2AuthorisationEvents
+        .exists(x => x.service == Service.CapitalGains.id && x.eventType == Rejected) shouldBe true
       agent2AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe false
     }
 
@@ -895,30 +871,14 @@ class ClientTaxAgentsDataControllerISpec
       givenAuthorisedAsClientWithNino(fakeRequest, nino)
       givenAuditConnector()
 
-      invitationsRepo.collection
-        .insertMany(
-          Seq(
-            acceptedPartialAuthInvitationAgent2
-          )
-        )
-        .toFuture()
-        .futureValue
+      invitationsRepo.collection.insertMany(Seq(acceptedPartialAuthInvitationAgent2)).toFuture().futureValue
+
+      partialAuthRepo.create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn2, Service.MtdIt.id, nino).futureValue
+
+      partialAuthRepo.create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn, Service.MtdIt.id, nino).futureValue
 
       partialAuthRepo
-        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn2, Service.MtdIt.id, nino)
-        .futureValue
-
-      partialAuthRepo
-        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn, Service.MtdIt.id, nino)
-        .futureValue
-
-      partialAuthRepo
-        .deauthorise(
-          Service.MtdIt.id,
-          nino,
-          arn,
-          updated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-        )
+        .deauthorise(Service.MtdIt.id, nino, arn, updated = Instant.now().truncatedTo(ChronoUnit.SECONDS))
         .futureValue
 
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -932,17 +892,19 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.authorisationEvents.authorisationEvents.size shouldBe 3
 
-      val agent1AuthorisationEvents =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName1)
+      val agent1AuthorisationEvents = clientTaxAgentsData
+        .authorisationEvents
+        .authorisationEvents
+        .filter(x => x.agentName == agentName1)
 
       agent1AuthorisationEvents.size shouldBe 2
       agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == DeAuthorised) shouldBe true
       agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe true
 
-      val agent2AuthorisationEvents =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName2)
+      val agent2AuthorisationEvents = clientTaxAgentsData
+        .authorisationEvents
+        .authorisationEvents
+        .filter(x => x.agentName == agentName2)
 
       agent2AuthorisationEvents.size shouldBe 1
       agent2AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe true

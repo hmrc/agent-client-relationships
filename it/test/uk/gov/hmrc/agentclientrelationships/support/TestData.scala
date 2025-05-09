@@ -98,15 +98,9 @@ trait TestData {
     suspensionDetails = Some(suspensionDetailsSuspended)
   )
 
-  val agentDetails: AgencyDetails = AgencyDetails(
-    "My Agency",
-    "abc@abc.com"
-  )
+  val agentDetails: AgencyDetails = AgencyDetails("My Agency", "abc@abc.com")
 
-  val existingAgentDetails: AgencyDetails = AgencyDetails(
-    "ExistingAgent",
-    "abc@abc.com"
-  )
+  val existingAgentDetails: AgencyDetails = AgencyDetails("ExistingAgent", "abc@abc.com")
 
   val agentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
     agencyDetails = agentDetails,

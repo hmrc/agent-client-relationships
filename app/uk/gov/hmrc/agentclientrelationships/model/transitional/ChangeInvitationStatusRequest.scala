@@ -16,10 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.transitional
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 
-case class ChangeInvitationStatusRequest(invitationStatus: InvitationStatus, endedBy: Option[String])
+case class ChangeInvitationStatusRequest(
+  invitationStatus: InvitationStatus,
+  endedBy: Option[String]
+)
 
 object ChangeInvitationStatusRequest {
   implicit val jsonFormat: OFormat[ChangeInvitationStatusRequest] = Json.format[ChangeInvitationStatusRequest]

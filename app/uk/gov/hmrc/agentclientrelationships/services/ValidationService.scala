@@ -18,85 +18,87 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
 import play.api.Logging
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource
-import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.{AfrRelationshipRepo, HipOrIfApi}
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, RelationshipFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.AfrRelationshipRepo
+import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.HipOrIfApi
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class ValidationService @Inject() (
   esConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-) extends Logging {
+)(implicit ec: ExecutionContext)
+extends Logging {
 
   // TODO look into updating this to not be an either as we never actually handle the Left it returns in a useful way
   // noinspection ScalaStyle
-  def validateForEnrolmentKey(serviceKey: String, clientType: String, clientId: String)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[String, EnrolmentKey]] =
+  def validateForEnrolmentKey(
+    serviceKey: String,
+    clientType: String,
+    clientId: String
+  )(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
-      case ("IR-SA", "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
+      case ("IR-SA", "ni" | "NI" | "NINO") if Nino.isValid(clientId) => Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
       case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
-      case (Service.PersonalIncomeRecord.id, "NINO") =>
-        Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
-      case (Service.Cbc.id, CbcIdType.enrolmentId) =>
-        makeSanitisedCbcEnrolmentKey(CbcId(clientId))
+      case (Service.PersonalIncomeRecord.id, "NINO") => Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
+      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) => Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
+      case (Service.Cbc.id, CbcIdType.enrolmentId) => makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>
         if (appConfig.supportedServicesWithoutPir.exists(_.id == serviceKey))
-          validateSupportedServiceForEnrolmentKey(serviceKey, clientType, clientId)
+          validateSupportedServiceForEnrolmentKey(
+            serviceKey,
+            clientType,
+            clientId
+          )
         else
           Future.successful(Left(s"Unknown service $serviceKey"))
     }
 
-  /** This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be
-    * HMRC-CBC-NONUK-ORG (if the caller has no way of knowing). We check and correct the enrolment key as needed. Also,
-    * if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId) as required by specs. First,
-    * query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
+  /** This is needed because sometimes we call the ACR endpoints specifying HMRC-CBC-ORG but it could actually be HMRC-CBC-NONUK-ORG (if the caller has no way
+    * of knowing). We check and correct the enrolment key as needed. Also, if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId)
+    * as required by specs. First, query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
     */
-  def makeSanitisedCbcEnrolmentKey(
-    cbcId: CbcId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[String, EnrolmentKey]] =
+  def makeSanitisedCbcEnrolmentKey(cbcId: CbcId)(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     // Try as HMRC-CBC-ORG (UK version)
-    esConnector.queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value))).flatMap {
-      case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
-        logger.info(s"CbcId ${cbcId.value} not found as as HMRC-CBC-ORG. Trying as HMRC-CBC-NONUK-ORG.")
-        esConnector.queryKnownFacts(Service.CbcNonUk, Seq(Identifier("cbcId", cbcId.value))).map {
-          case Some(_) => Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
-          case None    => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
-        }
-      case Some(identifiers) =>
-        Future.successful(
-          Right(
-            EnrolmentKey(
-              Service.Cbc.id,
-              identifiers
-            )
-          )
-        )
-    }
+    esConnector
+      .queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))
+      .flatMap {
+        case None => // No results from EACD for HMRC-CBC-ORG (UK version). Try non-uk instead.
+          logger.info(s"CbcId ${cbcId.value} not found as as HMRC-CBC-ORG. Trying as HMRC-CBC-NONUK-ORG.")
+          esConnector
+            .queryKnownFacts(Service.CbcNonUk, Seq(Identifier("cbcId", cbcId.value)))
+            .map {
+              case Some(_) => Right(EnrolmentKey(Service.CbcNonUk.id, Seq(Identifier(CbcIdType.enrolmentId, cbcId.value))))
+              case None => Left(s"CbcId ${cbcId.value}: tried as both HMRC-CBC-ORG and HMRC-CBC-NONUK-ORG, not found.")
+            }
+        case Some(identifiers) => Future.successful(Right(EnrolmentKey(Service.Cbc.id, identifiers)))
+      }
 
   def validateForTaxIdentifier(
     clientIdTypeStr: String,
     clientIdStr: String
   ): Either[RelationshipFailureResponse, TaxIdentifier] = {
     val clientIdType = ClientIdType.forId(clientIdTypeStr)
-    if (clientIdType.isValid(clientIdStr)) Right(clientIdType.createUnderlying(clientIdStr))
-    else Left(RelationshipFailureResponse.TaxIdentifierError)
+    if (clientIdType.isValid(clientIdStr))
+      Right(clientIdType.createUnderlying(clientIdStr))
+    else
+      Left(RelationshipFailureResponse.TaxIdentifierError)
   }
 
   def validateAuthProfileToService(
@@ -104,21 +106,18 @@ class ValidationService @Inject() (
     authProfile: Option[String],
     relationshipSource: RelationshipSource,
     service: Option[Service]
-  )(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[RelationshipFailureResponse, Service]] =
+  )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Service]] =
     service.fold {
       (taxIdentifier, authProfile, relationshipSource) match {
         case (Nino(_), Some("ALL00001"), HipOrIfApi) => Future.successful(Right(Service.MtdIt))
         case (Nino(_), Some("ITSAS001"), HipOrIfApi) => Future.successful(Right(Service.MtdItSupp))
-        case (Nino(_), None, HipOrIfApi)             => Future.successful(Right(Service.MtdIt))
-        case (Nino(_), _, AfrRelationshipRepo)       => Future.successful(Right(Service.PersonalIncomeRecord))
-        case (Vrn(_), _, _)                          => Future.successful(Right(Service.Vat))
-        case (Utr(_), _, _)                          => Future.successful(Right(Service.Trust))
-        case (CgtRef(_), _, _)                       => Future.successful(Right(Service.CapitalGains))
-        case (PptRef(_), _, _)                       => Future.successful(Right(Service.Ppt))
-        case (Urn(_), _, _)                          => Future.successful(Right(Service.TrustNT))
+        case (Nino(_), None, HipOrIfApi) => Future.successful(Right(Service.MtdIt))
+        case (Nino(_), _, AfrRelationshipRepo) => Future.successful(Right(Service.PersonalIncomeRecord))
+        case (Vrn(_), _, _) => Future.successful(Right(Service.Vat))
+        case (Utr(_), _, _) => Future.successful(Right(Service.Trust))
+        case (CgtRef(_), _, _) => Future.successful(Right(Service.CapitalGains))
+        case (PptRef(_), _, _) => Future.successful(Right(Service.Ppt))
+        case (Urn(_), _, _) => Future.successful(Right(Service.TrustNT))
         case (CbcId(_), _, _) =>
           EitherT(makeSanitisedCbcEnrolmentKey(CbcId(taxIdentifier.value)))
             .map(x => Service(x.service))
@@ -147,7 +146,9 @@ class ValidationService @Inject() (
         Future.successful(
           Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
         )
-    } else
+    }
+    else
       Future.successful(Left(s"Identifier $clientId of stated type $taxIdType cannot be used for service $serviceKey"))
   }
+
 }

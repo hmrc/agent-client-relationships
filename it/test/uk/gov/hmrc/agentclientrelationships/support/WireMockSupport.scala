@@ -98,6 +98,7 @@ object Port extends Logging {
     catch {
       case t: Throwable => false
     } finally
-      if (socket != null) socket.close()
+      if (socket != null)
+        socket.close()
   }
 }

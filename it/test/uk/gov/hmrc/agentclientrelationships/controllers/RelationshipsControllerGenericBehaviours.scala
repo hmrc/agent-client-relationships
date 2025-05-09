@@ -51,13 +51,14 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   // noinspection ScalaStyle
   def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
-    val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
-    } else if (isItsaNino(clientIdType, serviceId)) {
-      EnrolmentKey(Service.forId(serviceId), mtdItId)
-    } else {
-      EnrolmentKey(Service.forId(serviceId), clientId)
-    }
+    val enrolmentKey =
+      if (serviceId == Service.Cbc.id) {
+        EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
+      } else if (isItsaNino(clientIdType, serviceId)) {
+        EnrolmentKey(Service.forId(serviceId), mtdItId)
+      } else {
+        EnrolmentKey(Service.forId(serviceId), clientId)
+      }
     def extraSetup(serviceId: String, clientIdType: String): Unit = {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
@@ -160,9 +161,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   // noinspection ScalaStyle
   def relationshipsControllerPutISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
-    val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
-    } else EnrolmentKey(Service.forId(serviceId), clientId)
+    val enrolmentKey =
+      if (serviceId == Service.Cbc.id) {
+        EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
+      } else
+        EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String, clientIdType: String): Unit = {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
@@ -201,8 +204,10 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 201
-        if (enrolmentKey.service == Service.HMRCMTDITSUPP) verifyNoEnrolmentHasBeenDeallocated()
-        else verifyEnrolmentDeallocationAttempt(groupId = "zoo", enrolmentKey = enrolmentKey)
+        if (enrolmentKey.service == Service.HMRCMTDITSUPP)
+          verifyNoEnrolmentHasBeenDeallocated()
+        else
+          verifyEnrolmentDeallocationAttempt(groupId = "zoo", enrolmentKey = enrolmentKey)
 
         verifyCreateRelationshipAuditSent(
           requestPath,
@@ -301,7 +306,8 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         extraSetup(serviceId, clientIdType)
 
         await(
-          mongoLockRepository.collection
+          mongoLockRepository
+            .collection
             .insertOne(
               Lock(
                 id = s"recovery-${arn.value}-${enrolmentKey.tag}",
@@ -450,9 +456,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
   // noinspection ScalaStyle
   def relationshipsControllerDeleteISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
-    val enrolmentKey = if (serviceId == Service.Cbc.id) {
-      EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
-    } else EnrolmentKey(Service.forId(serviceId), clientId)
+    val enrolmentKey =
+      if (serviceId == Service.Cbc.id) {
+        EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
+      } else
+        EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
@@ -746,9 +754,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       def doRequest = doGetRequest(requestPath)
       val req = FakeRequest()
 
-      val enrolmentKey = if (serviceId == Service.Cbc.id) {
-        EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
-      } else EnrolmentKey(Service.forId(serviceId), clientId)
+      val enrolmentKey =
+        if (serviceId == Service.Cbc.id) {
+          EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
+        } else
+          EnrolmentKey(Service.forId(serviceId), clientId)
       def extraSetup(serviceId: String): Unit = {
         if (serviceId == Service.Cbc.id)
           givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)

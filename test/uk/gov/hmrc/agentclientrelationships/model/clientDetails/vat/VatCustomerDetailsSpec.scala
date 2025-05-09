@@ -21,7 +21,8 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.LocalDate
 
-class VatCustomerDetailsSpec extends UnitSpec {
+class VatCustomerDetailsSpec
+extends UnitSpec {
 
   "VatCustomerDetails" should {
 
@@ -29,25 +30,35 @@ class VatCustomerDetailsSpec extends UnitSpec {
 
       "optional fields are present" in {
         val json = Json.obj(
-          "approvedInformation" -> Json.obj(
-            "customerDetails" -> Json.obj(
-              "organisationName" -> "CFG",
-              "tradingName"      -> "CFG Solutions",
-              "individual" -> Json.obj(
-                "title"      -> "0001",
-                "firstName"  -> "Ilkay",
-                "middleName" -> "Silky",
-                "lastName"   -> "Gundo"
-              ),
-              "effectiveRegistrationDate" -> "2020-01-01",
-              "isInsolvent"               -> false
+          "approvedInformation" ->
+            Json.obj(
+              "customerDetails" ->
+                Json.obj(
+                  "organisationName" -> "CFG",
+                  "tradingName" -> "CFG Solutions",
+                  "individual" ->
+                    Json.obj(
+                      "title" -> "0001",
+                      "firstName" -> "Ilkay",
+                      "middleName" -> "Silky",
+                      "lastName" -> "Gundo"
+                    ),
+                  "effectiveRegistrationDate" -> "2020-01-01",
+                  "isInsolvent" -> false
+                )
             )
-          )
         )
 
         val expectedModel = VatCustomerDetails(
           Some("CFG"),
-          Some(VatIndividual(Some("Mr"), Some("Ilkay"), Some("Silky"), Some("Gundo"))),
+          Some(
+            VatIndividual(
+              Some("Mr"),
+              Some("Ilkay"),
+              Some("Silky"),
+              Some("Gundo")
+            )
+          ),
           Some("CFG Solutions"),
           Some(LocalDate.parse("2020-01-01")),
           isInsolvent = false
@@ -57,21 +68,16 @@ class VatCustomerDetailsSpec extends UnitSpec {
       }
 
       "optional fields are not present" in {
-        val json = Json.obj(
-          "approvedInformation" -> Json.obj(
-            "customerDetails" -> Json.obj(
-              "isInsolvent" -> false
-            )
-          )
-        )
+        val json = Json.obj("approvedInformation" -> Json.obj("customerDetails" -> Json.obj("isInsolvent" -> false)))
 
-        json.as[VatCustomerDetails] shouldBe VatCustomerDetails(
-          None,
-          None,
-          None,
-          None,
-          isInsolvent = false
-        )
+        json.as[VatCustomerDetails] shouldBe
+          VatCustomerDetails(
+            None,
+            None,
+            None,
+            None,
+            isInsolvent = false
+          )
       }
     }
   }
@@ -81,12 +87,23 @@ class VatCustomerDetailsSpec extends UnitSpec {
     "combine the fields in the individual record into a readable String" when {
 
       "all fields are present" in {
-        VatIndividual(Some("Mr"), Some("Ilkay"), Some("Silky"), Some("Gundo")).name shouldBe "Mr Ilkay Silky Gundo"
+        VatIndividual(
+          Some("Mr"),
+          Some("Ilkay"),
+          Some("Silky"),
+          Some("Gundo")
+        ).name shouldBe "Mr Ilkay Silky Gundo"
       }
 
       "some fields are missing" in {
-        VatIndividual(None, Some("Ilkay"), None, Some("Gundo")).name shouldBe "Ilkay Gundo"
+        VatIndividual(
+          None,
+          Some("Ilkay"),
+          None,
+          Some("Gundo")
+        ).name shouldBe "Ilkay Gundo"
       }
     }
   }
+
 }

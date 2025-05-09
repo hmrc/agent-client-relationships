@@ -16,53 +16,56 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Format, Reads, Writes, __}
+import play.api.libs.json.Format
+import play.api.libs.json.Reads
+import play.api.libs.json.Writes
+import play.api.libs.json.__
 
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneOffset}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 object MongoLocalDateTimeFormat {
 
   // LocalDate
 
-  final val localDateReads: Reads[LocalDate] =
-    Reads
-      .at[String](__ \ "$date" \ "$numberLong")
-      .map(date => Instant.ofEpochMilli(date.toLong).atZone(ZoneOffset.UTC).toLocalDate)
+  final val localDateReads: Reads[LocalDate] = Reads
+    .at[String](__ \ "$date" \ "$numberLong")
+    .map(date => Instant.ofEpochMilli(date.toLong).atZone(ZoneOffset.UTC).toLocalDate)
 
-  final val localDateWrites: Writes[LocalDate] =
-    Writes
-      .at[String](__ \ "$date" \ "$numberLong")
-      .contramap(_.atStartOfDay(ZoneOffset.UTC).toInstant.toEpochMilli.toString)
+  final val localDateWrites: Writes[LocalDate] = Writes
+    .at[String](__ \ "$date" \ "$numberLong")
+    .contramap(_.atStartOfDay(ZoneOffset.UTC).toInstant.toEpochMilli.toString)
 
   // for data that exists prior to the hmrc-mongo migration
-  final val legacyDateReads: Reads[LocalDate] =
-    Reads
-      .at[String](__)
-      .map(date => LocalDate.parse(date))
+  final val legacyDateReads: Reads[LocalDate] = Reads.at[String](__).map(date => LocalDate.parse(date))
 
   // LocalDateTime
 
-  final val localDateTimeReads: Reads[LocalDateTime] =
-    Reads
-      .at[String](__ \ "$date" \ "$numberLong")
-      .map { dateTime =>
-        Instant.ofEpochMilli(dateTime.toLong).atZone(ZoneOffset.UTC).toLocalDateTime
-      }
+  final val localDateTimeReads: Reads[LocalDateTime] = Reads
+    .at[String](__ \ "$date" \ "$numberLong")
+    .map { dateTime =>
+      Instant.ofEpochMilli(dateTime.toLong).atZone(ZoneOffset.UTC).toLocalDateTime
+    }
 
   // for data that exists prior to the hmrc-mongo migration -
-  final val legacyDateTimeReads: Reads[LocalDateTime] =
-    Reads
-      .at[String](__)
-      .map(dateTime => LocalDateTime.parse(dateTime))
+  final val legacyDateTimeReads: Reads[LocalDateTime] = Reads
+    .at[String](__)
+    .map(dateTime => LocalDateTime.parse(dateTime))
 
-  final val localDateTimeWrites: Writes[LocalDateTime] =
-    Writes
-      .at[String](__ \ "$date" \ "$numberLong")
-      .contramap(_.toInstant(ZoneOffset.UTC).toEpochMilli.toString)
+  final val localDateTimeWrites: Writes[LocalDateTime] = Writes
+    .at[String](__ \ "$date" \ "$numberLong")
+    .contramap(_.toInstant(ZoneOffset.UTC).toEpochMilli.toString)
 
-  final implicit val localDateTimeFormat: Format[LocalDateTime] =
-    Format(localDateTimeReads.orElse(legacyDateTimeReads), localDateTimeWrites)
+  implicit final val localDateTimeFormat: Format[LocalDateTime] = Format(
+    localDateTimeReads.orElse(legacyDateTimeReads),
+    localDateTimeWrites
+  )
 
-  final implicit val localDateFormat: Format[LocalDate] =
-    Format(localDateReads.orElse(legacyDateReads), localDateWrites)
+  implicit final val localDateFormat: Format[LocalDate] = Format(
+    localDateReads.orElse(legacyDateReads),
+    localDateWrites
+  )
+
 }

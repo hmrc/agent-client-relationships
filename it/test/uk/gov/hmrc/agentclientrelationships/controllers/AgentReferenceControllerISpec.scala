@@ -36,11 +36,7 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
   val testName1 = "testName1"
   val testName2 = "testName2"
   val testUid = "testUid"
-  val testRecord: AgentReferenceRecord = AgentReferenceRecord(
-    testUid,
-    testArn,
-    Seq(testName1)
-  )
+  val testRecord: AgentReferenceRecord = AgentReferenceRecord(testUid, testArn, Seq(testName1))
 
   s"GET $fetchOrCreateUrl" should {
     "return Unauthorised" when {
@@ -70,8 +66,10 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
 
         await(referenceRepo.collection.insertOne(testRecord).toFuture())
 
-        val result =
-          doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj("normalisedAgentName" -> testName1))
+        val result = doAgentPutRequest(
+          fetchOrCreateUrl + s"/${testArn.value}",
+          Json.obj("normalisedAgentName" -> testName1)
+        )
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(testRecord)
@@ -82,8 +80,10 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
 
         await(referenceRepo.collection.insertOne(testRecord).toFuture())
 
-        val result =
-          doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj("normalisedAgentName" -> testName2))
+        val result = doAgentPutRequest(
+          fetchOrCreateUrl + s"/${testArn.value}",
+          Json.obj("normalisedAgentName" -> testName2)
+        )
 
         val expected = testRecord.copy(normalisedAgentNames = Seq(testName1, testName2))
         result.status shouldBe 200
@@ -94,8 +94,10 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
         givenAuditConnector()
         givenAuthorised()
 
-        val result =
-          doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj("normalisedAgentName" -> testName1))
+        val result = doAgentPutRequest(
+          fetchOrCreateUrl + s"/${testArn.value}",
+          Json.obj("normalisedAgentName" -> testName1)
+        )
 
         val newRecord = await(referenceRepo.findByArn(testArn))
         result.status shouldBe 200

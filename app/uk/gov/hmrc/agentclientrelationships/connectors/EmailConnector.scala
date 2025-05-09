@@ -18,31 +18,41 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.Logging
 import play.api.libs.json.Json
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
-import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse}
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpErrorFunctions
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 
 import java.net.URL
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 @Singleton
-class EmailConnector @Inject() (appConfig: AppConfig, httpV2: HttpClientV2, val metrics: Metrics)(implicit
-  val ec: ExecutionContext
-) extends HttpAPIMonitor
-    with HttpErrorFunctions
-    with Logging {
+class EmailConnector @Inject() (
+  appConfig: AppConfig,
+  httpClient: HttpClientV2,
+  val metrics: Metrics
+)(implicit val ec: ExecutionContext)
+extends HttpApiMonitor
+with HttpErrorFunctions
+with Logging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 
-  def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] =
+  def sendEmail(emailInformation: EmailInformation)(implicit request: RequestHeader): Future[Boolean] =
     monitor(s"Send-Email-${emailInformation.templateId}") {
-      httpV2
-        .post(new URL(s"$baseUrl/hmrc/email"))
+      httpClient
+        .post(url"$baseUrl/hmrc/email")
         .withBody(Json.toJson(emailInformation))
         .execute[HttpResponse]
         .map { response =>
@@ -54,4 +64,5 @@ class EmailConnector @Inject() (appConfig: AppConfig, httpV2: HttpClientV2, val 
           }
         }
     }
+
 }

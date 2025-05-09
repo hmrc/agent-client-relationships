@@ -18,33 +18,44 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.{agentCodeKey, credIdKey}
-import uk.gov.hmrc.agentclientrelationships.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.agentCodeKey
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
+import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.UsersGroupsSearchConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case class AgentUser(userId: String, groupId: String, agentCode: AgentCode, arn: Arn)
+case class AgentUser(
+  userId: String,
+  groupId: String,
+  agentCode: AgentCode,
+  arn: Arn
+)
 
 @Singleton
 class AgentUserService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ugs: UsersGroupsSearchConnector,
   agentCacheProvider: AgentCacheProvider
-) extends Logging {
+)(implicit val executionContext: ExecutionContext)
+extends Logging {
 
   val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache
   val groupInfoCache = agentCacheProvider.ugsGroupInfoCache
 
-  def getAgentAdminAndSetAuditData(
-    arn: Arn
-  )(implicit ec: ExecutionContext, hc: HeaderCarrier, auditData: AuditData): Future[Either[String, AgentUser]] =
+  def getAgentAdminAndSetAuditData(arn: Arn)(implicit
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Either[String, AgentUser]] =
     for {
-      agentGroupId   <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
+      agentGroupId <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
       firstAdminUser <- firstGroupAdminCache(agentGroupId)(ugs.getFirstGroupAdminUser(agentGroupId))
       adminUserId = firstAdminUser.flatMap(_.userId)
       _ = adminUserId.foreach(auditData.set(credIdKey, _))
@@ -52,7 +63,15 @@ class AgentUserService @Inject() (
       agentCode = groupInfo.flatMap(_.agentCode)
       _ = agentCode.foreach(auditData.set(agentCodeKey, _))
     } yield (adminUserId, groupInfo, agentCode) match {
-      case (Some(userId), Some(_), Some(code)) => Right(AgentUser(userId, agentGroupId, code, arn))
+      case (Some(userId), Some(_), Some(code)) =>
+        Right(
+          AgentUser(
+            userId,
+            agentGroupId,
+            code,
+            arn
+          )
+        )
       case (None, _, _) =>
         logger.warn(s"Admin user had no userId for Arn: $arn")
         Left("NO_ADMIN_USER")
@@ -63,4 +82,5 @@ class AgentUserService @Inject() (
         logger.warn(s"Missing AgentCode for Arn: $arn and group: ${groupInfo.groupId}")
         Left("NO_AGENT_CODE")
     }
+
 }

@@ -34,6 +34,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import org.mongodb.scala.model.Filters
 import play.api.libs.json.{Format, JsObject}
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, EnrolmentKey, MongoLocalDateTimeFormat, TerminationResponse}
@@ -71,11 +72,18 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   val pillar2Client: TestClient = TestClient(Service.Pillar2.id, "PLRID", plrId)
 
   val individualList = List(itsaClient, vatClient, cgtClient, pptClient)
-  val businessList =
-    List(vatClient, trustClient, trustNTClient, cgtClient, pptClient, cbcClient, cbcNonUkClient, pillar2Client)
+  val businessList = List(
+    vatClient,
+    trustClient,
+    trustNTClient,
+    cgtClient,
+    pptClient,
+    cbcClient,
+    cbcNonUkClient,
+    pillar2Client
+  )
 
-  val servicesInIF =
-    List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
+  val servicesInIF = List(itsaClient, vatClient, trustClient, trustNTClient, cgtClient, pptClient, pillar2Client)
 
   val desOnlyWithRelationshipTypeAndAuthProfile = List(vatClient, cgtClient)
 
@@ -83,9 +91,12 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     if (isLoggedInClientStride) {
       givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE, "strideId-1234456")
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
-    } else if (isLoggedInClientInd) givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
-    else if (isLoggedInClientBusiness) givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId)
-    else requestIsNotAuthenticated()
+    } else if (isLoggedInClientInd)
+      givenLoginClientIndAll(mtdItId, vrn, nino, cgtRef, pptRef)
+    else if (isLoggedInClientBusiness)
+      givenLoginClientBusinessAll(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId)
+    else
+      requestIsNotAuthenticated()
   }
 
   "GET /client/relationships/service/:service" should {
@@ -115,8 +126,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
 
     def doRequest() = doGetRequest(requestPath)
 
-    s"find relationship for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual"
-    else "Business"}" in
+    s"find relationship for service ${testClient.service} and user ${if (isLoggedInClientInd)
+      "Individual"
+    else
+      "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipsViaClient(testClient.clientId, arn)
@@ -129,7 +142,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       }
 
     s"find multiple relationships for service ${testClient.service} " +
-      s"but filter out active and ended relationships for user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"but filter out active and ended relationships for user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getSomeActiveRelationshipsViaClient(testClient.clientId, arn.value, arn2.value, arn3.value)
@@ -151,7 +167,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     def doRequest() = doGetRequest(requestPath)
 
     "find relationship but filter out if the end date has been changed from 9999-12-31 " +
-      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getInactiveRelationshipViaClient(testClient.clientId, arn.value)
@@ -161,7 +180,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       }
 
     "return 404 when DES returns 404 relationship not found " +
-      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipFailsWith(testClient.clientId, 404)
@@ -171,7 +193,10 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
       }
 
     "return 404 when IF returns 400 (treated as relationship not found) " +
-      s"for service ${testClient.service} and user ${if (isLoggedInClientInd) "Individual" else "Business"}" in
+      s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(false, isLoggedInClientInd, isLoggedInBusiness) {
 
         getActiveRelationshipFailsWith(testClient.clientId, 400)
@@ -201,7 +226,11 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     s"return 200 with list of inactive ${testClient.service} for an Agent" in {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      val clientType = if (testClient.clientId.isInstanceOf[MtdItId]) "personal" else "business"
+      val clientType =
+        if (testClient.clientId.isInstanceOf[MtdItId])
+          "personal"
+        else
+          "business"
 
       val otherId: TaxIdentifier = otherTaxIdentifier(testClient.clientId)
 
@@ -452,7 +481,7 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
   }
 
   "sanitising a CBC enrolment key" should {
-    implicit val hc: HeaderCarrier = HeaderCarrier()
+    implicit val request: RequestHeader = FakeRequest()
     implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     "work for a HMRC-CBC-ORG enrolment key with a UTR stored in the enrolment store" in {
       val validationService = app.injector.instanceOf[ValidationService]

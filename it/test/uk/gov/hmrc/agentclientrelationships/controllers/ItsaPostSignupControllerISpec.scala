@@ -29,9 +29,7 @@ import java.time.Instant
 
 class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec with TestData with HipStub {
 
-  override def additionalConfig: Map[String, Any] = Map(
-    "hip.BusinessDetails.enabled" -> true
-  )
+  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
   val testUrl = s"/agent-client-relationships/itsa-post-signup/create-relationship/$nino"
 
@@ -55,7 +53,8 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
       givenCacheRefresh(arn, 404)
 
-      mongoPartialAuthRepo.collection
+      mongoPartialAuthRepo
+        .collection
         .insertOne(PartialAuthRelationship(Instant.now, arn.value, HMRCMTDIT, nino.value, active = true, Instant.now))
         .toFuture()
         .futureValue
@@ -99,7 +98,8 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       givenCacheRefresh(arn, 404)
 
-      mongoPartialAuthRepo.collection
+      mongoPartialAuthRepo
+        .collection
         .insertOne(
           PartialAuthRelationship(Instant.now, arn.value, HMRCMTDITSUPP, nino.value, active = true, Instant.now)
         )
@@ -305,7 +305,8 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAdminUser("foo", "any")
       givenAgentCanNotBeAllocated(503)
 
-      mongoPartialAuthRepo.collection
+      mongoPartialAuthRepo
+        .collection
         .insertOne(PartialAuthRelationship(Instant.now, arn.value, HMRCMTDIT, nino.value, active = true, Instant.now))
         .toFuture()
         .futureValue

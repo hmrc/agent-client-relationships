@@ -17,46 +17,53 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentsWithNino, RelationshipFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentsWithNino
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.services.ClientTaxAgentsDataService
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class ClientTaxAgentsDataController @Inject() (
   carService: ClientTaxAgentsDataService,
   val authConnector: AuthConnector,
-  cc: ControllerComponents
-)(implicit appConfig: AppConfig, ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+  cc: ControllerComponents,
+  appConfig: AppConfig
+)(implicit val executionContext: ExecutionContext)
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def findClientTaxAgentsData: Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsClientWithNino { authResponse: EnrolmentsWithNino =>
-      carService.getClientTaxAgentsData(authResponse).map {
-        case Right(clientTaxAgentsData) => Ok(Json.toJson(clientTaxAgentsData))
-        case Left(error) =>
-          error match {
-            case RelationshipFailureResponse.RelationshipBadRequest => BadRequest
-            case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) =>
-              ServiceUnavailable(message)
-            case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) =>
-              ServiceUnavailable(message)
-            case e =>
-              logger.error(s"Error retrieving client tax agents data: $e")
-              InternalServerError(e.toString)
-          }
+      carService
+        .getClientTaxAgentsData(authResponse)
+        .map {
+          case Right(clientTaxAgentsData) => Ok(Json.toJson(clientTaxAgentsData))
+          case Left(error) =>
+            // TODO: It takes great effort to return 5xx, which is probably ignored and results in technical difficulties anyway in frontend anyway...
+            // Verify if this is really needed and if not then rely on standard JsonErrorHandlder and simplify that and other code
+            error match {
+              case RelationshipFailureResponse.RelationshipBadRequest => BadRequest
+              case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) => ServiceUnavailable(message)
+              case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) => ServiceUnavailable(message)
+              case e =>
+                logger.error(s"Error retrieving client tax agents data: $e")
+                InternalServerError(e.toString)
+            }
 
-      }
+        }
 
     }
   }

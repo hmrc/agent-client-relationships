@@ -31,12 +31,9 @@ import java.time.{Instant, LocalDateTime, ZoneOffset}
 
 class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "features.recovery-enable" -> false
-      )
-      .configure(mongoConfiguration)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure("features.recovery-enable" -> false)
+    .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -100,7 +97,8 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
       createResult2 shouldBe 1
 
       val result = await(
-        repo.collection
+        repo
+          .collection
           .find(
             Filters.and(
               Filters.equal("arn", relationshipCopyRecord1.arn),

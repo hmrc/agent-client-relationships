@@ -18,7 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.util
 
 import play.api.mvc.Result
 import play.api.mvc.Results._
-import play.api.{Configuration, Environment, Mode}
+import play.api.Configuration
+import play.api.Environment
+import play.api.Mode
 import uk.gov.hmrc.http.SessionKeys
 
 trait AuthRedirects {
@@ -31,17 +33,16 @@ trait AuthRedirects {
   def env: Environment
 
   private lazy val envPrefix =
-    if (env.mode.equals(Mode.Test)) "Test"
+    if (env.mode.equals(Mode.Test))
+      "Test"
     else
-      config
-        .getOptional[String]("run.mode")
-        .getOrElse("Dev")
+      config.getOptional[String]("run.mode").getOrElse("Dev")
 
   private val hostDefaults: Map[String, String] = Map(
-    "Dev.external-url.bas-gateway-frontend.host"           -> "http://localhost:9553",
-    "Dev.external-url.citizen-auth-frontend.host"          -> "http://localhost:9029",
+    "Dev.external-url.bas-gateway-frontend.host" -> "http://localhost:9553",
+    "Dev.external-url.citizen-auth-frontend.host" -> "http://localhost:9029",
     "Dev.external-url.identity-verification-frontend.host" -> "http://localhost:9938",
-    "Dev.external-url.stride-auth-frontend.host"           -> "http://localhost:9041"
+    "Dev.external-url.stride-auth-frontend.host" -> "http://localhost:9041"
   )
 
   private def host(service: String): String = {
@@ -57,35 +58,30 @@ trait AuthRedirects {
 
   def strideLoginUrl: String = host("stride-auth-frontend") + "/stride/sign-in"
 
-  final lazy val defaultOrigin: String =
-    config
-      .getOptional[String]("sosOrigin")
-      .orElse(config.getOptional[String]("appName"))
-      .getOrElse("undefined")
+  final lazy val defaultOrigin: String = config
+    .getOptional[String]("sosOrigin")
+    .orElse(config.getOptional[String]("appName"))
+    .getOrElse("undefined")
 
   def origin: String = defaultOrigin
 
-  def toGGLogin(continueUrl: String): Result =
-    Redirect(
-      ggLoginUrl,
-      Map(
-        "continue_url" -> Seq(continueUrl),
-        "origin"       -> Seq(origin)
-      )
-    )
+  def toGGLogin(continueUrl: String): Result = Redirect(
+    ggLoginUrl,
+    Map("continue_url" -> Seq(continueUrl), "origin" -> Seq(origin))
+  )
 
   def toVerifyLogin(continueUrl: String): Result = Redirect(verifyLoginUrl).withSession(
-    SessionKeys.redirect    -> continueUrl,
+    SessionKeys.redirect -> continueUrl,
     SessionKeys.loginOrigin -> origin
   )
 
-  def toStrideLogin(successUrl: String, failureUrl: Option[String] = None): Result =
-    Redirect(
-      strideLoginUrl,
-      Map(
-        "successURL" -> Seq(successUrl),
-        "origin"     -> Seq(origin)
-      ) ++ failureUrl.map(f => Map("failureURL" -> Seq(f))).getOrElse(Map())
-    )
+  def toStrideLogin(
+    successUrl: String,
+    failureUrl: Option[String] = None
+  ): Result = Redirect(
+    strideLoginUrl,
+    Map("successURL" -> Seq(successUrl), "origin" -> Seq(origin)) ++
+      failureUrl.map(f => Map("failureURL" -> Seq(f))).getOrElse(Map())
+  )
 
 }

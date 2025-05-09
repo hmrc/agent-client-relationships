@@ -16,40 +16,38 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.services.FindRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
+import play.api.mvc.RequestHeader
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 trait MockFindRelationshipsService {
   this: ResettingMockitoSugar =>
 
   val mockFindRelationshipService: FindRelationshipsService = resettingMock[FindRelationshipsService]
 
-  def mockGetItsaRelationshipsForClient(nino: Nino, service: Service)(
-    response: Future[Option[ActiveRelationship]]
-  ): OngoingStubbing[Future[Option[ActiveRelationship]]] =
-    when(
-      mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(
-        any[HeaderCarrier],
-        any[ExecutionContext]
-      )
-    ).thenReturn(response)
+  def mockGetItsaRelationshipsForClient(
+    nino: Nino,
+    service: Service
+  )(response: Future[Option[ActiveRelationship]]): OngoingStubbing[Future[Option[ActiveRelationship]]] = when(
+    mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(any[RequestHeader])
+  ).thenReturn(response)
 
-  def mockGetActiveRelationshipsForClient(taxId: TaxIdentifier, service: Service)(
-    response: Future[Option[ActiveRelationship]]
-  ): OngoingStubbing[Future[Option[ActiveRelationship]]] =
-    when(
-      mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(
-        any[HeaderCarrier],
-        any[ExecutionContext]
-      )
-    ).thenReturn(response)
+  def mockGetActiveRelationshipsForClient(
+    taxId: TaxIdentifier,
+    service: Service
+  )(response: Future[Option[ActiveRelationship]]): OngoingStubbing[Future[Option[ActiveRelationship]]] = when(
+    mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(any[RequestHeader])
+  ).thenReturn(response)
+
 }

@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.stride
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 
 case class ActiveClientRelationship(
@@ -28,8 +29,10 @@ case class ActiveClientRelationship(
 )
 
 object ActiveClientRelationship {
+
   implicit val activeRelationshipformat: OFormat[ActiveRelationship] = Json.format[ActiveRelationship]
   implicit val format: OFormat[ActiveClientRelationship] = Json.format[ActiveClientRelationship]
+
 }
 
 case class ActiveClientsRelationshipResponse(activeClientRelationships: Seq[ActiveClientRelationship])

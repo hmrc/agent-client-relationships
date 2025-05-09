@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ItsaBusinessDetailsSpec extends UnitSpec {
+class ItsaBusinessDetailsSpec
+extends UnitSpec {
 
   "ItsaBusinessDetails" should {
 
@@ -28,30 +29,40 @@ class ItsaBusinessDetailsSpec extends UnitSpec {
       "optional fields are present" in {
         val json = Json.obj(
           "tradingName" -> "John Rocks",
-          "businessAddressDetails" -> Json.obj(
-            "postalCode"  -> "AA1 1AA",
-            "countryCode" -> "GB"
-          )
+          "businessAddressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
         )
 
-        json.as[ItsaBusinessDetails] shouldBe ItsaBusinessDetails("John Rocks", Some("AA1 1AA"), "GB")
+        json.as[ItsaBusinessDetails] shouldBe
+          ItsaBusinessDetails(
+            "John Rocks",
+            Some("AA1 1AA"),
+            "GB"
+          )
       }
 
       "optional fields are not present" in {
-        val json = Json.obj(
-          "tradingName" -> "Ilkay Gundo",
-          "businessAddressDetails" -> Json.obj(
-            "countryCode" -> "DE"
-          )
-        )
+        val json = Json.obj("tradingName" -> "Ilkay Gundo", "businessAddressDetails" -> Json.obj("countryCode" -> "DE"))
 
-        json.as[ItsaBusinessDetails] shouldBe ItsaBusinessDetails("Ilkay Gundo", None, "DE")
+        json.as[ItsaBusinessDetails] shouldBe
+          ItsaBusinessDetails(
+            "Ilkay Gundo",
+            None,
+            "DE"
+          )
       }
     }
 
     "return if an address is overseas (country code is not 'GB')" in {
-      ItsaBusinessDetails("John Rocks", Some("AA1 1AA"), "GB").isOverseas shouldBe false
-      ItsaBusinessDetails("Ilkay Gundo", None, "DE").isOverseas shouldBe true
+      ItsaBusinessDetails(
+        "John Rocks",
+        Some("AA1 1AA"),
+        "GB"
+      ).isOverseas shouldBe false
+      ItsaBusinessDetails(
+        "Ilkay Gundo",
+        None,
+        "DE"
+      ).isOverseas shouldBe true
     }
   }
 }

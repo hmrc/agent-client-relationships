@@ -19,22 +19,33 @@ package uk.gov.hmrc.agentclientrelationships.model
 import play.api.libs.json.Json.toJson
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class EmailInformationSpec extends UnitSpec {
+class EmailInformationSpec
+extends UnitSpec {
 
   val emails = Seq("someone@something.go.global")
   val templateId = "client_accepted_email"
-  val parametersAccept = Map("agentName" -> "Agent 1", "clientName" -> "Client 2", "service" -> "Accept ITSA")
-  val parametersExpired =
-    Map(
-      "agentName"  -> "Agent 1",
-      "clientName" -> "Client 2",
-      "service"    -> "Expired ITSA",
-      "expiryDate" -> "1 October 2020"
-    )
+  val parametersAccept = Map(
+    "agentName" -> "Agent 1",
+    "clientName" -> "Client 2",
+    "service" -> "Accept ITSA"
+  )
+  val parametersExpired = Map(
+    "agentName" -> "Agent 1",
+    "clientName" -> "Client 2",
+    "service" -> "Expired ITSA",
+    "expiryDate" -> "1 October 2020"
+  )
 
   "EmailInformation" should {
     "return accept email info" in {
-      val emailAcceptInfo = EmailInformation(emails, templateId, parametersAccept, false, None, None)
+      val emailAcceptInfo = EmailInformation(
+        emails,
+        templateId,
+        parametersAccept,
+        false,
+        None,
+        None
+      )
 
       val json = toJson(emailAcceptInfo)
 
@@ -44,7 +55,14 @@ class EmailInformationSpec extends UnitSpec {
     }
 
     "return expired email info" in {
-      val emailExpiredInfo = EmailInformation(emails, templateId, parametersExpired, false, None, None)
+      val emailExpiredInfo = EmailInformation(
+        emails,
+        templateId,
+        parametersExpired,
+        false,
+        None,
+        None
+      )
 
       val json = toJson(emailExpiredInfo)
 

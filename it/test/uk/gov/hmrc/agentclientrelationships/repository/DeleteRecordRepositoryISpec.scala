@@ -32,12 +32,9 @@ import java.time.{Instant, LocalDateTime, ZoneOffset}
 
 class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAppPerSuite with IntegrationPatience {
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "features.recovery-enable" -> false
-      )
-      .configure(mongoConfiguration)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure("features.recovery-enable" -> false)
+    .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
 

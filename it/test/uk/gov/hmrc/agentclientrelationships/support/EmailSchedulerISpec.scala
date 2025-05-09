@@ -41,24 +41,23 @@ import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext
 
 class EmailSchedulerISpec
-    extends TestKit(ActorSystem("testSystem"))
-    with UnitSpec
-    with MongoApp
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with BeforeAndAfterEach
-    with EmailStubs {
+extends TestKit(ActorSystem("testSystem"))
+with UnitSpec
+with MongoApp
+with GuiceOneServerPerSuite
+with WireMockSupport
+with BeforeAndAfterEach
+with EmailStubs {
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "emailScheduler.enabled"                    -> true,
-        "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
-        "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
-        "emailScheduler.lockDurationInSeconds"      -> "1",
-        "microservice.services.email.port"          -> wireMockPort
-      )
-      .configure(mongoConfiguration)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure(
+      "emailScheduler.enabled"                    -> true,
+      "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+      "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+      "emailScheduler.lockDurationInSeconds"      -> "1",
+      "microservice.services.email.port"          -> wireMockPort
+    )
+    .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -72,12 +71,7 @@ class EmailSchedulerISpec
   val timeout: Span = scaled(Span(30, Seconds))
   val interval: Span = scaled(Span(2, Seconds))
 
-  val scheduler = new EmailScheduler(
-    system,
-    emailService,
-    invitationsRepository,
-    mongoLockService
-  )
+  val scheduler = new EmailScheduler(system, emailService, invitationsRepository, mongoLockService)
 
   val baseInvitation: Invitation = Invitation
     .createNew(
@@ -191,17 +185,9 @@ class EmailSchedulerISpec
     "send expired emails for each invitation, update the status to Expired and the expiredEmailSent flag to true" in {
       val nonExpiredInvitation = baseInvitation.copy(warningEmailSent = true)
       val expiredInvitation = baseInvitation.copy(invitationId = "2", expiryDate = LocalDate.now().minusDays(1L))
-      val expiredInvitationDiffAgent = expiredInvitation.copy(
-        arn = "TARN7654321",
-        agencyName = "Will Fence",
-        agencyEmail = "agent2@email.com",
-        invitationId = "3"
-      )
-      val invitations = Seq(
-        nonExpiredInvitation,
-        expiredInvitation,
-        expiredInvitationDiffAgent
-      )
+      val expiredInvitationDiffAgent = expiredInvitation
+        .copy(arn = "TARN7654321", agencyName = "Will Fence", agencyEmail = "agent2@email.com", invitationId = "3")
+      val invitations = Seq(nonExpiredInvitation, expiredInvitation, expiredInvitationDiffAgent)
       await(invitationsRepository.collection.insertMany(invitations).toFuture())
       await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 2
 

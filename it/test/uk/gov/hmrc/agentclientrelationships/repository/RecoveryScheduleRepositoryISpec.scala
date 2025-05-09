@@ -27,12 +27,9 @@ import java.util.UUID
 
 class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "features.recovery-enable" -> false
-      )
-      .configure(mongoConfiguration)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure("features.recovery-enable" -> false)
+    .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
 

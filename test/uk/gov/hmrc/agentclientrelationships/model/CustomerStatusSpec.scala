@@ -19,16 +19,20 @@ package uk.gov.hmrc.agentclientrelationships.model
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class CustomerStatusSpec extends UnitSpec {
+class CustomerStatusSpec
+extends UnitSpec {
 
   "CustomerStatus" should {
 
     "write to JSON" in {
-      val model =
-        CustomerStatus(hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = true)
+      val model = CustomerStatus(
+        hasPendingInvitations = true,
+        hasInvitationsHistory = true,
+        hasExistingRelationships = true
+      )
       val json = Json.obj(
-        "hasPendingInvitations"    -> true,
-        "hasInvitationsHistory"    -> true,
+        "hasPendingInvitations" -> true,
+        "hasInvitationsHistory" -> true,
         "hasExistingRelationships" -> true
       )
 

@@ -20,15 +20,20 @@ import cats.data.EitherT
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvitationNotFound, UnsupportedStatusChange, UpdateStatusFailed}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedStatusChange
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UpdateStatusFailed
 import uk.gov.hmrc.agentclientrelationships.model.transitional.InvitationStatusAction
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Try
 
 @Singleton
@@ -36,7 +41,7 @@ class ChangeInvitationStatusByIdService @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   val validInvitationStatusActionsFrom: Map[InvitationStatusAction, Set[InvitationStatus]] = Map(
     InvitationStatusAction.Accept -> Set(Pending),
@@ -44,10 +49,10 @@ class ChangeInvitationStatusByIdService @Inject() (
     InvitationStatusAction.Cancel -> Set(Pending)
   )
 
-  def validateAction(action: String): Either[InvitationFailureResponse, InvitationStatusAction] = for {
-    invitationStatusAction <- Try(InvitationStatusAction(action))
-                                .fold(_ => Left(UnsupportedStatusChange), Right(_))
-  } yield invitationStatusAction
+  def validateAction(action: String): Either[InvitationFailureResponse, InvitationStatusAction] =
+    for {
+      invitationStatusAction <- Try(InvitationStatusAction(action)).fold(_ => Left(UnsupportedStatusChange), Right(_))
+    } yield invitationStatusAction
 
   def changeStatusById(
     invitationId: String,
@@ -55,46 +60,50 @@ class ChangeInvitationStatusByIdService @Inject() (
   ): Future[Either[InvitationFailureResponse, Unit]] =
     for {
 
-      invitationStoreResults <-
-        findMatchingInvitationById(invitationId)
-          .map(_.find(x => validInvitationStatusActionsFrom(invitationStatusAction).contains(x.status)))
-          .flatMap {
-            case Some(invitation) => updateStatus(invitation, invitationStatusAction)
+      invitationStoreResults <- findMatchingInvitationById(invitationId)
+        .map(_.find(x => validInvitationStatusActionsFrom(invitationStatusAction).contains(x.status)))
+        .flatMap {
+          case Some(invitation) => updateStatus(invitation, invitationStatusAction)
 
-            case None => Future.successful(Left(InvitationNotFound))
-          }
+          case None => Future.successful(Left(InvitationNotFound))
+        }
     } yield invitationStoreResults
 
   private def updateStatus(
     invitation: Invitation,
     invitationStatusAction: InvitationStatusAction
   ): Future[Either[InvitationFailureResponse, Unit]] =
-    (for {
-      _ <- EitherT(
-             updateInvitationStore(
-               invitationId = invitation.invitationId,
-               fromStatus = invitation.status,
-               toStatus = invitationStatusAction match {
-                 case InvitationStatusAction.Accept if invitation.isAltItsa => PartialAuth
-                 case InvitationStatusAction.Accept                         => Accepted
-                 case InvitationStatusAction.Cancel                         => Cancelled
-                 case InvitationStatusAction.Reject                         => Rejected
-               },
-               endedBy = None,
-               lastUpdated = None
-             )
-           )
-      _ <- if (invitation.isAltItsa)
-             EitherT(
-               createPartialAuthRecord(
-                 created = invitation.created,
-                 arn = Arn(invitation.arn),
-                 service = invitation.service,
-                 nino = Nino(invitation.suppliedClientId)
-               )
-             )
-           else EitherT.rightT[Future, InvitationFailureResponse](())
-    } yield ()).value
+    (
+      for {
+        _ <- EitherT(
+          updateInvitationStore(
+            invitationId = invitation.invitationId,
+            fromStatus = invitation.status,
+            toStatus =
+              invitationStatusAction match {
+                case InvitationStatusAction.Accept if invitation.isAltItsa => PartialAuth
+                case InvitationStatusAction.Accept => Accepted
+                case InvitationStatusAction.Cancel => Cancelled
+                case InvitationStatusAction.Reject => Rejected
+              },
+            endedBy = None,
+            lastUpdated = None
+          )
+        )
+        _ <-
+          if (invitation.isAltItsa)
+            EitherT(
+              createPartialAuthRecord(
+                created = invitation.created,
+                arn = Arn(invitation.arn),
+                service = invitation.service,
+                nino = Nino(invitation.suppliedClientId)
+              )
+            )
+          else
+            EitherT.rightT[Future, InvitationFailureResponse](())
+      } yield ()
+    ).value
 
   private def updateInvitationStore(
     invitationId: String,
@@ -102,38 +111,33 @@ class ChangeInvitationStatusByIdService @Inject() (
     toStatus: InvitationStatus,
     endedBy: Option[String],
     lastUpdated: Option[Instant]
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    invitationsRepository
-      .updateStatusFromTo(
-        invitationId = invitationId,
-        fromStatus = fromStatus,
-        toStatus = toStatus,
-        relationshipEndedBy = endedBy,
-        lastUpdated = lastUpdated
-      )
-      .map(
-        _.fold[Either[InvitationFailureResponse, Unit]](
-          Left(UpdateStatusFailed("Update status for invitation failed."))
-        )(_ => Right(()))
-      )
+  ): Future[Either[InvitationFailureResponse, Unit]] = invitationsRepository
+    .updateStatusFromTo(
+      invitationId = invitationId,
+      fromStatus = fromStatus,
+      toStatus = toStatus,
+      relationshipEndedBy = endedBy,
+      lastUpdated = lastUpdated
+    )
+    .map(
+      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(_ => Right(()))
+    )
 
   private def createPartialAuthRecord(
     created: Instant,
     arn: Arn,
     service: String,
     nino: Nino
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    partialAuthRepository
-      .create(
-        created = created,
-        arn = arn,
-        service = service,
-        nino = nino
-      )
-      .map(Right(_))
+  ): Future[Either[InvitationFailureResponse, Unit]] = partialAuthRepository
+    .create(
+      created = created,
+      arn = arn,
+      service = service,
+      nino = nino
+    )
+    .map(Right(_))
 
-  private def findMatchingInvitationById(invitationId: String): Future[Option[Invitation]] =
-    invitationsRepository
-      .findOneById(invitationId = invitationId)
+  private def findMatchingInvitationById(invitationId: String): Future[Option[Invitation]] = invitationsRepository
+    .findOneById(invitationId = invitationId)
 
 }

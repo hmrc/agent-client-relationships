@@ -18,14 +18,21 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import org.scalatest.Inside
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, SyncStatus}
+import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, SessionId}
+import uk.gov.hmrc.http.Authorization
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.SessionId
 
-import java.time.{Instant, ZoneOffset}
+import java.time.Instant
+import java.time.ZoneOffset
 
-class DeleteRecordSpec extends UnitSpec with Inside {
+class DeleteRecordSpec
+extends UnitSpec
+with Inside {
 
   "DeleteRecord" should {
     "serialize and deserialize from and to json" in {

@@ -28,16 +28,15 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 class AgentReferenceRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
-    with LogCapturing {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
+with LogCapturing {
 
-  override lazy val app: Application =
-    new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-      .build()
+  override lazy val app: Application = new GuiceApplicationBuilder()
+    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
+    .build()
 
   val repository: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
@@ -114,9 +113,8 @@ class AgentReferenceRepositoryISpec
         withCaptureOfErrorLogging(repository.localLogger) { logEvents =>
           await(repository.delete(Arn("LARN7404004"))) shouldBe ()
 
-          logEvents.count(
-            _.getMessage.contains("could not delete agent reference record, no matching ARN found.")
-          ) shouldBe 1
+          logEvents
+            .count(_.getMessage.contains("could not delete agent reference record, no matching ARN found.")) shouldBe 1
         }
 
         await(repository.delete(Arn("LARN7404004"))) shouldBe ()

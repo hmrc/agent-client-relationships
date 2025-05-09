@@ -61,18 +61,20 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     s"/transitional/change-invitation-status/arn/:arn/service/:service/client/:clientId change status to DeAuthorised" should {
       val (service, taxIdentifier) = testset
       val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
-      val suppliedClientId = taxIdentifier match {
-        case _: MtdItId => ClientIdentifier(nino)
-        case taxId      => ClientIdentifier(taxId)
-      }
+      val suppliedClientId =
+        taxIdentifier match {
+          case _: MtdItId => ClientIdentifier(nino)
+          case taxId      => ClientIdentifier(taxId)
+        }
       val clientName = "TestClientName"
       val agentName = "testAgentName"
       val agentEmail = "agent@email.com"
       val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
-      val serviceId = service match {
-        case PersonalIncomeRecord => PersonalIncomeRecord.id
-        case s                    => s.id
-      }
+      val serviceId =
+        service match {
+          case PersonalIncomeRecord => PersonalIncomeRecord.id
+          case s                    => s.id
+        }
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
@@ -204,8 +206,14 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     s"when invitation exists with the status PartialAuth in PartialAuthStore for ${service.id}" should {
       s"update status to " in {
         val created = Instant.parse("2020-01-01T00:00:00.000Z")
-        val partialAuth =
-          PartialAuthRelationship(created, arn.value, service.id, nino.value, active = true, lastUpdated = created)
+        val partialAuth = PartialAuthRelationship(
+          created,
+          arn.value,
+          service.id,
+          nino.value,
+          active = true,
+          lastUpdated = created
+        )
 
         val newInvitation = Invitation
           .createNew(
@@ -239,8 +247,14 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     s"when invitation exists with the status PartialAuth in PartialAuthStore and InvitationStore for ${service.id}" should {
       s"update status to " in {
         val created = Instant.parse("2020-01-01T00:00:00.000Z")
-        val partialAuth =
-          PartialAuthRelationship(created, arn.value, service.id, nino.value, active = true, lastUpdated = created)
+        val partialAuth = PartialAuthRelationship(
+          created,
+          arn.value,
+          service.id,
+          nino.value,
+          active = true,
+          lastUpdated = created
+        )
 
         await(partialAuthRepository.collection.insertOne(partialAuth).toFuture())
 
@@ -297,10 +311,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
         )
         result.status shouldBe 400
         result.json shouldBe toJson(
-          ErrorBody(
-            "INVALID_CLIENT_ID",
-            "Invalid clientId \"ABCDEF123456789\", for service type \"HMRC-MTD-IT\""
-          )
+          ErrorBody("INVALID_CLIENT_ID", "Invalid clientId \"ABCDEF123456789\", for service type \"HMRC-MTD-IT\"")
         )
       }
 

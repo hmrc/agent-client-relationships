@@ -16,9 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt
 
-import play.api.libs.json.{JsError, JsSuccess, Reads}
+import play.api.libs.json.JsError
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.Reads
 
-case class CgtSubscriptionDetails(name: String, postcode: Option[String], countryCode: String)
+case class CgtSubscriptionDetails(
+  name: String,
+  postcode: Option[String],
+  countryCode: String
+)
 
 object CgtSubscriptionDetails {
 
@@ -32,11 +38,23 @@ object CgtSubscriptionDetails {
       case "Individual" =>
         val firstName = (basePath \ "typeOfPersonDetails" \ "firstName").as[String]
         val lastName = (basePath \ "typeOfPersonDetails" \ "lastName").as[String]
-        JsSuccess(CgtSubscriptionDetails(firstName + " " + lastName, postcode, countryCode))
+        JsSuccess(
+          CgtSubscriptionDetails(
+            firstName + " " + lastName,
+            postcode,
+            countryCode
+          )
+        )
 
       case "Trustee" =>
         val orgName = (basePath \ "typeOfPersonDetails" \ "organisationName").as[String]
-        JsSuccess(CgtSubscriptionDetails(orgName, postcode, countryCode))
+        JsSuccess(
+          CgtSubscriptionDetails(
+            orgName,
+            postcode,
+            countryCode
+          )
+        )
 
       case e => JsError(s"Unexpected typeOfPerson from DES for CGT: $e")
     }

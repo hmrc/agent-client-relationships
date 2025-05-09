@@ -28,10 +28,10 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 
 class CustomerStatusControllerISpec
-    extends BaseControllerISpec
-    with AfiRelationshipStub
-    with AgentAssuranceStubs
-    with HipStub {
+extends BaseControllerISpec
+with AfiRelationshipStub
+with AgentAssuranceStubs
+with HipStub {
 
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -79,11 +79,7 @@ class CustomerStatusControllerISpec
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         await(partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture())
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = true,
-            hasInvitationsHistory = true,
-            hasExistingRelationships = true
-          )
+          CustomerStatus(hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = true)
         )
 
         val result = doGetRequest(request.uri)
@@ -99,11 +95,7 @@ class CustomerStatusControllerISpec
         givenAgentRecordFound(arn, existingAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = true,
-            hasInvitationsHistory = true,
-            hasExistingRelationships = true
-          )
+          CustomerStatus(hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = true)
         )
 
         val result = doGetRequest(request.uri)
@@ -119,11 +111,7 @@ class CustomerStatusControllerISpec
         givenAgentRecordFound(arn, existingAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = true,
-            hasInvitationsHistory = true,
-            hasExistingRelationships = false
-          )
+          CustomerStatus(hasPendingInvitations = true, hasInvitationsHistory = true, hasExistingRelationships = false)
         )
 
         val result = doGetRequest(request.uri)
@@ -139,11 +127,7 @@ class CustomerStatusControllerISpec
         givenAgentRecordFound(arn, suspendedAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = false,
-            hasInvitationsHistory = false,
-            hasExistingRelationships = false
-          )
+          CustomerStatus(hasPendingInvitations = false, hasInvitationsHistory = false, hasExistingRelationships = false)
         )
 
         val result = doGetRequest(request.uri)
@@ -157,11 +141,7 @@ class CustomerStatusControllerISpec
         givenAfiRelationshipForClientNotFound(nino.value)
         await(partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture())
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = false,
-            hasInvitationsHistory = true,
-            hasExistingRelationships = true
-          )
+          CustomerStatus(hasPendingInvitations = false, hasInvitationsHistory = true, hasExistingRelationships = true)
         )
 
         val result = doGetRequest(request.uri)
@@ -176,11 +156,7 @@ class CustomerStatusControllerISpec
         givenAfiRelationshipForClientNotFound(nino.value)
         await(partialAuthRepo.collection.insertOne(inactivePartialAuthRelationship).toFuture())
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = false,
-            hasInvitationsHistory = true,
-            hasExistingRelationships = true
-          )
+          CustomerStatus(hasPendingInvitations = false, hasInvitationsHistory = true, hasExistingRelationships = true)
         )
 
         val result = doGetRequest(request.uri)
@@ -194,11 +170,7 @@ class CustomerStatusControllerISpec
         givenAfiRelationshipForClientNotFound(nino.value)
         getActiveRelationshipsViaClient(mtdItId, arn)
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = false,
-            hasInvitationsHistory = false,
-            hasExistingRelationships = true
-          )
+          CustomerStatus(hasPendingInvitations = false, hasInvitationsHistory = false, hasExistingRelationships = true)
         )
 
         val result = doGetRequest(request.uri)
@@ -212,11 +184,7 @@ class CustomerStatusControllerISpec
         givenAfiRelationshipForClientIsActive(arn, "PERSONAL-INCOME-RECORD", nino.value, true)
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = false,
-            hasInvitationsHistory = false,
-            hasExistingRelationships = true
-          )
+          CustomerStatus(hasPendingInvitations = false, hasInvitationsHistory = false, hasExistingRelationships = true)
         )
 
         val result = doGetRequest(request.uri)
@@ -231,11 +199,7 @@ class CustomerStatusControllerISpec
         givenAfiRelationshipForClientNotFound(nino.value)
         await(partialAuthRepo.collection.insertOne(inactivePartialAuthRelationship).toFuture())
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = false,
-            hasInvitationsHistory = true,
-            hasExistingRelationships = false
-          )
+          CustomerStatus(hasPendingInvitations = false, hasInvitationsHistory = true, hasExistingRelationships = false)
         )
 
         val result = doGetRequest(request.uri)
@@ -249,11 +213,7 @@ class CustomerStatusControllerISpec
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         givenAfiRelationshipForClientNotFound(nino.value)
         val expectedBody = Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = false,
-            hasInvitationsHistory = false,
-            hasExistingRelationships = false
-          )
+          CustomerStatus(hasPendingInvitations = false, hasInvitationsHistory = false, hasExistingRelationships = false)
         )
 
         val result = doGetRequest(request.uri)

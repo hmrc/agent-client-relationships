@@ -30,7 +30,8 @@ import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMoc
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
@@ -41,57 +42,55 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
-    extends MongoRelationshipCopyRecordRepository(moduleComponent) {
-  override def create(record: RelationshipCopyRecord): Future[Int] =
-    Future.failed(new Exception("Could not connect the mongo db."))
+extends MongoRelationshipCopyRecordRepository(moduleComponent) {
+  override def create(record: RelationshipCopyRecord): Future[Int] = Future
+    .failed(new Exception("Could not connect the mongo db."))
 }
 
 class RelationshipsControllerWithoutMongoISpec
-    extends UnitSpec
-    with MongoSupport
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with RelationshipStubs
-    with DesStubs
-    with HipStub
-    with DesStubsGet
-    with MappingStubs
-    with DataStreamStub
-    with AuthStub {
+extends UnitSpec
+with MongoSupport
+with GuiceOneServerPerSuite
+with WireMockSupport
+with RelationshipStubs
+with DesStubs
+with HipStub
+with DesStubsGet
+with MappingStubs
+with DataStreamStub
+with AuthStub {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
-        "microservice.services.tax-enrolments.port"             -> wireMockPort,
-        "microservice.services.users-groups-search.port"        -> wireMockPort,
-        "microservice.services.des.port"                        -> wireMockPort,
-        "microservice.services.if.port"                         -> wireMockPort,
-        "microservice.services.hip.port"                        -> wireMockPort,
-        "microservice.services.auth.port"                       -> wireMockPort,
-        "microservice.services.agent-mapping.port"              -> wireMockPort,
-        "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host"                        -> wireMockHost,
-        "auditing.consumer.baseUri.port"                        -> wireMockPort,
-        "features.copy-relationship.mtd-vat"                    -> true,
-        "features.recovery-enable"                              -> false,
-        "agent.cache.expires"                                   -> "1 millis",
-        "agent.cache.enabled"                                   -> true,
-        "mongodb.uri"                                           -> mongoUri,
-        "hip.BusinessDetails.enabled"                           -> true
-      )
-      .overrides(new AbstractModule {
-        override def configure(): Unit = {
-          bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
-          ()
-        }
-      })
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure(
+      "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
+      "microservice.services.tax-enrolments.port"             -> wireMockPort,
+      "microservice.services.users-groups-search.port"        -> wireMockPort,
+      "microservice.services.des.port"                        -> wireMockPort,
+      "microservice.services.if.port"                         -> wireMockPort,
+      "microservice.services.hip.port"                        -> wireMockPort,
+      "microservice.services.auth.port"                       -> wireMockPort,
+      "microservice.services.agent-mapping.port"              -> wireMockPort,
+      "microservice.services.agent-client-authorisation.port" -> wireMockPort,
+      "auditing.consumer.baseUri.host"                        -> wireMockHost,
+      "auditing.consumer.baseUri.port"                        -> wireMockPort,
+      "features.copy-relationship.mtd-vat"                    -> true,
+      "features.recovery-enable"                              -> false,
+      "agent.cache.expires"                                   -> "1 millis",
+      "agent.cache.enabled"                                   -> true,
+      "mongodb.uri"                                           -> mongoUri,
+      "hip.BusinessDetails.enabled"                           -> true
+    )
+    .overrides(new AbstractModule {
+      override def configure(): Unit = {
+        bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
+        ()
+      }
+    })
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
 
   def repo: MongoRelationshipCopyRecordRepository = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
 
