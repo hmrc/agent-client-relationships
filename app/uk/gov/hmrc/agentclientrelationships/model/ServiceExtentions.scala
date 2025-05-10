@@ -22,9 +22,9 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
 object ServiceExtentions {
   implicit class ApiExtensions(service: Service) {
     def apiServiceName: String = service match {
-      case MtdIt => "MTD-IT"
+      case MtdIt     => "MTD-IT"
       case MtdItSupp => "MTD-IT"
-      case Vat => "MTD-VAT"
+      case Vat       => "MTD-VAT"
     }
   }
 }

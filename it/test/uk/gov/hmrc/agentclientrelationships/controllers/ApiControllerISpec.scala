@@ -406,54 +406,74 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       }
     )
 
-    s"return FORBIDDEN status and valid JSON ALREADY_AUTHORISED when request ITSA MAIN but ITSA SUPP relationship already exists" in {
+    s"return 201 status and valid JSON when request ITSA MAIN but ITSA SUPP relationship already exists" in {
 
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       val taxIdentifier = mtdItId
+      val clientId = mtdItId.value
 
       getStandardStubForCreateInvitation(HMRCMTDIT)
       getActiveRelationshipsViaClient(taxIdentifier, arn)
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDITSUPP, taxIdentifier), Set("foo"))
 
-      val expectedJson: JsValue = Json.toJson(
-        toJson(
-          ErrorBody(
-            "ALREADY_AUTHORISED",
-            "The client has already authorised the agent for this service. The agent does not need ask the client for this authorisation again."
-          )
-        )
-      )
-
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
-      result.status shouldBe FORBIDDEN
-      result.json shouldBe expectedJson
+      result.status shouldBe 201
+
+      val invitationSeq = invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue
+
+      invitationSeq.size shouldBe 1
+
+      val invitation = invitationSeq.head
+
+      result.json shouldBe Json.obj(
+        "invitationId" -> invitation.invitationId
+      )
+
+      invitation.status shouldBe Pending
+      invitation.suppliedClientId shouldBe inputData.suppliedClientId
+      invitation.clientId shouldBe clientId
+      invitation.service shouldBe inputData.service
+
+      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
-    s"return FORBIDDEN status and valid JSON ALREADY_AUTHORISED when request ITSA SUPP but ITSA MAIN relationship already exists" in {
+    s"return 201 status and valid when request ITSA SUPP but ITSA MAIN relationship already exists" in {
 
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(service = HMRCMTDITSUPP)
 
       val taxIdentifier = mtdItId
+      val clientId = mtdItId.value
 
       getStandardStubForCreateInvitation(HMRCMTDITSUPP)
       getActiveRelationshipsViaClient(taxIdentifier, arn)
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDIT, taxIdentifier), Set("foo"))
 
-      val expectedJson: JsValue = Json.toJson(
-        toJson(
-          ErrorBody(
-            "ALREADY_AUTHORISED",
-            "The client has already authorised the agent for this service. The agent does not need ask the client for this authorisation again."
-          )
-        )
-      )
-
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
-      result.status shouldBe FORBIDDEN
-      result.json shouldBe expectedJson
+      result.status shouldBe 201
+
+      val invitationSeq = invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue
+
+      invitationSeq.size shouldBe 1
+
+      val invitation = invitationSeq.head
+
+      result.json shouldBe Json.obj(
+        "invitationId" -> invitation.invitationId
+      )
+
+      invitation.status shouldBe Pending
+      invitation.suppliedClientId shouldBe inputData.suppliedClientId
+      invitation.clientId shouldBe clientId
+      invitation.service shouldBe inputData.service
+
+      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     s"return Forbidden status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId and PartialAuth relationship exists" in {
@@ -518,10 +538,11 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       result.json shouldBe expectedJson
     }
 
-    s"return Forbidden status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth for Alt Itsa Supp relationship exists" in {
+    s"return 201 status and valid JSON when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth for Alt Itsa Supp relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       getStandardStubForCreateInvitation(HMRCMTDIT)
+      val clientId = mtdItId.value
 
       await(
         partialAuthRepository
@@ -533,25 +554,35 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
           )
       )
 
-      val expectedJson: JsValue = Json.toJson(
-        toJson(
-          ErrorBody(
-            "ALREADY_AUTHORISED",
-            "The client has already authorised the agent for this service. The agent does not need ask the client for this authorisation again."
-          )
-        )
-      )
-
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
-      result.status shouldBe FORBIDDEN
-      result.json shouldBe expectedJson
+      result.status shouldBe 201
+
+      val invitationSeq = invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue
+
+      invitationSeq.size shouldBe 1
+
+      val invitation = invitationSeq.head
+
+      result.json shouldBe Json.obj(
+        "invitationId" -> invitation.invitationId
+      )
+
+      invitation.status shouldBe Pending
+      invitation.suppliedClientId shouldBe inputData.suppliedClientId
+      invitation.clientId shouldBe clientId
+      invitation.service shouldBe inputData.service
+
+      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
-    s"return Forbidden status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa Supp - client mtdItId exists and PartialAuth for Alt Itsa Main relationship exists" in {
+    s"return 201 status and valid JSON when invitation is created for Alt Itsa Supp - client mtdItId exists and PartialAuth for Alt Itsa Main relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(service = HMRCMTDITSUPP)
 
       getStandardStubForCreateInvitation(HMRCMTDITSUPP)
+      val clientId = mtdItId.value
 
       await(
         partialAuthRepository
@@ -563,19 +594,28 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
           )
       )
 
-      val expectedJson: JsValue = Json.toJson(
-        toJson(
-          ErrorBody(
-            "ALREADY_AUTHORISED",
-            "The client has already authorised the agent for this service. The agent does not need ask the client for this authorisation again."
-          )
-        )
-      )
-
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
-      result.status shouldBe FORBIDDEN
-      result.json shouldBe expectedJson
+      result.status shouldBe 201
+
+      val invitationSeq = invitationRepo
+        .findAllForAgent(arn.value)
+        .futureValue
+
+      invitationSeq.size shouldBe 1
+
+      val invitation = invitationSeq.head
+
+      result.json shouldBe Json.obj(
+        "invitationId" -> invitation.invitationId
+      )
+
+      invitation.status shouldBe Pending
+      invitation.suppliedClientId shouldBe inputData.suppliedClientId
+      invitation.clientId shouldBe clientId
+      invitation.service shouldBe inputData.service
+
+      verifyCreateInvitationAuditSent(requestPath, invitation)
     }
 
     // VALIDATION

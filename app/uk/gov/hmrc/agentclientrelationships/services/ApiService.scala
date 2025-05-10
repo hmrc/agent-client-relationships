@@ -242,10 +242,10 @@ class ApiService @Inject() (
   ): Future[Either[InvitationFailureResponse, Boolean]] =
     (for {
       _ <- EitherT(getExistingRelationship(arn, service, clientIdType, suppliedClientId))
-      _ <-
-        if (multiAgentServices.contains(service))
-          EitherT(getExistingRelationship(arn, multiAgentServicesOtherService(service), clientIdType, suppliedClientId))
-        else EitherT[Future, InvitationFailureResponse, Boolean](Future.successful(Right(false)))
+//      _ <-
+//        if (multiAgentServices.contains(service))
+//          EitherT(getExistingRelationship(arn, multiAgentServicesOtherService(service), clientIdType, suppliedClientId))
+//        else EitherT[Future, InvitationFailureResponse, Boolean](Future.successful(Right(false)))
     } yield false).value
 
   private def getExistingRelationship(arn: Arn, service: String, clientIdType: String, clientId: String)(implicit
