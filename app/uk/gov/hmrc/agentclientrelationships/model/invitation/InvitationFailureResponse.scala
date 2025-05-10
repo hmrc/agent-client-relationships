@@ -158,4 +158,8 @@ object InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
+  case object NoPermissionOnAgency extends InvitationFailureResponse {
+    def getResult(message: String): Result = Forbidden
+  }
+
 }

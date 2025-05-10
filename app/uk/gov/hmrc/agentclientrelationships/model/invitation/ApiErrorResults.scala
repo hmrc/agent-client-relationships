@@ -132,6 +132,15 @@ object ApiErrorResults {
     )
   )
 
+  val AgentSuspended: Result = Forbidden(
+    toJson(
+      ErrorBody(
+        "AGENT_SUSPENDED",
+        "This agent is suspended"
+      )
+    )
+  )
+
   val InvitationNotFound: Result = NotFound(
     toJson(ErrorBody("INVITATION_NOT_FOUND", "The authorisation request cannot be found."))
   )
@@ -168,6 +177,15 @@ object ApiErrorResults {
       ErrorBody(
         "ALREADY_AUTHORISED",
         "The client has already authorised the agent for this service. The agent does not need ask the client for this authorisation again."
+      )
+    )
+  )
+
+  val NoPermissionOnAgency: Result = Forbidden(
+    toJson(
+      ErrorBody(
+        "NO_PERMISSION_ON_AGENCY",
+        "The user that is signed in cannot access this authorisation request. Their details do not match the agent business that created the authorisation request."
       )
     )
   )

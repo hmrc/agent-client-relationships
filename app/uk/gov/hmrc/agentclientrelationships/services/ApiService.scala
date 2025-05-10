@@ -19,13 +19,13 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.Logging
-import play.api.mvc.Request
+import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IfOrHipConnector}
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsNotFound, ClientDetailsResponse, ErrorRetrievingClientDetails}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ClientDetailsResponse, ErrorRetrievingClientDetails}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateAuthorisationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiCreateInvitationRequest, InvitationFailureResponse}
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisationRequestInfo, ApiCreateInvitationRequest, InvitationFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse, AgentReferenceRecord}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
@@ -33,10 +33,12 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, 
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 import java.time.{Instant, ZoneOffset}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import play.api.mvc.RequestHeader
 
 @Singleton
 class ApiService @Inject() (
@@ -46,6 +48,7 @@ class ApiService @Inject() (
   appConfig: AppConfig,
   clientDetailsService: ClientDetailsService,
   knowFactsCheckService: KnowFactsCheckService,
+  invitationLinkService: InvitationLinkService,
   checkRelationshipsService: CheckRelationshipsOrchestratorService,
   partialAuthRepository: PartialAuthRepository
 )(implicit ec: ExecutionContext)
@@ -99,6 +102,33 @@ class ApiService @Inject() (
     invitationT.value
   }
 
+  def findInvitationForAgent(arn: Arn, invitationId: String, supportedServices: Seq[Service])(implicit
+    request: RequestHeader
+  ): Future[Either[InvitationFailureResponse, ApiAuthorisationRequestInfo]] =
+    (for {
+
+      _ <- EitherT.fromEither[Future](
+             if (InvitationId.isValid(invitationId)) Right(invitationId)
+             else Left(InvitationFailureResponse.InvitationNotFound)
+           )
+
+      agentRecord <- EitherT(getAgentDetailsByArn(arn))
+
+      newNormaliseAgentName = invitationLinkService.normaliseAgentName(agentRecord.agencyDetails.agencyName)
+
+      agentReferenceRecord <-
+        EitherT.right[InvitationFailureResponse](
+          invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)
+        )
+
+      invitation <- EitherT(findInvitation(invitationId, arn, supportedServices))
+
+    } yield ApiAuthorisationRequestInfo.createApiAuthorisationRequestInfo(
+      invitation,
+      agentReferenceRecord.uid,
+      newNormaliseAgentName
+    )).value
+
   private def getClientId(suppliedClientId: ClientId, service: Service)(implicit
     hc: HeaderCarrier
   ): Future[Either[InvitationFailureResponse, ClientId]] = (service, suppliedClientId.typeId) match {
@@ -112,6 +142,23 @@ class ApiService @Inject() (
         )
     case _ => Future successful Right(suppliedClientId)
   }
+
+  def findInvitation(
+    invitationId: String,
+    arn: Arn,
+    supportedServices: Seq[Service]
+  ): Future[Either[InvitationFailureResponse, Invitation]] =
+    invitationsRepository
+      .findOneById(invitationId)
+      .map {
+        _.fold[Either[InvitationFailureResponse, Invitation]](Left(InvitationFailureResponse.InvitationNotFound))(
+          invitation =>
+            if (invitation.arn == arn.value)
+              if (supportedServices.map(_.id).contains(invitation.service)) Right(invitation)
+              else Left(InvitationFailureResponse.UnsupportedService)
+            else Left(InvitationFailureResponse.NoPermissionOnAgency)
+        )
+      }
 
   private def create(
     arn: Arn,
