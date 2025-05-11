@@ -18,14 +18,20 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, Pending}
-import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository}
+import uk.gov.hmrc.agentclientrelationships.model.Accepted
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 import java.net.URLEncoder
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import scala.concurrent.ExecutionContext
 
 class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with TestData {
@@ -122,12 +128,24 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val result = doGetRequest(testClientUrl)
       result.status shouldBe 200
 
-      result.json shouldBe Json.obj("agentName" -> "My Agency", "service" -> "HMRC-MTD-VAT", "status" -> "Accepted")
+      result.json shouldBe Json.obj(
+        "agentName" -> "My Agency",
+        "service"   -> "HMRC-MTD-VAT",
+        "status"    -> "Accepted"
+      )
     }
     "return 404 status when invitation doesnt exist" in {
       val fakeRequest = FakeRequest("GET", testClientUrl)
       givenAuditConnector()
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       val result = doGetRequest(testClientUrl)
       result.status shouldBe 404
     }
@@ -218,7 +236,11 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       val allFiltersUrl = testTrackRequestsUrl + "&statusFilter=Accepted&clientName=" + clientNameFilter
       val fakeRequest = FakeRequest("GET", allFiltersUrl)
       val matchingInvitation = testInvitation
-        .copy(invitationId = "testInvitationId2", status = Accepted, clientName = "Find Me")
+        .copy(
+          invitationId = "testInvitationId2",
+          status = Accepted,
+          clientName = "Find Me"
+        )
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
@@ -338,4 +360,5 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 400
     }
   }
+
 }

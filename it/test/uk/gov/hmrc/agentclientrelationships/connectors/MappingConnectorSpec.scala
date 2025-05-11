@@ -24,22 +24,25 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, MappingStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.MappingStubs
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
 class MappingConnectorSpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with MappingStubs
-with DataStreamStub
-with MockFactory {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with MappingStubs
+    with DataStreamStub
+    with MockFactory {
 
   override implicit lazy val app: Application = appBuilder.build()
   val metrics: Metrics = app.injector.instanceOf[Metrics]
@@ -116,4 +119,5 @@ with MockFactory {
       await(mappingConnector.getAgentCodesFor(arn)) shouldBe oldAgentCodes
     }
   }
+
 }

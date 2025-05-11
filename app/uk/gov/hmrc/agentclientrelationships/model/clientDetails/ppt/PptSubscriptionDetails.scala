@@ -49,7 +49,8 @@ object PptSubscriptionDetails {
         )
 
       case "Organisation" =>
-        val organisationName = (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
+        val organisationName =
+          (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
         JsSuccess(
           PptSubscriptionDetails(
             organisationName,

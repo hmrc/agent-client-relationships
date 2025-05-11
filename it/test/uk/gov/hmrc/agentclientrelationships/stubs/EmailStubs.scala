@@ -25,7 +25,10 @@ import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 trait EmailStubs extends TestData {
 
-  def verifyRejectInvitationSent(emailInformation: EmailInformation, count: Int = 1) = eventually {
+  def verifyRejectInvitationSent(
+    emailInformation: EmailInformation,
+    count: Int = 1
+  ) = eventually {
     verify(
       count,
       postRequestedFor(urlPathEqualTo(s"/hmrc/email"))
@@ -33,9 +36,16 @@ trait EmailStubs extends TestData {
     )
   }
 
-  private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
+  private def similarToJson(value: String) = equalToJson(
+    value.stripMargin,
+    true,
+    true
+  )
 
-  def givenEmailSent(emailInformation: EmailInformation, status: Int = 202): StubMapping = stubFor(
+  def givenEmailSent(
+    emailInformation: EmailInformation,
+    status: Int = 202
+  ): StubMapping = stubFor(
     post("/hmrc/email")
       .withRequestBody(similarToJson(Json.toJson(emailInformation).toString()))
       .willReturn(aResponse().withStatus(status))

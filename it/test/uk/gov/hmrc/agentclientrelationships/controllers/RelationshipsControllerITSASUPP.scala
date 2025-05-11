@@ -36,7 +36,12 @@ trait RelationshipsControllerITSASUPP {
         givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
         givenNinoIsUnknownFor(mtdItId)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -49,7 +54,12 @@ trait RelationshipsControllerITSASUPP {
         givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
         givenNinoIsKnownFor(mtdItId, nino)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -65,7 +75,12 @@ trait RelationshipsControllerITSASUPP {
         givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId, "bar")
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 200

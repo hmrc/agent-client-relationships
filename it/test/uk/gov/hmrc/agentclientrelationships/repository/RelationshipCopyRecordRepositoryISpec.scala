@@ -22,12 +22,19 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.{Failed, Success}
-import uk.gov.hmrc.agentclientrelationships.support.{MongoApp, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
+import uk.gov.hmrc.agentclientrelationships.support.MongoApp
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 
 import java.time.temporal.ChronoUnit.MILLIS
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
 
@@ -62,11 +69,23 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
       val findResult = await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey))
       findResult shouldBe Some(relationshipCopyRecord)
 
-      await(repo.updateEtmpSyncStatus(Arn("TARN0000001"), vatEnrolmentKey, SyncStatus.Success))
+      await(
+        repo.updateEtmpSyncStatus(
+          Arn("TARN0000001"),
+          vatEnrolmentKey,
+          SyncStatus.Success
+        )
+      )
       val findResult2 = await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey))
       findResult2 shouldBe Some(relationshipCopyRecord.copy(syncToETMPStatus = Some(SyncStatus.Success)))
 
-      await(repo.updateEsSyncStatus(Arn("TARN0000001"), vatEnrolmentKey, SyncStatus.Success))
+      await(
+        repo.updateEsSyncStatus(
+          Arn("TARN0000001"),
+          vatEnrolmentKey,
+          SyncStatus.Success
+        )
+      )
       val findResult3 = await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey))
 
       findResult3 shouldBe Some(
@@ -97,8 +116,7 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
       createResult2 shouldBe 1
 
       val result = await(
-        repo
-          .collection
+        repo.collection
           .find(
             Filters.and(
               Filters.equal("arn", relationshipCopyRecord1.arn),
@@ -155,10 +173,26 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
       await(repo.collection.insertOne(copyRecord1).toFuture())
       await(repo.collection.insertOne(copyRecord2).toFuture())
       await(repo.collection.insertOne(copyRecord3).toFuture())
-      await(repo.updateEsSyncStatus(Arn("TARN0000001"), mtdItEnrolmentKey, Success))
-      await(repo.updateEtmpSyncStatus(Arn("TARN0000001"), vatEnrolmentKey, Success))
       await(
-        repo.updateEsSyncStatus(Arn("TARN0000002"), vatEnrolmentKey, Success)
+        repo.updateEsSyncStatus(
+          Arn("TARN0000001"),
+          mtdItEnrolmentKey,
+          Success
+        )
+      )
+      await(
+        repo.updateEtmpSyncStatus(
+          Arn("TARN0000001"),
+          vatEnrolmentKey,
+          Success
+        )
+      )
+      await(
+        repo.updateEsSyncStatus(
+          Arn("TARN0000002"),
+          vatEnrolmentKey,
+          Success
+        )
       ) // This one should do nothing as the record does not exist
       await(repo.findBy(Arn("TARN0000001"), mtdItEnrolmentKey)) shouldBe Some(
         copyRecord1.copy(syncToESStatus = Some(Success))
@@ -170,4 +204,5 @@ class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with 
     }
 
   }
+
 }

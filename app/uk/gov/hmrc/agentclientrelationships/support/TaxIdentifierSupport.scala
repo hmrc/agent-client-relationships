@@ -39,8 +39,7 @@ object TaxIdentifierSupport {
     `type` match {
       case "AgentReferenceNumber" => Arn(value)
       case _ =>
-        ClientIdType
-          .supportedTypes
+        ClientIdType.supportedTypes
           .find(_.enrolmentId == `type`)
           .map(_.createUnderlying(value))
           .getOrElse(throw new IllegalArgumentException("unsupported tax identifier type: " + `type`))

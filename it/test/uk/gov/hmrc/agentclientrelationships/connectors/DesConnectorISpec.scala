@@ -25,24 +25,30 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, DesStubs, DesStubsGet, IfStub}
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.DesStubsGet
+import uk.gov.hmrc.agentclientrelationships.stubs.IfStub
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, SaAgentReference}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
 class DesConnectorISpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with DesStubs
-with DesStubsGet
-with DataStreamStub
-with IfStub {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with DesStubs
+    with DesStubsGet
+    with DataStreamStub
+    with IfStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -74,7 +80,11 @@ with IfStub {
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   val desConnector =
-    new DesConnector(httpClient, app.injector.instanceOf[CorrelationIdGenerator], appConfig)(metrics, ec)
+    new DesConnector(
+      httpClient,
+      app.injector.instanceOf[CorrelationIdGenerator],
+      appConfig
+    )(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
@@ -94,7 +104,15 @@ with IfStub {
     }
 
     "return multiple CESA identifiers when client has multiple active agents" in {
-      val agentIds = Seq("001", "002", "003", "004", "005", "005", "007")
+      val agentIds = Seq(
+        "001",
+        "002",
+        "003",
+        "004",
+        "005",
+        "005",
+        "007"
+      )
       givenClientHasRelationshipWithMultipleAgentsInCESA(nino, agentIds)
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) should contain theSameElementsAs agentIds.map(
@@ -121,7 +139,18 @@ with IfStub {
     }
 
     "return empty seq when all client's relationships with agents ceased" in {
-      givenAllClientRelationshipsWithAgentsCeasedInCESA(nino, Seq("001", "002", "003", "004", "005", "005", "007"))
+      givenAllClientRelationshipsWithAgentsCeasedInCESA(
+        nino,
+        Seq(
+          "001",
+          "002",
+          "003",
+          "004",
+          "005",
+          "005",
+          "007"
+        )
+      )
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
@@ -190,4 +219,5 @@ with IfStub {
       result shouldBe false
     }
   }
+
 }

@@ -20,8 +20,7 @@ import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpReadsInstances
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
-object HttpReadsImplicits
-extends HttpReadsInstances {
+object HttpReadsImplicits extends HttpReadsInstances {
   self: HttpReadsInstances =>
 
   private val r: HttpReads[Either[UpstreamErrorResponse, Unit]] = readEitherOf[Unit](self.readUnit)

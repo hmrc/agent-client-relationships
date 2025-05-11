@@ -24,7 +24,17 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CapitalGains
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.PersonalIncomeRecord
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Pillar2
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Ppt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -66,8 +76,18 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
 
   val requestPath: String = "/agent-client-relationships/cleanup-invitation-status"
 
-  def requestJson(arn: String, clientId: String, service: String) = Json
-    .toJson(CleanUpInvitationStatusRequest(arn = arn, clientId = clientId, service = service))
+  def requestJson(
+    arn: String,
+    clientId: String,
+    service: String
+  ) = Json
+    .toJson(
+      CleanUpInvitationStatusRequest(
+        arn = arn,
+        clientId = clientId,
+        service = service
+      )
+    )
     .toString()
 
   allServices.foreach(testset =>
@@ -82,7 +102,14 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
-          val result = doAgentPutRequest(route = requestPath, body = requestJson(arn.value, clientId.value, service.id))
+          val result = doAgentPutRequest(
+            route = requestPath,
+            body = requestJson(
+              arn.value,
+              clientId.value,
+              service.id
+            )
+          )
           result.status shouldBe NOT_FOUND
         }
 
@@ -91,12 +118,22 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
       s"when invitation exists with the status Accepted in invitationStore for ${service.id}" should {
         s"update status to DeAuthorised" in {
           val newInvitation: Invitation = baseInvitation
-            .copy(service = serviceId, clientId = clientId.value, status = Accepted)
+            .copy(
+              service = serviceId,
+              clientId = clientId.value,
+              status = Accepted
+            )
 
           await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-          doAgentPutRequest(route = requestPath, body = requestJson(arn.value, clientId.value, serviceId))
-            .status shouldBe 204
+          doAgentPutRequest(
+            route = requestPath,
+            body = requestJson(
+              arn.value,
+              clientId.value,
+              serviceId
+            )
+          ).status shouldBe 204
 
           await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
         }
@@ -111,7 +148,11 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
       "return NotImplemented 501 status and JSON Error If service is not supported" in {
         val result = doAgentPutRequest(
           route = requestPath,
-          body = requestJson(arn.value, mtdItId.value, "INVALID-SERVICE-NAME")
+          body = requestJson(
+            arn.value,
+            mtdItId.value,
+            "INVALID-SERVICE-NAME"
+          )
         )
         result.status shouldBe 501
 

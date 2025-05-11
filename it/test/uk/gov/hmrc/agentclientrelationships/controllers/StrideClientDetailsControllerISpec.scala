@@ -18,24 +18,33 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride._
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuthRelationship, Pending}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HipStub}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, CbcNonUk}
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 class StrideClientDetailsControllerISpec
-extends BaseControllerISpec
-with ClientDetailsStub
-with HipStub
-with AfiRelationshipStub {
+    extends BaseControllerISpec
+    with ClientDetailsStub
+    with HipStub
+    with AfiRelationshipStub {
 
   override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
@@ -45,7 +54,12 @@ with AfiRelationshipStub {
   val testAgentRecord: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(agencyName = Some("ABC Ltd"), agencyEmail = None, agencyTelephone = None, agencyAddress = None)
+      TestAgencyDetails(
+        agencyName = Some("ABC Ltd"),
+        agencyEmail = None,
+        agencyTelephone = None,
+        agencyAddress = None
+      )
     ),
     suspensionDetails = None
   )
@@ -53,7 +67,12 @@ with AfiRelationshipStub {
   val testAgentRecord2: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
     agencyDetails = Some(
-      TestAgencyDetails(agencyName = Some("DEF Ltd"), agencyEmail = None, agencyTelephone = None, agencyAddress = None)
+      TestAgencyDetails(
+        agencyName = Some("DEF Ltd"),
+        agencyEmail = None,
+        agencyTelephone = None,
+        agencyAddress = None
+      )
     ),
     suspensionDetails = None
   )
@@ -93,13 +112,19 @@ with AfiRelationshipStub {
     suspensionDetails = Option(SuspensionDetails(suspended, Some(Set("AGSV"))))
   )
 
-  def invitationWithAgentName(invitation: Invitation, suspended: Boolean = false) = InvitationWithAgentName
+  def invitationWithAgentName(
+    invitation: Invitation,
+    suspended: Boolean = false
+  ) = InvitationWithAgentName
     .fromInvitationAndAgentRecord(invitation, agentDetailsDesResponse(suspended))
 
   val testEndpoint = "/agent-client-relationships/stride/client-details/service/"
 
-  def makeRequestUrl(service: String, clientIdType: String, clientId: String): String =
-    s"$testEndpoint$service/client/$clientIdType/$clientId"
+  def makeRequestUrl(
+    service: String,
+    clientIdType: String,
+    clientId: String
+  ): String = s"$testEndpoint$service/client/$clientIdType/$clientId"
 
   s"GET $testEndpoint" should {
     "return Unauthorised" when {
@@ -108,7 +133,13 @@ with AfiRelationshipStub {
         requestIsNotAuthenticated()
         givenAuditConnector()
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "NI", s"$nino"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "NI",
+            s"$nino"
+          )
+        )
         result.status shouldBe 401
       }
     }
@@ -117,7 +148,13 @@ with AfiRelationshipStub {
       "invalid parameters" in {
         givenAuditConnector()
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "VRN", s"$nino"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "VRN",
+            s"$nino"
+          )
+        )
         result.status shouldBe 400
       }
     }
@@ -131,7 +168,13 @@ with AfiRelationshipStub {
         givenVatCustomerInfoError(vrn.value, 404)
         getActiveRelationshipsViaClient(vrn, arn)
         givenAgentRecordFound(arn, testAgentRecord)
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 404
       }
     }
@@ -145,11 +188,16 @@ with AfiRelationshipStub {
         givenVatCustomerInfoExists(vrn.value)
         getActiveRelationshipsViaClient(vrn, arn)
         givenAgentRecordFound(arn, testAgentRecord)
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 200
 
-        result
-          .body shouldBe """{"clientName":"CFG Solutions","pendingInvitations":[],"activeMainAgent":{"agentName":"ABC Ltd","arn":"AARN0000002","service":"HMRC-MTD-VAT"}}"""
+        result.body shouldBe """{"clientName":"CFG Solutions","pendingInvitations":[],"activeMainAgent":{"agentName":"ABC Ltd","arn":"AARN0000002","service":"HMRC-MTD-VAT"}}"""
       }
     }
 
@@ -162,7 +210,13 @@ with AfiRelationshipStub {
         givenVatCustomerInfoExists(vrn.value)
         getActiveRelationshipFailsWith(vrn, 422)
         givenAgentRecordFound(arn, testAgentRecord)
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe """{"clientName":"CFG Solutions","pendingInvitations":[]}"""
@@ -177,7 +231,13 @@ with AfiRelationshipStub {
 
         getActiveRelationshipFailsWith(vrn, 422)
         givenAgentRecordFound(arn, testAgentRecord)
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -204,7 +264,13 @@ with AfiRelationshipStub {
 
         givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -212,7 +278,13 @@ with AfiRelationshipStub {
             ClientDetailsStrideResponse(
               clientName = pendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(pendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-VAT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-VAT"
+                )
+              )
             )
           )
           .toString()
@@ -237,7 +309,13 @@ with AfiRelationshipStub {
 
         givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -245,7 +323,13 @@ with AfiRelationshipStub {
             ClientDetailsStrideResponse(
               clientName = "CFG Solutions",
               pendingInvitations = Seq(),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-VAT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-VAT"
+                )
+              )
             )
           )
           .toString()
@@ -257,7 +341,11 @@ with AfiRelationshipStub {
         givenAuditConnector()
 
         val altItsaPendingInvitation = pendingInvitation
-          .copy(service = "HMRC-MTD-IT", suppliedClientId = nino.value, clientId = nino.value)
+          .copy(
+            service = "HMRC-MTD-IT",
+            suppliedClientId = nino.value,
+            clientId = nino.value
+          )
 
         invitationsRepo.collection.insertOne(altItsaPendingInvitation).toFuture().futureValue
 
@@ -267,7 +355,13 @@ with AfiRelationshipStub {
 
         givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "NI", s"${nino.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "NI",
+            s"${nino.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -275,7 +369,13 @@ with AfiRelationshipStub {
             ClientDetailsStrideResponse(
               clientName = altItsaPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(altItsaPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-IT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-IT"
+                )
+              )
             )
           )
           .toString()
@@ -287,7 +387,11 @@ with AfiRelationshipStub {
         givenAuditConnector()
 
         val itsaPendingInvitation = pendingInvitation
-          .copy(service = "HMRC-MTD-IT", suppliedClientId = nino.value, clientId = mtdItId.value)
+          .copy(
+            service = "HMRC-MTD-IT",
+            suppliedClientId = nino.value,
+            clientId = mtdItId.value
+          )
 
         invitationsRepo.collection.insertOne(itsaPendingInvitation).toFuture().futureValue
 
@@ -298,7 +402,13 @@ with AfiRelationshipStub {
 
         givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "NI", s"${nino.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "NI",
+            s"${nino.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -306,7 +416,13 @@ with AfiRelationshipStub {
             ClientDetailsStrideResponse(
               clientName = itsaPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(itsaPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-IT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-IT"
+                )
+              )
             )
           )
           .toString()
@@ -318,17 +434,32 @@ with AfiRelationshipStub {
         givenAuditConnector()
 
         val irvPendingInvitation = pendingInvitation
-          .copy(service = "PERSONAL-INCOME-RECORD", suppliedClientId = nino.value, clientId = nino.value)
+          .copy(
+            service = "PERSONAL-INCOME-RECORD",
+            suppliedClientId = nino.value,
+            clientId = nino.value
+          )
 
         invitationsRepo.collection.insertOne(irvPendingInvitation).toFuture().futureValue
 
         givenAgentRecordFound(arn, testAgentRecord)
 
-        givenAfiRelationshipForClientIsActive(arn2, "PERSONAL-INCOME-RECORD", nino.value, fromCesa = true)
+        givenAfiRelationshipForClientIsActive(
+          arn2,
+          "PERSONAL-INCOME-RECORD",
+          nino.value,
+          fromCesa = true
+        )
 
         givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("PERSONAL-INCOME-RECORD", "NINO", s"${nino.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "PERSONAL-INCOME-RECORD",
+            "NINO",
+            s"${nino.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -336,7 +467,13 @@ with AfiRelationshipStub {
             ClientDetailsStrideResponse(
               clientName = irvPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(irvPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "PERSONAL-INCOME-RECORD"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "PERSONAL-INCOME-RECORD"
+                )
+              )
             )
           )
           .toString()
@@ -348,19 +485,33 @@ with AfiRelationshipStub {
         givenAuditConnector()
 
         val cbcPendingInvitation = pendingInvitation
-          .copy(service = "HMRC-CBC-ORG", suppliedClientId = cbcId.value, clientId = cbcId.value)
+          .copy(
+            service = "HMRC-CBC-ORG",
+            suppliedClientId = cbcId.value,
+            clientId = cbcId.value
+          )
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue
 
         givenAgentRecordFound(arn, testAgentRecord)
 
-        givenKnownFactsQuery(Cbc, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
+        givenKnownFactsQuery(
+          Cbc,
+          cbcId,
+          Some(Seq(Identifier("cbcId", cbcId.value)))
+        )
 
         getActiveRelationshipsViaClient(cbcId, arn2)
 
         givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-CBC-ORG", "cbcId", s"${cbcId.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-CBC-ORG",
+            "cbcId",
+            s"${cbcId.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -368,7 +519,13 @@ with AfiRelationshipStub {
             ClientDetailsStrideResponse(
               clientName = cbcPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(cbcPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-CBC-ORG"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-CBC-ORG"
+                )
+              )
             )
           )
           .toString()
@@ -380,20 +537,34 @@ with AfiRelationshipStub {
         givenAuditConnector()
 
         val cbcPendingInvitation = pendingInvitation
-          .copy(service = "HMRC-CBC-NONUK-ORG", suppliedClientId = cbcId.value, clientId = cbcId.value)
+          .copy(
+            service = "HMRC-CBC-NONUK-ORG",
+            suppliedClientId = cbcId.value,
+            clientId = cbcId.value
+          )
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue
 
         givenAgentRecordFound(arn, testAgentRecord)
 
         givenCbcUkDoesNotExistInES(cbcId)
-        givenKnownFactsQuery(CbcNonUk, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
+        givenKnownFactsQuery(
+          CbcNonUk,
+          cbcId,
+          Some(Seq(Identifier("cbcId", cbcId.value)))
+        )
 
         getActiveRelationshipsViaClient(cbcId, arn2)
 
         givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-CBC-ORG", "cbcId", s"${cbcId.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-CBC-ORG",
+            "cbcId",
+            s"${cbcId.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -401,7 +572,13 @@ with AfiRelationshipStub {
             ClientDetailsStrideResponse(
               clientName = cbcPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(cbcPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-CBC-NONUK-ORG"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-CBC-NONUK-ORG"
+                )
+              )
             )
           )
           .toString()
@@ -433,16 +610,24 @@ with AfiRelationshipStub {
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
 
           cr.clientIdType match {
             case NinoType.id =>
               givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-              getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
-              givenAfiRelationshipForClientIsActive(arn, "PERSONAL-INCOME-RECORD", nino.value, true)
+              getItsaMainAndSupportingActiveRelationshipsViaClient(
+                mtdItId,
+                arn,
+                arn2
+              )
+              givenAfiRelationshipForClientIsActive(
+                arn,
+                "PERSONAL-INCOME-RECORD",
+                nino.value,
+                true
+              )
               givenItsaCitizenDetailsExists(nino.value)
               givenItsaDesignatoryDetailsExists(nino.value)
               givenAgentRecordFound(arn, testAgentRecord)
@@ -470,7 +655,11 @@ with AfiRelationshipStub {
               givenAgentRecordFound(arn, testAgentRecord)
             case CbcIdType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-              givenKnownFactsQuery(Service.CbcNonUk, taxIdentifier, Some(Seq(Identifier("cbcId", taxIdentifier.value))))
+              givenKnownFactsQuery(
+                Service.CbcNonUk,
+                taxIdentifier,
+                Some(Seq(Identifier("cbcId", taxIdentifier.value)))
+              )
               givenCbcDetailsExist(true)
               givenKnownFactsQuery(
                 Service.Cbc,
@@ -494,25 +683,20 @@ with AfiRelationshipStub {
 
       response.activeClientRelationships.size shouldBe 11
       // validate result
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              val mainRelationships = response
-                .activeClientRelationships
+              val mainRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value)
 
-              val partialAuthRelationships = response
-                .activeClientRelationships
+              val partialAuthRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value)
 
-              val suppRelationships = response
-                .activeClientRelationships
+              val suppRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
-              val irvRelationships = response
-                .activeClientRelationships
+              val irvRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id)
 
               mainRelationships.size shouldBe 1
@@ -521,44 +705,37 @@ with AfiRelationshipStub {
               irvRelationships.size shouldBe 1
 
             case VrnType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
               relationships.size shouldBe 1
 
             case UtrType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Trust.id)
               relationships.size shouldBe 1
 
             case UrnType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.TrustNT.id)
               relationships.size shouldBe 1
 
             case CgtRefType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.CapitalGains.id)
               relationships.size shouldBe 1
 
             case PptRefType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Ppt.id)
               relationships.size shouldBe 1
 
             case CbcIdType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Cbc.id)
               relationships.size shouldBe 1
 
             case PlrIdType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Pillar2.id)
               relationships.size shouldBe 1
             case _ =>
@@ -638,8 +815,7 @@ with AfiRelationshipStub {
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
 
@@ -665,24 +841,20 @@ with AfiRelationshipStub {
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              val mainRelationships = response
-                .activeClientRelationships
+              val mainRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-              val suppRelationships = response
-                .activeClientRelationships
+              val suppRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
               mainRelationships.size shouldBe 0
               suppRelationships.size shouldBe 0
 
             case VrnType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
               relationships.size shouldBe 1
             case _ =>
@@ -700,8 +872,7 @@ with AfiRelationshipStub {
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
 
@@ -728,24 +899,20 @@ with AfiRelationshipStub {
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              val mainRelationships = response
-                .activeClientRelationships
+              val mainRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-              val suppRelationships = response
-                .activeClientRelationships
+              val suppRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
               mainRelationships.size shouldBe 0
               suppRelationships.size shouldBe 0
 
             case VrnType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
               relationships.size shouldBe 1
             case _ =>
@@ -763,8 +930,7 @@ with AfiRelationshipStub {
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
@@ -787,24 +953,20 @@ with AfiRelationshipStub {
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              val mainRelationships = response
-                .activeClientRelationships
+              val mainRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-              val suppRelationships = response
-                .activeClientRelationships
+              val suppRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
               mainRelationships.size shouldBe 0
               suppRelationships.size shouldBe 0
 
             case VrnType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
               relationships.size shouldBe 0
             case _ =>
@@ -824,8 +986,7 @@ with AfiRelationshipStub {
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
@@ -848,23 +1009,19 @@ with AfiRelationshipStub {
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              val mainRelationships = response
-                .activeClientRelationships
+              val mainRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-              val suppRelationships = response
-                .activeClientRelationships
+              val suppRelationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
               mainRelationships.size shouldBe 0
               suppRelationships.size shouldBe 0
 
             case VrnType.id =>
-              val relationships = response
-                .activeClientRelationships
+              val relationships = response.activeClientRelationships
                 .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
               relationships.size shouldBe 0
             case _ =>
@@ -880,8 +1037,7 @@ with AfiRelationshipStub {
         Seq(ClientRelationshipRequest(NinoType.id, "FAKENINO"), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
       givenAuthorisedAsStrideUser(req, "someStrideId")
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
@@ -906,13 +1062,16 @@ with AfiRelationshipStub {
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
               givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-              getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+              getItsaMainAndSupportingActiveRelationshipsViaClient(
+                mtdItId,
+                arn,
+                arn2
+              )
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsError(nino.value, 403)
               givenItsaDesignatoryDetailsExists(nino.value)
@@ -941,13 +1100,16 @@ with AfiRelationshipStub {
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
               givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-              getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
+              getItsaMainAndSupportingActiveRelationshipsViaClient(
+                mtdItId,
+                arn,
+                arn2
+              )
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsExists(nino.value)
               givenItsaDesignatoryDetailsExists(nino.value)
@@ -974,8 +1136,7 @@ with AfiRelationshipStub {
 
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest
-        .clientRelationshipRequest
+      clientsRelationshipsRequest.clientRelationshipRequest
         .foreach { cr =>
           val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
           cr.clientIdType match {

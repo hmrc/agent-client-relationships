@@ -25,22 +25,27 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, IfStub}
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.IfStub
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 
 class IFConnectorISpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with IfStub
-with DataStreamStub {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with IfStub
+    with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -71,7 +76,12 @@ with DataStreamStub {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val request: RequestHeader = FakeRequest()
-  val ifConnector = new IfConnector(httpClient, app.injector.instanceOf[CorrelationIdGenerator], appConfig)(metrics, ec)
+  val ifConnector =
+    new IfConnector(
+      httpClient,
+      app.injector.instanceOf[CorrelationIdGenerator],
+      appConfig
+    )(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

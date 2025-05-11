@@ -70,36 +70,34 @@ class StrideClientDetailsService @Inject() (
     for {
       invitations <- getNonSuspendedInvitations(clientId, services)
       clientName <- getClientName(
-        invitations,
-        ek.service,
-        clientId
-      )
+                      invitations,
+                      ek.service,
+                      clientId
+                    )
       mActiveRel <- findActiveRelationship(ek.oneTaxIdentifier(), Service.forId(ek.service))
       mMainAgent <- findAgentDetails(mActiveRel)
       clientDetails = clientName.map(name =>
-        ClientDetailsStrideResponse(
-          name,
-          invitations,
-          mMainAgent
-        )
-      )
+                        ClientDetailsStrideResponse(
+                          name,
+                          invitations,
+                          mMainAgent
+                        )
+                      )
     } yield clientDetails
   }
 
   def findAllActiveRelationship(
     clientsRelationshipsRequest: ClientsRelationshipsRequest
   )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ActiveClientRelationship]]] =
-    clientsRelationshipsRequest
-      .clientRelationshipRequest
-      .map { crr =>
+    clientsRelationshipsRequest.clientRelationshipRequest
+      .map { crr: ClientRelationshipRequest =>
         for {
           taxIdentifier <- EitherT.fromEither[Future](
-            validationService.validateForTaxIdentifier(crr.clientIdType, crr.clientId)
-          )
+                             validationService.validateForTaxIdentifier(crr.clientIdType, crr.clientId)
+                           )
           activeRelationships <- EitherT(findAllActiveRelationshipForTaxId(taxIdentifier))
-          clientAgentsData <- findAgentClientDataForRelationships(taxIdentifier, activeRelationships)
-        } yield clientAgentsData
-          ._2
+          clientAgentsData    <- findAgentClientDataForRelationships(taxIdentifier, activeRelationships)
+        } yield clientAgentsData._2
           .map(r =>
             ActiveClientRelationship(
               clientId = crr.clientId,
@@ -126,9 +124,9 @@ class StrideClientDetailsService @Inject() (
   ] =
     for {
       activeRelationshipsWithAgentName <- findAgentNameForActiveRelationships(
-        activeRelationships,
-        taxIdentifier: TaxIdentifier
-      )
+                                            activeRelationships,
+                                            taxIdentifier: TaxIdentifier
+                                          )
       clientDetails <- EitherT(findClientDetailsByTaxIdentifier(taxIdentifier))
 
     } yield (clientDetails, activeRelationshipsWithAgentName)
@@ -142,24 +140,26 @@ class StrideClientDetailsService @Inject() (
           (
             for {
               itsaActiveRelationships <- EitherT(
-                findRelationshipsService.getAllActiveItsaRelationshipForClient(
-                  nino = Nino(taxIdentifier.value),
-                  activeOnly = true
-                )
-              )
+                                           findRelationshipsService.getAllActiveItsaRelationshipForClient(
+                                             nino = Nino(taxIdentifier.value),
+                                             activeOnly = true
+                                           )
+                                         )
 
-              irvActiveRelationship <- EitherT(
-                agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value)
-              ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
+              irvActiveRelationship <-
+                EitherT(
+                  agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value)
+                ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
 
               partialAuthAuthorisations <- EitherT.right[RelationshipFailureResponse](
-                getPartialAuthAuthorisations(taxIdentifier)
-              )
+                                             getPartialAuthAuthorisations(taxIdentifier)
+                                           )
 
             } yield itsaActiveRelationships ++ irvActiveRelationship ++ partialAuthAuthorisations
           ).value
 
-        case _ => findRelationshipsService.getAllRelationshipsForClient(taxIdentifier = taxIdentifier, activeOnly = true)
+        case _ =>
+          findRelationshipsService.getAllRelationshipsForClient(taxIdentifier = taxIdentifier, activeOnly = true)
 
       }
     ).map(_.map(_.filter(_.isActive))) // additional filtering for IF
@@ -209,27 +209,25 @@ class StrideClientDetailsService @Inject() (
     RelationshipFailureResponse,
     Seq[ClientRelationshipWithAgentName]
   ] =
-    activeRelationships
-      .map { ar =>
-        for {
-          agentDetails <- findAgentDetailsByArn(ar.arn)
-          service <- EitherT(
-            validationService.validateAuthProfileToService(
-              taxIdentifier,
-              ar.authProfile,
-              ar.relationshipSource,
-              ar.service
-            )
-          )
-        } yield ClientRelationshipWithAgentName(
-          ar.arn,
-          agentDetails.agencyDetails.agencyName,
-          service.id,
-          ar.dateTo,
-          ar.dateFrom
-        )
-      }
-      .sequence
+    activeRelationships.map { ar =>
+      for {
+        agentDetails <- findAgentDetailsByArn(ar.arn)
+        service <- EitherT(
+                     validationService.validateAuthProfileToService(
+                       taxIdentifier,
+                       ar.authProfile,
+                       ar.relationshipSource,
+                       ar.service
+                     )
+                   )
+      } yield ClientRelationshipWithAgentName(
+        ar.arn,
+        agentDetails.agencyDetails.agencyName,
+        service.id,
+        ar.dateTo,
+        ar.dateFrom
+      )
+    }.sequence
 
   private def findAgentDetailsByArn(arn: Arn)(implicit
     request: RequestHeader
@@ -249,12 +247,12 @@ class StrideClientDetailsService @Inject() (
       _.left
         .map {
           case ClientDetailsNotFound => RelationshipFailureResponse.ClientDetailsNotFound
-          case ErrorRetrievingClientDetails(status, msg) => RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg)
+          case ErrorRetrievingClientDetails(status, msg) =>
+            RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg)
         }
     )
 
-  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord
-    .suspensionDetails
+  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord.suspensionDetails
     .exists(_.suspensionStatus)
 
   private def getNonSuspendedInvitations(
@@ -264,17 +262,17 @@ class StrideClientDetailsService @Inject() (
     for {
       invitations <- invitationsRepository.findAllPendingForSuppliedClient(clientId, services)
       nonSuspended <- Future.sequence(
-        invitations.map(i =>
-          agentAssuranceConnector
-            .getAgentRecordWithChecks(Arn(i.arn))
-            .map(agentRecord =>
-              if (agentIsSuspended(agentRecord))
-                None
-              else
-                Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
-            )
-        )
-      )
+                        invitations.map(i =>
+                          agentAssuranceConnector
+                            .getAgentRecordWithChecks(Arn(i.arn))
+                            .map(agentRecord =>
+                              if (agentIsSuspended(agentRecord))
+                                None
+                              else
+                                Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
+                            )
+                        )
+                      )
     } yield nonSuspended.flatten
 
   private def findActiveRelationship(
@@ -288,8 +286,7 @@ class StrideClientDetailsService @Inject() (
           mRel <-
             if (partialAuth.isEmpty) {
               findRelationshipsService.getItsaRelationshipForClient(Nino(taxIdentifier.value), service)
-            }
-            else
+            } else
               Future.successful(
                 partialAuth.map(pa =>
                   ActiveRelationship(

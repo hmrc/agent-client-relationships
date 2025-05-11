@@ -51,8 +51,8 @@ class ClientDetailsController @Inject() (
   cc: ControllerComponents,
   appConfig: AppConfig
 )(implicit val executionContext: ExecutionContext)
-extends BackendController(cc)
-with AuthActions {
+    extends BackendController(cc)
+    with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -62,7 +62,7 @@ with AuthActions {
   ): String =
     service match {
       case `HMRCCBCORG` if clientDetails.isOverseas.contains(true) => HMRCCBCNONUKORG
-      case service => service
+      case service                                                 => service
     }
 
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
@@ -80,10 +80,10 @@ with AuthActions {
             val clientIdType = Service(refinedService).supportedSuppliedClientIdType.enrolmentId
             for {
               pendingInvitationMain <- pendingInvitation(
-                arn,
-                refinedService,
-                clientId
-              )
+                                         arn,
+                                         refinedService,
+                                         clientId
+                                       )
               pendingInvitationSupp <-
                 if (multiAgentServices.contains(refinedService))
                   pendingInvitation(
@@ -94,11 +94,11 @@ with AuthActions {
                 else
                   Future.successful(false)
               currentRelationshipMain <- existingRelationship(
-                arn,
-                refinedService,
-                clientIdType,
-                clientId
-              )
+                                           arn,
+                                           refinedService,
+                                           clientIdType,
+                                           clientId
+                                         )
               currentRelationshipSupp <-
                 if (multiAgentServices.contains(refinedService))
                   existingRelationship(
@@ -138,8 +138,8 @@ with AuthActions {
       None
     )
     .map {
-      case CheckRelationshipFound => Some(service)
-      case CheckRelationshipNotFound(_) => None
+      case CheckRelationshipFound          => Some(service)
+      case CheckRelationshipNotFound(_)    => None
       case CheckRelationshipInvalidRequest => throw new RuntimeException("Unexpected error during relationship check")
     }
     .flatMap {

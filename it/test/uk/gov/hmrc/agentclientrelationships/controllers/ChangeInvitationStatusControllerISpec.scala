@@ -23,13 +23,25 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.transitional.ChangeInvitationStatusRequest
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CapitalGains
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.PersonalIncomeRecord
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Pillar2
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Ppt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
-import java.time.{Instant, ZoneOffset}
+import java.time.Instant
+import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
 class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with TestData {
@@ -54,7 +66,10 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     MtdItSupp            -> mtdItId
   )
 
-  def requestPath(service: String, clientId: String): String =
+  def requestPath(
+    service: String,
+    clientId: String
+  ): String =
     s"/agent-client-relationships/transitional/change-invitation-status/arn/${arn.value}/service/$service/client/$clientId"
 
   allServices.foreach(testset =>
@@ -240,7 +255,13 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
         ).status shouldBe 204
 
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
-        await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
+        await(
+          partialAuthRepository.findActive(
+            service.id,
+            nino,
+            arn
+          )
+        ) shouldBe None
       }
     }
 
@@ -265,7 +286,13 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             .toString()
         ).status shouldBe 204
 
-        await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
+        await(
+          partialAuthRepository.findActive(
+            service.id,
+            nino,
+            arn
+          )
+        ) shouldBe None
       }
     }
 

@@ -16,19 +16,28 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.i18n.{Lang, Langs, MessagesApi}
+import play.api.i18n.Lang
+import play.api.i18n.Langs
+import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EmailInformation, Pending, Rejected}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, InvitationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.model.Cancelled
+import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.model.Rejected
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
@@ -41,13 +50,13 @@ import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
-extends BaseControllerISpec
-with ClientDetailsStub
-with AfiRelationshipStub
-with AgentAssuranceStubs
-with EmailStubs
-with HipStub
-with TestData {
+    extends BaseControllerISpec
+    with ClientDetailsStub
+    with AfiRelationshipStub
+    with AgentAssuranceStubs
+    with EmailStubs
+    with HipStub
+    with TestData {
 
   override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
@@ -90,21 +99,53 @@ with TestData {
     HMRCMTDIT -> baseInvitationInputData,
     HMRCPIR   -> baseInvitationInputData.copy(service = HMRCPIR),
     HMRCMTDVAT -> baseInvitationInputData
-      .copy(service = HMRCMTDVAT, clientId = vrn.value, suppliedClientIdType = VrnType.id),
+      .copy(
+        service = HMRCMTDVAT,
+        clientId = vrn.value,
+        suppliedClientIdType = VrnType.id
+      ),
     HMRCTERSORG -> baseInvitationInputData
-      .copy(service = HMRCTERSORG, clientId = utr.value, suppliedClientIdType = UtrType.id),
+      .copy(
+        service = HMRCTERSORG,
+        clientId = utr.value,
+        suppliedClientIdType = UtrType.id
+      ),
     HMRCTERSNTORG -> baseInvitationInputData
-      .copy(service = HMRCTERSNTORG, clientId = urn.value, suppliedClientIdType = UrnType.id),
+      .copy(
+        service = HMRCTERSNTORG,
+        clientId = urn.value,
+        suppliedClientIdType = UrnType.id
+      ),
     HMRCCGTPD -> baseInvitationInputData
-      .copy(service = HMRCCGTPD, clientId = cgtRef.value, suppliedClientIdType = CgtRefType.id),
+      .copy(
+        service = HMRCCGTPD,
+        clientId = cgtRef.value,
+        suppliedClientIdType = CgtRefType.id
+      ),
     HMRCPPTORG -> baseInvitationInputData
-      .copy(service = HMRCPPTORG, clientId = pptRef.value, suppliedClientIdType = PptRefType.id),
+      .copy(
+        service = HMRCPPTORG,
+        clientId = pptRef.value,
+        suppliedClientIdType = PptRefType.id
+      ),
     HMRCCBCORG -> baseInvitationInputData
-      .copy(service = HMRCCBCORG, clientId = cbcId.value, suppliedClientIdType = CbcIdType.id),
+      .copy(
+        service = HMRCCBCORG,
+        clientId = cbcId.value,
+        suppliedClientIdType = CbcIdType.id
+      ),
     HMRCCBCNONUKORG -> baseInvitationInputData
-      .copy(service = HMRCCBCNONUKORG, clientId = cbcId.value, suppliedClientIdType = CbcIdType.id),
+      .copy(
+        service = HMRCCBCNONUKORG,
+        clientId = cbcId.value,
+        suppliedClientIdType = CbcIdType.id
+      ),
     HMRCPILLAR2ORG -> baseInvitationInputData
-      .copy(service = HMRCPILLAR2ORG, clientId = plrId.value, suppliedClientIdType = PlrIdType.id),
+      .copy(
+        service = HMRCPILLAR2ORG,
+        clientId = plrId.value,
+        suppliedClientIdType = PlrIdType.id
+      ),
     HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
   )
 
@@ -124,8 +165,7 @@ with TestData {
   val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
   "create invitation" should {
 
-    allServices
-      .keySet
+    allServices.keySet
       .foreach(taxService =>
         s"return 201 status and valid JSON when invitation is created for $taxService" in {
           val inputData: CreateInvitationRequest = allServices(taxService)
@@ -304,8 +344,7 @@ with TestData {
       result.status shouldBe 400
 
       val message =
-        s"""Unsupported clientIdType "${createInvitationInputData
-          .suppliedClientIdType}", for service type "${createInvitationInputData.service}"""".stripMargin
+        s"""Unsupported clientIdType "${createInvitationInputData.suppliedClientIdType}", for service type "${createInvitationInputData.service}"""".stripMargin
       result.json shouldBe toJson(ErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message))
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
@@ -348,8 +387,7 @@ with TestData {
 
   "reject invitation" should {
 
-    allServices
-      .keySet
+    allServices.keySet
       .foreach(taxService =>
         s"return 201 status and valid JSON when invitation is created for $taxService" in {
           val inputData: CreateInvitationRequest = allServices(taxService)
@@ -406,7 +444,12 @@ with TestData {
           invitationSeq.head.status shouldBe Rejected
 
           verifyRejectInvitationSent(emailInfo)
-          verifyRespondToInvitationAuditSent(requestPath, pendingInvitation, accepted = false, isStride = false)
+          verifyRespondToInvitationAuditSent(
+            requestPath,
+            pendingInvitation,
+            accepted = false,
+            isStride = false
+          )
         }
       )
 
@@ -485,8 +528,7 @@ with TestData {
 
   "cancel invitation" should {
 
-    allServices
-      .keySet
+    allServices.keySet
       .foreach(taxService =>
         s"return 204 status when invitation is cancelled for $taxService" in {
           val inputData: CreateInvitationRequest = allServices(taxService)
@@ -545,4 +587,5 @@ with TestData {
     }
 
   }
+
 }

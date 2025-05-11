@@ -20,17 +20,13 @@ import play.api.Logging
 
 sealed trait InvitationStatusAction
 
-object InvitationStatusAction
-extends Logging {
+object InvitationStatusAction extends Logging {
 
-  case object Accept
-  extends InvitationStatusAction
+  case object Accept extends InvitationStatusAction
 
-  case object Cancel
-  extends InvitationStatusAction
+  case object Cancel extends InvitationStatusAction
 
-  case object Reject
-  extends InvitationStatusAction
+  case object Reject extends InvitationStatusAction
 
   def apply(status: String): InvitationStatusAction =
     status.toLowerCase match {

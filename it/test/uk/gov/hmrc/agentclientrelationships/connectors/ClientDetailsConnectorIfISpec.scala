@@ -18,30 +18,39 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
-import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.NOT_FOUND
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.{ItsaBusinessDetails, ItsaCitizenDetails, ItsaDesignatoryDetails}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaCitizenDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaDesignatoryDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.{VatCustomerDetails, VatIndividual}
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsNotFound, ErrorRetrievingClientDetails}
-import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, DataStreamStub, IfStub}
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatIndividual
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
+import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.IfStub
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 
 import java.time.LocalDate
 
 class ClientDetailsConnectorIfISpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with DataStreamStub
-with ClientDetailsStub
-with IfStub {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with DataStreamStub
+    with ClientDetailsStub
+    with IfStub {
 
   override lazy val app: Application = appBuilder.build()
 
@@ -116,7 +125,11 @@ with IfStub {
       givenAuditConnector()
       givenItsaBusinessDetailsExists("nino", "AA000001B")
       await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
-        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
+        ItsaBusinessDetails(
+          "Erling Haal",
+          Some("AA1 1AA"),
+          "GB"
+        )
       )
     }
 
@@ -124,7 +137,11 @@ with IfStub {
       givenAuditConnector()
       givenMultipleItsaBusinessDetailsExists("AA000001B")
       await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
-        ItsaBusinessDetails("Erling Haal", Some("AA1 1AA"), "GB")
+        ItsaBusinessDetails(
+          "Erling Haal",
+          Some("AA1 1AA"),
+          "GB"
+        )
       )
     }
 
@@ -155,7 +172,14 @@ with IfStub {
       givenVatCustomerInfoExists("123456789")
       val expectedModel = VatCustomerDetails(
         Some("CFG"),
-        Some(VatIndividual(Some("Mr"), Some("Ilkay"), Some("Silky"), Some("Gundo"))),
+        Some(
+          VatIndividual(
+            Some("Mr"),
+            Some("Ilkay"),
+            Some("Silky"),
+            Some("Gundo")
+          )
+        ),
         Some("CFG Solutions"),
         Some(LocalDate.parse("2020-01-01")),
         isInsolvent = false
@@ -193,13 +217,21 @@ with IfStub {
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
-      givenTrustDetailsError("1234567890", "UTR", NOT_FOUND)
+      givenTrustDetailsError(
+        "1234567890",
+        "UTR",
+        NOT_FOUND
+      )
       await(connector.getTrustName("1234567890")) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
-      givenTrustDetailsError("1234567890", "UTR", INTERNAL_SERVER_ERROR)
+      givenTrustDetailsError(
+        "1234567890",
+        "UTR",
+        INTERNAL_SERVER_ERROR
+      )
       await(connector.getTrustName("1234567890")) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getTrustName'"))
     }
@@ -211,7 +243,13 @@ with IfStub {
       givenAuditConnector()
       givenCgtDetailsExist("XACGTP123456789")
       await(connector.getCgtSubscriptionDetails("XACGTP123456789")) shouldBe
-        Right(CgtSubscriptionDetails("CFG Solutions", Some("AA1 1AA"), "GB"))
+        Right(
+          CgtSubscriptionDetails(
+            "CFG Solutions",
+            Some("AA1 1AA"),
+            "GB"
+          )
+        )
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
@@ -235,7 +273,11 @@ with IfStub {
       givenPptDetailsExist("XAPPT0004567890")
       await(connector.getPptSubscriptionDetails("XAPPT0004567890")) shouldBe
         Right(
-          PptSubscriptionDetails("CFG Solutions", LocalDate.parse("2020-01-01"), Some(LocalDate.parse("2030-01-01")))
+          PptSubscriptionDetails(
+            "CFG Solutions",
+            LocalDate.parse("2020-01-01"),
+            Some(LocalDate.parse("2030-01-01"))
+          )
         )
     }
 
@@ -289,7 +331,14 @@ with IfStub {
       givenAuditConnector()
       givenPillar2DetailsExist("XAPLR2222222222")
       await(connector.getPillar2SubscriptionDetails("XAPLR2222222222")) shouldBe
-        Right(Pillar2Record("CFG Solutions", "2020-01-01", "GB", inactive = true))
+        Right(
+          Pillar2Record(
+            "CFG Solutions",
+            "2020-01-01",
+            "GB",
+            inactive = true
+          )
+        )
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
@@ -307,4 +356,5 @@ with IfStub {
         )
     }
   }
+
 }

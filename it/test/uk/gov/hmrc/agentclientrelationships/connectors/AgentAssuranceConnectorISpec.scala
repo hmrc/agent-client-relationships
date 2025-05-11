@@ -21,20 +21,24 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.stubs.AgentAssuranceStubs
-import uk.gov.hmrc.agentclientrelationships.support.{TestData, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.TestData
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class AgentAssuranceConnectorISpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with TestData
-with AgentAssuranceStubs {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with TestData
+    with AgentAssuranceStubs {
 
   override lazy val app: Application = appBuilder.build()
 

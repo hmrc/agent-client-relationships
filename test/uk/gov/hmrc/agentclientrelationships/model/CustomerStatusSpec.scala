@@ -19,8 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class CustomerStatusSpec
-extends UnitSpec {
+class CustomerStatusSpec extends UnitSpec {
 
   "CustomerStatus" should {
 
@@ -31,8 +30,8 @@ extends UnitSpec {
         hasExistingRelationships = true
       )
       val json = Json.obj(
-        "hasPendingInvitations" -> true,
-        "hasInvitationsHistory" -> true,
+        "hasPendingInvitations"    -> true,
+        "hasInvitationsHistory"    -> true,
         "hasExistingRelationships" -> true
       )
 

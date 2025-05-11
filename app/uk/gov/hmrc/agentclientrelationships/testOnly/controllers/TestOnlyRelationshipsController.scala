@@ -32,7 +32,7 @@ class TestOnlyRelationshipsController @Inject() (
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   controllerComponents: ControllerComponents
 )(implicit ec: ExecutionContext)
-extends BackendController(controllerComponents) {
+    extends BackendController(controllerComponents) {
 
   def cleanCopyStatusRecord(
     arn: Arn,

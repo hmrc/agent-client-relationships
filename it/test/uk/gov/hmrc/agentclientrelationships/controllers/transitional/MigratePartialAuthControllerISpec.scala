@@ -19,10 +19,15 @@ package uk.gov.hmrc.agentclientrelationships.controllers.transitional
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseControllerISpec
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuth}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, ClientDetailsStub, EmailStubs}
+import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.AgentAssuranceStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -30,16 +35,18 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 
 import java.time.temporal.ChronoUnit.MILLIS
-import java.time.{LocalDate, LocalDateTime, ZoneOffset}
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
 class MigratePartialAuthControllerISpec
-extends BaseControllerISpec
-with ClientDetailsStub
-with AfiRelationshipStub
-with AgentAssuranceStubs
-with EmailStubs
-with TestData {
+    extends BaseControllerISpec
+    with ClientDetailsStub
+    with AfiRelationshipStub
+    with AgentAssuranceStubs
+    with EmailStubs
+    with TestData {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -156,4 +163,5 @@ with TestData {
     }
 
   }
+
 }

@@ -50,8 +50,8 @@ class InvitationController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-extends BackendController(cc)
-with AuthActions {
+    extends BackendController(cc)
+    with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -59,8 +59,7 @@ with AuthActions {
 
   def createInvitation(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request
-        .body
+      request.body
         .validate[CreateInvitationRequest]
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
@@ -76,14 +75,14 @@ with AuthActions {
                       UnsupportedService.getResult(msg)
 
                     case InvalidClientId =>
-                      val msg = s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
+                      val msg =
+                        s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
                       Logger(getClass).warn(msg)
                       InvalidClientId.getResult(msg)
 
                     case UnsupportedClientIdType =>
                       val msg =
-                        s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}""""
-                          .stripMargin
+                        s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}"""".stripMargin
                       Logger(getClass).warn(msg)
                       UnsupportedClientIdType.getResult(msg)
 
@@ -129,18 +128,18 @@ with AuthActions {
         case Some(invitation) if invitation.status == Pending =>
           for {
             enrolment <- validationService
-              .validateForEnrolmentKey(
-                invitation.service,
-                ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                invitation.clientId
-              )
-              .map(either =>
-                either.getOrElse(
-                  throw new RuntimeException(
-                    s"Could not parse invitation details into enrolment reason: ${either.left}"
-                  )
-                )
-              )
+                           .validateForEnrolmentKey(
+                             invitation.service,
+                             ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                             invitation.clientId
+                           )
+                           .map(either =>
+                             either.getOrElse(
+                               throw new RuntimeException(
+                                 s"Could not parse invitation details into enrolment reason: ${either.left}"
+                               )
+                             )
+                           )
             result <-
               authorisedUser(
                 None,
@@ -180,7 +179,7 @@ with AuthActions {
           UtrType.id
         )
         .map {
-          case true => NoContent
+          case true  => NoContent
           case false => NotFound
         }
     }

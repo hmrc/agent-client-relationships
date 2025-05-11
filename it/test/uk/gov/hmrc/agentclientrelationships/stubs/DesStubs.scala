@@ -32,7 +32,10 @@ trait DesStubs {
   val someAlienAgent = """{"hasAgent":false,"agentId":"alien"}"""
   val someCeasedAgent = """{"hasAgent":true,"agentId":"ex-agent","agentCeasedDate":"someDate"}"""
 
-  def givenClientHasRelationshipWithAgentInCESA(nino: Nino, agentId: String) = stubFor(
+  def givenClientHasRelationshipWithAgentInCESA(
+    nino: Nino,
+    agentId: String
+  ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
       aResponse()
         .withStatus(200)
@@ -40,7 +43,10 @@ trait DesStubs {
     )
   )
 
-  def givenClientHasRelationshipWithMultipleAgentsInCESA(nino: Nino, agentIds: Seq[String]) = stubFor(
+  def givenClientHasRelationshipWithMultipleAgentsInCESA(
+    nino: Nino,
+    agentIds: Seq[String]
+  ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
       aResponse()
         .withStatus(200)
@@ -50,7 +56,10 @@ trait DesStubs {
     )
   )
 
-  def givenClientRelationshipWithAgentCeasedInCESA(nino: Nino, agentId: String) = stubFor(
+  def givenClientRelationshipWithAgentCeasedInCESA(
+    nino: Nino,
+    agentId: String
+  ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
       aResponse()
         .withStatus(200)
@@ -58,7 +67,10 @@ trait DesStubs {
     )
   )
 
-  def givenAllClientRelationshipsWithAgentsCeasedInCESA(nino: Nino, agentIds: Seq[String]) = stubFor(
+  def givenAllClientRelationshipsWithAgentsCeasedInCESA(
+    nino: Nino,
+    agentIds: Seq[String]
+  ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
       aResponse()
         .withStatus(200)
@@ -81,4 +93,5 @@ trait DesStubs {
   def givenClientIsUnknownInCESAFor(nino: Nino) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(aResponse().withStatus(404))
   )
+
 }

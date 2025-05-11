@@ -30,8 +30,7 @@ sealed trait RelationshipReference {
 
 object RelationshipReference {
 
-  case class SaRef(value: SaAgentReference)
-  extends RelationshipReference
+  case class SaRef(value: SaAgentReference) extends RelationshipReference
 
   object SaRef {
 
@@ -44,8 +43,7 @@ object RelationshipReference {
 
   }
 
-  case class VatRef(value: AgentCode)
-  extends RelationshipReference
+  case class VatRef(value: AgentCode) extends RelationshipReference
 
   object VatRef {
 
@@ -61,7 +59,7 @@ object RelationshipReference {
     __.read[SaRef].map(x => x: RelationshipReference) orElse __.read[VatRef].map(x => x: RelationshipReference)
 
   implicit val relationshipReferenceWrites: Writes[RelationshipReference] = Writes[RelationshipReference] {
-    case saRef: SaRef => SaRef.saWrites.writes(saRef)
+    case saRef: SaRef   => SaRef.saWrites.writes(saRef)
     case vatRef: VatRef => VatRef.vatWrites.writes(vatRef)
   }
 

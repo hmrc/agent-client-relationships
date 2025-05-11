@@ -19,13 +19,25 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CapitalGains
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.PersonalIncomeRecord
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Pillar2
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Ppt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
-import java.time.{Instant, ZoneOffset}
+import java.time.Instant
+import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
 class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with TestData {
@@ -56,8 +68,10 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
     MtdItSupp            -> mtdItId
   )
 
-  def requestPath(invitationId: String, action: String): String =
-    s"/agent-client-relationships/authorisation-request/action-invitation/$invitationId/action/$action"
+  def requestPath(
+    invitationId: String,
+    action: String
+  ): String = s"/agent-client-relationships/authorisation-request/action-invitation/$invitationId/action/$action"
   allActions.foreach(testActionData =>
     allServices.foreach(testset =>
       s"/authorisation-request/action-invitation/:invitationId/action/:action change status to ${testActionData._1}" should {
@@ -100,7 +114,13 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
             doAgentPutRequest(requestPath(newInvitation.invitationId, action), "").status shouldBe 204
 
             if (!newInvitation.isAltItsa)
-              await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
+              await(
+                partialAuthRepository.findActive(
+                  service.id,
+                  nino,
+                  arn
+                )
+              ) shouldBe None
 
             val newStatus = await(invitationRepo.findOneById(newInvitation.invitationId)).get.status
             expectedStatus.contains(newStatus) should be(true)
@@ -166,7 +186,13 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
 
         doAgentPutRequest(requestPath(newInvitation.invitationId, "accept"), "").status shouldBe 204
 
-        await(partialAuthRepository.findActive(service.id, nino, arn)).get.active shouldBe true
+        await(
+          partialAuthRepository.findActive(
+            service.id,
+            nino,
+            arn
+          )
+        ).get.active shouldBe true
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == PartialAuth
 
       }
@@ -180,4 +206,5 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
       }
     }
   }
+
 }

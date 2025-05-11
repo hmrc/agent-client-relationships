@@ -47,9 +47,7 @@ case class CurrentUser(
   def isStride: Boolean = credentials.map(_.providerType).contains("PrivilegedApplication")
 }
 
-trait AuthActions
-extends AuthorisedFunctions
-with Logging {
+trait AuthActions extends AuthorisedFunctions with Logging {
   me: Results =>
 
   implicit val executionContext: ExecutionContext
@@ -74,7 +72,8 @@ with Logging {
                 clientId
               ) =>
             creds
-          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+            creds
         }
         .map { creds =>
           body(CurrentUser(Option(creds), affinity))
@@ -98,7 +97,8 @@ with Logging {
                   clientId
                 ) =>
             creds
-          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
+            creds
         }
         .map { creds =>
           body(CurrentUser(Option(creds), affinity))
@@ -114,26 +114,26 @@ with Logging {
   ): Boolean = affinity
     .flatMap {
       case AffinityGroup.Agent => arn
-      case _ => Some(clientId)
+      case _                   => Some(clientId)
     }
     .exists { requiredIdentifier =>
       // check that among the identifiers that the user has, there is one that matches the clientId provided
       requiredIdentifier match {
         // need to handle Arn separately as it is not one of our managed services
         case Arn(arn) =>
-          enrolments
-            .enrolments
+          enrolments.enrolments
             .exists(enrolment =>
               enrolment.key == "HMRC-AS-AGENT" &&
                 enrolment.identifiers.contains(EnrolmentIdentifier("AgentReferenceNumber", arn))
             )
         case taxId: TaxIdentifier =>
           val requiredTaxIdType = ClientIdentifier(taxId).enrolmentId
-          enrolments
-            .enrolments
+          enrolments.enrolments
             .flatMap(_.identifiers)
             .filter(_.key == requiredTaxIdType)
-            .exists(_.value.replace(" ", "") == requiredIdentifier.value.replace(" ", "")) // In case NINO comes back without spaces
+            .exists(
+              _.value.replace(" ", "") == requiredIdentifier.value.replace(" ", "")
+            ) // In case NINO comes back without spaces
       }
     }
 
@@ -161,13 +161,12 @@ with Logging {
           val id =
             if (supportedServices.exists(_.id == serviceKey)) {
               enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
-            }
-            else
+            } else
               None
 
           id match {
             case Some(i) => body(i)
-            case _ => Future.successful(NoPermissionToPerformOperation)
+            case _       => Future.successful(NoPermissionToPerformOperation)
           }
         case _ => Future.successful(NoPermissionToPerformOperation)
       }
@@ -185,12 +184,12 @@ with Logging {
         val requiredEnrolments =
           for {
             serviceKey <- serviceKeys
-            enrolment <- enrolments.getEnrolment(serviceKey)
+            enrolment  <- enrolments.getEnrolment(serviceKey)
           } yield LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value)))
 
         requiredEnrolments match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _ => body(requiredEnrolments)
+          case _              => body(requiredEnrolments)
         }
     }
 
@@ -203,13 +202,13 @@ with Logging {
         val identifiers =
           for {
             supportedService <- supportedServices
-            enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
-            clientId <- enrolment.identifiers.headOption
+            enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
+            clientId         <- enrolment.identifiers.headOption
           } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
         identifiers match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _ => body(identifiers.toMap)
+          case _              => body(identifiers.toMap)
         }
     }
 
@@ -227,7 +226,7 @@ with Logging {
     authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
         case Some(Credentials(strideId, _)) => body(strideId)
-        case _ => Future.successful(NoPermissionToPerformOperation)
+        case _                              => Future.successful(NoPermissionToPerformOperation)
       }
 
   val basicAuthHeader: Regex = "Basic (.+)".r
@@ -248,8 +247,7 @@ with Logging {
           case decodedAuth(username, password) =>
             if (BasicAuthentication(username, password) == expectedAuth) {
               body
-            }
-            else {
+            } else {
               logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
             }
@@ -265,7 +263,7 @@ with Logging {
   protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(implicit request: RequestHeader): Future[Result] =
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
-      case None => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
+      case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
     } recoverWith { case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments()) }
 
   protected def withEnrolledAsAgent[A](
@@ -287,7 +285,7 @@ with Logging {
     identifierKey: String
   ) =
     for {
-      enrolment <- enrolments.getEnrolment(serviceName)
+      enrolment  <- enrolments.getEnrolment(serviceName)
       identifier <- enrolment.getIdentifier(identifierKey)
     } yield identifier.value
 

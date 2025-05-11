@@ -19,14 +19,14 @@ package uk.gov.hmrc.agentclientrelationships.model
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
-class EnrolmentKeySpec
-extends AnyFlatSpec
-with Matchers {
+class EnrolmentKeySpec extends AnyFlatSpec with Matchers {
 
   "EnrolmentKey" should "toString with mixed case" in {
     val enrolmentKeyStr =
-      EnrolmentKey("HMRC-CBC-ORG", Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890")))
-        .toString
+      EnrolmentKey(
+        "HMRC-CBC-ORG",
+        Seq(Identifier("UTR", "1234567890"), Identifier("cbcId", "XCBCX1234567890"))
+      ).toString
 
     enrolmentKeyStr shouldBe "HMRC-CBC-ORG~UTR~1234567890~cbcId~XCBCX1234567890"
   }

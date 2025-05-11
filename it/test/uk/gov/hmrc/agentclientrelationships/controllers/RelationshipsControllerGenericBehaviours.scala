@@ -20,13 +20,21 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, Identifier, Service}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.CbcId
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.lock.Lock
 
-import java.time.{Instant, LocalDate, ZoneOffset}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
@@ -34,23 +42,51 @@ import java.time.{Instant, LocalDate, ZoneOffset}
 // For this reason, only legacy non-Granular Permissions logic is tested here.
 // The new Granular Permissions behaviours are tested directly in CheckRelationshipServiceSpec.
 
-trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControllerISpec with HipStub =>
+trait RelationshipsControllerGenericBehaviours {
+  this: RelationshipsBaseControllerISpec with HipStub =>
 
-  def relationshipsControllerISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
-    relationshipsControllerGetISpec(serviceId, clientId, clientIdType)
-    relationshipsControllerPutISpec(serviceId, clientId, clientIdType)
-    relationshipsControllerDeleteISpec(serviceId, clientId, clientIdType)
-    strideEndpointISpec(serviceId, clientId, clientIdType)
+  def relationshipsControllerISpec(
+    serviceId: String,
+    clientId: TaxIdentifier,
+    clientIdType: String
+  ): Unit = {
+    relationshipsControllerGetISpec(
+      serviceId,
+      clientId,
+      clientIdType
+    )
+    relationshipsControllerPutISpec(
+      serviceId,
+      clientId,
+      clientIdType
+    )
+    relationshipsControllerDeleteISpec(
+      serviceId,
+      clientId,
+      clientIdType
+    )
+    strideEndpointISpec(
+      serviceId,
+      clientId,
+      clientIdType
+    )
   }
 
   def now = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
-  def isItsaNino(clientIdType: String, serviceId: String): Boolean =
+  def isItsaNino(
+    clientIdType: String,
+    serviceId: String
+  ): Boolean =
     clientIdType.toUpperCase == "NI" &&
       (serviceId == Service.MtdIt.id || serviceId == Service.MtdItSupp.id)
 
   // noinspection ScalaStyle
-  def relationshipsControllerGetISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
+  def relationshipsControllerGetISpec(
+    serviceId: String,
+    clientId: TaxIdentifier,
+    clientIdType: String
+  ): Unit = {
     val enrolmentKey =
       if (serviceId == Service.Cbc.id) {
         EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
@@ -59,7 +95,10 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
       } else {
         EnrolmentKey(Service.forId(serviceId), clientId)
       }
-    def extraSetup(serviceId: String, clientIdType: String): Unit = {
+    def extraSetup(
+      serviceId: String,
+      clientIdType: String
+    ): Unit = {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
       if (isItsaNino(clientIdType, serviceId)) {
@@ -160,13 +199,20 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   }
 
   // noinspection ScalaStyle
-  def relationshipsControllerPutISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
+  def relationshipsControllerPutISpec(
+    serviceId: String,
+    clientId: TaxIdentifier,
+    clientIdType: String
+  ): Unit = {
     val enrolmentKey =
       if (serviceId == Service.Cbc.id) {
         EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
       } else
         EnrolmentKey(Service.forId(serviceId), clientId)
-    def extraSetup(serviceId: String, clientIdType: String): Unit = {
+    def extraSetup(
+      serviceId: String,
+      clientIdType: String
+    ): Unit = {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
       if (isItsaNino(clientIdType, serviceId)) {
@@ -283,7 +329,12 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
         givenAdminUser("foo", "any")
         givenDelegatedGroupIdsNotExistFor(enrolmentKey) // no previous relationships to deallocate
-        givenEnrolmentAllocationSucceeds("foo", "any", enrolmentKey, "NQJUEJCWT14")
+        givenEnrolmentAllocationSucceeds(
+          "foo",
+          "any",
+          enrolmentKey,
+          "NQJUEJCWT14"
+        )
         givenCacheRefresh(arn)
         extraSetup(serviceId, clientIdType)
 
@@ -306,8 +357,7 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         extraSetup(serviceId, clientIdType)
 
         await(
-          mongoLockRepository
-            .collection
+          mongoLockRepository.collection
             .insertOne(
               Lock(
                 id = s"recovery-${arn.value}-${enrolmentKey.tag}",
@@ -370,7 +420,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 500 when ES1 is unavailable" in new StubsForThisScenario {
         givenUserIsSubscribedClient(clientId)
-        givenPrincipalAgentUser(arn, "foo", userId = "user1")
+        givenPrincipalAgentUser(
+          arn,
+          "foo",
+          userId = "user1"
+        )
         givenGroupInfo(groupId = "foo", agentCode = "bar")
         givenDelegatedGroupIdRequestFailsWith(503)
         extraSetup(serviceId, clientIdType)
@@ -383,11 +437,20 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
       "return 500 when ES8 is unavailable" in {
         givenUserIsSubscribedClient(clientId)
-        givenPrincipalAgentUser(arn, "foo", userId = "user1")
+        givenPrincipalAgentUser(
+          arn,
+          "foo",
+          userId = "user1"
+        )
         givenGroupInfo(groupId = "foo", agentCode = "bar")
         givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey)
         givenAgentCanBeAllocated(clientId, arn)
-        givenEnrolmentAllocationFailsWith(503)(groupId = "foo", clientUserId = "user1", enrolmentKey, agentCode = "bar")
+        givenEnrolmentAllocationFailsWith(503)(
+          groupId = "foo",
+          clientUserId = "user1",
+          enrolmentKey,
+          agentCode = "bar"
+        )
         givenAdminUser("foo", "user1")
         extraSetup(serviceId, clientIdType)
 
@@ -455,7 +518,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   }
 
   // noinspection ScalaStyle
-  def relationshipsControllerDeleteISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String): Unit = {
+  def relationshipsControllerDeleteISpec(
+    serviceId: String,
+    clientId: TaxIdentifier,
+    clientIdType: String
+  ): Unit = {
     val enrolmentKey =
       if (serviceId == Service.Cbc.id) {
         EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
@@ -745,7 +812,11 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
   }
 
   // noinspection ScalaStyle
-  def strideEndpointISpec(serviceId: String, clientId: TaxIdentifier, clientIdType: String) =
+  def strideEndpointISpec(
+    serviceId: String,
+    clientId: TaxIdentifier,
+    clientIdType: String
+  ) =
     s"GET /relationships/service/$serviceId/client/$clientIdType/:clientId" should {
 
       val requestPath: String =
@@ -802,9 +873,19 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
 
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
-          getSomeActiveRelationshipsViaClient(mtdItId, arn.value, arn2.value, arn3.value)
+          getSomeActiveRelationshipsViaClient(
+            mtdItId,
+            arn.value,
+            arn2.value,
+            arn3.value
+          )
         } else
-          getSomeActiveRelationshipsViaClient(clientId, arn.value, arn2.value, arn3.value)
+          getSomeActiveRelationshipsViaClient(
+            clientId,
+            arn.value,
+            arn2.value,
+            arn3.value
+          )
 
         val result = doRequest
         result.status shouldBe 200
@@ -840,4 +921,5 @@ trait RelationshipsControllerGenericBehaviours { this: RelationshipsBaseControll
         result.status shouldBe 404
       }
     }
+
 }

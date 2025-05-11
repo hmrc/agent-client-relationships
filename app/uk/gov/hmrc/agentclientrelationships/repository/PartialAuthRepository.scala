@@ -47,39 +47,37 @@ import scala.concurrent.Future
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes")
-  crypto: Encrypter
-    with Decrypter
-)
-extends PlayMongoRepository[PartialAuthRelationship](
-  mongoComponent = mongoComponent,
-  collectionName = "partial-auth",
-  domainFormat = PartialAuthRelationship.mongoFormat,
-  indexes = Seq(
-    IndexModel(
-      Indexes.ascending(
-        "service",
-        "nino",
-        "arn",
-        "active"
+  crypto: Encrypter with Decrypter
+) extends PlayMongoRepository[PartialAuthRelationship](
+      mongoComponent = mongoComponent,
+      collectionName = "partial-auth",
+      domainFormat = PartialAuthRelationship.mongoFormat,
+      indexes = Seq(
+        IndexModel(
+          Indexes.ascending(
+            "service",
+            "nino",
+            "arn",
+            "active"
+          ),
+          IndexOptions().name("allRelationshipsIndex")
+        ),
+        IndexModel(
+          Indexes.ascending(
+            "service",
+            "nino",
+            "arn"
+          ),
+          IndexOptions()
+            .partialFilterExpression(BsonDocument("active" -> true))
+            .unique(true)
+            .name("activeRelationshipsIndex")
+        ),
+        IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex"))
       ),
-      IndexOptions().name("allRelationshipsIndex")
-    ),
-    IndexModel(
-      Indexes.ascending(
-        "service",
-        "nino",
-        "arn"
-      ),
-      IndexOptions()
-        .partialFilterExpression(BsonDocument("active" -> true))
-        .unique(true)
-        .name("activeRelationshipsIndex")
-    ),
-    IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex"))
-  ),
-  replaceIndexes = true
-)
-with Logging {
+      replaceIndexes = true
+    )
+    with Logging {
 
   // Permanent store of alt itsa authorisations
   override lazy val requiresTtlIndex: Boolean = false

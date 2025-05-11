@@ -98,42 +98,45 @@ trait RelationshipCopyRecordRepository {
 
 @Singleton
 class MongoRelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-extends PlayMongoRepository[RelationshipCopyRecord](
-  mongoComponent = mongoComponent,
-  collectionName = "relationship-copy-record",
-  domainFormat = formats,
-  indexes = Seq(
-    // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
-    // The situation will be simplified after a migration of the legacy documents.
-    IndexModel(
-      ascending(
-        "arn",
-        "clientIdentifier",
-        "clientIdentifierType"
+    extends PlayMongoRepository[RelationshipCopyRecord](
+      mongoComponent = mongoComponent,
+      collectionName = "relationship-copy-record",
+      domainFormat = formats,
+      indexes = Seq(
+        // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
+        // The situation will be simplified after a migration of the legacy documents.
+        IndexModel(
+          ascending(
+            "arn",
+            "clientIdentifier",
+            "clientIdentifierType"
+          ),
+          IndexOptions()
+            .name("arnAndAgentReferencePartial")
+            .partialFilterExpression(Filters.exists("clientIdentifier"))
+            .unique(true)
+        ),
+        IndexModel(
+          ascending("arn", "enrolmentKey"),
+          IndexOptions()
+            .name("arnAndEnrolmentKeyPartial")
+            .partialFilterExpression(Filters.exists("enrolmentKey"))
+            .unique(true)
+        )
       ),
-      IndexOptions()
-        .name("arnAndAgentReferencePartial")
-        .partialFilterExpression(Filters.exists("clientIdentifier"))
-        .unique(true)
-    ),
-    IndexModel(
-      ascending("arn", "enrolmentKey"),
-      IndexOptions()
-        .name("arnAndEnrolmentKeyPartial")
-        .partialFilterExpression(Filters.exists("enrolmentKey"))
-        .unique(true)
+      replaceIndexes = true
     )
-  ),
-  replaceIndexes = true
-)
-with RelationshipCopyRecordRepository
-with Logging {
+    with RelationshipCopyRecordRepository
+    with Logging {
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
   override def create(record: RelationshipCopyRecord): Future[Int] = collection
     .findOneAndReplace(
-      filter(Arn(record.arn), record.enrolmentKey.get), // we assume that all newly created records WILL have an enrolment key
+      filter(
+        Arn(record.arn),
+        record.enrolmentKey.get
+      ), // we assume that all newly created records WILL have an enrolment key
       record,
       FindOneAndReplaceOptions().upsert(true)
     )

@@ -44,7 +44,7 @@ class AgentUserService @Inject() (
   ugs: UsersGroupsSearchConnector,
   agentCacheProvider: AgentCacheProvider
 )(implicit val executionContext: ExecutionContext)
-extends Logging {
+    extends Logging {
 
   val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache
@@ -55,7 +55,7 @@ extends Logging {
     auditData: AuditData
   ): Future[Either[String, AgentUser]] =
     for {
-      agentGroupId <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
+      agentGroupId   <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
       firstAdminUser <- firstGroupAdminCache(agentGroupId)(ugs.getFirstGroupAdminUser(agentGroupId))
       adminUserId = firstAdminUser.flatMap(_.userId)
       _ = adminUserId.foreach(auditData.set(credIdKey, _))

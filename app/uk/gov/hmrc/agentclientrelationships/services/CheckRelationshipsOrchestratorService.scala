@@ -56,8 +56,8 @@ class CheckRelationshipsOrchestratorService @Inject() (
   desConnector: DesConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector
 )(implicit executionContext: ExecutionContext)
-extends Monitoring
-with Logging {
+    extends Monitoring
+    with Logging {
 
   def checkForRelationship(
     arn: Arn,
@@ -138,7 +138,7 @@ with Logging {
 
     val result =
       for {
-        _ <- agentUserService.getAgentAdminAndSetAuditData(arn)
+        _       <- agentUserService.getAgentAdminAndSetAuditData(arn)
         isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
         res <-
           if (isClear)
@@ -184,7 +184,8 @@ with Logging {
   ): Future[CheckRelationshipResult] = checkOldAndCopyService
     .checkForOldRelationshipAndCopy(arn, enrolmentKey)
     .map {
-      case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented => CheckRelationshipNotFound(errorCode)
+      case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented =>
+        CheckRelationshipNotFound(errorCode)
       case cesaResult =>
         if (cesaResult.grantAccess)
           CheckRelationshipFound
@@ -195,7 +196,9 @@ with Logging {
       case upS: UpstreamErrorResponse => throw upS
       case NonFatal(ex) =>
         val taxIdentifier = enrolmentKey.oneTaxIdentifier()
-        logger.warn(s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}")
+        logger.warn(
+          s"Error in checkForOldRelationshipAndCopy for ${arn.value}, ${taxIdentifier.value} (${taxIdentifier.getClass.getName}), ${ex.getMessage}"
+        )
         CheckRelationshipNotFound(errorCode)
     }
 
@@ -211,7 +214,7 @@ with Logging {
     )
     .map {
       case Some(_) => CheckRelationshipFound
-      case None => CheckRelationshipNotFound()
+      case None    => CheckRelationshipNotFound()
     }
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
@@ -219,7 +222,7 @@ with Logging {
     .getMtdIdFor(Nino(clientId))
     .flatMap {
       case Some(mtdItId) => proceed(mtdItId)
-      case None => Future.successful(CheckRelationshipNotFound())
+      case None          => Future.successful(CheckRelationshipNotFound())
     }
 
   private def withIrSaSuspensionCheck(arn: Arn)(
@@ -244,7 +247,7 @@ with Logging {
     checkOldAndCopyService
       .hasPartialAuthOrLegacyRelationshipInCesa(arn, nino)
       .map {
-        case true => CheckRelationshipFound
+        case true  => CheckRelationshipFound
         case false => CheckRelationshipNotFound()
       }
       .recover {
@@ -268,7 +271,7 @@ with Logging {
       .lookupESForOldRelationship(arn, vrn)
       .map {
         case references if references.nonEmpty => CheckRelationshipFound
-        case _ => CheckRelationshipNotFound()
+        case _                                 => CheckRelationshipNotFound()
       }
       .recover {
         case upS: UpstreamErrorResponse => throw upS
@@ -281,9 +284,6 @@ with Logging {
 }
 
 sealed trait CheckRelationshipResult
-case object CheckRelationshipFound
-extends CheckRelationshipResult
-case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND")
-extends CheckRelationshipResult
-case object CheckRelationshipInvalidRequest
-extends CheckRelationshipResult
+case object CheckRelationshipFound extends CheckRelationshipResult
+case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND") extends CheckRelationshipResult
+case object CheckRelationshipInvalidRequest extends CheckRelationshipResult

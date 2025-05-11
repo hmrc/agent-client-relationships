@@ -24,8 +24,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class FakeLockService
-extends MongoLockService {
+class FakeLockService extends MongoLockService {
 
   val locked: mutable.Set[(Arn, EnrolmentKey)] = mutable.Set.empty[(Arn, EnrolmentKey)]
 

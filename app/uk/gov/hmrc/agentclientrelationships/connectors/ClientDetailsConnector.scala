@@ -56,20 +56,20 @@ class ClientDetailsConnector @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
-extends HttpApiMonitor
-with Logging {
+    extends HttpApiMonitor
+    with Logging {
 
   private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
     "Environment" -> appConfig.desEnv,
     // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId" -> UUID.randomUUID().toString,
+    "CorrelationId"           -> UUID.randomUUID().toString,
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 
   private def ifHeaders(authToken: String): Seq[(String, String)] = Seq(
     "Environment" -> appConfig.ifEnvironment,
     // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId" -> UUID.randomUUID().toString,
+    "CorrelationId"           -> UUID.randomUUID().toString,
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 
@@ -103,7 +103,7 @@ with Logging {
         .map { response =>
           response.status match {
             // TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
-            case OK => Right(response.json.as[ItsaCitizenDetails])
+            case OK        => Right(response.json.as[ItsaCitizenDetails])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getItsaCitizenDetails', statusCode=$status")
@@ -127,7 +127,7 @@ with Logging {
         // but not suer if the Left(ErrorRetrievingClientDetail) is used anywhere. Analyse and simplify
         .map { response =>
           response.status match {
-            case OK => Right(response.json.as[VatCustomerDetails])
+            case OK        => Right(response.json.as[VatCustomerDetails])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getVatCustomerInfo', statusCode=$status")
@@ -155,7 +155,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK => Right((response.json \ "trustDetails" \ "trustName").as[String])
+            case OK        => Right((response.json \ "trustDetails" \ "trustName").as[String])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getTrustName', statusCode=$status")
@@ -175,7 +175,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK => Right(response.json.as[CgtSubscriptionDetails])
+            case OK        => Right(response.json.as[CgtSubscriptionDetails])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getCgtSubscriptionDetails', statusCode=$status")
@@ -195,7 +195,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK => Right(response.json.as[PptSubscriptionDetails])
+            case OK        => Right(response.json.as[PptSubscriptionDetails])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getPptSubscriptionDetails', statusCode=$status")
@@ -219,13 +219,13 @@ with Logging {
 
     val httpHeaders = Seq(
       HeaderNames.authorisation -> s"Bearer ${appConfig.eisAuthToken}",
-      "x-forwarded-host" -> "mdtp",
-      "x-correlation-id" -> UUID.randomUUID().toString,
-      "x-conversation-id" -> conversationId,
-      "date" -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
+      "x-forwarded-host"        -> "mdtp",
+      "x-correlation-id"        -> UUID.randomUUID().toString,
+      "x-conversation-id"       -> conversationId,
+      "date"         -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
       "content-type" -> "application/json",
-      "accept" -> "application/json",
-      "Environment" -> appConfig.eisEnvironment
+      "accept"       -> "application/json",
+      "Environment"  -> appConfig.eisEnvironment
     )
 
     monitor(s"ConsumedAPI-EIS-GetCbcSubscriptionDetails-POST") {
@@ -236,7 +236,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK => Right(response.json.as[SimpleCbcSubscription])
+            case OK        => Right(response.json.as[SimpleCbcSubscription])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getCbcSubscriptionDetails', statusCode=$status")
@@ -257,7 +257,7 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK => Right(response.json.as[Pillar2Record])
+            case OK        => Right(response.json.as[Pillar2Record])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getPillar2SubscriptionDetails', statusCode=$status")

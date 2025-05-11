@@ -23,13 +23,14 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.test.Helpers.AUTHORIZATION
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 
 class InternalAuthTokenInitialiserISpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with DataStreamStub {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with DataStreamStub {
 
   "when configured to run" should {
     "should initialise the internal-auth token if it is not already initialised" in {
@@ -156,4 +157,5 @@ with DataStreamStub {
       verify(0, postRequestedFor(urlMatching("/test-only/token")))
     }
   }
+
 }

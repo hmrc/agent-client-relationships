@@ -43,28 +43,23 @@ object InvitationFailureResponse {
       override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
     }
 
-  case object UnsupportedService
-  extends InvitationFailureResponse {
+  case object UnsupportedService extends InvitationFailureResponse {
     def getResult(message: String): Result = NotImplemented(toJson(ErrorBody("UNSUPPORTED_SERVICE", message)))
   }
 
-  case object InvalidClientId
-  extends InvitationFailureResponse {
+  case object InvalidClientId extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(toJson(ErrorBody("INVALID_CLIENT_ID", message)))
   }
 
-  case object UnsupportedClientIdType
-  extends InvitationFailureResponse {
+  case object UnsupportedClientIdType extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(toJson(ErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message)))
   }
 
-  case object UnsupportedClientType
-  extends InvitationFailureResponse {
+  case object UnsupportedClientType extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(toJson(ErrorBody("UNSUPPORTED_CLIENT_TYPE", message)))
   }
 
-  case object ClientRegistrationNotFound
-  extends InvitationFailureResponse {
+  case object ClientRegistrationNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = Forbidden(
       toJson(
         ErrorBody(
@@ -75,8 +70,7 @@ object InvitationFailureResponse {
     )
   }
 
-  case object DuplicateInvitationError
-  extends InvitationFailureResponse {
+  case object DuplicateInvitationError extends InvitationFailureResponse {
     def getResult(message: String): Result = Forbidden(
       toJson(
         ErrorBody(
@@ -87,42 +81,35 @@ object InvitationFailureResponse {
     )
   }
 
-  case object RelationshipNotFound
-  extends InvitationFailureResponse {
+  case object RelationshipNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(
       toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
     )
   }
 
-  case object EnrolmentKeyNotFound
-  extends InvitationFailureResponse {
+  case object EnrolmentKeyNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest
   }
 
-  case class RelationshipDeleteFailed(msg: String)
-  extends InvitationFailureResponse {
+  case class RelationshipDeleteFailed(msg: String) extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError(toJson(msg))
   }
 
-  case object NoPendingInvitation
-  extends InvitationFailureResponse {
+  case object NoPendingInvitation extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(message)
   }
 
-  case object UnsupportedStatusChange
-  extends InvitationFailureResponse {
+  case object UnsupportedStatusChange extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(
       toJson(ErrorBody("UNSUPPORTED_STATUS_CHANGE", "Not supported invitation status change"))
     )
   }
 
-  case class UpdateStatusFailed(msg: String)
-  extends InvitationFailureResponse {
+  case class UpdateStatusFailed(msg: String) extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError(toJson(msg))
   }
 
-  case object InvitationNotFound
-  extends InvitationFailureResponse {
+  case object InvitationNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 

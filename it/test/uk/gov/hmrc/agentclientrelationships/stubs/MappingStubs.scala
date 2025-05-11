@@ -18,11 +18,15 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.SaAgentReference
 
 trait MappingStubs {
 
-  def givenArnIsKnownFor(arn: Arn, saAgentReference: SaAgentReference) = stubFor(
+  def givenArnIsKnownFor(
+    arn: Arn,
+    saAgentReference: SaAgentReference
+  ) = stubFor(
     get(urlEqualTo(s"/agent-mapping/mappings/${arn.value}")).willReturn(
       aResponse()
         .withStatus(200)
@@ -30,7 +34,10 @@ trait MappingStubs {
     )
   )
 
-  def givenArnIsKnownFor(arn: Arn, refs: Seq[SaAgentReference]) = stubFor(
+  def givenArnIsKnownFor(
+    arn: Arn,
+    refs: Seq[SaAgentReference]
+  ) = stubFor(
     get(urlEqualTo(s"/agent-mapping/mappings/${arn.value}")).willReturn(
       aResponse()
         .withStatus(200)
@@ -40,7 +47,10 @@ trait MappingStubs {
     )
   )
 
-  def givenArnIsKnownFor(arn: Arn, agentCode: AgentCode) = stubFor(
+  def givenArnIsKnownFor(
+    arn: Arn,
+    agentCode: AgentCode
+  ) = stubFor(
     get(urlEqualTo(s"/agent-mapping/mappings/agentcode/${arn.value}")).willReturn(
       aResponse()
         .withStatus(200)
@@ -48,7 +58,10 @@ trait MappingStubs {
     )
   )
 
-  def givenArnIsKnownForAgentCodes(arn: Arn, agentCodes: Seq[AgentCode]) = stubFor(
+  def givenArnIsKnownForAgentCodes(
+    arn: Arn,
+    agentCodes: Seq[AgentCode]
+  ) = stubFor(
     get(urlEqualTo(s"/agent-mapping/mappings/agentcode/${arn.value}")).willReturn(
       aResponse()
         .withStatus(200)

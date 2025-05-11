@@ -27,20 +27,20 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class FakeDeleteRecordRepository
-extends DeleteRecordRepository {
+class FakeDeleteRecordRepository extends DeleteRecordRepository {
 
   private val data: mutable.Map[(Arn, EnrolmentKey), DeleteRecord] = mutable.Map()
 
   // the provided DeleteCopyRecord must use an enrolment key
-  override def create(record: DeleteRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get).map(result =>
-    if (result.isDefined)
-      throw new MongoException("duplicate key error collection")
-    else {
-      data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
-      1
-    }
-  )
+  override def create(record: DeleteRecord): Future[Int] =
+    findBy(Arn(record.arn), record.enrolmentKey.get).map(result =>
+      if (result.isDefined)
+        throw new MongoException("duplicate key error collection")
+      else {
+        data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
+        1
+      }
+    )
 
   override def findBy(
     arn: Arn,
@@ -65,8 +65,7 @@ extends DeleteRecordRepository {
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
         1
-      }
-      else
+      } else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
     )
 
@@ -82,8 +81,7 @@ extends DeleteRecordRepository {
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
         1
-      }
-      else
+      } else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
     )
   }
@@ -106,8 +104,7 @@ extends DeleteRecordRepository {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined)
-        data((arn, enrolmentKey)) = maybeValue
-          .get
+        data((arn, enrolmentKey)) = maybeValue.get
           .copy(lastRecoveryAttempt = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
       else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")

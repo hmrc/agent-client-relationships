@@ -44,10 +44,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class AuthActionsSpec
-extends UnitSpec
-with ResettingMockitoSugar
-with Results {
+class AuthActionsSpec extends UnitSpec with ResettingMockitoSugar with Results {
 
   lazy val mockAuthConnector = mock[AuthConnector]
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
@@ -83,9 +80,7 @@ with Results {
     delegatedAuthRule = None
   )
 
-  class TestAuth()
-  extends AuthActions
-  with Results {
+  class TestAuth() extends AuthActions with Results {
 
     implicit val request: RequestHeader = NoRequest
 

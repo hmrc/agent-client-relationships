@@ -25,8 +25,7 @@ case class EnrolmentsWithNino(
   nino: Option[String]
 ) {
 
-  private val ptNino: Option[String] = enrolments
-    .enrolments
+  private val ptNino: Option[String] = enrolments.enrolments
     .find(_.key == "HMRC-PT")
     .flatMap(_.identifiers.headOption.map(_.value))
 
@@ -36,8 +35,8 @@ case class EnrolmentsWithNino(
     val identifiers =
       for {
         supportedService <- supportedServices
-        enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
-        clientId <- enrolment.identifiers.headOption
+        enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
+        clientId         <- enrolment.identifiers.headOption
       } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
     identifiers.toMap
@@ -46,8 +45,8 @@ case class EnrolmentsWithNino(
     val identifiers =
       for {
         supportedService <- supportedServices
-        enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
-        clientId <- enrolment.identifiers.headOption
+        enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
+        clientId         <- enrolment.identifiers.headOption
       } yield (supportedService.id, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
     identifiers.toMap

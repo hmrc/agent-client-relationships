@@ -20,21 +20,30 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, PartialAuth, PartialAuthRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Identifier, MtdItId}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.SaAgentReference
 
-import java.time.{Instant, LocalDate, LocalDateTime}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
 
-trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerISpec with HipStub =>
+trait RelationshipsControllerITSABehaviours {
+  this: RelationshipsBaseControllerISpec with HipStub =>
 
   // noinspection ScalaStyle
   def relationshipControllerITSASpecificBehaviours(): Unit = {
@@ -66,7 +75,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenNinoIsUnknownFor(mtdItId)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -80,7 +94,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -96,7 +115,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenArnIsUnknownFor(arn)
         givenAdminUser("foo", "any")
 
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -116,7 +140,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
         givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
         givenDelegatedGroupIdsExistFor(mtdItSuppEnrolmentKey, Set("foo"))
         givenEnrolmentDeallocationSucceeds("foo", mtdItSuppEnrolmentKey)
@@ -179,7 +208,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
         givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
         givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
@@ -191,8 +225,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         val now = Instant.now()
 
         await(
-          invitationRepo
-            .collection
+          invitationRepo.collection
             .insertOne(
               Invitation(
                 "abc1",
@@ -219,17 +252,37 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         )
 
         await(
-          partialAuthRepository
-            .collection
-            .insertOne(PartialAuthRelationship(now, arn.value, HMRCMTDIT, nino.value, active = true, now))
+          partialAuthRepository.collection
+            .insertOne(
+              PartialAuthRelationship(
+                now,
+                arn.value,
+                HMRCMTDIT,
+                nino.value,
+                active = true,
+                now
+              )
+            )
             .toFuture()
         )
 
-        await(partialAuthRepository.findActive(HMRCMTDIT, nino, arn)).isDefined shouldBe true
+        await(
+          partialAuthRepository.findActive(
+            HMRCMTDIT,
+            nino,
+            arn
+          )
+        ).isDefined shouldBe true
 
         val result = doRequest
         result.status shouldBe 200
-        await(partialAuthRepository.findActive(HMRCMTDIT, nino, arn)).isEmpty shouldBe true
+        await(
+          partialAuthRepository.findActive(
+            HMRCMTDIT,
+            nino,
+            arn
+          )
+        ).isEmpty shouldBe true
       }
 
       "return 200 when no relationship in CESA but there is an alt-itsa SUPP invitation for client" in {
@@ -238,7 +291,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenDelegatedGroupIdsNotExistForMtdItIdSupp(mtdItId)
         givenNinoIsKnownFor(mtdItId, nino)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
         givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId, "bar")
         givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
@@ -250,8 +308,7 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         val now = Instant.now()
 
         await(
-          invitationRepo
-            .collection
+          invitationRepo.collection
             .insertOne(
               Invitation(
                 "abc1",
@@ -278,19 +335,39 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         )
 
         await(
-          partialAuthRepository
-            .collection
-            .insertOne(PartialAuthRelationship(now, arn.value, HMRCMTDITSUPP, nino.value, active = true, now))
+          partialAuthRepository.collection
+            .insertOne(
+              PartialAuthRelationship(
+                now,
+                arn.value,
+                HMRCMTDITSUPP,
+                nino.value,
+                active = true,
+                now
+              )
+            )
             .toFuture()
         )
 
-        await(partialAuthRepository.findActive(HMRCMTDITSUPP, nino, arn)).isDefined shouldBe true
+        await(
+          partialAuthRepository.findActive(
+            HMRCMTDITSUPP,
+            nino,
+            arn
+          )
+        ).isDefined shouldBe true
 
         val result = doGetRequest(
           s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT-SUPP/client/MTDITID/${mtdItId.value}"
         )
         result.status shouldBe 200
-        await(partialAuthRepository.findActive(HMRCMTDITSUPP, nino, arn)).isEmpty shouldBe true
+        await(
+          partialAuthRepository.findActive(
+            HMRCMTDITSUPP,
+            nino,
+            arn
+          )
+        ).isEmpty shouldBe true
       }
 
       // UNHAPPY PATH FOR ALTERNATIVE-ITSA
@@ -303,7 +380,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenArnIsUnknownFor(arn)
         givenClientHasNoRelationshipWithAnyAgentInCESA(nino)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -322,7 +404,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenAgentCanNotBeAllocated(status = 404)
         givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe empty
 
@@ -348,9 +435,19 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenAgentCanBeAllocated(mtdItId, arn)
-        givenEnrolmentAllocationFailsWith(404)("foo", "any", mtdItEnrolmentKey, "bar")
+        givenEnrolmentAllocationFailsWith(404)(
+          "foo",
+          "any",
+          mtdItEnrolmentKey,
+          "bar"
+        )
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
         givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
         givenDelegatedGroupIdsExistFor(mtdItSuppEnrolmentKey, Set("foo"))
         givenEnrolmentDeallocationSucceeds("foo", mtdItSuppEnrolmentKey)
@@ -411,7 +508,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenNinoIsKnownFor(mtdItId, nino)
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
         val result = doRequest
@@ -434,7 +536,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
           givenAgentCanBeAllocated(mtdItId, arn)
           givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
 
-          givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+          givenUserIsSubscribedAgent(
+            arn,
+            withThisGroupId = "foo",
+            withThisGgUserId = "any",
+            withThisAgentCode = "bar"
+          )
 
           await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
           val result = doRequest
@@ -450,7 +557,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenServiceReturnsServiceUnavailable()
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -471,7 +583,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 200
@@ -485,7 +602,12 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         givenAdminUser("foo", "any")
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientRelationshipWithAgentCeasedInCESA(nino, "baz")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -662,7 +784,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         "resume an ongoing de-auth if some delete record found" in new StubsForThisScenario {
           await(
             deleteRecordRepository
-              .create(DeleteRecord(arn.value, Some(mtdItEnrolmentKey), dateTime = LocalDateTime.now.minusMinutes(1)))
+              .create(
+                DeleteRecord(
+                  arn.value,
+                  Some(mtdItEnrolmentKey),
+                  dateTime = LocalDateTime.now.minusMinutes(1)
+                )
+              )
           )
           doAgentDeleteRequest(requestPath).status shouldBe 204
           verifyDeleteRecordNotExists
@@ -688,7 +816,13 @@ trait RelationshipsControllerITSABehaviours { this: RelationshipsBaseControllerI
         "try to resume unfinished de-auth and keep delete-record around" in new StubsForThisScenario {
           await(
             deleteRecordRepository
-              .create(DeleteRecord(arn.value, Some(mtdItEnrolmentKey), dateTime = LocalDateTime.now.minusMinutes(1)))
+              .create(
+                DeleteRecord(
+                  arn.value,
+                  Some(mtdItEnrolmentKey),
+                  dateTime = LocalDateTime.now.minusMinutes(1)
+                )
+              )
           )
           doAgentDeleteRequest(requestPath).status shouldBe 500
           verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))

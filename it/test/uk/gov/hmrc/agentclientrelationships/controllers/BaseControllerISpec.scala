@@ -29,34 +29,42 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecord, MongoDeleteRecordRepository, MongoRelationshipCopyRecordRepository, SyncStatus}
-import uk.gov.hmrc.agentclientrelationships.services.{MongoLockService, MongoLockServiceImpl}
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
+import uk.gov.hmrc.agentclientrelationships.repository.MongoDeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.MongoRelationshipCopyRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
+import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
+import uk.gov.hmrc.agentclientrelationships.services.MongoLockServiceImpl
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support._
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.auth.core.{AuthConnector, PlayAuthConnector}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.auth.core.PlayAuthConnector
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.test.MongoSupport
-import uk.gov.hmrc.mongo.{CurrentTimestampSupport, MongoComponent}
+import uk.gov.hmrc.mongo.CurrentTimestampSupport
+import uk.gov.hmrc.mongo.MongoComponent
 
 trait BaseControllerISpec
-extends UnitSpec
-with MongoSupport
-with GuiceOneServerPerSuite
-with WireMockSupport
-with RelationshipStubs
-with DesStubs
-with DesStubsGet
-with MappingStubs
-with DataStreamStub
-with AuthStub
-with MockitoSugar
-with JsonMatchers
-with AUCDStubs
-with AgentAssuranceStubs
-with IntegrationPatience {
+    extends UnitSpec
+    with MongoSupport
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with RelationshipStubs
+    with DesStubs
+    with DesStubsGet
+    with MappingStubs
+    with DataStreamStub
+    with AuthStub
+    with MockitoSugar
+    with JsonMatchers
+    with AUCDStubs
+    with AgentAssuranceStubs
+    with IntegrationPatience {
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder.build()
@@ -172,24 +180,49 @@ with IntegrationPatience {
 
   protected def doGetRequest(route: String): HttpResponse = new Resource(route, port).get()
 
-  protected def doAgentPostRequest(route: String, json: JsValue) = new Resource(route, port).postAsJson(json.toString())
+  protected def doAgentPostRequest(
+    route: String,
+    json: JsValue
+  ) = new Resource(route, port).postAsJson(json.toString())
 
   protected def doAgentPutRequest(route: String) = Http.putEmpty(s"http://localhost:$port$route")
-  protected def doAgentPutRequest(route: String, body: JsValue) = new Resource(route, port).putAsJson(body.toString())
+  protected def doAgentPutRequest(
+    route: String,
+    body: JsValue
+  ) = new Resource(route, port).putAsJson(body.toString())
 
-  protected def doAgentPutRequest(route: String, body: String) = new Resource(route, port).putAsJson(body)
+  protected def doAgentPutRequest(
+    route: String,
+    body: String
+  ) = new Resource(route, port).putAsJson(body)
 
   protected def doAgentDeleteRequest(route: String) = Http.delete(s"http://localhost:$port$route")
 
-  protected def doAgentPostRequest(route: String, body: String) = new Resource(route, port).postAsJson(body)
+  protected def doAgentPostRequest(
+    route: String,
+    body: String
+  ) = new Resource(route, port).postAsJson(body)
 
   protected def verifyDeleteRecordHasStatuses(
     etmpStatus: Option[SyncStatus.Value],
     esStatus: Option[SyncStatus.Value]
   ) =
     await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) should matchPattern {
-      case Some(DeleteRecord(arn.value, Some(ek), _, _, _, `etmpStatus`, `esStatus`, _, _, _, _))
-          if ek == LocalEnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789")) =>
+      case Some(
+            DeleteRecord(
+              arn.value,
+              Some(ek),
+              _,
+              _,
+              _,
+              `etmpStatus`,
+              `esStatus`,
+              _,
+              _,
+              _,
+              _
+            )
+          ) if ek == LocalEnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789")) =>
     }
 
   protected def verifyDeleteRecordNotExists = await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe None

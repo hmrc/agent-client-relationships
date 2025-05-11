@@ -17,14 +17,23 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.{Accepted, Invitation, PartialAuth, PartialAuthRelationship}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
+import uk.gov.hmrc.agentclientrelationships.model.Accepted
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.domain.Nino
 
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 class LookupInvitationsControllerISpec extends BaseControllerISpec {
 
@@ -82,7 +91,11 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
       LocalDate.now(),
       Some("personal")
     )
-    .copy(created = testTime, lastUpdated = testTime, status = Accepted)
+    .copy(
+      created = testTime,
+      lastUpdated = testTime,
+      status = Accepted
+    )
 
   val altItsaInvitation: Invitation = Invitation
     .createNew(
@@ -96,7 +109,11 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
       LocalDate.now(),
       Some("personal")
     )
-    .copy(created = testTime, lastUpdated = testTime, status = PartialAuth)
+    .copy(
+      created = testTime,
+      lastUpdated = testTime,
+      status = PartialAuth
+    )
   val partialAuth: PartialAuthRelationship = PartialAuthRelationship(
     testTime,
     testArn.value,
@@ -165,7 +182,13 @@ class LookupInvitationsControllerISpec extends BaseControllerISpec {
         val result = doGetRequest(invitationsUrl + s"?clientIds=${testMtdItId1.value}&clientIds=${testMtdItId2.value}")
 
         result.status shouldBe 200
-        result.json shouldBe Json.toJson(Seq(itsaInvitation, suppItsaInvitation, acceptedItsaInvitation))
+        result.json shouldBe Json.toJson(
+          Seq(
+            itsaInvitation,
+            suppItsaInvitation,
+            acceptedItsaInvitation
+          )
+        )
       }
       "queried with clientId and services that match some data" in {
         givenAuditConnector()

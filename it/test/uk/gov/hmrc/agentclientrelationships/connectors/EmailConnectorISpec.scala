@@ -22,7 +22,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 
@@ -44,7 +45,11 @@ class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with Wire
   implicit val request: RequestHeader = FakeRequest()
 
   "sendEmail" should {
-    val emailInfo = EmailInformation(Seq("abc@xyz.com"), "template-id", Map("param1" -> "foo", "param2" -> "bar"))
+    val emailInfo = EmailInformation(
+      Seq("abc@xyz.com"),
+      "template-id",
+      Map("param1" -> "foo", "param2" -> "bar")
+    )
 
     "return true when the email service responds with a 202" in {
       givenEmailSent(emailInfo)
@@ -62,4 +67,5 @@ class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with Wire
       result shouldBe false
     }
   }
+
 }

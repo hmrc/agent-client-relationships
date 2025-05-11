@@ -26,26 +26,40 @@ import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HipStub}
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, MtdIt, MtdItSupp, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CapitalGains
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Pillar2
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Ppt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.LocalDate
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 
 class HipConnectorISpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with HipStub
-with DataStreamStub {
+    extends UnitSpec
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with HipStub
+    with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -80,7 +94,13 @@ with DataStreamStub {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val request: RequestHeader = FakeRequest()
-  val hipConnector = new HipConnector(httpClient, agentCacheProvider, hipHeaders, appConfig)(metrics, ec)
+  val hipConnector =
+    new HipConnector(
+      httpClient,
+      agentCacheProvider,
+      hipHeaders,
+      appConfig
+    )(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
@@ -391,7 +411,11 @@ with DataStreamStub {
     }
 
     "return existing active relationships for specified clientId for ItSa Supp service" in {
-      getActiveRelationshipsViaClient(mtdItId, agentARN, "ITSAS001")
+      getActiveRelationshipsViaClient(
+        mtdItId,
+        agentARN,
+        "ITSAS001"
+      )
       givenAuditConnector()
 
       val result = await(hipConnector.getActiveClientRelationships(mtdItId, Service.MtdItSupp))
@@ -517,7 +541,11 @@ with DataStreamStub {
     val encodedArn = UriEncoding.encodePathSegment(agentARN.value, "UTF-8")
 
     "return existing inactive relationships for specified clientId for ItSa service" in {
-      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
+      getInactiveRelationshipsViaAgent(
+        agentARN,
+        otherTaxIdentifier(mtdItId),
+        mtdItId
+      )
       givenAuditConnector()
       val result = await(hipConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
@@ -531,7 +559,11 @@ with DataStreamStub {
     }
 
     "return existing inactive relationships for specified clientId for Vat service" in {
-      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn)
+      getInactiveRelationshipsViaAgent(
+        agentARN,
+        otherTaxIdentifier(vrn),
+        vrn
+      )
       givenAuditConnector()
       val result = await(hipConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
@@ -746,7 +778,11 @@ with DataStreamStub {
   }
 
   "isActive" should {
-    val noEndRelationship = ActiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")))
+    val noEndRelationship = ActiveRelationship(
+      Arn("foo"),
+      None,
+      Some(LocalDate.parse("1111-11-11"))
+    )
     val afterCurrentDateRelationship = ActiveRelationship(
       Arn("foo"),
       Some(LocalDate.parse("2222-11-11")),
@@ -810,4 +846,5 @@ with DataStreamStub {
       hipConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
     }
   }
+
 }

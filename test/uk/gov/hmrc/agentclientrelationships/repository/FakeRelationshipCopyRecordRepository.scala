@@ -25,8 +25,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class FakeRelationshipCopyRecordRepository
-extends RelationshipCopyRecordRepository {
+class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordRepository {
 
   private val data: mutable.Map[(Arn, EnrolmentKey), RelationshipCopyRecord] = mutable.Map()
   private val UPDATED_RECORD_COUNT = 1
@@ -36,8 +35,7 @@ extends RelationshipCopyRecordRepository {
     .map { result =>
       if (result.isDefined) {
         throw new MongoException("duplicate key error collection")
-      }
-      else {
+      } else {
         data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
         1
       }
@@ -51,8 +49,7 @@ extends RelationshipCopyRecordRepository {
     Future.successful(
       if (maybeValue.isDefined) {
         maybeValue
-      }
-      else {
+      } else {
         None
       }
     )
@@ -68,8 +65,7 @@ extends RelationshipCopyRecordRepository {
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
         UPDATED_RECORD_COUNT
-      }
-      else {
+      } else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
       }
     )
@@ -86,8 +82,7 @@ extends RelationshipCopyRecordRepository {
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
         UPDATED_RECORD_COUNT
-      }
-      else {
+      } else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
       }
     )

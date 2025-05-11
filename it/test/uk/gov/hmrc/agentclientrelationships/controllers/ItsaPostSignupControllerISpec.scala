@@ -22,7 +22,8 @@ import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.Instant
@@ -48,14 +49,27 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAdminUser("foo", "any")
       givenAgentCanBeAllocated(mtdItId, arn)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
-      givenEnrolmentAllocationSucceeds("foo", "any", mtdItEnrolmentKey, "NQJUEJCWT14")
+      givenEnrolmentAllocationSucceeds(
+        "foo",
+        "any",
+        mtdItEnrolmentKey,
+        "NQJUEJCWT14"
+      )
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
       givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
       givenCacheRefresh(arn, 404)
 
-      mongoPartialAuthRepo
-        .collection
-        .insertOne(PartialAuthRelationship(Instant.now, arn.value, HMRCMTDIT, nino.value, active = true, Instant.now))
+      mongoPartialAuthRepo.collection
+        .insertOne(
+          PartialAuthRelationship(
+            Instant.now,
+            arn.value,
+            HMRCMTDIT,
+            nino.value,
+            active = true,
+            Instant.now
+          )
+        )
         .toFuture()
         .futureValue
 
@@ -93,15 +107,26 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAdminUser("foo", "any")
       givenAgentCanBeAllocated(mtdItId, arn)
       givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
-      givenEnrolmentAllocationSucceeds("foo", "any", mtdItSuppEnrolmentKey, "NQJUEJCWT14")
+      givenEnrolmentAllocationSucceeds(
+        "foo",
+        "any",
+        mtdItSuppEnrolmentKey,
+        "NQJUEJCWT14"
+      )
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       givenCacheRefresh(arn, 404)
 
-      mongoPartialAuthRepo
-        .collection
+      mongoPartialAuthRepo.collection
         .insertOne(
-          PartialAuthRelationship(Instant.now, arn.value, HMRCMTDITSUPP, nino.value, active = true, Instant.now)
+          PartialAuthRelationship(
+            Instant.now,
+            arn.value,
+            HMRCMTDITSUPP,
+            nino.value,
+            active = true,
+            Instant.now
+          )
         )
         .toFuture()
         .futureValue
@@ -144,7 +169,12 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAdminUser("foo", "any")
       givenAgentCanBeAllocated(mtdItId, arn)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
-      givenEnrolmentAllocationSucceeds("foo", "any", mtdItEnrolmentKey, "NQJUEJCWT14")
+      givenEnrolmentAllocationSucceeds(
+        "foo",
+        "any",
+        mtdItEnrolmentKey,
+        "NQJUEJCWT14"
+      )
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
       givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
       givenCacheRefresh(arn, 404)
@@ -215,7 +245,12 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAdminUser("foo", "any")
       givenAgentCanBeAllocated(mtdItId, arn)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
-      givenEnrolmentAllocationSucceeds("foo", "any", mtdItEnrolmentKey, "NQJUEJCWT14")
+      givenEnrolmentAllocationSucceeds(
+        "foo",
+        "any",
+        mtdItEnrolmentKey,
+        "NQJUEJCWT14"
+      )
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
       givenDelegatedGroupIdsExistFor(mtdItSuppEnrolmentKey, Set("foo"))
       givenEnrolmentDeallocationSucceeds("foo", mtdItSuppEnrolmentKey)
@@ -305,9 +340,17 @@ class ItsaPostSignupControllerISpec extends RelationshipsBaseControllerISpec wit
       givenAdminUser("foo", "any")
       givenAgentCanNotBeAllocated(503)
 
-      mongoPartialAuthRepo
-        .collection
-        .insertOne(PartialAuthRelationship(Instant.now, arn.value, HMRCMTDIT, nino.value, active = true, Instant.now))
+      mongoPartialAuthRepo.collection
+        .insertOne(
+          PartialAuthRelationship(
+            Instant.now,
+            arn.value,
+            HMRCMTDIT,
+            nino.value,
+            active = true,
+            Instant.now
+          )
+        )
         .toFuture()
         .futureValue
 

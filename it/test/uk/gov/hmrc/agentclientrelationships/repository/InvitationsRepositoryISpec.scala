@@ -24,24 +24,34 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCMTDVAT, HMRCPIR, MtdIt, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service, Vrn}
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDVAT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCPIR
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DAYS
 import scala.util.Random
 
 class InvitationsRepositoryISpec
-extends AnyWordSpec
-with Matchers
-with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[Invitation] {
+    extends AnyWordSpec
+    with Matchers
+    with GuiceOneAppPerSuite
+    with DefaultPlayMongoRepositorySupport[Invitation] {
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
@@ -63,7 +73,11 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
       "Macrosoft",
       "testAgentName",
       "agent@email.com",
-      LocalDate.of(2020, 1, 1),
+      LocalDate.of(
+        2020,
+        1,
+        1
+      ),
       Some("personal")
     )
     .copy(
@@ -155,7 +169,15 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
       await(
-        repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("123456789", "123456788", "123456787"))
+        repository.findAllForAgent(
+          "XARN1234567",
+          Seq(Vat.id),
+          Seq(
+            "123456789",
+            "123456788",
+            "123456787"
+          )
+        )
       ) shouldBe listOfInvitations
     }
 
@@ -166,19 +188,37 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
       }
 
       "no invitations are found for a given ARN, filtered on the target services and clientIds" in {
-        await(repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("123456789"))) shouldBe Seq()
+        await(
+          repository.findAllForAgent(
+            "XARN1234567",
+            Seq(Vat.id),
+            Seq("123456789")
+          )
+        ) shouldBe Seq()
       }
 
       "the filter for the service is not satisfied" in {
         await(repository.collection.insertOne(pendingInvitation()).toFuture())
 
-        await(repository.findAllForAgent("XARN1234567", Seq("HMRC-XYZ"), Seq("123456789"))) shouldBe Seq()
+        await(
+          repository.findAllForAgent(
+            "XARN1234567",
+            Seq("HMRC-XYZ"),
+            Seq("123456789")
+          )
+        ) shouldBe Seq()
       }
 
       "the filter for the clientId is not satisfied" in {
         await(repository.collection.insertOne(pendingInvitation()).toFuture())
 
-        await(repository.findAllForAgent("XARN1234567", Seq(Vat.id), Seq("1"))) shouldBe Seq()
+        await(
+          repository.findAllForAgent(
+            "XARN1234567",
+            Seq(Vat.id),
+            Seq("1")
+          )
+        ) shouldBe Seq()
       }
     }
 
@@ -199,7 +239,14 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
       val invitation = pendingInvitation()
       await(repository.collection.insertOne(invitation).toFuture())
 
-      lazy val updatedInvitation = await(repository.updateStatusFromTo(invitation.invitationId, Pending, Rejected)).get
+      lazy val updatedInvitation =
+        await(
+          repository.updateStatusFromTo(
+            invitation.invitationId,
+            Pending,
+            Rejected
+          )
+        ).get
       updatedInvitation.status shouldBe Rejected
       updatedInvitation.lastUpdated.isAfter(invitation.lastUpdated)
     }
@@ -221,25 +268,53 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
     }
 
     "fail to update fromTo the status of an invitation when a matching invitation is not found" in {
-      await(repository.updateStatusFromTo("ABC", Pending, Rejected)) shouldBe None
+      await(
+        repository.updateStatusFromTo(
+          "ABC",
+          Pending,
+          Rejected
+        )
+      ) shouldBe None
     }
 
     "de-authorise and return the invitation when a matching Authorised invitation is found" in {
-      val invitation = pendingInvitation(MtdIt, MtdItId("1234567890"), Some(Nino("AB213308A")))
+      val invitation = pendingInvitation(
+        MtdIt,
+        MtdItId("1234567890"),
+        Some(Nino("AB213308A"))
+      )
       await(repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture())
 
       lazy val updatedInvitation =
-        await(repository.deauthorise(invitation.arn, invitation.clientId, invitation.service, "This guy")).get
+        await(
+          repository.deauthorise(
+            invitation.arn,
+            invitation.clientId,
+            invitation.service,
+            "This guy"
+          )
+        ).get
       updatedInvitation.status shouldBe DeAuthorised
       updatedInvitation.relationshipEndedBy shouldBe Some("This guy")
       updatedInvitation.lastUpdated.isAfter(pendingInvitation().lastUpdated)
     }
 
     "return None when a matching Authorised invitation is not found" in {
-      val invitation = pendingInvitation(MtdIt, MtdItId("1234567890"), Some(Nino("AB213308A")))
+      val invitation = pendingInvitation(
+        MtdIt,
+        MtdItId("1234567890"),
+        Some(Nino("AB213308A"))
+      )
       await(repository.collection.insertOne(invitation.copy(status = DeAuthorised)).toFuture())
 
-      await(repository.deauthorise(invitation.arn, invitation.clientId, invitation.service, "This guy")) shouldBe None
+      await(
+        repository.deauthorise(
+          invitation.arn,
+          invitation.clientId,
+          invitation.service,
+          "This guy"
+        )
+      ) shouldBe None
     }
 
     "update a client ID and client ID type when a matching invitation is found" in {
@@ -264,16 +339,35 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
 
     "fail to update a client ID and client ID type when no matching invitation is found" in {
       await(repository.collection.insertOne(pendingInvitation()).toFuture())
-      await(repository.updateInvitation("MTD-IT-ID", "XYZ", "XYZType", "MTD-IT-ID", "ABC", "ABCType")) shouldBe false
+      await(
+        repository.updateInvitation(
+          "MTD-IT-ID",
+          "XYZ",
+          "XYZType",
+          "MTD-IT-ID",
+          "ABC",
+          "ABCType"
+        )
+      ) shouldBe false
     }
 
     "retrieve all pending invitations for client" in {
       val itsaInv = pendingInvitation().copy(suppliedClientId = "678", service = HMRCMTDIT)
       val itsaSuppInv = pendingInvitation().copy(suppliedClientId = "678", service = HMRCMTDITSUPP)
       val otherClientItsaSuppInv = pendingInvitation().copy(suppliedClientId = "789", service = HMRCMTDITSUPP)
-      val expiredInv = pendingInvitation().copy(suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired)
+      val expiredInv = pendingInvitation().copy(
+        suppliedClientId = "678",
+        service = HMRCMTDITSUPP,
+        status = Expired
+      )
       val irvInv = pendingInvitation().copy(suppliedClientId = "678", service = HMRCPIR)
-      val listOfInvitations = Seq(itsaInv, itsaSuppInv, otherClientItsaSuppInv, expiredInv, irvInv)
+      val listOfInvitations = Seq(
+        itsaInv,
+        itsaSuppInv,
+        otherClientItsaSuppInv,
+        expiredInv,
+        irvInv
+      )
 
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
@@ -286,16 +380,45 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
     "produce a TrackRequestsResult with the correct pagination" in {
       val listOfInvitations = Seq(
         pendingInvitation(),
-        pendingInvitation().copy(invitationId = "234", suppliedClientId = "678", service = HMRCMTDIT),
-        pendingInvitation().copy(invitationId = "345", suppliedClientId = "678", service = HMRCMTDITSUPP),
+        pendingInvitation().copy(
+          invitationId = "234",
+          suppliedClientId = "678",
+          service = HMRCMTDIT
+        ),
+        pendingInvitation().copy(
+          invitationId = "345",
+          suppliedClientId = "678",
+          service = HMRCMTDITSUPP
+        ),
         pendingInvitation()
-          .copy(invitationId = "456", suppliedClientId = "678", service = HMRCMTDITSUPP, status = Expired),
-        pendingInvitation().copy(invitationId = "567", suppliedClientId = "789", service = HMRCMTDITSUPP),
-        pendingInvitation().copy(invitationId = "678", suppliedClientId = "678", service = HMRCPIR)
+          .copy(
+            invitationId = "456",
+            suppliedClientId = "678",
+            service = HMRCMTDITSUPP,
+            status = Expired
+          ),
+        pendingInvitation().copy(
+          invitationId = "567",
+          suppliedClientId = "789",
+          service = HMRCMTDITSUPP
+        ),
+        pendingInvitation().copy(
+          invitationId = "678",
+          suppliedClientId = "678",
+          service = HMRCPIR
+        )
       )
       await(repository.collection.insertMany(listOfInvitations).toFuture())
 
-      val result = await(repository.trackRequests("XARN1234567", None, None, 1, 10))
+      val result = await(
+        repository.trackRequests(
+          "XARN1234567",
+          None,
+          None,
+          1,
+          10
+        )
+      )
       result.totalResults shouldBe 6
       result.pageNumber shouldBe 1
       result.requests shouldBe listOfInvitations
@@ -320,11 +443,23 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
           expiryDate = LocalDate.now().plusDays(5L)
         )
         val tooEarlyForWarningInvitation = newInvitation
-          .copy(invitationId = "3", suppliedClientId = "3", expiryDate = LocalDate.now().plusDays(6L))
+          .copy(
+            invitationId = "3",
+            suppliedClientId = "3",
+            expiryDate = LocalDate.now().plusDays(6L)
+          )
         val tooLateForWarningInvitation = newInvitation
-          .copy(invitationId = "4", suppliedClientId = "4", expiryDate = LocalDate.now().minusDays(1L))
+          .copy(
+            invitationId = "4",
+            suppliedClientId = "4",
+            expiryDate = LocalDate.now().minusDays(1L)
+          )
         val expectedInvitation = newInvitation
-          .copy(invitationId = "5", suppliedClientId = "5", expiryDate = LocalDate.now().plusDays(5L))
+          .copy(
+            invitationId = "5",
+            suppliedClientId = "5",
+            expiryDate = LocalDate.now().plusDays(5L)
+          )
 
         val listOfInvitations = Seq(
           newInvitation,
@@ -348,9 +483,17 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
         val firstArnInv1 = pendingInvitation().copy(expiryDate = LocalDate.now().plusDays(5L), invitationId = "1")
         val firstArnInv2 = firstArnInv1.copy(invitationId = "2", suppliedClientId = "2")
         val firstArnInv3 = firstArnInv1.copy(invitationId = "3", suppliedClientId = "3")
-        val secondArnInv1 = firstArnInv1.copy(arn = "2", invitationId = "4", suppliedClientId = "4")
+        val secondArnInv1 = firstArnInv1.copy(
+          arn = "2",
+          invitationId = "4",
+          suppliedClientId = "4"
+        )
         val secondArnInv2 = secondArnInv1.copy(invitationId = "5", suppliedClientId = "5")
-        val thirdArnInv1 = firstArnInv1.copy(arn = "3", invitationId = "6", suppliedClientId = "6")
+        val thirdArnInv1 = firstArnInv1.copy(
+          arn = "3",
+          invitationId = "6",
+          suppliedClientId = "6"
+        )
 
         val listOfInvitations = Seq(
           firstArnInv1,
@@ -379,7 +522,12 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
     "retrieve invitations meeting the criteria for an expired email to be sent" in {
       val newInvitation = pendingInvitation().copy(expiryDate = LocalDate.now().plusDays(22L))
       val acceptedInvitation = newInvitation
-        .copy(invitationId = "1", suppliedClientId = "1", status = Accepted, expiryDate = LocalDate.now().minusDays(1L))
+        .copy(
+          invitationId = "1",
+          suppliedClientId = "1",
+          status = Accepted,
+          expiryDate = LocalDate.now().minusDays(1L)
+        )
       val expiredEmailSentInvitation = newInvitation.copy(
         invitationId = "2",
         suppliedClientId = "2",
@@ -387,9 +535,17 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
         expiryDate = LocalDate.now().minusDays(1L)
       )
       val tooEarlyForExpiredInvitation = newInvitation
-        .copy(invitationId = "3", suppliedClientId = "3", expiryDate = LocalDate.now().plusDays(1L))
+        .copy(
+          invitationId = "3",
+          suppliedClientId = "3",
+          expiryDate = LocalDate.now().plusDays(1L)
+        )
       val expectedInvitation = newInvitation
-        .copy(invitationId = "4", suppliedClientId = "4", expiryDate = LocalDate.now().minusDays(1L))
+        .copy(
+          invitationId = "4",
+          suppliedClientId = "4",
+          expiryDate = LocalDate.now().minusDays(1L)
+        )
 
       val listOfInvitations = Seq(
         newInvitation,
@@ -431,7 +587,12 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
 
       val relevantInvitation = pendingInvitation()
       val irrelevantInvitation = pendingInvitation()
-        .copy(arn = "TARN7654321", service = HMRCMTDIT, clientId = "AABBCC12D", status = Accepted)
+        .copy(
+          arn = "TARN7654321",
+          service = HMRCMTDIT,
+          clientId = "AABBCC12D",
+          status = Accepted
+        )
 
       "all parameters are provided" in {
         await(repository.collection.insertMany(Seq(relevantInvitation, irrelevantInvitation)).toFuture())
@@ -483,4 +644,5 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
       }
     }
   }
+
 }

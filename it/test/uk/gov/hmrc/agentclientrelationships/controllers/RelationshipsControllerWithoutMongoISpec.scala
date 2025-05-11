@@ -23,13 +23,22 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, PartialAuthRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.repository.MongoRelationshipCopyRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.agentclientrelationships.support.Resource
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.SaAgentReference
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import uk.gov.hmrc.mongo.MongoComponent
@@ -42,23 +51,23 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
-extends MongoRelationshipCopyRecordRepository(moduleComponent) {
+    extends MongoRelationshipCopyRecordRepository(moduleComponent) {
   override def create(record: RelationshipCopyRecord): Future[Int] = Future
     .failed(new Exception("Could not connect the mongo db."))
 }
 
 class RelationshipsControllerWithoutMongoISpec
-extends UnitSpec
-with MongoSupport
-with GuiceOneServerPerSuite
-with WireMockSupport
-with RelationshipStubs
-with DesStubs
-with HipStub
-with DesStubsGet
-with MappingStubs
-with DataStreamStub
-with AuthStub {
+    extends UnitSpec
+    with MongoSupport
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with RelationshipStubs
+    with DesStubs
+    with HipStub
+    with DesStubsGet
+    with MappingStubs
+    with DataStreamStub
+    with AuthStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 

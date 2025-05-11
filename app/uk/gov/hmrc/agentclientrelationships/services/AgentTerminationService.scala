@@ -43,26 +43,26 @@ class AgentTerminationService @Inject() (
     val drr = deleteRecordRepository.terminateAgent(arn)
     val rcrr = relationshipCopyRecordRepository.terminateAgent(arn)
     for {
-      drrResult <- EitherT(drr)
+      drrResult  <- EitherT(drr)
       rcrrResult <- EitherT(rcrr)
       result <- EitherT.fromEither[Future](
-        Right(
-          TerminationResponse(
-            Seq(
-              DeletionCount(
-                "agent-client-relationships",
-                "delete-record",
-                drrResult
-              ),
-              DeletionCount(
-                "agent-client-relationships",
-                "relationship-copy-record",
-                rcrrResult
-              )
-            )
-          )
-        )
-      )
+                  Right(
+                    TerminationResponse(
+                      Seq(
+                        DeletionCount(
+                          "agent-client-relationships",
+                          "delete-record",
+                          drrResult
+                        ),
+                        DeletionCount(
+                          "agent-client-relationships",
+                          "relationship-copy-record",
+                          rcrrResult
+                        )
+                      )
+                    )
+                  )
+                )
     } yield result
   }
 

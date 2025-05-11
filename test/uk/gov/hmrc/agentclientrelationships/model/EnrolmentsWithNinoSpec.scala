@@ -25,8 +25,7 @@ import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.auth.core.EnrolmentIdentifier
 import uk.gov.hmrc.auth.core.Enrolments
 
-class EnrolmentsWithNinoSpec
-extends UnitSpec {
+class EnrolmentsWithNinoSpec extends UnitSpec {
 
   val nino = "AA111111A"
   val mtdItId = "XAIT1234567"

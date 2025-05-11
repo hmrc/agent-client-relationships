@@ -81,7 +81,12 @@ trait DesStubsGet {
                   "organisationName" -> "CFG",
                   "tradingName"      -> "CFG Solutions",
                   "individual" -> Json
-                    .obj("title" -> "0001", "firstName" -> "Ilkay", "middleName" -> "Silky", "lastName" -> "Gundo"),
+                    .obj(
+                      "title"      -> "0001",
+                      "firstName"  -> "Ilkay",
+                      "middleName" -> "Silky",
+                      "lastName"   -> "Gundo"
+                    ),
                   "effectiveRegistrationDate" -> "2020-01-01",
                   "isInsolvent"               -> false
                 )
@@ -98,7 +103,10 @@ trait DesStubsGet {
       .willReturn(aResponse().withBody(s"""{}""").withStatus(200))
   )
 
-  def givenDESRespondsWithStatusForVrn(vrn: Vrn, status: Int): StubMapping = stubFor(
+  def givenDESRespondsWithStatusForVrn(
+    vrn: Vrn,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information")).willReturn(aResponse().withStatus(status))
   )
 

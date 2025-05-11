@@ -41,12 +41,11 @@ class CleanUpInvitationStatusController @Inject() (
   setRelationshipEndedService: CleanUpInvitationStatusService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-extends BackendController(cc) {
+    extends BackendController(cc) {
 
   def deauthoriseInvitation: Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request
-        .body
+      request.body
         .validate[CleanUpInvitationStatusRequest]
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
@@ -55,20 +54,19 @@ extends BackendController(cc) {
               for {
                 service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
                 clientId <- EitherT.fromEither[Future](
-                  setRelationshipEndedService.validateClientId(service, payload.clientId)
-                )
+                              setRelationshipEndedService.validateClientId(service, payload.clientId)
+                            )
                 result <- EitherT(
-                  setRelationshipEndedService.deauthoriseInvitation(
-                    arn = payload.arn,
-                    clientId = clientId.value,
-                    service = service.id,
-                    relationshipEndedBy = "HMRC"
-                  )
-                )
+                            setRelationshipEndedService.deauthoriseInvitation(
+                              arn = payload.arn,
+                              clientId = clientId.value,
+                              service = service.id,
+                              relationshipEndedBy = "HMRC"
+                            )
+                          )
               } yield result
 
-            responseT
-              .value
+            responseT.value
               .map(
                 _.fold(
                   failureResponse =>

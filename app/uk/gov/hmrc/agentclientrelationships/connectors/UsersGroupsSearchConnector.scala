@@ -75,10 +75,9 @@ class UsersGroupsSearchConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-)
-extends HttpApiMonitor
-with HttpErrorFunctions
-with Logging {
+) extends HttpApiMonitor
+    with HttpErrorFunctions
+    with Logging {
 
   def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] =
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {

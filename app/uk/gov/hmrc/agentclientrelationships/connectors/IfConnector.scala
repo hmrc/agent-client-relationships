@@ -21,27 +21,24 @@ import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.Authorization
-import uk.gov.hmrc.http.HeaderNames
-import uk.gov.hmrc.http.HttpReads
-import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -58,9 +55,8 @@ class IfConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-)
-extends HttpApiMonitor
-with Logging {
+) extends HttpApiMonitor
+    with Logging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 
@@ -72,7 +68,7 @@ API#1171 Get Business Details (for ITSA customers)
 https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
    * */
   def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
+    val url = url"$ifBaseUrl/registration/business-details/mtdId/${mtdId.value}"
 
     getWithIFHeaders(
       "GetBusinessDetailsByMtdId",
@@ -81,7 +77,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       ifEnv
     ).map { result =>
       result.status match {
-        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
@@ -95,7 +91,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
    * */
   def getMtdIdFor(nino: Nino)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
+    val url = url"$ifBaseUrl/registration/business-details/nino/${nino.value}"
 
     getWithIFHeaders(
       "GetBusinessDetailsByNino",
@@ -104,7 +100,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       ifEnv
     ).map { result =>
       result.status match {
-        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
@@ -119,7 +115,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     ec: ExecutionContext
   ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
 
-    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino)}")
+    val url = url"$ifBaseUrl/registration/business-details/nino/$nino"
 
     getWithIFHeaders(
       "ConsumedAPI-IF-GetBusinessDetails-GET",
@@ -148,8 +144,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  private def isInternalHost(url: URL): Boolean = appConfig
-    .internalHostPatterns
+  private def isInternalHost(url: URL): Boolean = appConfig.internalHostPatterns
     .exists(_.pattern.matcher(url.getHost).matches())
 
   private[connectors] def getWithIFHeaders(
@@ -183,8 +178,8 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     authToken: String,
     env: String
   ): Seq[(String, String)] = Seq(
-    Environment -> env,
-    CorrelationId -> randomUuidGenerator.makeCorrelationId(),
+    Environment               -> env,
+    CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 

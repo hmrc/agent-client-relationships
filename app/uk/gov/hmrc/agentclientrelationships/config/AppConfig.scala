@@ -27,8 +27,7 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 
-case class ConfigNotFoundException(message: String)
-extends RuntimeException(message)
+case class ConfigNotFoundException(message: String) extends RuntimeException(message)
 
 @Singleton
 class AppConfig @Inject() (

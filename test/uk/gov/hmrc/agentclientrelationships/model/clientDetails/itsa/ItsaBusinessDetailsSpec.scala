@@ -19,8 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ItsaBusinessDetailsSpec
-extends UnitSpec {
+class ItsaBusinessDetailsSpec extends UnitSpec {
 
   "ItsaBusinessDetails" should {
 
@@ -28,7 +27,7 @@ extends UnitSpec {
 
       "optional fields are present" in {
         val json = Json.obj(
-          "tradingName" -> "John Rocks",
+          "tradingName"            -> "John Rocks",
           "businessAddressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
         )
 

@@ -74,43 +74,41 @@ class InvitationsRepository @Inject() (
 )(implicit
   ec: ExecutionContext,
   @Named("aes")
-  crypto: Encrypter
-    with Decrypter
-)
-extends PlayMongoRepository[Invitation](
-  mongoComponent = mongoComponent,
-  collectionName = "invitations",
-  domainFormat = Invitation.mongoFormat,
-  indexes = Seq(
-    IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
-    IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
-    IndexModel(
-      Indexes.ascending(
-        arnKey,
-        serviceKey,
-        suppliedClientIdKey
+  crypto: Encrypter with Decrypter
+) extends PlayMongoRepository[Invitation](
+      mongoComponent = mongoComponent,
+      collectionName = "invitations",
+      domainFormat = Invitation.mongoFormat,
+      indexes = Seq(
+        IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
+        IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
+        IndexModel(
+          Indexes.ascending(
+            arnKey,
+            serviceKey,
+            suppliedClientIdKey
+          ),
+          IndexOptions()
+            .partialFilterExpression(equal(statusKey, Codecs.toBson[InvitationStatus](Pending)))
+            .name("uniquePendingIndex")
+            .unique(true)
+        ),
+        IndexModel(
+          Indexes.ascending("created"),
+          IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
+        ),
+        IndexModel(Indexes.ascending(clientIdKey)),
+        IndexModel(Indexes.ascending(suppliedClientIdKey)),
+        IndexModel(Indexes.ascending(statusKey)),
+        IndexModel(Indexes.ascending(serviceKey)),
+        IndexModel(Indexes.ascending(clientNameKey)),
+        IndexModel(Indexes.ascending(statusKey, warningEmaiSentKey)),
+        IndexModel(Indexes.ascending(statusKey, expiredEmailSentKey))
       ),
-      IndexOptions()
-        .partialFilterExpression(equal(statusKey, Codecs.toBson[InvitationStatus](Pending)))
-        .name("uniquePendingIndex")
-        .unique(true)
-    ),
-    IndexModel(
-      Indexes.ascending("created"),
-      IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
-    ),
-    IndexModel(Indexes.ascending(clientIdKey)),
-    IndexModel(Indexes.ascending(suppliedClientIdKey)),
-    IndexModel(Indexes.ascending(statusKey)),
-    IndexModel(Indexes.ascending(serviceKey)),
-    IndexModel(Indexes.ascending(clientNameKey)),
-    IndexModel(Indexes.ascending(statusKey, warningEmaiSentKey)),
-    IndexModel(Indexes.ascending(statusKey, expiredEmailSentKey))
-  ),
-  replaceIndexes = true,
-  extraCodecs = Seq(Codecs.playFormatCodec(MongoTrackRequestsResult.format))
-)
-with Logging {
+      replaceIndexes = true,
+      extraCodecs = Seq(Codecs.playFormatCodec(MongoTrackRequestsResult.format))
+    )
+    with Logging {
 
   // scalastyle:off parameter.number
   def create(
@@ -463,22 +461,21 @@ with Logging {
     )
     for {
       results <- collection
-        .aggregate[MongoTrackRequestsResult](fullAggregatePipeline)
-        .toFuture()
-        .map(_.headOption.getOrElse(MongoTrackRequestsResult()))
+                   .aggregate[MongoTrackRequestsResult](fullAggregatePipeline)
+                   .toFuture()
+                   .map(_.headOption.getOrElse(MongoTrackRequestsResult()))
     } yield TrackRequestsResult(
       requests = results.requests,
       clientNames = results.clientNamesFacet.headOption.map(_.clientNames.sorted).getOrElse(Nil),
       availableFilters = results.availableFiltersFacet.headOption.map(_.availableFilters.sorted).getOrElse(Nil),
       totalResults = results.totalResultsFacet.headOption.map(_.count).getOrElse(0),
       pageNumber = pageNumber,
-      filtersApplied =
-        (statusFilter, clientName) match {
-          case (Some(f), Some(c)) => Some(Map("statusFilter" -> f, "clientFilter" -> c))
-          case (Some(f), None) => Some(Map("statusFilter" -> f))
-          case (None, Some(c)) => Some(Map("clientFilter" -> c))
-          case _ => None
-        }
+      filtersApplied = (statusFilter, clientName) match {
+        case (Some(f), Some(c)) => Some(Map("statusFilter" -> f, "clientFilter" -> c))
+        case (Some(f), None)    => Some(Map("statusFilter" -> f))
+        case (None, Some(c))    => Some(Map("clientFilter" -> c))
+        case _                  => None
+      }
     )
   }
 

@@ -21,8 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Ins
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.Email
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ClientDetailsResponseSpec
-extends UnitSpec {
+class ClientDetailsResponseSpec extends UnitSpec {
 
   "ClientDetailsResponse" should {
 
@@ -41,12 +40,12 @@ extends UnitSpec {
         )
 
         val expectedJson = Json.obj(
-          "name" -> "Ilkay Gundo",
-          "status" -> "Insolvent",
-          "isOverseas" -> true,
-          "knownFacts" -> Json.arr("test@email.com"),
-          "knownFactType" -> "Email",
-          "hasPendingInvitation" -> true,
+          "name"                       -> "Ilkay Gundo",
+          "status"                     -> "Insolvent",
+          "isOverseas"                 -> true,
+          "knownFacts"                 -> Json.arr("test@email.com"),
+          "knownFactType"              -> "Email",
+          "hasPendingInvitation"       -> true,
           "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
         )
 
@@ -63,9 +62,9 @@ extends UnitSpec {
         )
 
         val expectedJson = Json.obj(
-          "name" -> "Ilkay Gundo",
-          "isOverseas" -> true,
-          "knownFacts" -> Json.arr(),
+          "name"                 -> "Ilkay Gundo",
+          "isOverseas"           -> true,
+          "knownFacts"           -> Json.arr(),
           "hasPendingInvitation" -> false
         )
 

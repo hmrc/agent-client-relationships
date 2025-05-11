@@ -43,11 +43,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class CheckRelationshipServiceSpec
-extends AnyFreeSpecLike
-with Matchers
-with ScalaFutures
-with BeforeAndAfterEach
-with ResettingMockitoSugar {
+    extends AnyFreeSpecLike
+    with Matchers
+    with ScalaFutures
+    with BeforeAndAfterEach
+    with ResettingMockitoSugar {
 
   val arn: Arn = Arn("AARN0000002")
   private val taxIdentifier: TaxIdentifier = Vrn("101747641")

@@ -69,16 +69,17 @@ class MappingConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-)
-extends HttpApiMonitor
-with Logging {
+) extends HttpApiMonitor
+    with Logging {
 
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] =
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {
       httpClient
         .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
         .execute[SaMappings]
-        .map(_.mappings.map(_.saAgentReference)) // TODO: this transformation should happen in service layer, connector should return plain SaMappings
+        .map(
+          _.mappings.map(_.saAgentReference)
+        ) // TODO: this transformation should happen in service layer, connector should return plain SaMappings
     }
 
   def getAgentCodesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[AgentCode]] =
@@ -86,7 +87,9 @@ with Logging {
       httpClient
         .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
         .execute[AgentCodeMappings]
-        .map(_.mappings.map(_.agentCode)) // TODO: this transformation should happen in service layer, connector should return plain SaMappings
+        .map(
+          _.mappings.map(_.agentCode)
+        ) // TODO: this transformation should happen in service layer, connector should return plain SaMappings
     }
 
 }

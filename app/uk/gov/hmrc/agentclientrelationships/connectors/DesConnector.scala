@@ -21,7 +21,6 @@ import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -35,10 +34,10 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -52,9 +51,8 @@ class DesConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-)
-extends HttpApiMonitor
-with Logging {
+) extends HttpApiMonitor
+    with Logging {
 
   private val desBaseUrl = appConfig.desUrl
   private val desAuthToken = appConfig.desToken
@@ -64,13 +62,12 @@ with Logging {
   private val CorrelationId = "CorrelationId"
 
   def getClientSaAgentSaReferences(nino: Nino)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
-    val url = new URL(s"${appConfig.desUrl}/registration/relationship/nino/${encodePathSegment(nino.value)}")
+    val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.value}"
 
     getWithDesHeaders("GetStatusAgentRelationship", url).map { response =>
       response.status match {
         case Status.OK =>
-          response
-            .json
+          response.json
             .as[Agents]
             .agents
             .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty)
@@ -82,17 +79,18 @@ with Logging {
     }
   }
 
-  def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] = getWithDesHeaders(
-    "GetAgentRecord",
-    new URL(getAgentRecordUrl(agentId))
-  ).map { response =>
-    response.status match {
-      case Status.OK => Option(response.json.as[AgentRecord])
-      case status =>
-        logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
-        None
+  def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] =
+    getWithDesHeaders(
+      "GetAgentRecord",
+      new URL(getAgentRecordUrl(agentId))
+    ).map { response =>
+      response.status match {
+        case Status.OK => Option(response.json.as[AgentRecord])
+        case status =>
+          logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
+          None
+      }
     }
-  }
 
   private def getAgentRecordUrl(agentId: TaxIdentifier) =
     agentId match {
@@ -107,7 +105,7 @@ with Logging {
 
   // DES API #1363  Get Vat Customer Information
   def vrnIsKnownInEtmp(vrn: Vrn)(implicit request: RequestHeader): Future[Boolean] = {
-    val url = new URL(s"$desBaseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information")
+    val url = url"$desBaseUrl/vat/customer/vrn/${vrn.value}/information"
     getWithDesHeaders(
       "GetVatCustomerInformation",
       url,
@@ -116,8 +114,8 @@ with Logging {
     ).map { response =>
       response.status match {
         case Status.OK if response.json.as[JsObject].fields.isEmpty => false
-        case Status.OK => true
-        case Status.NOT_FOUND => false
+        case Status.OK                                              => true
+        case Status.NOT_FOUND                                       => false
         case other: Int =>
           logger.error(s"Error in GetVatCustomerInformation. $other, ${response.body}")
           false
@@ -129,9 +127,9 @@ with Logging {
     authToken: String,
     env: String
   ): Seq[(String, String)] = Seq(
-    Environment -> env,
+    Environment               -> env,
     HeaderNames.authorisation -> s"Bearer $authToken",
-    CorrelationId -> randomUuidGenerator.makeCorrelationId()
+    CorrelationId             -> randomUuidGenerator.makeCorrelationId()
   )
 
   private def getWithDesHeaders(
@@ -139,14 +137,10 @@ with Logging {
     url: URL,
     authToken: String = desAuthToken,
     env: String = desEnv
-  )(implicit request: RequestHeader): Future[HttpResponse] = {
-
-    val isInternalHost = appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
-
+  )(implicit request: RequestHeader): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
       httpClient.get(url = url).setHeader(desHeaders(authToken, env): _*).execute[HttpResponse]
 
     }
-  }
 
 }

@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import org.scalatest.{BeforeAndAfterEach, Suite}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.Suite
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 trait MongoApp extends MongoSupport with ResetMongoBeforeTest {

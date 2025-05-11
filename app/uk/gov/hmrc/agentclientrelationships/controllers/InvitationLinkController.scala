@@ -55,8 +55,8 @@ class InvitationLinkController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-extends BackendController(cc)
-with AuthActions {
+    extends BackendController(cc)
+    with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -94,13 +94,11 @@ with AuthActions {
     serviceKeys: Seq[String]
   ): Set[String] = {
     val suppServices = serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
-    (enrolments.map(_.service) ++ suppServices)
-      .map {
-        case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
-        case "HMRC-NI" | "HMRC-PT" => "PERSONAL-INCOME-RECORD"
-        case serviceKey => serviceKey
-      }
-      .toSet
+    (enrolments.map(_.service) ++ suppServices).map {
+      case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
+      case "HMRC-NI" | "HMRC-PT"                                        => "PERSONAL-INCOME-RECORD"
+      case serviceKey                                                   => serviceKey
+    }.toSet
   }
 
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
@@ -120,7 +118,9 @@ with AuthActions {
                 )
                 .flatMap {
                   case Nil =>
-                    Logger(getClass).warn(s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}")
+                    Logger(getClass).warn(
+                      s"Invitation was not found for UID: ${request.body.uid}, service keys: ${request.body.serviceKeys}"
+                    )
                     Future.successful(NotFound)
                   case invitations: Seq[Invitation] =>
                     val invitation = invitations
@@ -132,9 +132,9 @@ with AuthActions {
                       )
                     for {
                       existingRelationship <- checkRelationshipsService.findCurrentMainAgent(
-                        invitation,
-                        enrolments.find(_.service == invitation.service)
-                      )
+                                                invitation,
+                                                enrolments.find(_.service == invitation.service)
+                                              )
                     } yield Ok(
                       Json.toJson(
                         ValidateInvitationResponse(
@@ -167,7 +167,9 @@ with AuthActions {
       .map(_ => NoContent)
       .recoverWith {
         case e: MongoWriteException if e.getError.getCode.equals(11000) =>
-          logger.warn(s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion")
+          logger.warn(
+            s"Duplicate found for arn ${record.arn} and uid ${record.uid} so record already there and continuing with deletion"
+          )
           Future(NoContent)
         case other => Future.failed(other)
       }

@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import play.api.http.Status.OK
+import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
@@ -39,8 +41,7 @@ class AgentAssuranceConnector @Inject() (
 )(implicit
   appConfig: AppConfig,
   val ec: ExecutionContext
-)
-extends HttpApiMonitor {
+) extends HttpApiMonitor {
 
   // TODO: why agent-assurance uses internal-auth.token?
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
@@ -48,6 +49,20 @@ extends HttpApiMonitor {
   def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = httpClient
     .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
     .setHeader(aaHeaders)
-    .execute[AgentDetailsDesResponse]
+    .execute[HttpResponse]
+    .map(response =>
+      response.status match {
+        case OK => Json.parse(response.body).as[AgentDetailsDesResponse]
+        // TODO: Review error handling flow
+        // Current implementation throws an exception with status code
+        // which gets recovered in an unknown location in the call chain.
+        // This should be implemented as below, returning None for 404 case, and errors for other cases.
+        // No recovery from exceptions should take place.
+        case other => throw UpstreamErrorResponse(s"Agent record unavailable: des response code: $other", other)
+      }
+    )
+//    .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
+//    .setHeader(aaHeaders)
+//    .execute[Option[AgentDetailsDesResponse]]
 
 }

@@ -20,8 +20,7 @@ import play.api.libs.json.Format
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 
-object SyncStatus
-extends Enumeration {
+object SyncStatus extends Enumeration {
 
   type SyncStatus = Value
   val InProgress, IncompleteInputParams, Success, Failed = Value

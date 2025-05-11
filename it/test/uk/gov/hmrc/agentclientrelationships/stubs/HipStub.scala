@@ -20,7 +20,8 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
 
@@ -34,7 +35,10 @@ trait HipStub {
     any(urlMatching(s"/etmp/RESTAdapter/rosm/agent-relationship?.*")).willReturn(aResponse().withStatus(503))
   )
 
-  def givenAgentCanBeAllocated(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping = stubFor(
+  def givenAgentCanBeAllocated(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn
+  ): StubMapping = stubFor(
     post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
       .withRequestBody(containing(taxIdentifier.value))
       .withRequestBody(containing(arn.value))
@@ -48,7 +52,10 @@ trait HipStub {
       .willReturn(aResponse().withStatus(status).withBody(s"""{"reason": "Service unavailable"}"""))
   )
 
-  def givenAgentCanBeDeallocated(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping = stubFor(
+  def givenAgentCanBeDeallocated(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn
+  ): StubMapping = stubFor(
     post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
       .withRequestBody(containing(taxIdentifier.value))
       .withRequestBody(containing(arn.value))
@@ -56,7 +63,10 @@ trait HipStub {
       .willReturn(aResponse().withStatus(200).withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}"""))
   )
 
-  def givenAgentHasNoActiveRelationship(taxIdentifier: TaxIdentifier, arn: Arn): StubMapping = stubFor(
+  def givenAgentHasNoActiveRelationship(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn
+  ): StubMapping = stubFor(
     post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
       .withRequestBody(containing(taxIdentifier.value))
       .withRequestBody(containing(arn.value))
@@ -77,7 +87,11 @@ trait HipStub {
   ): StubMapping = stubFor(
     get(
       urlEqualTo(
-        relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          authProfileOption = Some(authProfile),
+          activeOnly = true
+        )
       )
     ).willReturn(aResponse().withStatus(status))
   )
@@ -88,7 +102,11 @@ trait HipStub {
   ): StubMapping = stubFor(
     get(
       urlEqualTo(
-        relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          authProfileOption = Some(authProfile),
+          activeOnly = true
+        )
       )
     ).willReturn(aResponse().withStatus(403).withBody("suspended"))
   )
@@ -100,7 +118,11 @@ trait HipStub {
   ): StubMapping = stubFor(
     get(
       urlEqualTo(
-        relationshipHipUrl(taxIdentifier = taxIdentifier, authProfileOption = Some(authProfile), activeOnly = true)
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          authProfileOption = Some(authProfile),
+          activeOnly = true
+        )
       )
     ).willReturn(
       aResponse()
@@ -129,7 +151,15 @@ trait HipStub {
     arn: Arn,
     activeOnly: Boolean = true
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly))).willReturn(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          None,
+          activeOnly = activeOnly
+        )
+      )
+    ).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -156,7 +186,15 @@ trait HipStub {
     arn: Arn,
     activeOnly: Boolean = true
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly))).willReturn(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          None,
+          activeOnly = activeOnly
+        )
+      )
+    ).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -184,7 +222,15 @@ trait HipStub {
     arnSup: Arn,
     activeOnly: Boolean = true
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly))).willReturn(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          None,
+          activeOnly = activeOnly
+        )
+      )
+    ).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -226,7 +272,15 @@ trait HipStub {
     arnSup: Arn,
     activeOnly: Boolean = true
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly))).willReturn(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          None,
+          activeOnly = activeOnly
+        )
+      )
+    ).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -267,7 +321,15 @@ trait HipStub {
     status: Int,
     activeOnly: Boolean = true
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          None,
+          activeOnly = activeOnly
+        )
+      )
+    )
       .willReturn(aResponse().withStatus(status))
   )
 
@@ -276,7 +338,15 @@ trait HipStub {
     status: Int,
     activeOnly: Boolean = true
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly))).willReturn(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          None,
+          activeOnly = activeOnly
+        )
+      )
+    ).willReturn(
       aResponse()
         .withStatus(status)
         .withBody(s"""
@@ -294,7 +364,15 @@ trait HipStub {
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean = true
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          None,
+          activeOnly = activeOnly
+        )
+      )
+    )
       .willReturn(aResponse().withStatus(422).withBody("suspended"))
   )
 
@@ -306,7 +384,15 @@ trait HipStub {
   ): Unit = eventually {
     verify(
       count,
-      getRequestedFor(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, None, activeOnly = activeOnly)))
+      getRequestedFor(
+        urlEqualTo(
+          relationshipHipUrl(
+            taxIdentifier = taxIdentifier,
+            None,
+            activeOnly = activeOnly
+          )
+        )
+      )
     )
   }
 
@@ -315,7 +401,15 @@ trait HipStub {
     agentArn: String,
     authProfile: String = "ALL00001"
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = true))).willReturn(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          Some(authProfile),
+          activeOnly = true
+        )
+      )
+    ).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -342,7 +436,15 @@ trait HipStub {
     agentArn3: String,
     authProfile: String = "ALL00001"
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = true))).willReturn(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          Some(authProfile),
+          activeOnly = true
+        )
+      )
+    ).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -384,7 +486,10 @@ trait HipStub {
     )
   )
 
-  def getInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, authProfile: String = "ALL00001"): StubMapping = {
+  def getInactiveRelationshipsForClient(
+    taxIdentifier: TaxIdentifier,
+    authProfile: String = "ALL00001"
+  ): StubMapping = {
 
     val individualOrOrganisationJson =
       if (taxIdentifier.isInstanceOf[MtdItId])
@@ -401,7 +506,15 @@ trait HipStub {
            |""".stripMargin
 
     stubFor(
-      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = false)))
+      get(
+        urlEqualTo(
+          relationshipHipUrl(
+            taxIdentifier = taxIdentifier,
+            Some(authProfile),
+            activeOnly = false
+          )
+        )
+      )
         .willReturn(
           aResponse()
             .withStatus(200)
@@ -417,44 +530,51 @@ trait HipStub {
                                                                                                |  "activity" : "09"
                                                                                                |},
                                                                                                |{
-                                                                                               | "refNumber" : "${taxIdentifier
-                .value}",
-                                                                                               |  "arn" : "ABCDE777777", """
-                .stripMargin + individualOrOrganisationJson + s"""
-                                                                 |  "dateFrom" : "2019-09-09",
-                                                                 |  "dateTo" : "2050-09-09",
-                                                                 |  "contractAccountCategory" : "01",
-                                                                 |  "activity" : "09"
-                                                                 |  }
-                                                                 |]}"""
-                .stripMargin
+                                                                                               | "refNumber" : "${taxIdentifier.value}",
+                                                                                               |  "arn" : "ABCDE777777", """.stripMargin + individualOrOrganisationJson + s"""
+                                                                                                                                                                            |  "dateFrom" : "2019-09-09",
+                                                                                                                                                                            |  "dateTo" : "2050-09-09",
+                                                                                                                                                                            |  "contractAccountCategory" : "01",
+                                                                                                                                                                            |  "activity" : "09"
+                                                                                                                                                                            |  }
+                                                                                                                                                                            |]}""".stripMargin
             )
         )
     )
   }
 
-  def getNoInactiveRelationshipsForClient(taxIdentifier: TaxIdentifier, authProfile: String = "ALL00001"): StubMapping =
-    stubFor(
-      get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = false)))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{"relationshipDisplayResponse":[
-                         |{
-                         |  "refNumber" : "${taxIdentifier.value}",
-                         |  "arn" : "ABCDE123456",
-                         |  "individual" : {
-                         |    "firstName": "someName"
-                         |  },
-                         |  "dateFrom" : "2015-09-10",
-                         |  "dateTo" : "2050-09-09",
-                         |  "contractAccountCategory" : "01",
-                         |  "activity" : "09"
-                         |}
-                         |]}""".stripMargin)
+  def getNoInactiveRelationshipsForClient(
+    taxIdentifier: TaxIdentifier,
+    authProfile: String = "ALL00001"
+  ): StubMapping = stubFor(
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          Some(authProfile),
+          activeOnly = false
         )
+      )
     )
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{"relationshipDisplayResponse":[
+                       |{
+                       |  "refNumber" : "${taxIdentifier.value}",
+                       |  "arn" : "ABCDE123456",
+                       |  "individual" : {
+                       |    "firstName": "someName"
+                       |  },
+                       |  "dateFrom" : "2015-09-10",
+                       |  "dateTo" : "2050-09-09",
+                       |  "contractAccountCategory" : "01",
+                       |  "activity" : "09"
+                       |}
+                       |]}""".stripMargin)
+      )
+  )
 
   def getFailInactiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
@@ -462,7 +582,15 @@ trait HipStub {
     body: Option[String] = None,
     authProfile: String = "ALL00001"
   ): StubMapping = stubFor(
-    get(urlEqualTo(relationshipHipUrl(taxIdentifier = taxIdentifier, Some(authProfile), activeOnly = false)))
+    get(
+      urlEqualTo(
+        relationshipHipUrl(
+          taxIdentifier = taxIdentifier,
+          Some(authProfile),
+          activeOnly = false
+        )
+      )
+    )
       .willReturn(aResponse().withStatus(status).withBody(body.getOrElse("")))
   )
 
@@ -506,29 +634,35 @@ trait HipStub {
     )
   }
 
-  def getAgentInactiveRelationshipsButActive(encodedArn: String, agentArn: String, clientId: String): StubMapping =
-    stubFor(
-      get(urlEqualTo(inactiveUrl(Arn(agentArn)))).willReturn(
-        aResponse()
-          .withStatus(200)
-          .withBody(s"""
-                       |{"relationshipDisplayResponse":[
-                       |{
-                       |  "refNumber" : "$clientId",
-                       |  "arn" : "$agentArn",
-                       |  "organisation" : {
-                       |    "organisationName": "someOrganisationName"
-                       |  },
-                       |  "dateFrom" : "2015-09-10",
-                       |  "dateTo" : "9999-09-21",
-                       |  "contractAccountCategory" : "01",
-                       |  "activity" : "09"
-                       |}
-                       |]}""".stripMargin)
-      )
+  def getAgentInactiveRelationshipsButActive(
+    encodedArn: String,
+    agentArn: String,
+    clientId: String
+  ): StubMapping = stubFor(
+    get(urlEqualTo(inactiveUrl(Arn(agentArn)))).willReturn(
+      aResponse()
+        .withStatus(200)
+        .withBody(s"""
+                     |{"relationshipDisplayResponse":[
+                     |{
+                     |  "refNumber" : "$clientId",
+                     |  "arn" : "$agentArn",
+                     |  "organisation" : {
+                     |    "organisationName": "someOrganisationName"
+                     |  },
+                     |  "dateFrom" : "2015-09-10",
+                     |  "dateTo" : "9999-09-21",
+                     |  "contractAccountCategory" : "01",
+                     |  "activity" : "09"
+                     |}
+                     |]}""".stripMargin)
     )
+  )
 
-  def getFailAgentInactiveRelationships(encodedArn: String, status: Int): StubMapping = stubFor(
+  def getFailAgentInactiveRelationships(
+    encodedArn: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(inactiveUrl(Arn(encodedArn)))).willReturn(aResponse().withStatus(status))
   )
 
@@ -540,7 +674,10 @@ trait HipStub {
     get(urlEqualTo(inactiveUrl(Arn(encodedArn)))).willReturn(aResponse().withStatus(503))
   )
 
-  def getAgentInactiveRelationshipsNoDateTo(arn: Arn, clientId: String): StubMapping = stubFor(
+  def getAgentInactiveRelationshipsNoDateTo(
+    arn: Arn,
+    clientId: String
+  ): StubMapping = stubFor(
     get(urlEqualTo(inactiveUrl(arn))).willReturn(
       aResponse()
         .withStatus(200)
@@ -698,7 +835,10 @@ trait HipStub {
     s"/etmp/RESTAdapter/rosm/agent-relationship?arn=${arn.value}" +
       s"&isAnAgent=true&activeOnly=false&regime=AGSV&dateFrom=${LocalDate.now().minusDays(30).toString}&dateTo=${LocalDate.now().toString}"
 
-  def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino): StubMapping = stubFor(
+  def givenNinoIsKnownFor(
+    mtdId: MtdItId,
+    nino: Nino
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdId.value}")).willReturn(
       aResponse().withStatus(200).withBody(s"""{"success":{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}}""")
     )
@@ -724,7 +864,10 @@ trait HipStub {
       .willReturn(aResponse().withStatus(400))
   )
 
-  def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId): StubMapping = stubFor(
+  def givenMtdItIdIsKnownFor(
+    nino: Nino,
+    mtdId: MtdItId
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}")).willReturn(
       aResponse().withStatus(200).withBody(s"""{"success":{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}}""")
     )
@@ -751,7 +894,10 @@ trait HipStub {
   )
 
   // idType: String, id: String, foundId: String = "XAIT0000111122"
-  def givenNinoItsaBusinessDetailsExists(mtdId: MtdItId, nino: Nino): StubMapping = stubFor(
+  def givenNinoItsaBusinessDetailsExists(
+    mtdId: MtdItId,
+    nino: Nino
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdId.value}"))
       .willReturn(aResponse().withBody(s"""
                                           |{
@@ -773,7 +919,10 @@ trait HipStub {
           """.stripMargin))
   )
 
-  def givenMtdItsaBusinessDetailsExists(nino: Nino, mtdId: MtdItId): StubMapping = stubFor(
+  def givenMtdItsaBusinessDetailsExists(
+    nino: Nino,
+    mtdId: MtdItId
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
       .willReturn(aResponse().withBody(s"""
                                           |{
@@ -796,29 +945,31 @@ trait HipStub {
   )
 
   def givenMultipleItsaBusinessDetailsExists(nino: String): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino")).willReturn(aResponse().withBody(s"""
-                                                                                                                       |{
-                                                                                                                       |    "success": {
-                                                                                                                       |        "taxPayerDisplayResponse": {
-                                                                                                                       |            "businessData": [
-                                                                                                                       |                {
-                                                                                                                       |                    "tradingName": "Erling Haal",
-                                                                                                                       |                    "businessAddressDetails": {
-                                                                                                                       |                        "postalCode": "AA1 1AA",
-                                                                                                                       |                        "countryCode": "GB"
-                                                                                                                       |                    }
-                                                                                                                       |                },
-                                                                                                                       |                {
-                                                                                                                       |                    "tradingName": "Bernard Silver",
-                                                                                                                       |                    "businessAddressDetails": {
-                                                                                                                       |                        "postalCode": "BB1 1BB",
-                                                                                                                       |                        "countryCode": "PT"
-                                                                                                                       |                    }
-                                                                                                                       |                }
-                                                                                                                       |            ]
-                                                                                                                       |        }
-                                                                                                                       |    }
-                                                                                                                       |}
+    get(
+      urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino")
+    ).willReturn(aResponse().withBody(s"""
+                                         |{
+                                         |    "success": {
+                                         |        "taxPayerDisplayResponse": {
+                                         |            "businessData": [
+                                         |                {
+                                         |                    "tradingName": "Erling Haal",
+                                         |                    "businessAddressDetails": {
+                                         |                        "postalCode": "AA1 1AA",
+                                         |                        "countryCode": "GB"
+                                         |                    }
+                                         |                },
+                                         |                {
+                                         |                    "tradingName": "Bernard Silver",
+                                         |                    "businessAddressDetails": {
+                                         |                        "postalCode": "BB1 1BB",
+                                         |                        "countryCode": "PT"
+                                         |                    }
+                                         |                }
+                                         |            ]
+                                         |        }
+                                         |    }
+                                         |}
           """.stripMargin))
   )
 
@@ -834,7 +985,10 @@ trait HipStub {
           """.stripMargin))
   )
 
-  def givenItsaBusinessDetailsError(nino: String, status: Int): StubMapping = stubFor(
+  def givenItsaBusinessDetailsError(
+    nino: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino"))
       .willReturn(aResponse().withStatus(status))
   )

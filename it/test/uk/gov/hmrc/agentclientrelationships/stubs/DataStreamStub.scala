@@ -18,7 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
@@ -28,7 +30,10 @@ trait DataStreamStub extends Eventually {
 
   private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(1, Seconds)), scaled(Span(50, Millis)))
 
-  def verifyCreateInvitationAuditSent(requestPath: String, invitation: Invitation): Unit = verifyAuditRequestSent(
+  def verifyCreateInvitationAuditSent(
+    requestPath: String,
+    invitation: Invitation
+  ): Unit = verifyAuditRequestSent(
     1,
     event = AgentClientRelationshipEvent.CreateInvitation,
     detail = Map(
@@ -83,16 +88,15 @@ trait DataStreamStub extends Eventually {
   ): Unit = verifyAuditRequestSent(
     1,
     event = AgentClientRelationshipEvent.CreateRelationship,
-    detail =
-      Map(
-        "agentReferenceNumber"    -> arn,
-        "service"                 -> service,
-        "clientId"                -> clientId,
-        "clientIdType"            -> clientIdType,
-        "etmpRelationshipCreated" -> etmpRelationshipCreated.toString,
-        "enrolmentDelegated"      -> enrolmentDelegated.toString,
-        "howRelationshipCreated"  -> howRelationshipCreated
-      ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
+    detail = Map(
+      "agentReferenceNumber"    -> arn,
+      "service"                 -> service,
+      "clientId"                -> clientId,
+      "clientIdType"            -> clientIdType,
+      "etmpRelationshipCreated" -> etmpRelationshipCreated.toString,
+      "enrolmentDelegated"      -> enrolmentDelegated.toString,
+      "howRelationshipCreated"  -> howRelationshipCreated
+    ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
     tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
   )
 
@@ -110,16 +114,15 @@ trait DataStreamStub extends Eventually {
   ): Unit = verifyAuditRequestSent(
     1,
     event = AgentClientRelationshipEvent.TerminateRelationship,
-    detail =
-      Map(
-        "agentReferenceNumber"      -> arn,
-        "clientId"                  -> clientId,
-        "clientIdType"              -> clientIdType,
-        "service"                   -> service,
-        "enrolmentDeallocated"      -> enrolmentDeallocated.toString,
-        "etmpRelationshipRemoved"   -> etmpRelationshipRemoved.toString,
-        "howRelationshipTerminated" -> howRelationshipTerminated
-      ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
+    detail = Map(
+      "agentReferenceNumber"      -> arn,
+      "clientId"                  -> clientId,
+      "clientIdType"              -> clientIdType,
+      "service"                   -> service,
+      "enrolmentDeallocated"      -> enrolmentDeallocated.toString,
+      "etmpRelationshipRemoved"   -> etmpRelationshipRemoved.toString,
+      "howRelationshipTerminated" -> howRelationshipTerminated
+    ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
     tags = Map("transactionName" -> "terminate-relationship", "path" -> requestPath)
   )
 
@@ -176,6 +179,10 @@ trait DataStreamStub extends Eventually {
 
   private def auditUrl = "/write/audit"
 
-  private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
+  private def similarToJson(value: String) = equalToJson(
+    value.stripMargin,
+    true,
+    true
+  )
 
 }

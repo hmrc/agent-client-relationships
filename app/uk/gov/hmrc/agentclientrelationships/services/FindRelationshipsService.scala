@@ -42,8 +42,8 @@ class FindRelationshipsService @Inject() (
   appConfig: AppConfig,
   val metrics: Metrics
 )(implicit executionContext: ExecutionContext)
-extends Monitoring
-with Logging {
+    extends Monitoring
+    with Logging {
 
   def getItsaRelationshipForClient(
     nino: Nino,
@@ -64,9 +64,9 @@ with Logging {
     (
       for {
         mtdItId <- EitherT.fromOptionF(
-          ifOrHipConnector.getMtdIdFor(nino),
-          RelationshipFailureResponse.TaxIdentifierError
-        )
+                     ifOrHipConnector.getMtdIdFor(nino),
+                     RelationshipFailureResponse.TaxIdentifierError
+                   )
         relationships <- EitherT(hipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))
       } yield relationships.filter(_.isActive)
     ).leftFlatMap(recoverGetRelationships).value
@@ -77,8 +77,7 @@ with Logging {
   )(implicit request: RequestHeader): Future[Option[ActiveRelationship]] =
     // If the tax id type is among one of the supported ones...
     if (
-      appConfig
-        .supportedServicesWithoutPir
+      appConfig.supportedServicesWithoutPir
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     )
@@ -94,8 +93,7 @@ with Logging {
   )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     // If the tax id type is among one of the supported ones...
     if (
-      appConfig
-        .supportedServicesWithoutPir
+      appConfig.supportedServicesWithoutPir
         .map(_.supportedClientIdType.enrolmentId)
         .contains(ClientIdentifier(taxIdentifier).enrolmentId)
     ) {
@@ -103,8 +101,7 @@ with Logging {
         .leftFlatMap(recoverGetRelationships)
         .value
 
-    }
-    else {
+    } else {
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(Left(RelationshipFailureResponse.TaxIdentifierError))
     }
@@ -131,7 +128,7 @@ with Logging {
     .traverse(appConfig.supportedServicesWithoutPir) { service =>
       identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
         case Some(taxId) => getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))
-        case None => Future.successful(None)
+        case None        => Future.successful(None)
       }
     }
     .map(
@@ -146,7 +143,7 @@ with Logging {
     .traverse(appConfig.supportedServicesWithoutPir) { service =>
       identifiers.get(service) match {
         case Some(taxId) => getInactiveRelationshipsForClient(taxId, service)
-        case None => Future.successful(Seq.empty)
+        case None        => Future.successful(Seq.empty)
       }
     }
     .map(_.flatten)
@@ -157,13 +154,11 @@ with Logging {
   )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] =
     // if it is one of the tax ids that we support...
     if (
-      appConfig
-        .supportedServicesWithoutPir
+      appConfig.supportedServicesWithoutPir
         .exists(_.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId)
     ) {
       hipConnector.getInactiveClientRelationships(taxIdentifier, service)
-    }
-    else { // otherwise...
+    } else { // otherwise...
       logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
       Future.successful(Seq.empty)
     }

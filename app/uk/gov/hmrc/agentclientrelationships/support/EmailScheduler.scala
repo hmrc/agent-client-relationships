@@ -47,8 +47,7 @@ class EmailScheduler @Inject() (
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
-)
-extends Logging {
+) extends Logging {
 
   if (appConfig.emailSchedulerEnabled) {
 
@@ -93,8 +92,7 @@ extends Logging {
       receiver = expiredEmailActorRef,
       msg = "<start>"
     )
-  }
-  else {
+  } else {
     logger.info("[EmailScheduler] Scheduler is disabled")
   }
 }
@@ -107,9 +105,8 @@ class WarningEmailActor(
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
-)
-extends Actor
-with Logging {
+) extends Actor
+    with Logging {
 
   def receive: Receive = { case _ =>
     mongoLockService.schedulerLock("WarningEmailSchedule") {
@@ -122,12 +119,12 @@ with Logging {
             .sendWarningEmail(aggregationResult.invitations)(RequestSupport.thereIsNoRequest)
             .map {
               case true =>
-                aggregationResult
-                  .invitations
+                aggregationResult.invitations
                   .foreach { invitation =>
                     invitationsRepository.updateWarningEmailSent(invitation.invitationId)
                   }
-              case false => logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${aggregationResult.arn}")
+              case false =>
+                logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${aggregationResult.arn}")
             }
           ()
         }
@@ -144,9 +141,8 @@ class ExpiredEmailActor(
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
-)
-extends Actor
-with Logging {
+) extends Actor
+    with Logging {
 
   def receive: Receive = { case _ =>
     mongoLockService.schedulerLock("ExpiredEmailSchedule") {
@@ -160,7 +156,7 @@ with Logging {
           emailService
             .sendExpiredEmail(invitation)(NoRequest)
             .map {
-              case true => invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
+              case true  => invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
               case false =>
                 // TODO: Improve error handling to provide clearer insights into why the email was not sent.
                 // Throw an exception in EmailConnector so it can fail properly.

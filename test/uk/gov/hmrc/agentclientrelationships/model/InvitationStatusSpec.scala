@@ -21,8 +21,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus.unapply
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class InvitationStatusSpec
-extends UnitSpec {
+class InvitationStatusSpec extends UnitSpec {
 
   "InvitationStatus" should {
 

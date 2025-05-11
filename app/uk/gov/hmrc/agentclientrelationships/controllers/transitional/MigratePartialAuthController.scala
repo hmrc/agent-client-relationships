@@ -35,8 +35,8 @@ class MigratePartialAuthController @Inject() (
   invitationService: InvitationService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-extends BackendController(cc)
-with Logging {
+    extends BackendController(cc)
+    with Logging {
 
   def migratePartialAuth: Action[AnyContent] = Action.async { implicit request =>
     val invitation = request.body.asJson.get.as[Invitation](Invitation.acaReads)
@@ -46,7 +46,9 @@ with Logging {
         .map(_ => NoContent)
         .recoverWith {
           case e: MongoWriteException if e.getError.getCode.equals(11000) =>
-            logger.warn(s"Duplicate found for invitationId ${invitation.invitationId} so record already there and continuing with deletion")
+            logger.warn(
+              s"Duplicate found for invitationId ${invitation.invitationId} so record already there and continuing with deletion"
+            )
             Future(NoContent)
           case other => Future.failed(other)
         }

@@ -31,7 +31,10 @@ trait ClientDetailsStub {
           """.stripMargin))
   )
 
-  def givenItsaDesignatoryDetailsError(nino: String, status: Int): StubMapping = stubFor(
+  def givenItsaDesignatoryDetailsError(
+    nino: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/citizen-details/$nino/designatory-details")).willReturn(aResponse().withStatus(status))
   )
 
@@ -52,7 +55,10 @@ trait ClientDetailsStub {
           """.stripMargin))
   )
 
-  def givenItsaCitizenDetailsError(nino: String, status: Int): StubMapping = stubFor(
+  def givenItsaCitizenDetailsError(
+    nino: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/citizen-details/nino/$nino")).willReturn(aResponse().withStatus(status))
   )
 
@@ -78,11 +84,17 @@ trait ClientDetailsStub {
           """.stripMargin))
   )
 
-  def givenVatCustomerInfoError(vrn: String, status: Int): StubMapping = stubFor(
+  def givenVatCustomerInfoError(
+    vrn: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/vat/customer/vrn/$vrn/information")).willReturn(aResponse().withStatus(status))
   )
 
-  def givenTrustDetailsExist(identifier: String, identifierType: String): StubMapping = stubFor(
+  def givenTrustDetailsExist(
+    identifier: String,
+    identifierType: String
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/trusts/agent-known-fact-check/$identifierType/$identifier")).willReturn(aResponse().withBody(s"""
                                                                                                                       |{
                                                                                                                       |  "trustDetails": {
@@ -92,7 +104,11 @@ trait ClientDetailsStub {
             """.stripMargin))
   )
 
-  def givenTrustDetailsError(identifier: String, identifierType: String, status: Int): StubMapping = stubFor(
+  def givenTrustDetailsError(
+    identifier: String,
+    identifierType: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/trusts/agent-known-fact-check/$identifierType/$identifier"))
       .willReturn(aResponse().withStatus(status))
   )
@@ -114,7 +130,10 @@ trait ClientDetailsStub {
             """.stripMargin))
   )
 
-  def givenCgtDetailsError(cgtRef: String, status: Int): StubMapping = stubFor(
+  def givenCgtDetailsError(
+    cgtRef: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef")).willReturn(aResponse().withStatus(status))
   )
 
@@ -139,7 +158,10 @@ trait ClientDetailsStub {
             """.stripMargin))
   )
 
-  def givenPptDetailsError(pptRef: String, status: Int): StubMapping = stubFor(
+  def givenPptDetailsError(
+    pptRef: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/plastic-packaging-tax/subscriptions/PPT/$pptRef/display"))
       .willReturn(aResponse().withStatus(status))
   )
@@ -202,7 +224,11 @@ trait ClientDetailsStub {
             """.stripMargin))
   )
 
-  def givenPillar2DetailsError(plrId: String, status: Int): StubMapping = stubFor(
+  def givenPillar2DetailsError(
+    plrId: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/pillar2/subscription/$plrId")).willReturn(aResponse().withStatus(status))
   )
+
 }

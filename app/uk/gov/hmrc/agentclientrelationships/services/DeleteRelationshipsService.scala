@@ -60,8 +60,8 @@ class DeleteRelationshipsService @Inject() (
   invitationService: InvitationService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Monitoring
-with Logging {
+    extends Monitoring
+    with Logging {
 
   private val recoveryTimeout: Int = appConfig.recoveryTimeout
 
@@ -106,10 +106,10 @@ with Logging {
         removed <- removeDeleteRecord(arn, enrolmentKey)
         if removed
         _ <- setRelationshipEnded(
-          arn,
-          enrolmentKey,
-          endedBy.getOrElse("HMRC")
-        )
+               arn,
+               enrolmentKey,
+               endedBy.getOrElse("HMRC")
+             )
       } yield ()
     }
 
@@ -124,8 +124,7 @@ with Logging {
                 if (isDone) {
                   auditService.sendTerminateRelationshipAuditEvent()
                   removeDeleteRecord(arn, enrolmentKey)
-                }
-                else
+                } else
                   Future.unit
             } yield isDone
           case None =>
@@ -166,7 +165,10 @@ with Logging {
       for {
         etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
         if etmpSyncStatusInProgress == DbUpdateSucceeded
-        maybeResponse <- hipConnector.deleteAgentRelationship(enrolmentKey, arn) // TODO DG oneTaxIdentifier may not return what we want for CBC!
+        maybeResponse <- hipConnector.deleteAgentRelationship(
+                           enrolmentKey,
+                           arn
+                         ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
         _ =
           if (maybeResponse.nonEmpty)
             auditData.set(etmpRelationshipRemovedKey, true)
@@ -270,17 +272,17 @@ with Logging {
         maybeAgentUser <- agentUserService.getAgentAdminAndSetAuditData(arn)
         agentUser = maybeAgentUser.fold(error => throw RelationshipNotFound(error), identity)
         _ <- checkService
-          .checkForRelationship(
-            arn,
-            None,
-            enrolmentKey
-          )
-          .flatMap {
-            case true => es.deallocateEnrolmentFromAgent(agentUser.groupId, enrolmentKey)
-            case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
-          }
+               .checkForRelationship(
+                 arn,
+                 None,
+                 enrolmentKey
+               )
+               .flatMap {
+                 case true  => es.deallocateEnrolmentFromAgent(agentUser.groupId, enrolmentKey)
+                 case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+               }
         _ = auditData.set(enrolmentDeallocatedKey, true)
-        _ <- agentUserClientDetailsConnector.cacheRefresh(arn)
+        _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)
         esSyncStatusSuccess <- updateEsSyncStatus(Success)
       } yield esSyncStatusSuccess
     ).recoverWith(
@@ -330,8 +332,7 @@ with Logging {
               auditData.set("initialDeleteDateTime", record.dateTime)
               auditData.set("numberOfAttempts", record.numberOfAttempts + 1)
               if (
-                record
-                  .dateTime
+                record.dateTime
                   .plusSeconds(recoveryTimeout)
                   .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
               ) {
@@ -343,8 +344,7 @@ with Logging {
                     else
                       Future.successful(())
                 } yield isDone
-              }
-              else {
+              } else {
                 logger.error(s"Terminating recovery of failed de-authorisation $record because timeout has passed.")
                 auditData.set("abandonmentReason", "timeout")
                 auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
@@ -382,10 +382,10 @@ with Logging {
               _ <- deleteEsRecord(arn, enrolmentKey)
               _ <- deleteEtmpRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
-                arn,
-                enrolmentKey,
-                deleteRecord.relationshipEndedBy.getOrElse("HMRC")
-              )
+                     arn,
+                     enrolmentKey,
+                     deleteRecord.relationshipEndedBy.getOrElse("HMRC")
+                   )
             } yield true
           case (false, true) =>
             logger.warn(
@@ -397,10 +397,10 @@ with Logging {
               _ = auditData.set(etmpRelationshipRemovedKey, true)
               _ <- deleteEsRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
-                arn,
-                enrolmentKey,
-                deleteRecord.relationshipEndedBy.getOrElse("HMRC")
-              )
+                     arn,
+                     enrolmentKey,
+                     deleteRecord.relationshipEndedBy.getOrElse("HMRC")
+                   )
             } yield true
           case (true, false) =>
             for {
@@ -408,10 +408,10 @@ with Logging {
               _ = auditData.set(enrolmentDeallocatedKey, true)
               _ <- deleteEtmpRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
-                arn,
-                enrolmentKey,
-                deleteRecord.relationshipEndedBy.getOrElse("HMRC")
-              )
+                     arn,
+                     enrolmentKey,
+                     deleteRecord.relationshipEndedBy.getOrElse("HMRC")
+                   )
             } yield true
           case (false, false) =>
             logger.warn(s"resumeRelationshipRemoval called for ${arn.value}, $enrolmentKey when no recovery needed")
@@ -427,7 +427,7 @@ with Logging {
     (
       for {
         clientIdTypeStr <- deleteRecord.clientIdentifierType
-        clientIdStr <- deleteRecord.clientIdentifier
+        clientIdStr     <- deleteRecord.clientIdentifier
         service <- appConfig.supportedServicesWithoutPir.find(_.supportedClientIdType.enrolmentId == clientIdTypeStr)
       } yield EnrolmentKey(service.id, Seq(Identifier(clientIdTypeStr, clientIdStr)))
     ).getOrElse(
@@ -440,8 +440,8 @@ with Logging {
   def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
     maybeGroup match {
       case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => Some("Client")
-      case Some(AffinityGroup.Agent) => Some("Agent")
-      case _ => Some("HMRC")
+      case Some(AffinityGroup.Agent)                                         => Some("Agent")
+      case _                                                                 => Some("HMRC")
     }
 
   def setRelationshipEnded(

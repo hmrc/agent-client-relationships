@@ -42,10 +42,7 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AuditServiceSpec
-extends UnitSpec
-with MockitoSugar
-with Eventually {
+class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
   implicit val patience: PatienceConfig = PatienceConfig(
     timeout = scaled(Span(500, Millis)),
@@ -53,8 +50,8 @@ with Eventually {
   )
 
   val request: RequestHeader = FakeRequest("GET", "/path").withHeaders(
-    HeaderNames.xSessionId -> "dummy session id",
-    HeaderNames.xRequestId -> "dummy request id",
+    HeaderNames.xSessionId    -> "dummy session id",
+    HeaderNames.xRequestId    -> "dummy request id",
     HeaderNames.authorisation -> "dummy auth"
   )
 

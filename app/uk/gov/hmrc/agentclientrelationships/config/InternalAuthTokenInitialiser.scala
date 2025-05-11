@@ -38,8 +38,7 @@ abstract class InternalAuthTokenInitialiser {
 }
 
 @Singleton
-class NoOpInternalAuthTokenInitialiser @Inject()
-extends InternalAuthTokenInitialiser {
+class NoOpInternalAuthTokenInitialiser @Inject() extends InternalAuthTokenInitialiser {
   override val initialised: Future[Done] = Future.successful(Done)
 }
 
@@ -50,9 +49,8 @@ class InternalAuthTokenInitialiserImpl @Inject() (
 )(implicit
   ec: ExecutionContext,
   clock: Clock
-)
-extends InternalAuthTokenInitialiser
-with Logging {
+) extends InternalAuthTokenInitialiser
+    with Logging {
 
   override val initialised: Future[Done] =
     for {
@@ -65,8 +63,7 @@ with Logging {
     if (isValid) {
       logger.info("Auth token is already valid")
       Future.successful(Done)
-    }
-    else {
+    } else {
       createClientAuthToken()
     }
   }
@@ -77,14 +74,14 @@ with Logging {
       .post(url"${appConfig.internalAuthBaseUrl}/test-only/token")(HeaderCarrier())
       .withBody(
         Json.obj(
-          "token" -> appConfig.internalAuthToken,
+          "token"     -> appConfig.internalAuthToken,
           "principal" -> appConfig.appName,
           "permissions" ->
             Seq(
               Json.obj(
-                "resourceType" -> "agent-assurance",
+                "resourceType"     -> "agent-assurance",
                 "resourceLocation" -> "agent-record-with-checks/arn",
-                "actions" -> Seq("WRITE")
+                "actions"          -> Seq("WRITE")
               )
             )
         )
@@ -94,8 +91,7 @@ with Logging {
         if (response.status == CREATED) {
           logger.info("Auth token initialised")
           Future.successful(Done)
-        }
-        else {
+        } else {
           Future.failed(new RuntimeException("Unable to initialise internal-auth token"))
         }
       }

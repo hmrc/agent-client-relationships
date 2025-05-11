@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -36,7 +37,11 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
   val testName1 = "testName1"
   val testName2 = "testName2"
   val testUid = "testUid"
-  val testRecord: AgentReferenceRecord = AgentReferenceRecord(testUid, testArn, Seq(testName1))
+  val testRecord: AgentReferenceRecord = AgentReferenceRecord(
+    testUid,
+    testArn,
+    Seq(testName1)
+  )
 
   s"GET $fetchOrCreateUrl" should {
     "return Unauthorised" when {

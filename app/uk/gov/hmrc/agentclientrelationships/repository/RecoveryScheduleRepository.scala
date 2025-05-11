@@ -61,15 +61,15 @@ trait RecoveryScheduleRepository {
 
 @Singleton
 class MongoRecoveryScheduleRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-extends PlayMongoRepository[RecoveryRecord](
-  mongoComponent = mongoComponent,
-  collectionName = "recovery-schedule",
-  domainFormat = RecoveryRecord.formats,
-  indexes = Seq(IndexModel(ascending("uid", "runAt"), IndexOptions().unique(true))),
-  replaceIndexes = true
-)
-with RecoveryScheduleRepository
-with Logging {
+    extends PlayMongoRepository[RecoveryRecord](
+      mongoComponent = mongoComponent,
+      collectionName = "recovery-schedule",
+      domainFormat = RecoveryRecord.formats,
+      indexes = Seq(IndexModel(ascending("uid", "runAt"), IndexOptions().unique(true))),
+      replaceIndexes = true
+    )
+    with RecoveryScheduleRepository
+    with Logging {
 
   override def read: Future[RecoveryRecord] = collection
     .find()

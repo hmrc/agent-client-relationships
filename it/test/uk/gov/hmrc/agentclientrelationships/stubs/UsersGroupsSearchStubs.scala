@@ -17,17 +17,26 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
+import com.github.tomakehurst.wiremock.matching.MatchResult
+import com.github.tomakehurst.wiremock.matching.UrlPattern
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import uk.gov.hmrc.agentclientrelationships.connectors.{GroupInfo, UserDetails}
+import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
+import uk.gov.hmrc.agentclientrelationships.connectors.UserDetails
 import uk.gov.hmrc.domain.AgentCode
 
 trait UsersGroupsSearchStubs {
 
   private val ugsBaseUrl = s"/users-groups-search"
 
-  def givenGroupInfo(groupId: String, agentCode: String) = {
-    val groupInfo = GroupInfo(groupId, Some("Agent"), Some(AgentCode(agentCode)))
+  def givenGroupInfo(
+    groupId: String,
+    agentCode: String
+  ) = {
+    val groupInfo = GroupInfo(
+      groupId,
+      Some("Agent"),
+      Some(AgentCode(agentCode))
+    )
     stubFor(
       get(urlEqualTo(s"$ugsBaseUrl/groups/$groupId"))
         .willReturn(aResponse().withBody(GroupInfo.formats.writes(groupInfo).toString()))
@@ -35,7 +44,11 @@ trait UsersGroupsSearchStubs {
   }
 
   def givenGroupInfoNoAgentCode(groupId: String) = {
-    val groupInfo = GroupInfo(groupId, Some("Agent"), None)
+    val groupInfo = GroupInfo(
+      groupId,
+      Some("Agent"),
+      None
+    )
     stubFor(
       get(urlEqualTo(s"$ugsBaseUrl/groups/$groupId"))
         .willReturn(aResponse().withBody(GroupInfo.formats.writes(groupInfo).toString()))
@@ -85,15 +98,23 @@ trait UsersGroupsSearchStubs {
     get(urlEqualTo(s"/users-groups-search/groups/$groupId")).willReturn(aResponse().withStatus(404))
   )
 
-  def givenAdminUser(groupId: String, userId: String) = givenAgentGroupWithUsers(
+  def givenAdminUser(
+    groupId: String,
+    userId: String
+  ) = givenAgentGroupWithUsers(
     groupId,
     List(UserDetails(userId = Some(userId), credentialRole = Some("Admin")))
   )
 
-  def givenAgentGroupWithUsers(groupId: String, users: Seq[UserDetails]): StubMapping = stubFor(
+  def givenAgentGroupWithUsers(
+    groupId: String,
+    users: Seq[UserDetails]
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/users-groups-search/groups/$groupId/users")).willReturn(aResponse().withBody(s"""
                                                                                                       |[
-                                                                                                      |    ${users.map(UserDetails.formats.writes).mkString(",")}
+                                                                                                      |    ${users
+      .map(UserDetails.formats.writes)
+      .mkString(",")}
                                                                                                       |]
           """.stripMargin))
   )

@@ -40,6 +40,7 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -63,9 +64,8 @@ class HipConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-)
-extends HttpApiMonitor
-with Logging {
+) extends HttpApiMonitor
+    with Logging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
@@ -149,9 +149,9 @@ with Logging {
       case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.BAD_REQUEST | Status.NOT_FOUND => None
+          case Status.BAD_REQUEST | Status.NOT_FOUND                                         => None
           case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => None
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => None
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => None
           case _ =>
             logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
             // TODO WG - check - that looks so wrong to rerun any value, should be an exception
@@ -183,8 +183,10 @@ with Logging {
       .leftMap[RelationshipFailureResponse] { errorResponse =>
         errorResponse.statusCode match {
           case Status.NOT_FOUND => RelationshipFailureResponse.RelationshipNotFound
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => RelationshipFailureResponse.RelationshipNotFound
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => RelationshipFailureResponse.RelationshipSuspended
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") =>
+            RelationshipFailureResponse.RelationshipNotFound
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") =>
+            RelationshipFailureResponse.RelationshipSuspended
           case Status.BAD_REQUEST =>
             logger.error(s"Error in HIP 'GetActiveClientRelationships' with error: ${errorResponse.getMessage}")
             RelationshipFailureResponse.RelationshipBadRequest
@@ -218,12 +220,13 @@ with Logging {
       url,
       headers.subscriptionHeaders
     ).map {
-      case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
+      case Right(response) =>
+        (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
       case Left(errorResponse) =>
         errorResponse.statusCode match {
-          case Status.BAD_REQUEST | Status.NOT_FOUND => Nil
+          case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
           case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => Nil
+          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
           case _ =>
             logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
             Seq.empty[InactiveRelationship]
@@ -242,9 +245,7 @@ with Logging {
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
 
     val url =
-      new URL(
-        s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?arn=$encodedAgentId&isAnAgent=true&activeOnly=false&regime=$regime&dateFrom=$from&dateTo=$now"
-      )
+      url"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?arn=$encodedAgentId&isAnAgent=true&activeOnly=false&regime=$regime&dateFrom=$from&dateTo=$now"
 
     val cacheKey = s"${arn.value}-$now"
     agentCacheProvider.agentTrackPageCache(cacheKey) {
@@ -253,12 +254,13 @@ with Logging {
         url,
         headers.subscriptionHeaders
       ).map {
-        case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
+        case Right(response) =>
+          (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
         case Left(errorResponse) =>
           errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND => Nil
+            case Status.BAD_REQUEST | Status.NOT_FOUND                                         => Nil
             case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => Nil
+            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009")       => Nil
             case _ =>
               logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
               Seq.empty[InactiveRelationship]
@@ -347,7 +349,9 @@ with Logging {
               if errorResponse.getMessage.contains("008") | errorResponse.getMessage.contains("006") =>
             Left(ClientDetailsNotFound)
           case status =>
-            logger.warn(s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}")
+            logger.warn(
+              s"Unexpected error during 'getItsaBusinessDetails', statusCode=$status message:${errorResponse.getMessage}"
+            )
             Left(
               ErrorRetrievingClientDetails(
                 status,
@@ -364,7 +368,10 @@ with Logging {
     getHeaders: () => Seq[(String, String)]
   )(implicit request: RequestHeader): Future[Either[UpstreamErrorResponse, HttpResponse]] =
     monitor(s"ConsumedAPI-HIP-$apiName-GET") {
-      httpClient.get(url).setHeader(getHeaders(): _*).execute[Either[UpstreamErrorResponse, HttpResponse]]
+      httpClient
+        .get(url)
+        .setHeader(getHeaders(): _*)
+        .execute[Either[UpstreamErrorResponse, HttpResponse]]
     }
 
   private def postWithHipHeaders(
@@ -386,7 +393,7 @@ with Logging {
 
   private[connectors] def isActive(r: ActiveRelationship): Boolean =
     r.dateTo match {
-      case None => true
+      case None    => true
       case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 
@@ -395,7 +402,7 @@ with Logging {
       case None => false
       case Some(d) =>
         d.isBefore(Instant.now().atZone(ZoneOffset.UTC).toLocalDate) ||
-        d.equals(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
+          d.equals(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 
   private def relationshipHipUrl(
@@ -458,14 +465,14 @@ with Logging {
   private def getRegimeFor(clientId: TaxIdentifier): String =
     clientId match {
       case MtdItId(_) => "ITSA"
-      case Vrn(_) => "VATC"
-      case Utr(_) => "TRS"
-      case Urn(_) => "TRS"
-      case CgtRef(_) => "CGT"
-      case PptRef(_) => "PPT"
-      case CbcId(_) => "CBC"
-      case PlrId(_) => "PLR"
-      case _ => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
+      case Vrn(_)     => "VATC"
+      case Utr(_)     => "TRS"
+      case Urn(_)     => "TRS"
+      case CgtRef(_)  => "CGT"
+      case PptRef(_)  => "PPT"
+      case CbcId(_)   => "CBC"
+      case PlrId(_)   => "PLR"
+      case _          => throw new IllegalArgumentException(s"Tax identifier not supported $clientId")
     }
 
   private def createAgentRelationshipHipInputJson(
@@ -505,13 +512,13 @@ with Logging {
   private def getAuthProfile(service: String): String =
     service match {
       case HMRCMTDITSUPP => "ITSAS001"
-      case _ => "ALL00001"
+      case _             => "ALL00001"
     }
 
   private def getIsExclusiveAgent(service: String): Boolean =
     service match {
       case HMRCMTDITSUPP => false
-      case _ => true
+      case _             => true
     }
 
   private val includeIdTypeIfNeeded: EnrolmentKey => JsObject => JsObject =
@@ -533,7 +540,7 @@ with Logging {
           clientId match {
             case Utr(_) => request + ((idType, JsString("UTR")))
             case Urn(_) => request + ((idType, JsString("URN")))
-            case e => throw new Exception(s"unsupported tax identifier $e for regime TRS")
+            case e      => throw new Exception(s"unsupported tax identifier $e for regime TRS")
           }
         case Some("CGT") =>
           request +

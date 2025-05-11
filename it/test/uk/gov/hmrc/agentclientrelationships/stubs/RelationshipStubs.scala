@@ -17,12 +17,19 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.domain.Nino
 
 trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
 
-  def givenPrincipalAgentUser(arn: Arn, groupId: String, userId: String = "any") = {
+  def givenPrincipalAgentUser(
+    arn: Arn,
+    groupId: String,
+    userId: String = "any"
+  ) = {
     givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), groupId)
     givenPrincipalUserIdExistFor(agentEnrolmentKey(arn), userId)
   }
@@ -35,7 +42,10 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
     EnrolmentKey(Service.MtdItSupp, mtdItId)
   )
 
-  def givenDelegatedGroupIdsExistForMtdItId(mtdItId: MtdItId, ids: String*) = givenDelegatedGroupIdsExistFor(
+  def givenDelegatedGroupIdsExistForMtdItId(
+    mtdItId: MtdItId,
+    ids: String*
+  ) = givenDelegatedGroupIdsExistFor(
     EnrolmentKey(Service.MtdIt, mtdItId),
     Set("bar", "foo") ++ ids.toSet
   )
@@ -53,42 +63,66 @@ trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchS
     Set("bar", "foo")
   )
 
-  def givenMTDITEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) = givenEnrolmentAllocationSucceeds(
+  def givenMTDITEnrolmentAllocationSucceeds(
+    mtdItId: MtdItId,
+    agentCode: String
+  ) = givenEnrolmentAllocationSucceeds(
     "foo",
     "any",
     EnrolmentKey(Service.MtdIt, mtdItId),
     agentCode
   )
 
-  def givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId: MtdItId, agentCode: String) = givenEnrolmentAllocationSucceeds(
+  def givenMTDITSUPPEnrolmentAllocationSucceeds(
+    mtdItId: MtdItId,
+    agentCode: String
+  ) = givenEnrolmentAllocationSucceeds(
     "foo",
     "any",
     EnrolmentKey(Service.MtdItSupp, mtdItId),
     agentCode
   )
 
-  def givenMTDVATEnrolmentAllocationSucceeds(vrn: Vrn, agentCode: String) = givenEnrolmentAllocationSucceeds(
+  def givenMTDVATEnrolmentAllocationSucceeds(
+    vrn: Vrn,
+    agentCode: String
+  ) = givenEnrolmentAllocationSucceeds(
     "foo",
     "any",
     EnrolmentKey(Service.Vat, vrn),
     agentCode
   )
 
-  def givenDelegatedGroupIdsExistForEnrolmentKey(enrolmentKey: EnrolmentKey, ids: String*) =
-    givenDelegatedGroupIdsExistFor(enrolmentKey, Set("bar", "foo") ++ ids.toSet)
+  def givenDelegatedGroupIdsExistForEnrolmentKey(
+    enrolmentKey: EnrolmentKey,
+    ids: String*
+  ) = givenDelegatedGroupIdsExistFor(enrolmentKey, Set("bar", "foo") ++ ids.toSet)
 
   def givenDelegatedGroupIdsNotExistForEnrolmentKey(enrolmentKey: EnrolmentKey) = givenDelegatedGroupIdsNotExistFor(
     enrolmentKey
   )
 
-  def givenServiceEnrolmentAllocationSucceeds(enrolmentKey: EnrolmentKey, agentCode: String) =
-    givenEnrolmentAllocationSucceeds("foo", "any", enrolmentKey, agentCode)
+  def givenServiceEnrolmentAllocationSucceeds(
+    enrolmentKey: EnrolmentKey,
+    agentCode: String
+  ) = givenEnrolmentAllocationSucceeds(
+    "foo",
+    "any",
+    enrolmentKey,
+    agentCode
+  )
 
-  def givenAgentIsAllocatedAndAssignedToClient(enrolmentKey: EnrolmentKey, agentCode: String) =
-    givenDelegatedGroupIdsExistFor(enrolmentKey, Set("foo"))
+  def givenAgentIsAllocatedAndAssignedToClient(
+    enrolmentKey: EnrolmentKey,
+    agentCode: String
+  ) = givenDelegatedGroupIdsExistFor(enrolmentKey, Set("foo"))
 
-  def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn: Vrn, agentCode: String) = {
+  def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(
+    vrn: Vrn,
+    agentCode: String
+  ) = {
     givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"), Set("oldvatfoo"))
     givenGroupInfo("oldvatfoo", agentCode)
   }
+
 }

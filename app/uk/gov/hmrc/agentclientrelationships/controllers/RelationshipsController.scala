@@ -62,8 +62,8 @@ class RelationshipsController @Inject() (
   validationService: ValidationService,
   override val controllerComponents: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-extends BackendController(controllerComponents)
-with AuthActions {
+    extends BackendController(controllerComponents)
+    with AuthActions {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
@@ -85,9 +85,9 @@ with AuthActions {
         userId
       )
       .map {
-        case CheckRelationshipFound => Ok
+        case CheckRelationshipFound             => Ok
         case CheckRelationshipNotFound(message) => NotFound(toJson(message))
-        case CheckRelationshipInvalidRequest => BadRequest
+        case CheckRelationshipInvalidRequest    => BadRequest
       }
   }
 
@@ -174,7 +174,7 @@ with AuthActions {
                   taxIdentifier match {
                     // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
                     case nino @ Nino(_) => ifOrHipConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
-                    case _ => Future.successful(Some(enrolmentKey))
+                    case _              => Future.successful(Some(enrolmentKey))
                   }
                 _ <-
                   maybeEk.fold {
@@ -228,7 +228,7 @@ with AuthActions {
         .getActiveRelationshipsForClient(clientId, Service(service))
         .map {
           case Some(relationship) => Ok(Json.toJson(relationship))
-          case None => NotFound
+          case None               => NotFound
         }
     }
   }
@@ -251,13 +251,12 @@ with AuthActions {
             val relationships =
               if (service == Service.MtdIt.id || service == Service.MtdItSupp.id) {
                 findService.getItsaRelationshipForClient(Nino(taxIdentifier.value), Service(service))
-              }
-              else {
+              } else {
                 findService.getActiveRelationshipsForClient(taxIdentifier, Service(service))
               }
             relationships.map {
               case Some(relationship) => Ok(Json.toJson(relationship))
-              case None => NotFound
+              case None               => NotFound
             }
           }
         case Left(error) => Future.successful(BadRequest(error))
@@ -320,15 +319,13 @@ with AuthActions {
                     auditData.set(cesaRelationshipKey, matching.nonEmpty)
                     auditService.sendCheckCesaAndPartialAuthAuditEvent()
                     NoContent // a legacy SA relationship was found and it is mapped to the Arn
-                  }
-                  else
+                  } else
                     Ok // A legacy SA relationship was found but it is not mapped to the Arn
                 }
                 .recover {
                   case e: UpstreamErrorResponse if e.statusCode == 404 => Ok
                 }
-            }
-            else
+            } else
               Future successful NotFound // No legacy SA relationship was found
           }
       }

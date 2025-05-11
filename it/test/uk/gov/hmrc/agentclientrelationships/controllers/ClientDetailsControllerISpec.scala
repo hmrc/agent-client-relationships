@@ -16,21 +16,32 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
+import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsOrchestratorService, ClientDetailsService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, HipStub}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
+import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
+import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub with HipStub {
@@ -41,8 +52,7 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
-  val checkRelationshipsService: CheckRelationshipsOrchestratorService = app
-    .injector
+  val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector
     .instanceOf[CheckRelationshipsOrchestratorService]
 
   val controller =
@@ -251,7 +261,12 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            partialAuthRepo.create(Instant.now(), Arn("XARN1234567"), MtdItSupp.toString(), Nino("AA000001B"))
+            partialAuthRepo.create(
+              Instant.now(),
+              Arn("XARN1234567"),
+              MtdItSupp.toString(),
+              Nino("AA000001B")
+            )
           )
 
           val result = doGetRequest(request.uri)
@@ -444,4 +459,5 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
       result.status shouldBe 401
     }
   }
+
 }

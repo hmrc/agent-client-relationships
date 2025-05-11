@@ -38,27 +38,27 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class InvitationServiceSpec
-extends UnitSpec
-with ResettingMockitoSugar
-with MockInvitationsRepository
-with MockPartialAuthRepository
-with MockIFConnector
-with MockAgentAssuranceConnector
-with MockEmailService {
+    extends UnitSpec
+    with ResettingMockitoSugar
+    with MockInvitationsRepository
+    with MockPartialAuthRepository
+    with MockIFConnector
+    with MockAgentAssuranceConnector
+    with MockEmailService {
 
   implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
   implicit val request: RequestHeader = FakeRequest()
   val mockAppConfig: AppConfig = mock[AppConfig]
 
   object TestService
-  extends InvitationService(
-    mockInvitationsRepository,
-    mockPartialAuthRepository,
-    mockIfOrHipConnector,
-    mockAgentAssuranceConnector,
-    mockEmailService,
-    mockAppConfig
-  )
+      extends InvitationService(
+        mockInvitationsRepository,
+        mockPartialAuthRepository,
+        mockIfOrHipConnector,
+        mockAgentAssuranceConnector,
+        mockEmailService,
+        mockAppConfig
+      )
 
   val testVrn: Vrn = Vrn("1234567890")
   val testArn1 = "ARN1234567891"

@@ -19,8 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class CgtSubscriptionDetailsSpec
-extends UnitSpec {
+class CgtSubscriptionDetailsSpec extends UnitSpec {
 
   "CgtSubscriptionDetails" should {
 
@@ -33,8 +32,8 @@ extends UnitSpec {
               "typeOfPersonDetails" ->
                 Json.obj(
                   "typeOfPerson" -> "Individual",
-                  "firstName" -> "Erling",
-                  "lastName" -> "Haal"
+                  "firstName"    -> "Erling",
+                  "lastName"     -> "Haal"
                 ),
               "addressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
             )
@@ -53,7 +52,7 @@ extends UnitSpec {
           "subscriptionDetails" ->
             Json.obj(
               "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
-              "addressDetails" -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
+              "addressDetails"      -> Json.obj("postalCode" -> "AA1 1AA", "countryCode" -> "GB")
             )
         )
 
@@ -70,7 +69,7 @@ extends UnitSpec {
           "subscriptionDetails" ->
             Json.obj(
               "typeOfPersonDetails" -> Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "CFG Solutions"),
-              "addressDetails" -> Json.obj("countryCode" -> "GB")
+              "addressDetails"      -> Json.obj("countryCode" -> "GB")
             )
         )
 

@@ -25,8 +25,7 @@ import java.util.Locale
 
 object DateTimeHelper {
 
-  def formatISOInstantSeconds(now: Instant): String = DateTimeFormatter
-    .ISO_INSTANT
+  def formatISOInstantSeconds(now: Instant): String = DateTimeFormatter.ISO_INSTANT
     .format(now.truncatedTo(ChronoUnit.SECONDS))
 
   private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)

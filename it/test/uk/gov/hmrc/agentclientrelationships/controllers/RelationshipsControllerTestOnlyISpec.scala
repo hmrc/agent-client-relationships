@@ -23,22 +23,27 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRelationshipCopyRecordRepository, RelationshipCopyRecord}
+import uk.gov.hmrc.agentclientrelationships.repository.MongoRelationshipCopyRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentclientrelationships.support.{Http, MongoApp, UnitSpec, WireMockSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, Service}
+import uk.gov.hmrc.agentclientrelationships.support.Http
+import uk.gov.hmrc.agentclientrelationships.support.MongoApp
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 
 class RelationshipsControllerTestOnlyISpec
-extends UnitSpec
-with MongoApp
-with GuiceOneServerPerSuite
-with WireMockSupport
-with DesStubs
-with MappingStubs
-with DataStreamStub
-with IntegrationPatience {
+    extends UnitSpec
+    with MongoApp
+    with GuiceOneServerPerSuite
+    with WireMockSupport
+    with DesStubs
+    with MappingStubs
+    with DataStreamStub
+    with IntegrationPatience {
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -101,4 +106,5 @@ with IntegrationPatience {
     }
 
   }
+
 }

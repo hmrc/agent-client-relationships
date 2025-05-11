@@ -47,26 +47,26 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class StrideClientDetailsServiceSpec
-extends UnitSpec
-with ResettingMockitoSugar
-with MockAgentFiRelationshipConnector
-with MockAgentAssuranceConnector
-with MockClientDetailsService
-with MockFindRelationshipsService
-with MockPartialAuthRepository
-with MockInvitationsRepository
-with MockValidationService {
+    extends UnitSpec
+    with ResettingMockitoSugar
+    with MockAgentFiRelationshipConnector
+    with MockAgentAssuranceConnector
+    with MockClientDetailsService
+    with MockFindRelationshipsService
+    with MockPartialAuthRepository
+    with MockInvitationsRepository
+    with MockValidationService {
 
   object TestService
-  extends StrideClientDetailsService(
-    invitationsRepository = mockInvitationsRepository,
-    partialAuthRepository = mockPartialAuthRepository,
-    agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
-    clientDetailsService = mockClientDetailsService,
-    agentAssuranceConnector = mockAgentAssuranceConnector,
-    findRelationshipsService = mockFindRelationshipService,
-    validationService = mockValidationService
-  )
+      extends StrideClientDetailsService(
+        invitationsRepository = mockInvitationsRepository,
+        partialAuthRepository = mockPartialAuthRepository,
+        agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
+        clientDetailsService = mockClientDetailsService,
+        agentAssuranceConnector = mockAgentAssuranceConnector,
+        findRelationshipsService = mockFindRelationshipService,
+        validationService = mockValidationService
+      )
 
   val testArn: Arn = Arn("ARN1234567890")
   val testArn2: Arn = Arn("ARN1234567891")

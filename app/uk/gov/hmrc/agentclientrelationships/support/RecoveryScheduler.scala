@@ -44,7 +44,7 @@ class RecoveryScheduler @Inject() (
   actorSystem: ActorSystem,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Logging {
+    extends Logging {
 
   val recoveryInterval = appConfig.recoveryInterval
   val recoveryEnable = appConfig.recoveryEnabled
@@ -59,15 +59,13 @@ extends Logging {
         )
       }
     )
-    actorSystem
-      .scheduler
+    actorSystem.scheduler
       .scheduleOnce(
         5.seconds,
         taskActor,
         "<start>"
       )
-  }
-  else
+  } else
     logger.warn("Recovery job scheduler not enabled.")
 
   def recover: Future[Unit] = deleteRelationshipsService.tryToResume(new AuditData).map(_ => ())
@@ -79,12 +77,11 @@ class TaskActor(
   recoveryInterval: Int,
   recover: => Future[Unit]
 )(implicit ec: ExecutionContext)
-extends Actor
-with Logging {
+    extends Actor
+    with Logging {
 
   def receive: PartialFunction[Any, Unit] = { case uid: String =>
-    mongoRecoveryScheduleRepository
-      .read
+    mongoRecoveryScheduleRepository.read
       .foreach { case RecoveryRecord(recordUid, runAt) =>
         val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
         if (uid == recordUid) {
@@ -100,9 +97,7 @@ with Logging {
           mongoRecoveryScheduleRepository
             .write(newUid, nextRunAt)
             .map { _ =>
-              context
-                .system
-                .scheduler
+              context.system.scheduler
                 .scheduleOnce(
                   delay.seconds,
                   self,
@@ -111,8 +106,7 @@ with Logging {
               logger.info("About to start recovery job.")
               recover
             }
-        }
-        else {
+        } else {
           val dateTime =
             if (runAt.isBefore(now))
               now
@@ -121,9 +115,7 @@ with Logging {
           val delay =
             (dateTime.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)) +
               Random.nextInt(Math.min(60, recoveryInterval))
-          context
-            .system
-            .scheduler
+          context.system.scheduler
             .scheduleOnce(
               delay.seconds,
               self,

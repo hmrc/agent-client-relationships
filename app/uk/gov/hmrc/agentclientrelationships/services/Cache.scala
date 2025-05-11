@@ -39,8 +39,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
 
-trait KenshooCacheMetrics
-extends Logging {
+trait KenshooCacheMetrics extends Logging {
 
   val kenshooRegistry: MetricRegistry
 
@@ -55,8 +54,7 @@ trait Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T]
 }
 
-class DoNotCache[T]
-extends Cache[T] {
+class DoNotCache[T] extends Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = body
 }
 
@@ -86,9 +84,8 @@ class MongoCache[T] @Inject() (
   metrics: Metrics,
   reads: Reads[T],
   writes: Writes[T]
-)
-extends KenshooCacheMetrics
-with Cache[T] {
+) extends KenshooCacheMetrics
+    with Cache[T] {
 
   val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 

@@ -19,8 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class RegistrationRelationshipResponseSpec
-extends UnitSpec {
+class RegistrationRelationshipResponseSpec extends UnitSpec {
 
   "RegistrationRelationshipResponse" should {
     val successResult = RegistrationRelationshipResponse("2025-02-07T10:10:10.000Z")

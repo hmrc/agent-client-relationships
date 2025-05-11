@@ -49,8 +49,8 @@ class CustomerStatusController @Inject() (
   appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-extends BackendController(cc)
-with AuthActions {
+    extends BackendController(cc)
+    with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
@@ -63,18 +63,17 @@ with AuthActions {
         partialAuthRecords <-
           authResponse.getNino match {
             case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
-            case None => Future.successful(None)
+            case None     => Future.successful(None)
           }
         irvRelationshipExists <-
           authResponse.getNino match {
             case Some(nino) => agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
-            case None => Future.successful(false)
+            case None       => Future.successful(false)
           }
         existingRelationships <-
           if (partialAuthRecords.exists(_.active) || irvRelationshipExists) {
             Future.successful(true)
-          }
-          else {
+          } else {
             findRelationshipsService
               .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
               .map(_.nonEmpty)

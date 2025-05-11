@@ -46,7 +46,7 @@ class ChangeInvitationStatusController @Inject() (
   changeInvitationStatusService: ChangeInvitationStatusService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-extends BackendController(cc) {
+    extends BackendController(cc) {
 
   def changeInvitationStatus(
     arn: Arn,
@@ -54,8 +54,7 @@ extends BackendController(cc) {
     clientIdStr: String
   ): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request
-        .body
+      request.body
         .validate[ChangeInvitationStatusRequest]
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
@@ -65,21 +64,20 @@ extends BackendController(cc) {
 
                 service <- EitherT.fromEither[Future](changeInvitationStatusService.validateService(serviceStr))
                 suppliedClientId <- EitherT.fromEither[Future](
-                  changeInvitationStatusService.validateClientId(service, clientIdStr)
-                )
+                                      changeInvitationStatusService.validateClientId(service, clientIdStr)
+                                    )
 
                 result <- EitherT(
-                  navigateToStatusAction(
-                    arn,
-                    service,
-                    suppliedClientId,
-                    changeRequest
-                  )
-                )
+                            navigateToStatusAction(
+                              arn,
+                              service,
+                              suppliedClientId,
+                              changeRequest
+                            )
+                          )
               } yield result
 
-            responseT
-              .value
+            responseT.value
               .map(
                 _.fold(
                   err =>

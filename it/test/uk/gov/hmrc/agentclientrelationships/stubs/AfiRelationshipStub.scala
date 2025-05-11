@@ -24,7 +24,12 @@ import java.time.LocalDateTime
 
 trait AfiRelationshipStub {
 
-  def givenAfiRelationshipIsActive(arn: Arn, service: String, clientId: String, fromCesa: Boolean) = stubFor(
+  def givenAfiRelationshipIsActive(
+    arn: Arn,
+    service: String,
+    clientId: String,
+    fromCesa: Boolean
+  ) = stubFor(
     get(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
       .willReturn(
         aResponse()
@@ -41,7 +46,12 @@ trait AfiRelationshipStub {
       )
   )
 
-  def givenAfiRelationshipForClientIsActive(arn: Arn, service: String, clientId: String, fromCesa: Boolean) = stubFor(
+  def givenAfiRelationshipForClientIsActive(
+    arn: Arn,
+    service: String,
+    clientId: String,
+    fromCesa: Boolean
+  ) = stubFor(
     get(urlEqualTo(s"/agent-fi-relationship/relationships/service/PERSONAL-INCOME-RECORD/clientId/$clientId"))
       .willReturn(
         aResponse()
@@ -63,32 +73,57 @@ trait AfiRelationshipStub {
       .willReturn(aResponse().withStatus(404))
   )
 
-  def givenAfiRelationshipNotFound(arn: Arn, service: String, clientId: String) = stubFor(
+  def givenAfiRelationshipNotFound(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ) = stubFor(
     get(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
       .willReturn(aResponse().withStatus(404))
   )
 
-  def givenTerminateAfiRelationshipSucceeds(arn: Arn, service: String, clientId: String) = stubFor(
+  def givenTerminateAfiRelationshipSucceeds(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ) = stubFor(
     delete(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
       .willReturn(aResponse().withStatus(200))
   )
 
-  def givenTerminateAfiRelationshipFails(arn: Arn, service: String, clientId: String, status: Int = 500) = stubFor(
+  def givenTerminateAfiRelationshipFails(
+    arn: Arn,
+    service: String,
+    clientId: String,
+    status: Int = 500
+  ) = stubFor(
     delete(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
       .willReturn(aResponse().withStatus(status))
   )
 
-  def givenCreateAfiRelationshipSucceeds(arn: Arn, service: String, clientId: String) = stubFor(
+  def givenCreateAfiRelationshipSucceeds(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ) = stubFor(
     put(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
       .willReturn(aResponse().withStatus(201))
   )
 
-  def givenCreateAfiRelationshipFails(arn: Arn, service: String, clientId: String) = stubFor(
+  def givenCreateAfiRelationshipFails(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ) = stubFor(
     put(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
       .willReturn(aResponse().withStatus(500))
   )
 
-  def givenTestOnlyCreateAfiRelationshipFails(arn: Arn, service: String, clientId: String) = stubFor(
+  def givenTestOnlyCreateAfiRelationshipFails(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ) = stubFor(
     put(
       urlEqualTo(s"/agent-fi-relationship/test-only/relationships/agent/${arn.value}/service/$service/client/$clientId")
     ).willReturn(aResponse().withStatus(500))
@@ -111,7 +146,10 @@ trait AfiRelationshipStub {
     )
   )
 
-  def given2InactiveAfiRelationships(endDate1: LocalDateTime, endDate2: LocalDateTime) = stubFor(
+  def given2InactiveAfiRelationships(
+    endDate1: LocalDateTime,
+    endDate2: LocalDateTime
+  ) = stubFor(
     get(urlEqualTo(s"/agent-fi-relationship/relationships/inactive")).willReturn(
       aResponse()
         .withStatus(200)

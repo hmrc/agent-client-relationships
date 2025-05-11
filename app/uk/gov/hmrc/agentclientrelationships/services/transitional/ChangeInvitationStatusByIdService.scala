@@ -41,7 +41,7 @@ class ChangeInvitationStatusByIdService @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository
 )(implicit ec: ExecutionContext)
-extends Logging {
+    extends Logging {
 
   val validInvitationStatusActionsFrom: Map[InvitationStatusAction, Set[InvitationStatus]] = Map(
     InvitationStatusAction.Accept -> Set(Pending),
@@ -60,13 +60,14 @@ extends Logging {
   ): Future[Either[InvitationFailureResponse, Unit]] =
     for {
 
-      invitationStoreResults <- findMatchingInvitationById(invitationId)
-        .map(_.find(x => validInvitationStatusActionsFrom(invitationStatusAction).contains(x.status)))
-        .flatMap {
-          case Some(invitation) => updateStatus(invitation, invitationStatusAction)
+      invitationStoreResults <-
+        findMatchingInvitationById(invitationId)
+          .map(_.find(x => validInvitationStatusActionsFrom(invitationStatusAction).contains(x.status)))
+          .flatMap {
+            case Some(invitation) => updateStatus(invitation, invitationStatusAction)
 
-          case None => Future.successful(Left(InvitationNotFound))
-        }
+            case None => Future.successful(Left(InvitationNotFound))
+          }
     } yield invitationStoreResults
 
   private def updateStatus(
@@ -76,20 +77,19 @@ extends Logging {
     (
       for {
         _ <- EitherT(
-          updateInvitationStore(
-            invitationId = invitation.invitationId,
-            fromStatus = invitation.status,
-            toStatus =
-              invitationStatusAction match {
-                case InvitationStatusAction.Accept if invitation.isAltItsa => PartialAuth
-                case InvitationStatusAction.Accept => Accepted
-                case InvitationStatusAction.Cancel => Cancelled
-                case InvitationStatusAction.Reject => Rejected
-              },
-            endedBy = None,
-            lastUpdated = None
-          )
-        )
+               updateInvitationStore(
+                 invitationId = invitation.invitationId,
+                 fromStatus = invitation.status,
+                 toStatus = invitationStatusAction match {
+                   case InvitationStatusAction.Accept if invitation.isAltItsa => PartialAuth
+                   case InvitationStatusAction.Accept                         => Accepted
+                   case InvitationStatusAction.Cancel                         => Cancelled
+                   case InvitationStatusAction.Reject                         => Rejected
+                 },
+                 endedBy = None,
+                 lastUpdated = None
+               )
+             )
         _ <-
           if (invitation.isAltItsa)
             EitherT(
@@ -120,7 +120,9 @@ extends Logging {
       lastUpdated = lastUpdated
     )
     .map(
-      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(_ => Right(()))
+      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(
+        _ => Right(())
+      )
     )
 
   private def createPartialAuthRecord(

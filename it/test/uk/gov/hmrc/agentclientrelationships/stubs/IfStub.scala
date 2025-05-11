@@ -22,6 +22,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 
 trait IfStub {
+
   def givenReturnsServerError(): StubMapping = stubFor(
     any(urlMatching(s"/registration/.*")).willReturn(aResponse().withStatus(500))
   )
@@ -30,7 +31,10 @@ trait IfStub {
     any(urlMatching(s"/registration/.*")).willReturn(aResponse().withStatus(503))
   )
 
-  def givenNinoIsKnownFor(mtdId: MtdItId, nino: Nino): StubMapping = stubFor(
+  def givenNinoIsKnownFor(
+    mtdId: MtdItId,
+    nino: Nino
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}"""))
   )
@@ -43,7 +47,10 @@ trait IfStub {
     get(urlMatching(s"/registration/.*?/mtdId/${mtdId.value}")).willReturn(aResponse().withStatus(400))
   )
 
-  def givenMtdItIdIsKnownFor(nino: Nino, mtdId: MtdItId): StubMapping = stubFor(
+  def givenMtdItIdIsKnownFor(
+    nino: Nino,
+    mtdId: MtdItId
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}"""))
   )
@@ -56,23 +63,28 @@ trait IfStub {
     get(urlMatching(s"/registration/.*?/nino/${nino.value}")).willReturn(aResponse().withStatus(400))
   )
 
-  def givenItsaBusinessDetailsExists(idType: String, id: String, mtdId: String = "XAIT0000111122"): StubMapping =
-    stubFor(get(urlEqualTo(s"/registration/business-details/$idType/$id")).willReturn(aResponse().withBody(s"""
-                                                                                                              |{
-                                                                                                              |  "taxPayerDisplayResponse": {
-                                                                                                              |    "businessData": [
-                                                                                                              |      {
-                                                                                                              |        "tradingName": "Erling Haal",
-                                                                                                              |        "businessAddressDetails": {
-                                                                                                              |          "postalCode": "AA1 1AA",
-                                                                                                              |          "countryCode": "GB"
-                                                                                                              |        }
-                                                                                                              |      }
-                                                                                                              |    ],
-                                                                                                              |    "mtdId": "$mtdId"
-                                                                                                              |  }
-                                                                                                              |}
-          """.stripMargin)))
+  def givenItsaBusinessDetailsExists(
+    idType: String,
+    id: String,
+    mtdId: String = "XAIT0000111122"
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/registration/business-details/$idType/$id")).willReturn(aResponse().withBody(s"""
+                                                                                                      |{
+                                                                                                      |  "taxPayerDisplayResponse": {
+                                                                                                      |    "businessData": [
+                                                                                                      |      {
+                                                                                                      |        "tradingName": "Erling Haal",
+                                                                                                      |        "businessAddressDetails": {
+                                                                                                      |          "postalCode": "AA1 1AA",
+                                                                                                      |          "countryCode": "GB"
+                                                                                                      |        }
+                                                                                                      |      }
+                                                                                                      |    ],
+                                                                                                      |    "mtdId": "$mtdId"
+                                                                                                      |  }
+                                                                                                      |}
+          """.stripMargin))
+  )
 
   def givenMultipleItsaBusinessDetailsExists(nino: String): StubMapping = stubFor(
     get(urlEqualTo(s"/registration/business-details/nino/$nino")).willReturn(aResponse().withBody(s"""
@@ -109,7 +121,10 @@ trait IfStub {
           """.stripMargin))
   )
 
-  def givenItsaBusinessDetailsError(nino: String, status: Int): StubMapping = stubFor(
+  def givenItsaBusinessDetailsError(
+    nino: String,
+    status: Int
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/registration/business-details/nino/$nino")).willReturn(aResponse().withStatus(status))
   )
 

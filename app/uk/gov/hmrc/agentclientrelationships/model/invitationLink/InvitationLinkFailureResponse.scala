@@ -20,13 +20,10 @@ sealed trait InvitationLinkFailureResponse
 
 object InvitationLinkFailureResponse {
 
-  case object AgentReferenceDataNotFound
-  extends InvitationLinkFailureResponse
+  case object AgentReferenceDataNotFound extends InvitationLinkFailureResponse
 
-  case object NormalizedAgentNameNotMatched
-  extends InvitationLinkFailureResponse
+  case object NormalizedAgentNameNotMatched extends InvitationLinkFailureResponse
 
-  case object AgentSuspended
-  extends InvitationLinkFailureResponse
+  case object AgentSuspended extends InvitationLinkFailureResponse
 
 }
