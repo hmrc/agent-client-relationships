@@ -24,6 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -389,7 +390,7 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
         case t: TaxIdentifier => t.value
         case _                => x.toString
       }
-    val hc = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
+    val hc = RequestSupport.hc
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
     val tags = hc.toAuditTags(transactionName, request.path)
     DataEvent(
