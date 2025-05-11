@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.Logging
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
+import play.api.http.Status
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
@@ -26,7 +27,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.{HttpResponse, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -76,20 +77,38 @@ class MappingConnector @Inject() (
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {
       httpClient
         .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
-        .execute[SaMappings]
-        .map(
-          _.mappings.map(_.saAgentReference)
-        ) // TODO: this transformation should happen in service layer, connector should return plain SaMappings
+        .execute[HttpResponse]
+        .map { response =>
+          // TODO: Fix error handling
+          // Currently
+          // - Only correctly handles 404 status codes
+          // - Incorrectly reports Seq.empty for all other error cases
+          response.status match {
+            case Status.OK => response.json.as[SaMappings].mappings.map(_.saAgentReference)
+            case other =>
+              logger.error(s"Error in Digital-Mappings getSaAgentReferences: $other, ${response.body}")
+              Seq.empty
+          }
+        }
     }
 
   def getAgentCodesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[AgentCode]] =
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {
       httpClient
         .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
-        .execute[AgentCodeMappings]
-        .map(
-          _.mappings.map(_.agentCode)
-        ) // TODO: this transformation should happen in service layer, connector should return plain SaMappings
+        .execute[HttpResponse]
+        .map { response =>
+          // TODO: Fix error handling
+          // Currently
+          // - Only correctly handles 404 status codes
+          // - Incorrectly reports Seq.empty for all other error cases
+          response.status match {
+            case Status.OK => response.json.as[AgentCodeMappings].mappings.map(_.agentCode)
+            case other =>
+              logger.error(s"Error in Digital-Mappings getAgentCodes: $other, ${response.body}")
+              Seq.empty
+          }
+        }
     }
 
 }

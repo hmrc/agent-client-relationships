@@ -17,8 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import cats.data.EitherT
-import play.api.http.Status.NOT_FOUND
-import play.api.http.Status.OK
+import play.api.http.Status.{CREATED, NOT_FOUND, OK}
 import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.mvc.RequestHeader
@@ -105,7 +104,14 @@ class AgentFiRelationshipConnector @Inject() (
           )
         )
         .withBody(body)
-        .execute[Unit]
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case CREATED => ()
+            case status =>
+              throw UpstreamErrorResponse(s"Unexpected status $status received from AFI create relationship", status)
+          }
+        }
     }
   }
 

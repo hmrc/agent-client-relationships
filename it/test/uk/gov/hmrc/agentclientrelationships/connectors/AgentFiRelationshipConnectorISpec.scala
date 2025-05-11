@@ -49,8 +49,7 @@ class AgentFiRelationshipConnectorISpec
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -75,12 +74,7 @@ class AgentFiRelationshipConnectorISpec
 
   private implicit val request: RequestHeader = FakeRequest()
 
-  val agentFiRelationshipConnector =
-    new AgentFiRelationshipConnector(
-      appConfig,
-      httpClient,
-      metrics
-    )(ec)
+  val agentFiRelationshipConnector = app.injector.instanceOf[AgentFiRelationshipConnector]
 
   val arn: Arn = Arn("ABCDE123456")
   val service: String = Service.PersonalIncomeRecord.id
@@ -136,7 +130,7 @@ class AgentFiRelationshipConnectorISpec
   }
 
   "createRelationship" should {
-    "return a true if PersonalIncomeRecord has been created" in {
+    "return unit if PersonalIncomeRecord has been created" in {
       givenCreateAfiRelationshipSucceeds(
         arn,
         service,
@@ -149,7 +143,7 @@ class AgentFiRelationshipConnectorISpec
           clientId,
           LocalDateTime.now()
         )
-      ) shouldBe true
+      ) shouldBe ()
     }
     "throw an if PersonalIncomeRecord fails to create" in {
       givenCreateAfiRelationshipFails(

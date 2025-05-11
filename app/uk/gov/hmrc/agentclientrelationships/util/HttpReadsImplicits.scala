@@ -23,9 +23,8 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 object HttpReadsImplicits extends HttpReadsInstances {
   self: HttpReadsInstances =>
 
-  private val r: HttpReads[Either[UpstreamErrorResponse, Unit]] = readEitherOf[Unit](self.readUnit)
+  private lazy val r: HttpReads[Either[UpstreamErrorResponse, Unit]] = readEitherOf[Unit](self.readUnit)
 
   // Shadows readUnit with instance which throws exception when the http response code is non 2xx
   override implicit val readUnit: HttpReads[Unit] = throwOnFailure(r)
-
 }
