@@ -51,8 +51,9 @@ class DesConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   private val desBaseUrl = appConfig.desUrl
   private val desAuthToken = appConfig.desToken
@@ -79,18 +80,17 @@ class DesConnector @Inject() (
     }
   }
 
-  def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] =
-    getWithDesHeaders(
-      "GetAgentRecord",
-      new URL(getAgentRecordUrl(agentId))
-    ).map { response =>
-      response.status match {
-        case Status.OK => Option(response.json.as[AgentRecord])
-        case status =>
-          logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
-          None
-      }
+  def getAgentRecord(agentId: TaxIdentifier)(implicit request: RequestHeader): Future[Option[AgentRecord]] = getWithDesHeaders(
+    "GetAgentRecord",
+    new URL(getAgentRecordUrl(agentId))
+  ).map { response =>
+    response.status match {
+      case Status.OK => Option(response.json.as[AgentRecord])
+      case status =>
+        logger.error(s"Error in GetAgentRecord. $status, ${response.body}")
+        None
     }
+  }
 
   private def getAgentRecordUrl(agentId: TaxIdentifier) =
     agentId match {
@@ -114,8 +114,8 @@ class DesConnector @Inject() (
     ).map { response =>
       response.status match {
         case Status.OK if response.json.as[JsObject].fields.isEmpty => false
-        case Status.OK                                              => true
-        case Status.NOT_FOUND                                       => false
+        case Status.OK => true
+        case Status.NOT_FOUND => false
         case other: Int =>
           logger.error(s"Error in GetVatCustomerInformation. $other, ${response.body}")
           false
@@ -127,9 +127,9 @@ class DesConnector @Inject() (
     authToken: String,
     env: String
   ): Seq[(String, String)] = Seq(
-    Environment               -> env,
+    Environment -> env,
     HeaderNames.authorisation -> s"Bearer $authToken",
-    CorrelationId             -> randomUuidGenerator.makeCorrelationId()
+    CorrelationId -> randomUuidGenerator.makeCorrelationId()
   )
 
   private def getWithDesHeaders(

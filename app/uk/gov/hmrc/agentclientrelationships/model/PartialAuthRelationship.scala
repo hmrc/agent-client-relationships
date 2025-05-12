@@ -72,7 +72,8 @@ object PartialAuthRelationship {
   implicit val format: Format[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
 
   def mongoFormat(implicit
-    crypto: Encrypter with Decrypter
+    crypto: Encrypter
+      with Decrypter
   ): Format[PartialAuthRelationship] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     (

@@ -36,7 +36,10 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-class RelationshipCopyRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
+class RelationshipCopyRecordRepositoryISpec
+extends UnitSpec
+with MongoApp
+with GuiceOneServerPerSuite {
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure("features.recovery-enable" -> false)

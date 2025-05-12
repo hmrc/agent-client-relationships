@@ -30,7 +30,8 @@ import uk.gov.hmrc.domain.AgentCode
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
 
 trait RelationshipsControllerVATBehaviours {
-  this: RelationshipsBaseControllerISpec with HipStub =>
+  this: RelationshipsBaseControllerISpec
+    with HipStub =>
 
   def relationshipControllerVATSpecificBehaviours(): Unit = {
     val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
@@ -42,8 +43,7 @@ trait RelationshipsControllerVATBehaviours {
 
     "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
 
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
       def doRequest = doGetRequest(requestPath)
 
@@ -83,17 +83,17 @@ trait RelationshipsControllerVATBehaviours {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "oldAgentCodes"           -> oldAgentCode,
-            "service"                 -> "mtd-vat",
-            "vrn"                     -> vrn.value,
-            "ESRelationship"          -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "oldAgentCodes" -> oldAgentCode,
+            "service" -> "mtd-vat",
+            "vrn" -> vrn.value,
+            "ESRelationship" -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "true",
-            "howRelationshipCreated"  -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"         -> "true"
+            "enrolmentDelegated" -> "true",
+            "howRelationshipCreated" -> "CopyExistingESRelationship",
+            "vrnExistsInEtmp" -> "true"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -103,11 +103,11 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "oldAgentCodes"        -> oldAgentCode,
-            "vrn"                  -> vrn.value,
-            "ESRelationship"       -> "true"
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "oldAgentCodes" -> oldAgentCode,
+            "vrn" -> vrn.value,
+            "ESRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -135,9 +135,9 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode,
-            "ESRelationship"       -> "true"
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -215,17 +215,17 @@ trait RelationshipsControllerVATBehaviours {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "service"                 -> "mtd-vat",
-            "vrn"                     -> vrn.value,
-            "oldAgentCodes"           -> oldAgentCode,
-            "ESRelationship"          -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "service" -> "mtd-vat",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "false",
-            "howRelationshipCreated"  -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"         -> "true"
+            "enrolmentDelegated" -> "false",
+            "howRelationshipCreated" -> "CopyExistingESRelationship",
+            "vrnExistsInEtmp" -> "true"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -235,11 +235,11 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "ESRelationship"       -> "true",
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "ESRelationship" -> "true",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -265,13 +265,13 @@ trait RelationshipsControllerVATBehaviours {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"   -> arn.value,
-            "service"                -> "mtd-vat",
-            "vrn"                    -> vrn.value,
-            "oldAgentCodes"          -> oldAgentCode,
-            "ESRelationship"         -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "service" -> "mtd-vat",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true",
             "howRelationshipCreated" -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"        -> "false"
+            "vrnExistsInEtmp" -> "false"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -281,11 +281,11 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "ESRelationship"       -> "true",
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "ESRelationship" -> "true",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -366,8 +366,7 @@ trait RelationshipsControllerVATBehaviours {
 
     "GET /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn" should {
 
-      val requestPath =
-        s"/agent-client-relationships/agent/${arn.value}/service/HMCE-VATDEC-ORG/client/vrn/${vrn.value}"
+      val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMCE-VATDEC-ORG/client/vrn/${vrn.value}"
 
       def doRequest = doGetRequest(requestPath)
 
@@ -416,9 +415,9 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode,
-            "ESRelationship"       -> "true"
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )

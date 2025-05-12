@@ -30,7 +30,8 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
-trait EnrolmentStoreProxyStubs extends Eventually {
+trait EnrolmentStoreProxyStubs
+extends Eventually {
 
   private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(50, Millis)))
 

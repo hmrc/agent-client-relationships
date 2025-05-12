@@ -42,8 +42,8 @@ class AgentPermissionsConnector @Inject() (
   appConfig: AppConfig,
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
-    extends HttpApiMonitor
-    with Logging {
+extends HttpApiMonitor
+with Logging {
 
   def isClientUnassigned(
     arn: Arn,
@@ -57,8 +57,7 @@ class AgentPermissionsConnector @Inject() (
         .map { response =>
           response.status match {
             case Status.OK => false
-            case Status.NOT_FOUND =>
-              true // TODO: the endpoint should return empty Seq for such case. Now when NotFound is return, it's not obvious if records are not found or if the url is not defined or permissions are not found
+            case Status.NOT_FOUND => true // TODO: the endpoint should return empty Seq for such case. Now when NotFound is return, it's not obvious if records are not found or if the url is not defined or permissions are not found
             case e => throw UpstreamErrorResponse(response.body, e)
           }
         }

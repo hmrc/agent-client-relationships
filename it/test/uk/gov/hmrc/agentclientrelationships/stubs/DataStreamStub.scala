@@ -26,7 +26,8 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 
-trait DataStreamStub extends Eventually {
+trait DataStreamStub
+extends Eventually {
 
   private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(1, Seconds)), scaled(Span(50, Millis)))
 
@@ -38,11 +39,11 @@ trait DataStreamStub extends Eventually {
     event = AgentClientRelationshipEvent.CreateInvitation,
     detail = Map(
       "agentReferenceNumber" -> invitation.arn,
-      "service"              -> invitation.service,
-      "clientId"             -> invitation.clientId,
-      "clientIdType"         -> invitation.clientIdType,
-      "suppliedClientId"     -> invitation.suppliedClientId,
-      "invitationId"         -> invitation.invitationId
+      "service" -> invitation.service,
+      "clientId" -> invitation.clientId,
+      "clientIdType" -> invitation.clientIdType,
+      "suppliedClientId" -> invitation.suppliedClientId,
+      "invitationId" -> invitation.invitationId
     ),
     tags = Map("transactionName" -> "create-invitation", "path" -> requestPath)
   )
@@ -57,11 +58,11 @@ trait DataStreamStub extends Eventually {
     event = AgentClientRelationshipEvent.RespondToInvitation,
     detail = Map(
       "agentReferenceNumber" -> invitation.arn,
-      "service"              -> invitation.service,
-      "clientId"             -> invitation.clientId,
-      "clientIdType"         -> invitation.clientIdType,
-      "suppliedClientId"     -> invitation.suppliedClientId,
-      "invitationId"         -> invitation.invitationId,
+      "service" -> invitation.service,
+      "clientId" -> invitation.clientId,
+      "clientIdType" -> invitation.clientIdType,
+      "suppliedClientId" -> invitation.suppliedClientId,
+      "invitationId" -> invitation.invitationId,
       "response" -> (if (accepted)
                        "Accepted"
                      else
@@ -88,15 +89,16 @@ trait DataStreamStub extends Eventually {
   ): Unit = verifyAuditRequestSent(
     1,
     event = AgentClientRelationshipEvent.CreateRelationship,
-    detail = Map(
-      "agentReferenceNumber"    -> arn,
-      "service"                 -> service,
-      "clientId"                -> clientId,
-      "clientIdType"            -> clientIdType,
-      "etmpRelationshipCreated" -> etmpRelationshipCreated.toString,
-      "enrolmentDelegated"      -> enrolmentDelegated.toString,
-      "howRelationshipCreated"  -> howRelationshipCreated
-    ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
+    detail =
+      Map(
+        "agentReferenceNumber" -> arn,
+        "service" -> service,
+        "clientId" -> clientId,
+        "clientIdType" -> clientIdType,
+        "etmpRelationshipCreated" -> etmpRelationshipCreated.toString,
+        "enrolmentDelegated" -> enrolmentDelegated.toString,
+        "howRelationshipCreated" -> howRelationshipCreated
+      ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
     tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
   )
 
@@ -114,15 +116,16 @@ trait DataStreamStub extends Eventually {
   ): Unit = verifyAuditRequestSent(
     1,
     event = AgentClientRelationshipEvent.TerminateRelationship,
-    detail = Map(
-      "agentReferenceNumber"      -> arn,
-      "clientId"                  -> clientId,
-      "clientIdType"              -> clientIdType,
-      "service"                   -> service,
-      "enrolmentDeallocated"      -> enrolmentDeallocated.toString,
-      "etmpRelationshipRemoved"   -> etmpRelationshipRemoved.toString,
-      "howRelationshipTerminated" -> howRelationshipTerminated
-    ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
+    detail =
+      Map(
+        "agentReferenceNumber" -> arn,
+        "clientId" -> clientId,
+        "clientIdType" -> clientIdType,
+        "service" -> service,
+        "enrolmentDeallocated" -> enrolmentDeallocated.toString,
+        "etmpRelationshipRemoved" -> etmpRelationshipRemoved.toString,
+        "howRelationshipTerminated" -> howRelationshipTerminated
+      ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
     tags = Map("transactionName" -> "terminate-relationship", "path" -> requestPath)
   )
 
@@ -136,10 +139,10 @@ trait DataStreamStub extends Eventually {
     1,
     event = AgentClientRelationshipEvent.TerminatePartialAuthorisation,
     detail = Map(
-      "agentReferenceNumber"              -> arn,
-      "clientId"                          -> clientId,
-      "clientIdType"                      -> "nino",
-      "service"                           -> service,
+      "agentReferenceNumber" -> arn,
+      "clientId" -> clientId,
+      "clientIdType" -> "nino",
+      "service" -> service,
       "howPartialAuthorisationTerminated" -> howRelationshipTerminated
     ),
     tags = Map("transactionName" -> "terminate-partial-auth", "path" -> requestPath)

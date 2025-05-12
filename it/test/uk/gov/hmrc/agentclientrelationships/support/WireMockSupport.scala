@@ -36,7 +36,9 @@ object WireMockSupport {
   private lazy val wireMockPort = Port.randomAvailable
 }
 
-trait WireMockSupport extends BeforeAndAfterAll with BeforeAndAfterEach {
+trait WireMockSupport
+extends BeforeAndAfterAll
+with BeforeAndAfterEach {
   me: Suite =>
 
   val wireMockPort: Int = WireMockSupport.wireMockPort
@@ -68,7 +70,8 @@ trait WireMockSupport extends BeforeAndAfterAll with BeforeAndAfterEach {
 }
 
 // This class was copy-pasted from the hmrctest project, which is now deprecated.
-object Port extends Logging {
+object Port
+extends Logging {
 
   val rnd = new scala.util.Random
   val range = 8000 to 39999
@@ -98,12 +101,14 @@ object Port extends Logging {
         socket = new ServerSocket(p)
         socket.setReuseAddress(true)
         true
-      } else {
+      }
+      else {
         false
       }
     catch {
       case t: Throwable => false
-    } finally
+    }
+    finally
       if (socket != null)
         socket.close()
   }

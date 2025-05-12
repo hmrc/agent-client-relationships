@@ -54,7 +54,7 @@ class AuthorisationAcceptService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   auditService: AuditService
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def accept(
     invitation: Invitation,
@@ -91,45 +91,45 @@ class AuthorisationAcceptService @Inject() (
           Future.unit
       // Create relationship
       _ <- createRelationship(
-             invitation,
-             enrolment,
-             isAltItsa,
-             timestamp
-           )
+        invitation,
+        enrolment,
+        isAltItsa,
+        timestamp
+      )
       // Update invitation
       updated <- invitationsRepository.updateStatus(
-                   invitation.invitationId,
-                   nextStatus,
-                   Some(timestamp)
-                 )
+        invitation.invitationId,
+        nextStatus,
+        Some(timestamp)
+      )
       // Deauth previously accepted invitations (non blocking)
       _ <- Future.successful(
-             if (invitation.service != HMRCMTDITSUPP)
-               deauthAcceptedInvitations(
-                 service = invitation.service,
-                 optArn = None,
-                 clientId = invitation.clientId,
-                 optInvitationId = Some(invitation.invitationId),
-                 isAltItsa = isAltItsa,
-                 timestamp = timestamp
-               )
-             else
-               Future.unit
-           )
+        if (invitation.service != HMRCMTDITSUPP)
+          deauthAcceptedInvitations(
+            service = invitation.service,
+            optArn = None,
+            clientId = invitation.clientId,
+            optInvitationId = Some(invitation.invitationId),
+            isAltItsa = isAltItsa,
+            timestamp = timestamp
+          )
+        else
+          Future.unit
+      )
       // Deauth previously accepted alt itsa invitations in case the client is mtd itsa (non blocking)
       _ <- Future.successful(
-             if (invitation.service == HMRCMTDIT && !isAltItsa)
-               deauthAcceptedInvitations(
-                 service = invitation.service,
-                 optArn = None,
-                 clientId = invitation.suppliedClientId,
-                 optInvitationId = Some(invitation.invitationId),
-                 isAltItsa = true,
-                 timestamp = timestamp
-               )
-             else
-               Future.unit
-           )
+        if (invitation.service == HMRCMTDIT && !isAltItsa)
+          deauthAcceptedInvitations(
+            service = invitation.service,
+            optArn = None,
+            clientId = invitation.suppliedClientId,
+            optInvitationId = Some(invitation.invitationId),
+            isAltItsa = true,
+            timestamp = timestamp
+          )
+        else
+          Future.unit
+      )
       // Accept confirmation email (non blocking)
       _ <- Future.successful(emailService.sendAcceptedEmail(invitation))
     } yield updated
@@ -278,5 +278,7 @@ class AuthorisationAcceptService @Inject() (
 
 }
 
-sealed trait AuthorisationResponseError extends Exception
-case object CreateRelationshipLocked extends AuthorisationResponseError
+sealed trait AuthorisationResponseError
+extends Exception
+case object CreateRelationshipLocked
+extends AuthorisationResponseError

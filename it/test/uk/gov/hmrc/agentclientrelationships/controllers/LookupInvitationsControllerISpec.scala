@@ -35,7 +35,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-class LookupInvitationsControllerISpec extends BaseControllerISpec {
+class LookupInvitationsControllerISpec
+extends BaseControllerISpec {
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]

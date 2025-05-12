@@ -40,11 +40,15 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class FriendlyNameServiceSpec extends UnitSpec with MockitoSugar with BeforeAndAfterEach {
+class FriendlyNameServiceSpec
+extends UnitSpec
+with MockitoSugar
+with BeforeAndAfterEach {
 
   val mockEsp: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
 
-  object testService extends FriendlyNameService(mockEsp)
+  object testService
+  extends FriendlyNameService(mockEsp)
 
   implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global

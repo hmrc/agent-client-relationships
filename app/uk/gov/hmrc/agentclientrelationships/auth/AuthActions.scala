@@ -47,7 +47,9 @@ case class CurrentUser(
   def isStride: Boolean = credentials.map(_.providerType).contains("PrivilegedApplication")
 }
 
-trait AuthActions extends AuthorisedFunctions with Logging {
+trait AuthActions
+extends AuthorisedFunctions
+with Logging {
   me: Results =>
 
   implicit val executionContext: ExecutionContext
@@ -72,8 +74,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
                 clientId
               ) =>
             creds
-          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-            creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
         }
         .map { creds =>
           body(CurrentUser(Option(creds), affinity))
@@ -97,8 +98,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
                   clientId
                 ) =>
             creds
-          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) =>
-            creds
+          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
         }
         .map { creds =>
           body(CurrentUser(Option(creds), affinity))
@@ -114,7 +114,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   ): Boolean = affinity
     .flatMap {
       case AffinityGroup.Agent => arn
-      case _                   => Some(clientId)
+      case _ => Some(clientId)
     }
     .exists { requiredIdentifier =>
       // check that among the identifiers that the user has, there is one that matches the clientId provided
@@ -161,12 +161,13 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           val id =
             if (supportedServices.exists(_.id == serviceKey)) {
               enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
-            } else
+            }
+            else
               None
 
           id match {
             case Some(i) => body(i)
-            case _       => Future.successful(NoPermissionToPerformOperation)
+            case _ => Future.successful(NoPermissionToPerformOperation)
           }
         case _ => Future.successful(NoPermissionToPerformOperation)
       }
@@ -184,12 +185,12 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         val requiredEnrolments =
           for {
             serviceKey <- serviceKeys
-            enrolment  <- enrolments.getEnrolment(serviceKey)
+            enrolment <- enrolments.getEnrolment(serviceKey)
           } yield LocalEnrolmentKey(serviceKey, enrolment.identifiers.map(id => Identifier(id.key, id.value)))
 
         requiredEnrolments match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _              => body(requiredEnrolments)
+          case _ => body(requiredEnrolments)
         }
     }
 
@@ -202,13 +203,13 @@ trait AuthActions extends AuthorisedFunctions with Logging {
         val identifiers =
           for {
             supportedService <- supportedServices
-            enrolment        <- enrolments.getEnrolment(supportedService.enrolmentKey)
-            clientId         <- enrolment.identifiers.headOption
+            enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
+            clientId <- enrolment.identifiers.headOption
           } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
 
         identifiers match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _              => body(identifiers.toMap)
+          case _ => body(identifiers.toMap)
         }
     }
 
@@ -226,7 +227,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
         case Some(Credentials(strideId, _)) => body(strideId)
-        case _                              => Future.successful(NoPermissionToPerformOperation)
+        case _ => Future.successful(NoPermissionToPerformOperation)
       }
 
   val basicAuthHeader: Regex = "Basic (.+)".r
@@ -247,7 +248,8 @@ trait AuthActions extends AuthorisedFunctions with Logging {
           case decodedAuth(username, password) =>
             if (BasicAuthentication(username, password) == expectedAuth) {
               body
-            } else {
+            }
+            else {
               logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
             }
@@ -263,7 +265,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
   protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(implicit request: RequestHeader): Future[Result] =
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
-      case None      => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
+      case None => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
     } recoverWith { case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments()) }
 
   protected def withEnrolledAsAgent[A](
@@ -285,7 +287,7 @@ trait AuthActions extends AuthorisedFunctions with Logging {
     identifierKey: String
   ) =
     for {
-      enrolment  <- enrolments.getEnrolment(serviceName)
+      enrolment <- enrolments.getEnrolment(serviceName)
       identifier <- enrolment.getIdentifier(identifierKey)
     } yield identifier.value
 

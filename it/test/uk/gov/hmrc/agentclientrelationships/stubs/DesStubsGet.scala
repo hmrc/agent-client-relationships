@@ -32,7 +32,7 @@ trait DesStubsGet {
   private val agentRecordUrl: TaxIdentifier => String = {
     case Arn(arn) => s"/registration/personal-details/arn/$arn"
     case Utr(utr) => s"/registration/personal-details/utr/$utr"
-    case x        => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   def getAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping = stubFor(
@@ -79,16 +79,16 @@ trait DesStubsGet {
               "approvedInformation" -> Json.obj(
                 "customerDetails" -> Json.obj(
                   "organisationName" -> "CFG",
-                  "tradingName"      -> "CFG Solutions",
+                  "tradingName" -> "CFG Solutions",
                   "individual" -> Json
                     .obj(
-                      "title"      -> "0001",
-                      "firstName"  -> "Ilkay",
+                      "title" -> "0001",
+                      "firstName" -> "Ilkay",
                       "middleName" -> "Silky",
-                      "lastName"   -> "Gundo"
+                      "lastName" -> "Gundo"
                     ),
                   "effectiveRegistrationDate" -> "2020-01-01",
-                  "isInsolvent"               -> false
+                  "isInsolvent" -> false
                 )
               )
             )

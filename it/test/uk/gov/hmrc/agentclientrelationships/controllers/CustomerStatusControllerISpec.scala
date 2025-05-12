@@ -38,10 +38,10 @@ import java.time.Instant
 import java.time.LocalDate
 
 class CustomerStatusControllerISpec
-    extends BaseControllerISpec
-    with AfiRelationshipStub
-    with AgentAssuranceStubs
-    with HipStub {
+extends BaseControllerISpec
+with AfiRelationshipStub
+with AgentAssuranceStubs
+with HipStub {
 
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]

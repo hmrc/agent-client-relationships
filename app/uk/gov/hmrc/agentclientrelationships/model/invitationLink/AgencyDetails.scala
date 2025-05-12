@@ -28,8 +28,8 @@ object AgencyDetails {
 
   private def optionalReads(fieldName: String): Reads[String] = Reads[String] {
     case JsString(value) => JsSuccess(value)
-    case JsNull          => JsError(s"$fieldName must not be null")
-    case _               => JsError(s"Invalid $fieldName value")
+    case JsNull => JsError(s"$fieldName must not be null")
+    case _ => JsError(s"Invalid $fieldName value")
   }
 
   private val reads: Reads[AgencyDetails] =

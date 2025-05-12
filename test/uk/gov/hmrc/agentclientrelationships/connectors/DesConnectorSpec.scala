@@ -26,7 +26,9 @@ import uk.gov.hmrc.http.client.HttpClientV2
 
 import scala.concurrent.ExecutionContext
 
-class DesConnectorSpec extends UnitSpec with MockitoSugar {
+class DesConnectorSpec
+extends UnitSpec
+with MockitoSugar {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   val appConfig: AppConfig = mock[AppConfig]
@@ -47,7 +49,7 @@ class DesConnectorSpec extends UnitSpec with MockitoSugar {
       underTest.desHeaders(authToken = "testAuthToken", env = "testEnv").toMap shouldBe
         Map(
           "Authorization" -> "Bearer testAuthToken",
-          "Environment"   -> "testEnv",
+          "Environment" -> "testEnv",
           "CorrelationId" -> "testCorrelationId"
         )
     }

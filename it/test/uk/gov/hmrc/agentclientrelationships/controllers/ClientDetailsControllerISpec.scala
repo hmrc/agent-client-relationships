@@ -44,7 +44,10 @@ import java.time.Instant
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub with HipStub {
+class ClientDetailsControllerISpec
+extends BaseControllerISpec
+with ClientDetailsStub
+with HipStub {
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -93,10 +96,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "Erling Haal",
-            "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA11AA"),
-            "knownFactType"        -> "PostalCode",
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false
           )
         }
@@ -126,10 +129,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "Erling Haal",
-            "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA11AA"),
-            "knownFactType"        -> "PostalCode",
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> true
           )
         }
@@ -158,10 +161,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "Erling Haal",
-            "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA11AA"),
-            "knownFactType"        -> "PostalCode",
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> true
           )
         }
@@ -177,11 +180,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
@@ -197,11 +200,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
           )
         }
@@ -216,11 +219,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "CFG Solutions",
-            "isOverseas"                 -> true,
-            "knownFacts"                 -> Json.arr("test@email.com", "test2@email.com"),
-            "knownFactType"              -> "Email",
-            "hasPendingInvitation"       -> false,
+            "name" -> "CFG Solutions",
+            "isOverseas" -> true,
+            "knownFacts" -> Json.arr("test@email.com", "test2@email.com"),
+            "knownFactType" -> "Email",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-CBC-NONUK-ORG"
           )
         }
@@ -244,11 +247,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
@@ -272,11 +275,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
           )
         }
@@ -305,11 +308,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> true,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> true,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
@@ -327,9 +330,9 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "CFG Solutions",
-            "knownFacts"           -> Json.arr("2020-01-01"),
-            "knownFactType"        -> "Date",
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
             "hasPendingInvitation" -> false
           )
         }
@@ -357,9 +360,9 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "CFG Solutions",
-            "knownFacts"           -> Json.arr("2020-01-01"),
-            "knownFactType"        -> "Date",
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
             "hasPendingInvitation" -> true
           )
         }
@@ -373,10 +376,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "CFG Solutions",
-            "knownFacts"                 -> Json.arr("2020-01-01"),
-            "knownFactType"              -> "Date",
-            "hasPendingInvitation"       -> false,
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
           )
         }
@@ -403,10 +406,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "CFG Solutions",
-            "knownFacts"                 -> Json.arr("2020-01-01"),
-            "knownFactType"              -> "Date",
-            "hasPendingInvitation"       -> true,
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
+            "hasPendingInvitation" -> true,
             "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
           )
         }

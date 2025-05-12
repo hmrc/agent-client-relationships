@@ -24,7 +24,8 @@ import play.api.mvc.request.RequestTarget
 import play.api.mvc.Headers
 import play.api.mvc.Request
 
-object NoRequest extends Request[Any] {
+object NoRequest
+extends Request[Any] {
 
   override def body: Any = ""
   override def method: String = ""

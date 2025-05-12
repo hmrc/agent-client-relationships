@@ -27,7 +27,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -70,8 +71,9 @@ class MappingConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] =
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {

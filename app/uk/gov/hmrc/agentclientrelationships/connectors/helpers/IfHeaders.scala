@@ -33,8 +33,8 @@ class IfHeaders @Inject() (
   private val hip = "HIP"
 
   def makeHeaders(authToken: String): Seq[(String, String)] = Seq(
-    Environment               -> appConfig.ifEnvironment,
-    CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
+    Environment -> appConfig.ifEnvironment,
+    CorrelationId -> randomUuidGenerator.makeCorrelationId(),
     HeaderNames.AUTHORIZATION -> s"Bearer $authToken"
   )
 

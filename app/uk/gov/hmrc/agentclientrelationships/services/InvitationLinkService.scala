@@ -37,7 +37,7 @@ class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
   agentAssuranceConnector: AgentAssuranceConnector
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
 
@@ -54,11 +54,11 @@ class InvitationLinkService @Inject() (
       for {
         agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
         _ <- EitherT.fromEither[Future](
-               validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
-             )
+          validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
+        )
         agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-        _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
-        agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
+        _ <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agencyName <- EitherT(getAgencyName(agentDetailsResponse))
       } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
     agencyNameT.value
@@ -87,8 +87,8 @@ class InvitationLinkService @Inject() (
       for {
         agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
         agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-        _                    <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
-        agencyName           <- EitherT(getAgencyName(agentDetailsResponse))
+        _ <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agencyName <- EitherT(getAgencyName(agentDetailsResponse))
       } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
     responseT.value
@@ -107,7 +107,7 @@ class InvitationLinkService @Inject() (
     .findByArn(arn)
     .flatMap {
       case Some(value) => Future.successful(value)
-      case None        => createAgentReferenceRecord(arn, newNormaliseAgentName)
+      case None => createAgentReferenceRecord(arn, newNormaliseAgentName)
     }
 
   private def updateAgentReferenceRecord(
@@ -143,8 +143,7 @@ class InvitationLinkService @Inject() (
 
   private def getAgentDetails(
     arn: Arn
-  )(implicit request: RequestHeader): Future[AgentDetailsDesResponse] =
-    agentAssuranceConnector.getAgentRecordWithChecks(arn)
+  )(implicit request: RequestHeader): Future[AgentDetailsDesResponse] = agentAssuranceConnector.getAgentRecordWithChecks(arn)
 
   private def checkSuspensionDetails(
     agentDetailsDesResponse: AgentDetailsDesResponse

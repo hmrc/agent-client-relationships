@@ -40,7 +40,9 @@ import java.time.Instant
 import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
-class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with TestData {
+class ChangeInvitationStatusByIdControllerISpec
+extends BaseControllerISpec
+with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -55,17 +57,17 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
   )
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt                -> mtdItId,
+    MtdIt -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat                  -> vrn,
-    Trust                -> utr,
-    TrustNT              -> urn,
-    CapitalGains         -> cgtRef,
-    Ppt                  -> pptRef,
-    Cbc                  -> cbcId,
-    CbcNonUk             -> cbcId,
-    Pillar2              -> plrId,
-    MtdItSupp            -> mtdItId
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
+    CapitalGains -> cgtRef,
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId
   )
 
   def requestPath(
@@ -82,7 +84,7 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         val suppliedClientId =
           taxIdentifier match {
             case _: MtdItId => ClientIdentifier(nino)
-            case taxId      => ClientIdentifier(taxId)
+            case taxId => ClientIdentifier(taxId)
           }
         val clientName = "TestClientName"
         val agentName = "testAgentName"

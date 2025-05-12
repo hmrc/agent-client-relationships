@@ -39,7 +39,8 @@ object AgentReferenceRecord {
   implicit val formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
 
   def mongoFormat(implicit
-    crypto: Encrypter with Decrypter
+    crypto: Encrypter
+      with Decrypter
   ): Format[AgentReferenceRecord] =
     (
       (__ \ "uid").format[String] and

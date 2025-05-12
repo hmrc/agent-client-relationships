@@ -52,7 +52,7 @@ class RemoveAuthorisationService @Inject() (
   invitationsRepository: InvitationsRepository,
   ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def validateRequest(
     serviceStr: String,
@@ -61,9 +61,9 @@ class RemoveAuthorisationService @Inject() (
     for {
       service <- Try(Service.forId(serviceStr)).fold(_ => Left(UnsupportedService), Right(_))
       clientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id))
-                    // Client requests can come with an MTDITID instead of nino so we need to check that too
-                    .orElse(Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)))
-                    .fold(_ => Left(InvalidClientId), Right(_))
+        // Client requests can come with an MTDITID instead of nino so we need to check that too
+        .orElse(Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)))
+        .fold(_ => Left(InvalidClientId), Right(_))
     } yield ValidRequest(clientId, service)
 
   def findPartialAuthInvitation(
@@ -127,7 +127,7 @@ class RemoveAuthorisationService @Inject() (
           .getMtdIdFor(Nino(suppliedClientId.value))
           .map {
             case Some(mtdItId) => Right(EnrolmentKey(service, mtdItId))
-            case None          => Right(suppliedEnrolmentKey)
+            case None => Right(suppliedEnrolmentKey)
           }
           .recover { case NonFatal(_) => Left(ClientRegistrationNotFound) }
       case _ => Future successful Right(suppliedEnrolmentKey)

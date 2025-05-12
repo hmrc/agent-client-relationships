@@ -27,7 +27,9 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class IfConnectorSpec extends UnitSpec with MockitoSugar {
+class IfConnectorSpec
+extends UnitSpec
+with MockitoSugar {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   val appConfig: AppConfig = mock[AppConfig]
@@ -49,7 +51,7 @@ class IfConnectorSpec extends UnitSpec with MockitoSugar {
       underTest.ifHeaders("testAuthToken", "testEnv").toMap shouldBe
         Map(
           "Authorization" -> "Bearer testAuthToken",
-          "Environment"   -> "testEnv",
+          "Environment" -> "testEnv",
           "CorrelationId" -> "testCorrelationId"
         )
     }

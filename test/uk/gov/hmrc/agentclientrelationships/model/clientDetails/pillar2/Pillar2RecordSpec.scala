@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class Pillar2RecordSpec extends UnitSpec {
+class Pillar2RecordSpec
+extends UnitSpec {
 
   "Pillar2Record" should {
 
@@ -32,7 +33,7 @@ class Pillar2RecordSpec extends UnitSpec {
             Json.obj(
               "upeDetails" -> Json.obj("organisationName" -> "CFG Solutions", "registrationDate" -> "2020-01-01"),
               "upeCorrespAddressDetails" -> Json.obj("countryCode" -> "GB"),
-              "accountStatus"            -> Json.obj("inactive" -> true)
+              "accountStatus" -> Json.obj("inactive" -> true)
             )
         )
 

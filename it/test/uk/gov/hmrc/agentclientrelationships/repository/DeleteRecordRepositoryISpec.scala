@@ -37,7 +37,11 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-class DeleteRecordRepositoryISpec extends UnitSpec with MongoApp with GuiceOneAppPerSuite with IntegrationPatience {
+class DeleteRecordRepositoryISpec
+extends UnitSpec
+with MongoApp
+with GuiceOneAppPerSuite
+with IntegrationPatience {
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure("features.recovery-enable" -> false)

@@ -54,8 +54,8 @@ class CreateRelationshipsService @Inject() (
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   val metrics: Metrics
 )(implicit ec: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   // noinspection ScalaStyle
   def createRelationship(
@@ -93,17 +93,17 @@ class CreateRelationshipsService @Inject() (
       }
 
       for {
-        agentUser            <- retrieveAgentUser(arn)
+        agentUser <- retrieveAgentUser(arn)
         recordCreationStatus <- createRelationshipRecord
         if recordCreationStatus == DbUpdateSucceeded
         etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey)
         if etmpRecordCreationStatus == DbUpdateSucceeded
         esRecordCreationStatus <- createEsRecord(
-                                    arn,
-                                    enrolmentKey,
-                                    agentUser,
-                                    failIfAllocateAgentInESFails
-                                  )
+          arn,
+          enrolmentKey,
+          agentUser,
+          failIfAllocateAgentInESFails
+        )
         _ = auditService.sendCreateRelationshipAuditEvent()
       } yield esRecordCreationStatus
     }
@@ -236,13 +236,13 @@ class CreateRelationshipsService @Inject() (
           else
             deallocatePreviousRelationship(arn, enrolmentKey)
         _ <- es.allocateEnrolmentToAgent(
-               agentUser.groupId,
-               agentUser.userId,
-               enrolmentKey,
-               agentUser.agentCode
-             )
+          agentUser.groupId,
+          agentUser.userId,
+          enrolmentKey,
+          agentUser.agentCode
+        )
         _ = auditData.set(enrolmentDelegatedKey, true)
-        _                   <- agentUserClientDetailsConnector.cacheRefresh(arn)
+        _ <- agentUserClientDetailsConnector.cacheRefresh(arn)
         esSyncStatusSuccess <- updateEsSyncStatus(Success)
       } yield esSyncStatusSuccess
     ).recoverWith(recoverAgentUserRelationshipNotFound.orElse(recoverUpstream5xx).orElse(recoverNonFatal))
@@ -256,61 +256,60 @@ class CreateRelationshipsService @Inject() (
     for {
       existingAgents <- es.getDelegatedGroupIdsFor(enrolmentKey)
       _ <- Future.sequence(
-             existingAgents.map { groupId =>
-               (
-                 for {
-                   maybeArn <- es.getAgentReferenceNumberFor(groupId)
-                   _ <-
-                     maybeArn match {
-                       case None =>
-                         logger.warn(s"Arn not found for provided groupId: $groupId")
-                         Future.successful(())
-                       case Some(arnToRemove) =>
-                         val deleteRecord = DeleteRecord(
-                           arnToRemove.value,
-                           Some(enrolmentKey),
-                           syncToETMPStatus = Some(Success),
-                           headerCarrier = Some(hc)
-                         )
-                         deleteRecordRepository
-                           .create(deleteRecord)
-                           .map(convertDbUpdateStatus)
-                           .recover { case NonFatal(ex) =>
-                             logger.warn(
-                               s"Inserting delete record into mongo failed for ${newArn.value}, ${enrolmentKey.tag}",
-                               ex
-                             )
-                             DbUpdateFailed
-                           }
-                     }
-                   _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)
-                   _ <-
-                     maybeArn match {
-                       case None => Future successful (())
-                       case Some(removedArn) =>
-                         deleteRecordRepository
-                           .remove(removedArn, enrolmentKey)
-                           .map { updated =>
-                             if (updated > 0) {
-                               auditService.auditForAgentReplacement(removedArn, enrolmentKey)
-                               true
-                             } else
-                               false
-                           }
-                           .recoverWith { case NonFatal(ex) =>
-                             logger.warn(
-                               s"Removing delete record from mongo failed for ${removedArn.value}, ${enrolmentKey.tag}",
-                               ex
-                             )
-                             Future.successful(false)
-                           }
-                     }
-                 } yield ()
-               ).recover { case NonFatal(ex) =>
-                 logger.error(s"Could not deallocate previous relationship because of: $ex. Will try later.")
-               }
-             }
-           )
+        existingAgents.map { groupId =>
+          (
+            for {
+              maybeArn <- es.getAgentReferenceNumberFor(groupId)
+              _ <-
+                maybeArn match {
+                  case None =>
+                    logger.warn(s"Arn not found for provided groupId: $groupId")
+                    Future.successful(())
+                  case Some(arnToRemove) =>
+                    val deleteRecord = DeleteRecord(
+                      arnToRemove.value,
+                      Some(enrolmentKey),
+                      syncToETMPStatus = Some(Success),
+                      headerCarrier = Some(hc)
+                    )
+                    deleteRecordRepository
+                      .create(deleteRecord)
+                      .map(convertDbUpdateStatus)
+                      .recover { case NonFatal(ex) =>
+                        logger.warn(
+                          s"Inserting delete record into mongo failed for ${newArn.value}, ${enrolmentKey.tag}",
+                          ex
+                        )
+                        DbUpdateFailed
+                      }
+                }
+              _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)
+              _ <-
+                maybeArn match {
+                  case None => Future successful (())
+                  case Some(removedArn) =>
+                    deleteRecordRepository
+                      .remove(removedArn, enrolmentKey)
+                      .map { updated =>
+                        if (updated > 0) {
+                          auditService.auditForAgentReplacement(removedArn, enrolmentKey)
+                          true
+                        }
+                        else
+                          false
+                      }
+                      .recoverWith { case NonFatal(ex) =>
+                        logger.warn(
+                          s"Removing delete record from mongo failed for ${removedArn.value}, ${enrolmentKey.tag}",
+                          ex
+                        )
+                        Future.successful(false)
+                      }
+                }
+            } yield ()
+          ).recover { case NonFatal(ex) => logger.error(s"Could not deallocate previous relationship because of: $ex. Will try later.") }
+        }
+      )
     } yield ()
 
   private def retrieveAgentUser(arn: Arn)(implicit
@@ -339,15 +338,15 @@ class CreateRelationshipsService @Inject() (
             s"Relationship copy record found: ETMP and ES had failed status. Record dateTime: ${relationshipCopyRecord.dateTime}"
           )
           for {
-            agentUser  <- retrieveAgentUser(arn)
+            agentUser <- retrieveAgentUser(arn)
             etmpStatus <- createEtmpRecord(arn, enrolmentKey)
             if etmpStatus == DbUpdateSucceeded
             esStatus <- createEsRecord(
-                          arn,
-                          enrolmentKey,
-                          agentUser,
-                          failIfAllocateAgentInESFails = false
-                        )
+              arn,
+              enrolmentKey,
+              agentUser,
+              failIfAllocateAgentInESFails = false
+            )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield esStatus
         case (false, true) =>
@@ -357,11 +356,11 @@ class CreateRelationshipsService @Inject() (
           for {
             agentUser <- retrieveAgentUser(arn)
             esStatus <- createEsRecord(
-                          arn,
-                          enrolmentKey,
-                          agentUser,
-                          failIfAllocateAgentInESFails = false
-                        )
+              arn,
+              enrolmentKey,
+              agentUser,
+              failIfAllocateAgentInESFails = false
+            )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield esStatus
         case (true, false) =>

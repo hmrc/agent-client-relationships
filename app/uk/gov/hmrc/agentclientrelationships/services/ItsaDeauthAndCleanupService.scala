@@ -75,11 +75,11 @@ class ItsaDeauthAndCleanupService @Inject() (
         for {
           // Attempt to remove existing alt itsa partial auth
           altItsa <- partialAuthRepository.deauthorise(
-                       serviceToCheck.id,
-                       Nino(nino),
-                       Arn(arn),
-                       timestamp
-                     )
+            serviceToCheck.id,
+            Nino(nino),
+            Arn(arn),
+            timestamp
+          )
           _ =
             if (altItsa) {
               implicit val auditData: AuditData = new AuditData()
@@ -111,31 +111,31 @@ class ItsaDeauthAndCleanupService @Inject() (
             }
           // Clean up accepted invitations
           _ <- Future.successful(
-                 if (altItsa)
-                   deauthAcceptedInvitations(
-                     serviceToCheck.id,
-                     Some(arn),
-                     nino,
-                     isAltItsa = true,
-                     timestamp
-                   )
-                 else
-                   Future.unit
-               )
+            if (altItsa)
+              deauthAcceptedInvitations(
+                serviceToCheck.id,
+                Some(arn),
+                nino,
+                isAltItsa = true,
+                timestamp
+              )
+            else
+              Future.unit
+          )
           _ <- Future.successful(
-                 optMtdItId.fold(Future.unit) { mtdItId =>
-                   if (itsa)
-                     deauthAcceptedInvitations(
-                       serviceToCheck.id,
-                       Some(arn),
-                       mtdItId,
-                       isAltItsa = false,
-                       timestamp
-                     )
-                   else
-                     Future.unit
-                 }
-               )
+            optMtdItId.fold(Future.unit) { mtdItId =>
+              if (itsa)
+                deauthAcceptedInvitations(
+                  serviceToCheck.id,
+                  Some(arn),
+                  mtdItId,
+                  isAltItsa = false,
+                  timestamp
+                )
+              else
+                Future.unit
+            }
+          )
         } yield altItsa || itsa
       case _ => Future.successful(false)
     }

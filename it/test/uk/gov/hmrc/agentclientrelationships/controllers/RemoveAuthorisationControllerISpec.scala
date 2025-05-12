@@ -64,11 +64,11 @@ import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
 class RemoveAuthorisationControllerISpec
-    extends RelationshipsBaseControllerISpec
-    with HipStub
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with TestData {
+extends RelationshipsBaseControllerISpec
+with HipStub
+with ClientDetailsStub
+with AfiRelationshipStub
+with TestData {
 
   override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
@@ -99,15 +99,15 @@ class RemoveAuthorisationControllerISpec
   def allServices: Map[Service, TaxIdentifier] = Map(
     MtdIt -> mtdItId,
     //    PersonalIncomeRecord -> nino, PIR tested separately in this file
-    Vat          -> vrn,
-    Trust        -> utr,
-    TrustNT      -> urn,
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
     CapitalGains -> cgtRef,
-    Ppt          -> pptRef,
-    Cbc          -> cbcId,
-    CbcNonUk     -> cbcId,
-    Pillar2      -> plrId,
-    MtdItSupp    -> mtdItId
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId
   )
 
   val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/remove-authorisation"
@@ -121,20 +121,19 @@ class RemoveAuthorisationControllerISpec
         val suppliedClientId =
           taxIdentifier match {
             case _: MtdItId => ClientIdentifier(nino)
-            case taxId      => ClientIdentifier(taxId)
+            case taxId => ClientIdentifier(taxId)
           }
 
         val enrolmentKey: EnrolmentKey =
           taxIdentifier match {
-            case _: CbcId if service == Cbc =>
-              EnrolmentKey(service.enrolmentKey, Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
+            case _: CbcId if service == Cbc => EnrolmentKey(service.enrolmentKey, Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
             case _ => EnrolmentKey(service.enrolmentKey, taxIdentifier)
           }
 
         val serviceId =
           service match {
             case PersonalIncomeRecord => PersonalIncomeRecord.id
-            case s                    => s.id
+            case s => s.id
           }
         val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 

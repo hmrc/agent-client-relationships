@@ -20,7 +20,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
 
-class TaxIdentifierSupportSpec extends UnitSpec {
+class TaxIdentifierSupportSpec
+extends UnitSpec {
 
   "identifierNickname" should {
     "return ARN when tax identifier is of Arn type" in {

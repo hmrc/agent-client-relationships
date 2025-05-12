@@ -43,9 +43,9 @@ class EmailConnector @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
-    extends HttpApiMonitor
-    with HttpErrorFunctions
-    with Logging {
+extends HttpApiMonitor
+with HttpErrorFunctions
+with Logging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 

@@ -36,30 +36,30 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 
 class RelationshipsControllerTestOnlyISpec
-    extends UnitSpec
-    with MongoApp
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DesStubs
-    with MappingStubs
-    with DataStreamStub
-    with IntegrationPatience {
+extends UnitSpec
+with MongoApp
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DesStubs
+with MappingStubs
+with DataStreamStub
+with IntegrationPatience {
 
   override implicit lazy val app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure(
       "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-      "microservice.services.tax-enrolments.port"        -> wireMockPort,
-      "microservice.services.users-groups-search.port"   -> wireMockPort,
-      "microservice.services.des.port"                   -> wireMockPort,
-      "microservice.services.if.port"                    -> wireMockPort,
-      "microservice.services.auth.port"                  -> wireMockPort,
-      "microservice.services.agent-mapping.port"         -> wireMockPort,
-      "auditing.consumer.baseUri.host"                   -> wireMockHost,
-      "auditing.consumer.baseUri.port"                   -> wireMockPort,
-      "application.router"                               -> "testOnlyDoNotUseInAppConf.Routes",
-      "features.recovery-enable"                         -> false
+      "microservice.services.tax-enrolments.port" -> wireMockPort,
+      "microservice.services.users-groups-search.port" -> wireMockPort,
+      "microservice.services.des.port" -> wireMockPort,
+      "microservice.services.if.port" -> wireMockPort,
+      "microservice.services.auth.port" -> wireMockPort,
+      "microservice.services.agent-mapping.port" -> wireMockPort,
+      "auditing.consumer.baseUri.host" -> wireMockHost,
+      "auditing.consumer.baseUri.port" -> wireMockPort,
+      "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+      "features.recovery-enable" -> false
     )
     .configure(mongoConfiguration)
 

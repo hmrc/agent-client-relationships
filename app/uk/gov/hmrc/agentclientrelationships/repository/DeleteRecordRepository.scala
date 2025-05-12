@@ -83,8 +83,8 @@ object DeleteRecord {
       override def writes(hc: HeaderCarrier): JsObject = JsObject(
         Seq(
           "authorization" -> hc.authorization.map(_.value),
-          "sessionId"     -> hc.sessionId.map(_.value),
-          "gaToken"       -> hc.gaToken
+          "sessionId" -> hc.sessionId.map(_.value),
+          "gaToken" -> hc.gaToken
         ).collect { case (key, Some(value)) => (key, JsString(value)) }
       )
     }
@@ -147,36 +147,36 @@ trait DeleteRecordRepository {
 
 @Singleton
 class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[DeleteRecord](
-      mongoComponent = mongoComponent,
-      collectionName = "delete-record",
-      domainFormat = formats,
-      indexes = Seq(
-        // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
-        // The situation will be simplified after a migration of the legacy documents.
-        IndexModel(
-          Indexes.ascending(
-            "arn",
-            "clientIdentifier",
-            "clientIdentifierType"
-          ),
-          IndexOptions()
-            .partialFilterExpression(Filters.exists("clientIdentifier"))
-            .unique(true)
-            .name("arnAndAgentReferencePartial")
-        ),
-        IndexModel(
-          Indexes.ascending("arn", "enrolmentKey"),
-          IndexOptions()
-            .partialFilterExpression(Filters.exists("enrolmentKey"))
-            .unique(true)
-            .name("arnAndEnrolmentKeyPartial")
-        )
+extends PlayMongoRepository[DeleteRecord](
+  mongoComponent = mongoComponent,
+  collectionName = "delete-record",
+  domainFormat = formats,
+  indexes = Seq(
+    // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
+    // The situation will be simplified after a migration of the legacy documents.
+    IndexModel(
+      Indexes.ascending(
+        "arn",
+        "clientIdentifier",
+        "clientIdentifierType"
       ),
-      replaceIndexes = true
+      IndexOptions()
+        .partialFilterExpression(Filters.exists("clientIdentifier"))
+        .unique(true)
+        .name("arnAndAgentReferencePartial")
+    ),
+    IndexModel(
+      Indexes.ascending("arn", "enrolmentKey"),
+      IndexOptions()
+        .partialFilterExpression(Filters.exists("enrolmentKey"))
+        .unique(true)
+        .name("arnAndEnrolmentKeyPartial")
     )
-    with DeleteRecordRepository
-    with Logging {
+  ),
+  replaceIndexes = true
+)
+with DeleteRecordRepository
+with Logging {
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 

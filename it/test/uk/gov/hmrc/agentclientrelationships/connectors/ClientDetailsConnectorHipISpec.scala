@@ -47,24 +47,24 @@ import uk.gov.hmrc.domain.Nino
 import java.time.LocalDate
 
 class ClientDetailsConnectorHipISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DataStreamStub
-    with ClientDetailsStub
-    with HipStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DataStreamStub
+with ClientDetailsStub
+with HipStub {
 
   override lazy val app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.citizen-details.port" -> wireMockPort,
-    "microservice.services.if.port"              -> wireMockPort,
-    "microservice.services.hip.port"             -> wireMockPort,
-    "microservice.services.eis.port"             -> wireMockPort,
-    "microservice.services.des.port"             -> wireMockPort,
-    "auditing.consumer.baseUri.host"             -> wireMockHost,
-    "auditing.consumer.baseUri.port"             -> wireMockPort,
-    "hip.BusinessDetails.enabled"                -> true
+    "microservice.services.if.port" -> wireMockPort,
+    "microservice.services.hip.port" -> wireMockPort,
+    "microservice.services.eis.port" -> wireMockPort,
+    "microservice.services.des.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "hip.BusinessDetails.enabled" -> true
   )
 
   implicit val request: RequestHeader = FakeRequest()

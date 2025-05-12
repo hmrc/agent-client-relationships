@@ -43,8 +43,8 @@ class LookupInvitationsController @Inject() (
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthorisedFunctions {
+extends BackendController(cc)
+with AuthorisedFunctions {
 
   def lookupInvitations(
     arn: Option[Arn],
@@ -55,26 +55,27 @@ class LookupInvitationsController @Inject() (
     authorised() {
       if (arn.isEmpty && services.isEmpty && clientIds.isEmpty && status.isEmpty) {
         Future.successful(BadRequest)
-      } else {
+      }
+      else {
         for {
           invitations <- invitationsRepository.findAllBy(
-                           arn.map(_.value),
-                           services,
-                           clientIds,
-                           status
-                         )
+            arn.map(_.value),
+            services,
+            clientIds,
+            status
+          )
           partialAuths <- lookupPartialAuths(
-                            arn,
-                            services,
-                            clientIds,
-                            status,
-                            invitations
-                          )
+            arn,
+            services,
+            clientIds,
+            status,
+            invitations
+          )
           combined = (invitations ++ partialAuths.map(_.asInvitation)).sortBy(_.created)
           result =
             combined match {
               case Nil => NotFound
-              case _   => Ok(Json.toJson(combined))
+              case _ => Ok(Json.toJson(combined))
             }
         } yield result
       }
@@ -86,7 +87,7 @@ class LookupInvitationsController @Inject() (
       invitationsRepository
         .findOneById(invitationId)
         .map {
-          case None             => NotFound
+          case None => NotFound
           case Some(invitation) => Ok(Json.toJson(invitation))
         }
     }
@@ -118,7 +119,7 @@ class LookupInvitationsController @Inject() (
       val itsaServices = services.filter(Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(_))
       val optNino = clientIds.find(Nino.isValid)
       val isActive = status.map {
-        case PartialAuth  => true
+        case PartialAuth => true
         case DeAuthorised => false
       }
 
@@ -137,7 +138,8 @@ class LookupInvitationsController @Inject() (
             }
           )
         }
-    } else {
+    }
+    else {
       Future.successful(Nil)
     }
 

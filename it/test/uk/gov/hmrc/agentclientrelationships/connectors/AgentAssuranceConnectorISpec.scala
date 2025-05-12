@@ -34,19 +34,19 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class AgentAssuranceConnectorISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with TestData
-    with AgentAssuranceStubs {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with TestData
+with AgentAssuranceStubs {
 
   override lazy val app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.agent-assurance.port" -> wireMockPort,
-    "auditing.consumer.baseUri.host"             -> wireMockHost,
-    "auditing.consumer.baseUri.port"             -> wireMockPort,
-    "internal-auth.token"                        -> "internalAuthToken"
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "internal-auth.token" -> "internalAuthToken"
   )
 
   implicit val request: RequestHeader = FakeRequest()

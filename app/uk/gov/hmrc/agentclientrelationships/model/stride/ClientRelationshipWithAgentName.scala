@@ -32,7 +32,7 @@ case class ClientRelationshipWithAgentName(
 ) {
   def isActive: Boolean =
     dateTo match {
-      case None    => true
+      case None => true
       case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 }

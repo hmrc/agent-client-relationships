@@ -20,15 +20,19 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.Suite
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-trait MongoApp extends MongoSupport with ResetMongoBeforeTest {
+trait MongoApp
+extends MongoSupport
+with ResetMongoBeforeTest {
   me: Suite =>
 
   protected def mongoConfiguration = Map("mongodb.uri" -> mongoUri)
 
 }
 
-trait ResetMongoBeforeTest extends BeforeAndAfterEach {
-  me: Suite with MongoSupport =>
+trait ResetMongoBeforeTest
+extends BeforeAndAfterEach {
+  me: Suite
+    with MongoSupport =>
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()

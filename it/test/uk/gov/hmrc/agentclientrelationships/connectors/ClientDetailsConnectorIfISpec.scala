@@ -45,23 +45,23 @@ import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import java.time.LocalDate
 
 class ClientDetailsConnectorIfISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DataStreamStub
-    with ClientDetailsStub
-    with IfStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DataStreamStub
+with ClientDetailsStub
+with IfStub {
 
   override lazy val app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.citizen-details.port" -> wireMockPort,
-    "microservice.services.if.port"              -> wireMockPort,
-    "microservice.services.eis.port"             -> wireMockPort,
-    "microservice.services.des.port"             -> wireMockPort,
-    "auditing.consumer.baseUri.host"             -> wireMockHost,
-    "auditing.consumer.baseUri.port"             -> wireMockPort,
-    "hip.BusinessDetails.enabled"                -> false
+    "microservice.services.if.port" -> wireMockPort,
+    "microservice.services.eis.port" -> wireMockPort,
+    "microservice.services.des.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "hip.BusinessDetails.enabled" -> false
   )
 
   implicit val request: RequestHeader = FakeRequest()

@@ -26,5 +26,7 @@ object DbUpdateStatus {
       DbUpdateFailed
 }
 
-case object DbUpdateSucceeded extends DbUpdateStatus
-case object DbUpdateFailed extends DbUpdateStatus
+case object DbUpdateSucceeded
+extends DbUpdateStatus
+case object DbUpdateFailed
+extends DbUpdateStatus

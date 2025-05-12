@@ -44,7 +44,7 @@ class RecoveryScheduler @Inject() (
   actorSystem: ActorSystem,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   val recoveryInterval = appConfig.recoveryInterval
   val recoveryEnable = appConfig.recoveryEnabled
@@ -65,7 +65,8 @@ class RecoveryScheduler @Inject() (
         taskActor,
         "<start>"
       )
-  } else
+  }
+  else
     logger.warn("Recovery job scheduler not enabled.")
 
   def recover: Future[Unit] = deleteRelationshipsService.tryToResume(new AuditData).map(_ => ())
@@ -77,8 +78,8 @@ class TaskActor(
   recoveryInterval: Int,
   recover: => Future[Unit]
 )(implicit ec: ExecutionContext)
-    extends Actor
-    with Logging {
+extends Actor
+with Logging {
 
   def receive: PartialFunction[Any, Unit] = { case uid: String =>
     mongoRecoveryScheduleRepository.read
@@ -106,7 +107,8 @@ class TaskActor(
               logger.info("About to start recovery job.")
               recover
             }
-        } else {
+        }
+        else {
           val dateTime =
             if (runAt.isBefore(now))
               now

@@ -51,9 +51,9 @@ class AuthorisationAcceptController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions
-    with Logging {
+extends BackendController(cc)
+with AuthActions
+with Logging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
@@ -68,18 +68,18 @@ class AuthorisationAcceptController @Inject() (
 
           for {
             enrolment <- validationService
-                           .validateForEnrolmentKey(
-                             invitation.service,
-                             ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                             invitation.clientId
-                           )
-                           .map(either =>
-                             either.getOrElse(
-                               throw new RuntimeException(
-                                 s"Could not parse invitation details into enrolment reason: ${either.left}"
-                               )
-                             )
-                           )
+              .validateForEnrolmentKey(
+                invitation.service,
+                ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                invitation.clientId
+              )
+              .map(either =>
+                either.getOrElse(
+                  throw new RuntimeException(
+                    s"Could not parse invitation details into enrolment reason: ${either.left}"
+                  )
+                )
+              )
             result <-
               authorisedUser(
                 None,
@@ -98,7 +98,7 @@ class AuthorisationAcceptController @Inject() (
                   }
                   .recoverWith {
                     case CreateRelationshipLocked => Future.successful(Locked)
-                    case err                      => throw err
+                    case err => throw err
                   }
               }
             _ <-

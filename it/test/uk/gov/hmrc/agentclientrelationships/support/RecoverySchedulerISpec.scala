@@ -44,31 +44,31 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class RecoverySchedulerISpec
-    extends TestKit(ActorSystem("testSystem"))
-    with UnitSpec
-    with MongoSupport
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with RelationshipStubs
-    with DataStreamStub
-    with HipStub
-    with AUCDStubs
-    with BeforeAndAfterEach {
+extends TestKit(ActorSystem("testSystem"))
+with UnitSpec
+with MongoSupport
+with GuiceOneServerPerSuite
+with WireMockSupport
+with RelationshipStubs
+with DataStreamStub
+with HipStub
+with AUCDStubs
+with BeforeAndAfterEach {
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
-    "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
-    "microservice.services.tax-enrolments.port"             -> wireMockPort,
-    "microservice.services.users-groups-search.port"        -> wireMockPort,
-    "microservice.services.hip.port"                        -> wireMockPort,
-    "auditing.consumer.baseUri.host"                        -> wireMockHost,
-    "auditing.consumer.baseUri.port"                        -> wireMockPort,
-    "features.copy-relationship.mtd-it"                     -> true,
-    "features.copy-relationship.mtd-vat"                    -> true,
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.hip.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
     "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-    "microservice.services.agent-user-client-details.port"  -> wireMockPort,
-    "features.recovery-enable"                              -> false,
-    "auditing.enabled"                                      -> true,
-    "mongodb.uri"                                           -> mongoUri
+    "microservice.services.agent-user-client-details.port" -> wireMockPort,
+    "features.recovery-enable" -> false,
+    "auditing.enabled" -> true,
+    "mongodb.uri" -> mongoUri
   )
 
   override implicit lazy val app: Application = appBuilder.build()

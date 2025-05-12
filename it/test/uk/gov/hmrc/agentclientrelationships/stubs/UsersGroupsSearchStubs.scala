@@ -113,8 +113,8 @@ trait UsersGroupsSearchStubs {
     get(urlEqualTo(s"/users-groups-search/groups/$groupId/users")).willReturn(aResponse().withBody(s"""
                                                                                                       |[
                                                                                                       |    ${users
-      .map(UserDetails.formats.writes)
-      .mkString(",")}
+                                                                                                       .map(UserDetails.formats.writes)
+                                                                                                       .mkString(",")}
                                                                                                       |]
           """.stripMargin))
   )

@@ -27,10 +27,10 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 
 class InternalAuthTokenInitialiserISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DataStreamStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DataStreamStub {
 
   "when configured to run" should {
     "should initialise the internal-auth token if it is not already initialised" in {
@@ -38,13 +38,13 @@ class InternalAuthTokenInitialiserISpec
       val appName = "appName"
 
       val expectedRequest = Json.obj(
-        "token"     -> authToken,
+        "token" -> authToken,
         "principal" -> appName,
         "permissions" -> Seq(
           Json.obj(
-            "resourceType"     -> "agent-assurance",
+            "resourceType" -> "agent-assurance",
             "resourceLocation" -> "agent-record-with-checks/arn",
-            "actions"          -> List("WRITE")
+            "actions" -> List("WRITE")
           )
         )
       )
@@ -56,9 +56,9 @@ class InternalAuthTokenInitialiserISpec
       new GuiceApplicationBuilder()
         .configure(
           "microservice.services.internal-auth.port" -> wireMockPort,
-          "appName"                                  -> appName,
-          "internal-auth-token-enabled-on-start"     -> true,
-          "internal-auth.token"                      -> authToken
+          "appName" -> appName,
+          "internal-auth-token-enabled-on-start" -> true,
+          "internal-auth.token" -> authToken
         )
         .build()
 
@@ -74,13 +74,13 @@ class InternalAuthTokenInitialiserISpec
       val appName = "appName"
 
       val expectedRequest = Json.obj(
-        "token"     -> authToken,
+        "token" -> authToken,
         "principal" -> appName,
         "permissions" -> Seq(
           Json.obj(
-            "resourceType"     -> "agent-assurance",
+            "resourceType" -> "agent-assurance",
             "resourceLocation" -> "agent-record-with-checks/arn",
-            "actions"          -> List("WRITE")
+            "actions" -> List("WRITE")
           )
         )
       )
@@ -93,9 +93,9 @@ class InternalAuthTokenInitialiserISpec
         new GuiceApplicationBuilder()
           .configure(
             "microservice.services.internal-auth.port" -> wireMockPort,
-            "appName"                                  -> appName,
-            "internal-auth-token-enabled-on-start"     -> true,
-            "internal-auth.token"                      -> authToken
+            "appName" -> appName,
+            "internal-auth-token-enabled-on-start" -> true,
+            "internal-auth.token" -> authToken
           )
           .build()
       }
@@ -120,9 +120,9 @@ class InternalAuthTokenInitialiserISpec
       val app = new GuiceApplicationBuilder()
         .configure(
           "microservice.services.internal-auth.port" -> wireMockPort,
-          "appName"                                  -> appName,
-          "internal-auth-token-enabled-on-start"     -> true,
-          "internal-auth.token"                      -> authToken
+          "appName" -> appName,
+          "internal-auth-token-enabled-on-start" -> true,
+          "internal-auth.token" -> authToken
         )
         .build()
 
@@ -145,9 +145,9 @@ class InternalAuthTokenInitialiserISpec
       val app = new GuiceApplicationBuilder()
         .configure(
           "microservice.services.internal-auth.port" -> wireMockPort,
-          "appName"                                  -> appName,
-          "internal-auth-token-enabled-on-start"     -> false,
-          "internal-auth.token"                      -> authToken
+          "appName" -> appName,
+          "internal-auth-token-enabled-on-start" -> false,
+          "internal-auth.token" -> authToken
         )
         .build()
 

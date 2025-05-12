@@ -29,14 +29,17 @@ import java.time.ZoneOffset
 sealed trait RelationshipSource
 object RelationshipSource {
 
-  case object HipOrIfApi extends RelationshipSource
-  case object AfrRelationshipRepo extends RelationshipSource
-  case object AcrPartialAuthRepo extends RelationshipSource
+  case object HipOrIfApi
+  extends RelationshipSource
+  case object AfrRelationshipRepo
+  extends RelationshipSource
+  case object AcrPartialAuthRepo
+  extends RelationshipSource
 
   implicit val writes: Writes[RelationshipSource] = Writes {
-    case HipOrIfApi          => JsString("HipOrIfApi")
+    case HipOrIfApi => JsString("HipOrIfApi")
     case AfrRelationshipRepo => JsString("AfrRelationshipRepo")
-    case AcrPartialAuthRepo  => JsString("AcrPartialAuthRepo")
+    case AcrPartialAuthRepo => JsString("AcrPartialAuthRepo")
   }
 
 }
@@ -128,7 +131,7 @@ object ClientRelationship {
 
   def isActive(dateTo: Option[LocalDate]): Boolean =
     dateTo match {
-      case None    => true
+      case None => true
       case Some(d) => d.isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDate)
     }
 

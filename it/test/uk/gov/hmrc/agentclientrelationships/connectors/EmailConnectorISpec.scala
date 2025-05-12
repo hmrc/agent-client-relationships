@@ -29,15 +29,19 @@ import play.api.test.FakeRequest
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with EmailStubs {
+class EmailConnectorISpec
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with EmailStubs {
 
   override lazy val app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.email.port" -> wireMockPort,
-    "auditing.consumer.baseUri.host"   -> wireMockHost,
-    "auditing.consumer.baseUri.port"   -> wireMockPort,
-    "internal-auth.token"              -> "internalAuthToken"
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "internal-auth.token" -> "internalAuthToken"
   )
 
   val connector: EmailConnector = app.injector.instanceOf[EmailConnector]

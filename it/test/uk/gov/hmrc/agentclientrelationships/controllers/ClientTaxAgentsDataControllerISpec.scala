@@ -31,11 +31,11 @@ import java.time.Instant
 import java.time.ZoneOffset
 
 class ClientTaxAgentsDataControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with HipStub
-    with TestData {
+extends BaseControllerISpec
+with ClientDetailsStub
+with AfiRelationshipStub
+with HipStub
+with TestData {
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
@@ -323,8 +323,7 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 1
 
       // Check how many invitations for agent we have
-      val agentNameInvitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
+      val agentNameInvitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
       agentNameInvitations.size shouldBe 2
 
     }
@@ -372,12 +371,10 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 2
 
       // Check how many invitations for agent we have
-      val agentName1Invitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
+      val agentName1Invitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
       agentName1Invitations.size shouldBe 2
 
-      val agentName2Invitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName2).get.invitations
+      val agentName2Invitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName2).get.invitations
       agentName2Invitations.size shouldBe 1
 
     }
@@ -444,8 +441,7 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 1
 
       // Check how many invitations for agent we have
-      val agentName1Invitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
+      val agentName1Invitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
       agentName1Invitations.size shouldBe 2
 
       clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName2) shouldBe None
@@ -556,21 +552,18 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 3 // for 3 agents data
 
-      val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
+      val agent1Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
       agent1Authorisations.size shouldBe 3
       agent1Authorisations.exists(_.service == Service.MtdIt.id) shouldBe true
       agent1Authorisations.exists(_.service == Service.Vat.id) shouldBe true
       agent1Authorisations.exists(_.service == Service.Trust.id) shouldBe true
 
-      val agent2Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn2.value).get.authorisations
+      val agent2Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn2.value).get.authorisations
       agent2Authorisations.size shouldBe 2
       agent2Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true
       agent2Authorisations.exists(_.service == Service.TrustNT.id) shouldBe true
 
-      val agent3Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn3.value).get.authorisations
+      val agent3Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn3.value).get.authorisations
       agent3Authorisations.size shouldBe 2
       agent3Authorisations.exists(_.service == Service.Ppt.id) shouldBe true
       agent3Authorisations.exists(_.service == Service.CapitalGains.id) shouldBe true
@@ -597,8 +590,7 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 1
 
-      val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
+      val agent1Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
 
       agent1Authorisations.size shouldBe 1
       agent1Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true

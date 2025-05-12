@@ -41,10 +41,10 @@ import java.time.Instant
 import java.time.LocalDate
 
 class StrideClientDetailsControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with HipStub
-    with AfiRelationshipStub {
+extends BaseControllerISpec
+with ClientDetailsStub
+with HipStub
+with AfiRelationshipStub {
 
   override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
@@ -770,9 +770,7 @@ class StrideClientDetailsControllerISpec
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
-      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
-        Seq(expectedPartialAuthRelationship)
-      )
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships = Seq(expectedPartialAuthRelationship))
 
     }
 
@@ -801,9 +799,7 @@ class StrideClientDetailsControllerISpec
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
-      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
-        Seq(expectedPartialAuthRelationship)
-      )
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships = Seq(expectedPartialAuthRelationship))
 
     }
 

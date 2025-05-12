@@ -40,10 +40,9 @@ object ActiveRelationship {
         (JsPath \ "dateFrom").readNullable[LocalDate]
     )(ActiveRelationship.apply _)
 
-  val hipReads: Reads[ActiveRelationship] =
-    ((__ \ "arn").read[Arn] and (__ \ "dateTo").readNullable[LocalDate] and (__ \ "dateFrom").readNullable[LocalDate])(
-      ActiveRelationship.apply _
-    )
+  val hipReads: Reads[ActiveRelationship] = ((__ \ "arn").read[Arn] and (__ \ "dateTo").readNullable[LocalDate] and (__ \ "dateFrom").readNullable[LocalDate])(
+    ActiveRelationship.apply _
+  )
 
   val irvReads: Reads[ActiveRelationship] =
     (

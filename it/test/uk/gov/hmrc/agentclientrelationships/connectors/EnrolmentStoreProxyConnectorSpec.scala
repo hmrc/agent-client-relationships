@@ -42,31 +42,31 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import scala.concurrent.ExecutionContext
 
 class EnrolmentStoreProxyConnectorSpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with EnrolmentStoreProxyStubs
-    with DataStreamStub
-    with MockitoSugar {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with EnrolmentStoreProxyStubs
+with DataStreamStub
+with MockitoSugar {
 
   override implicit lazy val app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-    "microservice.services.tax-enrolments.port"        -> wireMockPort,
-    "microservice.services.users-groups-search.port"   -> wireMockPort,
-    "microservice.services.des.port"                   -> wireMockPort,
-    "microservice.services.auth.port"                  -> wireMockPort,
-    "microservice.services.agent-mapping.port"         -> wireMockPort,
-    "auditing.consumer.baseUri.host"                   -> wireMockHost,
-    "auditing.consumer.baseUri.port"                   -> wireMockPort,
-    "features.copy-relationship.mtd-it"                -> true,
-    "features.copy-relationship.mtd-vat"               -> true,
-    "features.recovery-enable"                         -> false,
-    "agent.cache.expires"                              -> "1 millis",
-    "agent.cache.enabled"                              -> true,
-    "agent.trackPage.cache.expires"                    -> "1 millis",
-    "agent.trackPage.cache.enabled"                    -> true
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.des.port" -> wireMockPort,
+    "microservice.services.auth.port" -> wireMockPort,
+    "microservice.services.agent-mapping.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
+    "features.recovery-enable" -> false,
+    "agent.cache.expires" -> "1 millis",
+    "agent.cache.enabled" -> true,
+    "agent.trackPage.cache.expires" -> "1 millis",
+    "agent.trackPage.cache.enabled" -> true
   )
 
   implicit val request: RequestHeader = FakeRequest()

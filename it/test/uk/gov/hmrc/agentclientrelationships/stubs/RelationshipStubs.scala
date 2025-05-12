@@ -23,7 +23,9 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.domain.Nino
 
-trait RelationshipStubs extends EnrolmentStoreProxyStubs with UsersGroupsSearchStubs {
+trait RelationshipStubs
+extends EnrolmentStoreProxyStubs
+with UsersGroupsSearchStubs {
 
   def givenPrincipalAgentUser(
     arn: Arn,

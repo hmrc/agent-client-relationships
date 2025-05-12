@@ -360,16 +360,16 @@ trait AuthStub {
   ): AuthStub = {
     val (service, key, value) =
       identifier match {
-        case Nino(v)    => ("HMRC-NI", "NINO", v)
+        case Nino(v) => ("HMRC-NI", "NINO", v)
         case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
-        case Vrn(v)     => ("HMRC-MTD-VAT", "VRN", v)
-        case Utr(v)     => ("HMRC-TERS-ORG", "SAUTR", v)
-        case Urn(v)     => ("HMRC-TERSNT-ORG", "URN", v)
-        case CgtRef(v)  => ("HMRC-CGT-PD", "CGTPDRef", v)
-        case PptRef(v)  => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
-        case CbcId(v)   => ("HMRC-CBC-ORG", "cbcId", v)
-        case PlrId(v)   => ("HMRC-PILLAR2-ORG", "PLRID", v)
-        case x          => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+        case Vrn(v) => ("HMRC-MTD-VAT", "VRN", v)
+        case Utr(v) => ("HMRC-TERS-ORG", "SAUTR", v)
+        case Urn(v) => ("HMRC-TERSNT-ORG", "URN", v)
+        case CgtRef(v) => ("HMRC-CGT-PD", "CGTPDRef", v)
+        case PptRef(v) => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
+        case CbcId(v) => ("HMRC-CBC-ORG", "cbcId", v)
+        case PlrId(v) => ("HMRC-PILLAR2-ORG", "PLRID", v)
+        case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
       }
 
     stubFor(
@@ -379,9 +379,9 @@ trait AuthStub {
           .withBody(s"""
                        |{
                        |"affinityGroup": "${if (key == "URN")
-            "Organisation"
-          else
-            "Individual"}",
+                        "Organisation"
+                      else
+                        "Individual"}",
                        |"allEnrolments": [{
                        |  "key": "$service",
                        |  "identifiers": [{
@@ -474,10 +474,10 @@ trait AuthStub {
          |{
          |  "allEnrolments": [
          |    ${enrolments
-        .map(enrolment =>
-          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
-        )
-        .mkString(", ")}
+          .map(enrolment =>
+            s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+          )
+          .mkString(", ")}
          |  ],
          |  "nino": "$defaultNino"
          |}
@@ -514,10 +514,10 @@ trait AuthStub {
          |  },
          |  "allEnrolments": [
          |    ${enrolments
-        .map(enrolment =>
-          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
-        )
-        .mkString(", ")}
+          .map(enrolment =>
+            s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+          )
+          .mkString(", ")}
          |  ]
          |}
           """.stripMargin
@@ -538,7 +538,7 @@ trait AuthStub {
             Json.obj("key" -> "HMRC-PT", "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino.value)))
           ),
           "nino" -> s"${nino.value}",
-          "utr"  -> "1234567890"
+          "utr" -> "1234567890"
         )
         .toString
     )
@@ -653,10 +653,10 @@ trait AuthStub {
          |{
          |"authorisedEnrolments": [
          |  ${enrolments
-        .map(enrolment =>
-          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
-        )
-        .mkString(", ")}
+          .map(enrolment =>
+            s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+          )
+          .mkString(", ")}
          |]}
           """.stripMargin
     )

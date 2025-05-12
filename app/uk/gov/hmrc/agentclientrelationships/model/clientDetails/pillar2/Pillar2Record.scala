@@ -29,10 +29,10 @@ case class Pillar2Record(
 object Pillar2Record {
   implicit val reads: Reads[Pillar2Record] =
     for {
-      orgName     <- (__ \ "success" \ "upeDetails" \ "organisationName").read[String]
-      regDate     <- (__ \ "success" \ "upeDetails" \ "registrationDate").read[String]
+      orgName <- (__ \ "success" \ "upeDetails" \ "organisationName").read[String]
+      regDate <- (__ \ "success" \ "upeDetails" \ "registrationDate").read[String]
       countryCode <- (__ \ "success" \ "upeCorrespAddressDetails" \ "countryCode").read[String]
-      inactive    <- (__ \ "success" \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
+      inactive <- (__ \ "success" \ "accountStatus" \ "inactive").readNullable[Boolean].map(_.getOrElse(false))
     } yield Pillar2Record(
       orgName,
       regDate,

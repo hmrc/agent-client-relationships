@@ -42,8 +42,8 @@ class AgentReferenceController @Inject() (
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthorisedFunctions {
+extends BackendController(cc)
+with AuthorisedFunctions {
 
   def fetchOrCreateRecord(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
@@ -56,8 +56,7 @@ class AgentReferenceController @Inject() (
               agentReferenceRepository
                 .findByArn(arn)
                 .flatMap {
-                  case Some(record) if record.normalisedAgentNames.contains(normalisedAgentName) =>
-                    Future.successful(Ok(Json.toJson(record)))
+                  case Some(record) if record.normalisedAgentNames.contains(normalisedAgentName) => Future.successful(Ok(Json.toJson(record)))
                   case Some(record) =>
                     agentReferenceRepository
                       .updateAgentName(record.uid, normalisedAgentName)
@@ -82,7 +81,7 @@ class AgentReferenceController @Inject() (
       .findBy(uid)
       .map {
         case Some(record) => Ok(Json.toJson(record))
-        case None         => NotFound
+        case None => NotFound
       }
   }
 

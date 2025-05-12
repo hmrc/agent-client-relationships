@@ -52,10 +52,10 @@ object VatCustomerDetails {
 
   implicit val reads: Reads[VatCustomerDetails] =
     for {
-      orgName     <- (pathPrefix \ "organisationName").readNullable[String]
-      individual  <- (pathPrefix \ "individual").readNullable[VatIndividual]
+      orgName <- (pathPrefix \ "organisationName").readNullable[String]
+      individual <- (pathPrefix \ "individual").readNullable[VatIndividual]
       tradingName <- (pathPrefix \ "tradingName").readNullable[String]
-      regDate     <- (pathPrefix \ "effectiveRegistrationDate").readNullable[String].map(_.map(LocalDate.parse))
+      regDate <- (pathPrefix \ "effectiveRegistrationDate").readNullable[String].map(_.map(LocalDate.parse))
       isInsolvent <- (pathPrefix \ "isInsolvent").read[Boolean]
     } yield VatCustomerDetails(
       orgName,

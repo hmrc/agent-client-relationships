@@ -28,11 +28,11 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 class AgentReferenceRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
-    with LogCapturing {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
+with LogCapturing {
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)

@@ -32,7 +32,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with ScalaFutures with Matchers {
+class AgentTerminationServiceSpec
+extends AnyFlatSpec
+with MockFactory
+with ScalaFutures
+with Matchers {
 
   val arn: Arn = Arn("AARN0000002")
 

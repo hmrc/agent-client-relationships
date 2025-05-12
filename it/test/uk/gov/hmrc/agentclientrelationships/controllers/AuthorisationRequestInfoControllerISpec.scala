@@ -34,7 +34,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import scala.concurrent.ExecutionContext
 
-class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with TestData {
+class AuthorisationRequestInfoControllerISpec
+extends BaseControllerISpec
+with TestData {
 
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -67,8 +69,7 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
 
   val testUrl = s"/agent-client-relationships/agent/${arn.value}/authorisation-request-info/$testInvitationId"
   val testClientUrl = s"/agent-client-relationships/client/authorisation-request-info/$testInvitationId"
-  val testTrackRequestsUrl =
-    s"/agent-client-relationships/agent/${arn.value}/authorisation-requests?pageNumber=1&pageSize=10"
+  val testTrackRequestsUrl = s"/agent-client-relationships/agent/${arn.value}/authorisation-requests?pageNumber=1&pageSize=10"
 
   s"GET $testUrl" should {
     "return 200 status and valid JSON when invitation exists and there is an agent record" in {
@@ -87,24 +88,24 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.json shouldBe Json.obj(
         "agentLink" -> Json.obj("uid" -> uid, "normalizedAgentName" -> "my-agency"),
         "authorisationRequest" -> Json.obj(
-          "invitationId"         -> "testInvitationId",
-          "arn"                  -> "AARN0000002",
-          "service"              -> "HMRC-MTD-VAT",
-          "clientId"             -> vrn.value,
-          "clientIdType"         -> "vrn",
-          "suppliedClientId"     -> vrn.value,
+          "invitationId" -> "testInvitationId",
+          "arn" -> "AARN0000002",
+          "service" -> "HMRC-MTD-VAT",
+          "clientId" -> vrn.value,
+          "clientIdType" -> "vrn",
+          "suppliedClientId" -> vrn.value,
           "suppliedClientIdType" -> "vrn",
-          "clientName"           -> "testName",
-          "agencyName"           -> "testAgentName",
-          "agencyEmail"          -> "agent@email.com",
-          "warningEmailSent"     -> false,
-          "expiredEmailSent"     -> false,
-          "status"               -> "Pending",
-          "relationshipEndedBy"  -> "Me",
-          "clientType"           -> "personal",
-          "expiryDate"           -> testDate,
-          "created"              -> testTime,
-          "lastUpdated"          -> testTime
+          "clientName" -> "testName",
+          "agencyName" -> "testAgentName",
+          "agencyEmail" -> "agent@email.com",
+          "warningEmailSent" -> false,
+          "expiredEmailSent" -> false,
+          "status" -> "Pending",
+          "relationshipEndedBy" -> "Me",
+          "clientType" -> "personal",
+          "expiryDate" -> testDate,
+          "created" -> testTime,
+          "lastUpdated" -> testTime
         )
       )
     }
@@ -130,8 +131,8 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
 
       result.json shouldBe Json.obj(
         "agentName" -> "My Agency",
-        "service"   -> "HMRC-MTD-VAT",
-        "status"    -> "Accepted"
+        "service" -> "HMRC-MTD-VAT",
+        "status" -> "Accepted"
       )
     }
     "return 404 status when invitation doesnt exist" in {
@@ -169,11 +170,11 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(listOfInvitations),
-        "clientNames"      -> Json.arr("testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(listOfInvitations),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "totalResults"     -> 3
+        "totalResults" -> 3
       )
     }
     "correctly filter the result set when the clientName filter is applied" in {
@@ -196,12 +197,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(Seq(matchingInvitation)),
-        "clientNames"      -> Json.arr("Find Me", "testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(Seq(matchingInvitation)),
+        "clientNames" -> Json.arr("Find Me", "testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "filtersApplied"   -> Json.obj("clientFilter" -> "Find Me"),
-        "totalResults"     -> 1
+        "filtersApplied" -> Json.obj("clientFilter" -> "Find Me"),
+        "totalResults" -> 1
       )
     }
     "correctly filter the result set when the status filter is applied" in {
@@ -223,12 +224,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(Seq(matchingInvitation)),
-        "clientNames"      -> Json.arr("testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(Seq(matchingInvitation)),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Accepted", "Pending"),
-        "filtersApplied"   -> Json.obj("statusFilter" -> "Accepted"),
-        "totalResults"     -> 1
+        "filtersApplied" -> Json.obj("statusFilter" -> "Accepted"),
+        "totalResults" -> 1
       )
     }
     "correctly filter the result set when the all filters are applied" in {
@@ -256,12 +257,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.toJson(Seq(matchingInvitation)),
-        "clientNames"      -> Json.arr("Find Me", "testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.toJson(Seq(matchingInvitation)),
+        "clientNames" -> Json.arr("Find Me", "testName"),
         "availableFilters" -> Json.arr("Accepted", "Pending"),
-        "filtersApplied"   -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
-        "totalResults"     -> 1
+        "filtersApplied" -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
+        "totalResults" -> 1
       )
     }
     "correctly return an empty result set when filters are not matched" in {
@@ -283,12 +284,12 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> 1,
-        "requests"         -> Json.arr(),
-        "clientNames"      -> Json.arr("testName"),
+        "pageNumber" -> 1,
+        "requests" -> Json.arr(),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "filtersApplied"   -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
-        "totalResults"     -> 0
+        "filtersApplied" -> Json.obj("statusFilter" -> "Accepted", "clientFilter" -> "Find Me"),
+        "totalResults" -> 0
       )
     }
     "respect the page size" in {
@@ -317,9 +318,9 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
             testInvitation.copy(invitationId = "testInvitationId2")
           )
         ),
-        "clientNames"      -> Json.arr("testName"),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "totalResults"     -> 3
+        "totalResults" -> 3
       )
     }
     "respect the page number" in {
@@ -343,11 +344,11 @@ class AuthorisationRequestInfoControllerISpec extends BaseControllerISpec with T
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "pageNumber"       -> expectedPageNumber,
-        "requests"         -> Json.toJson(Seq(testInvitation.copy(invitationId = "testInvitationId3"))),
-        "clientNames"      -> Json.arr("testName"),
+        "pageNumber" -> expectedPageNumber,
+        "requests" -> Json.toJson(Seq(testInvitation.copy(invitationId = "testInvitationId3"))),
+        "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
-        "totalResults"     -> 3
+        "totalResults" -> 3
       )
     }
     "return 400 status when the query is not well formed" in {

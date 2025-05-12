@@ -35,7 +35,7 @@ class EmailService @Inject() (
   messagesApi: MessagesApi,
   langs: Langs
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   // TODO: Currently, the language defaults to English by selecting the first available language.
   // Update the implementation to allow the frontend to specify the desired language for sending emails.
@@ -54,10 +54,10 @@ class EmailService @Inject() (
         to = Seq(invitations.head.agencyEmail),
         templateId = templateId,
         parameters = Map(
-          "agencyName"          -> invitations.head.agencyName,
+          "agencyName" -> invitations.head.agencyName,
           "numberOfInvitations" -> numberOfInvitations.toString,
-          "createdDate"         -> DateTimeHelper.displayDate(invitations.head.created),
-          "expiryDate"          -> DateTimeHelper.displayDate(invitations.head.expiryDate)
+          "createdDate" -> DateTimeHelper.displayDate(invitations.head.created),
+          "expiryDate" -> DateTimeHelper.displayDate(invitations.head.expiryDate)
         )
       )
     )
@@ -89,7 +89,7 @@ class EmailService @Inject() (
         "agencyName" -> invitation.agencyName,
         "clientName" -> invitation.clientName,
         "expiryDate" -> DateTimeHelper.displayDate(invitation.expiryDate),
-        "service"    -> messagesApi(s"service.${invitation.service}")
+        "service" -> messagesApi(s"service.${invitation.service}")
       ) ++ altItsaParam
     )
   }

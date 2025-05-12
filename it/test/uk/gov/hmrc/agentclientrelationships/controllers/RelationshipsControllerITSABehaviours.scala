@@ -43,12 +43,12 @@ import scala.concurrent.ExecutionContext
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
 
 trait RelationshipsControllerITSABehaviours {
-  this: RelationshipsBaseControllerISpec with HipStub =>
+  this: RelationshipsBaseControllerISpec
+    with HipStub =>
 
   // noinspection ScalaStyle
   def relationshipControllerITSASpecificBehaviours(): Unit = {
-    val requestPath: String =
-      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
     val relationshipCopiedSuccessfully = RelationshipCopyRecord(
       arn.value,
@@ -169,18 +169,18 @@ trait RelationshipsControllerITSABehaviours {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "nino"                    -> nino.value,
-            "saAgentRef"              -> "foo",
-            "service"                 -> "HMRC-MTD-IT",
-            "clientId"                -> mtdItId.value,
-            "clientIdType"            -> "mtditid",
-            "cesaRelationship"        -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "service" -> "HMRC-MTD-IT",
+            "clientId" -> mtdItId.value,
+            "clientIdType" -> "mtditid",
+            "cesaRelationship" -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "true",
-            "howRelationshipCreated"  -> "CopyExistingCESARelationship"
+            "enrolmentDelegated" -> "true",
+            "howRelationshipCreated" -> "CopyExistingCESARelationship"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -190,11 +190,11 @@ trait RelationshipsControllerITSABehaviours {
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "nino"                 -> nino.value,
-            "saAgentRef"           -> "foo",
-            "cesaRelationship"     -> "true"
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "cesaRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -471,18 +471,18 @@ trait RelationshipsControllerITSABehaviours {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "nino"                    -> nino.value,
-            "saAgentRef"              -> "foo",
-            "service"                 -> "HMRC-MTD-IT",
-            "clientId"                -> mtdItId.value,
-            "clientIdType"            -> "mtditid",
-            "cesaRelationship"        -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "service" -> "HMRC-MTD-IT",
+            "clientId" -> mtdItId.value,
+            "clientIdType" -> "mtditid",
+            "cesaRelationship" -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "false",
-            "howRelationshipCreated"  -> "CopyExistingCESARelationship"
+            "enrolmentDelegated" -> "false",
+            "howRelationshipCreated" -> "CopyExistingCESARelationship"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -492,11 +492,11 @@ trait RelationshipsControllerITSABehaviours {
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "nino"                 -> nino.value,
-            "saAgentRef"           -> "foo",
-            "cesaRelationship"     -> "true"
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "cesaRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -570,8 +570,7 @@ trait RelationshipsControllerITSABehaviours {
     }
 
     "GET /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino" should {
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
       def doRequest = doGetRequest(requestPath)
 
@@ -696,9 +695,9 @@ trait RelationshipsControllerITSABehaviours {
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "nino"                 -> nino.value,
-            "saAgentRef"           -> "foo",
-            "cesaRelationship"     -> "true"
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "cesaRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -723,9 +722,9 @@ trait RelationshipsControllerITSABehaviours {
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "nino"                 -> nino.value,
-            "saAgentRef"           -> "foo",
-            "cesaRelationship"     -> "true"
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "cesaRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
@@ -734,8 +733,7 @@ trait RelationshipsControllerITSABehaviours {
 
     "DELETE /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId" when {
 
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
       "the relationship exists and the Arn matches that of current Agent user" should {
 
@@ -832,8 +830,7 @@ trait RelationshipsControllerITSABehaviours {
 
     "DELETE /agent/:arn/service/HMRC-MTD-IT/client/NI/:nino" when {
 
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/NI/${nino.value}"
 
       "the relationship exists and the Arn matches that of current Agent user" should {
 

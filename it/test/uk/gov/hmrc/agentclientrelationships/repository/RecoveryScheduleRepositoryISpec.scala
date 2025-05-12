@@ -28,7 +28,10 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 
-class RecoveryScheduleRepositoryISpec extends UnitSpec with MongoApp with GuiceOneServerPerSuite {
+class RecoveryScheduleRepositoryISpec
+extends UnitSpec
+with MongoApp
+with GuiceOneServerPerSuite {
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure("features.recovery-enable" -> false)

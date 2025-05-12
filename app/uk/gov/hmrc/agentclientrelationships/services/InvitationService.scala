@@ -59,7 +59,7 @@ class InvitationService @Inject() (
   emailService: EmailService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def trackRequests(
     arn: Arn,
@@ -83,21 +83,21 @@ class InvitationService @Inject() (
       for {
 
         suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
-        service          <- EitherT.fromEither[Future](createInvitationInputData.getService)
-        clientType       <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
-        agentRecord      <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
-        clientId         <- EitherT(getClientId(suppliedClientId, service))
+        service <- EitherT.fromEither[Future](createInvitationInputData.getService)
+        clientType <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
+        agentRecord <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
+        clientId <- EitherT(getClientId(suppliedClientId, service))
         invitation <- EitherT(
-                        create(
-                          arn,
-                          service,
-                          clientId,
-                          suppliedClientId,
-                          createInvitationInputData.clientName,
-                          clientType,
-                          agentRecord.agencyDetails
-                        )
-                      )
+          create(
+            arn,
+            service,
+            clientId,
+            suppliedClientId,
+            createInvitationInputData.clientName,
+            clientType,
+            agentRecord.agencyDetails
+          )
+        )
       } yield invitation
 
     invitationT.value
@@ -116,7 +116,7 @@ class InvitationService @Inject() (
   ): Future[Invitation] =
     for {
       invitation <- invitationsRepository.updateStatus(invitationId, Rejected)
-      _          <- emailService.sendRejectedEmail(invitation)
+      _ <- emailService.sendRejectedEmail(invitation)
     } yield invitation
 
   def cancelInvitation(
@@ -161,11 +161,11 @@ class InvitationService @Inject() (
 
     for {
       invitations <- invitationsRepository.findAllBy(
-                       arn = None,
-                       services,
-                       clientIds,
-                       status = None
-                     )
+        arn = None,
+        services,
+        clientIds,
+        status = None
+      )
       suspendedArns <- getSuspendedArns(invitations.map(_.arn).distinct)
     } yield invitations.filterNot(invitation => suspendedArns.contains(invitation.arn))
   }
@@ -227,16 +227,16 @@ class InvitationService @Inject() (
     (
       for {
         invitation <- invitationsRepository.create(
-                        arn.value,
-                        service,
-                        clientId,
-                        suppliedClientId,
-                        clientName,
-                        agentDetails.agencyName,
-                        agentDetails.agencyEmail,
-                        expiryDate,
-                        clientType
-                      )
+          arn.value,
+          service,
+          clientId,
+          suppliedClientId,
+          clientName,
+          agentDetails.agencyName,
+          agentDetails.agencyEmail,
+          expiryDate,
+          clientType
+        )
       } yield {
         logger.info(s"""Created invitation with id: "${invitation.invitationId}".""")
         Right(invitation)
@@ -249,15 +249,16 @@ class InvitationService @Inject() (
   def migratePartialAuth(invitation: Invitation): Future[Unit] =
     for {
       _ <- partialAuthRepository.create(
-             invitation.created,
-             Arn(invitation.arn),
-             invitation.service,
-             Nino(invitation.clientId)
-           )
+        invitation.created,
+        Arn(invitation.arn),
+        invitation.service,
+        Nino(invitation.clientId)
+      )
       _ <-
         if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
           invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
-        } else
+        }
+        else
           Future.unit
     } yield ()
 

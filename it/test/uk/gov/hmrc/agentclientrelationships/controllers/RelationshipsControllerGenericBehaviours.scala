@@ -43,7 +43,8 @@ import java.time.ZoneOffset
 // The new Granular Permissions behaviours are tested directly in CheckRelationshipServiceSpec.
 
 trait RelationshipsControllerGenericBehaviours {
-  this: RelationshipsBaseControllerISpec with HipStub =>
+  this: RelationshipsBaseControllerISpec
+    with HipStub =>
 
   def relationshipsControllerISpec(
     serviceId: String,
@@ -90,9 +91,11 @@ trait RelationshipsControllerGenericBehaviours {
     val enrolmentKey =
       if (serviceId == Service.Cbc.id) {
         EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
-      } else if (isItsaNino(clientIdType, serviceId)) {
+      }
+      else if (isItsaNino(clientIdType, serviceId)) {
         EnrolmentKey(Service.forId(serviceId), mtdItId)
-      } else {
+      }
+      else {
         EnrolmentKey(Service.forId(serviceId), clientId)
       }
     def extraSetup(
@@ -110,8 +113,7 @@ trait RelationshipsControllerGenericBehaviours {
 
     s"GET  /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" should {
 
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
 
       def doRequest = doGetRequest(requestPath)
 
@@ -207,7 +209,8 @@ trait RelationshipsControllerGenericBehaviours {
     val enrolmentKey =
       if (serviceId == Service.Cbc.id) {
         EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
-      } else
+      }
+      else
         EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(
       serviceId: String,
@@ -224,8 +227,7 @@ trait RelationshipsControllerGenericBehaviours {
 
     s"PUT /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" should {
 
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
 
       trait StubsForThisScenario {
         givenPrincipalAgentUser(arn, "foo")
@@ -282,7 +284,8 @@ trait RelationshipsControllerGenericBehaviours {
 
         if (enrolmentKey.service == Service.HMRCMTDITSUPP) {
           verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
-        } else {
+        }
+        else {
           verifyTerminateRelationshipAuditSent(
             requestPath,
             "barArn",
@@ -526,7 +529,8 @@ trait RelationshipsControllerGenericBehaviours {
     val enrolmentKey =
       if (serviceId == Service.Cbc.id) {
         EnrolmentKey(s"${Service.Cbc.id}~$clientIdType~${clientId.value}~UTR~1234567890")
-      } else
+      }
+      else
         EnrolmentKey(Service.forId(serviceId), clientId)
     def extraSetup(serviceId: String): Unit = {
       if (serviceId == Service.Cbc.id)
@@ -536,8 +540,7 @@ trait RelationshipsControllerGenericBehaviours {
 
     s"DELETE /agent/:arn/service/$serviceId/client/$clientIdType/:clientId" when {
 
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/$serviceId/client/$clientIdType/${clientId.value}"
 
       "the relationship exists and the clientId matches that of current Agent user" should {
 
@@ -819,8 +822,7 @@ trait RelationshipsControllerGenericBehaviours {
   ) =
     s"GET /relationships/service/$serviceId/client/$clientIdType/:clientId" should {
 
-      val requestPath: String =
-        s"/agent-client-relationships/relationships/service/$serviceId/client/$clientIdType/${clientId.value}"
+      val requestPath: String = s"/agent-client-relationships/relationships/service/$serviceId/client/$clientIdType/${clientId.value}"
 
       def doRequest = doGetRequest(requestPath)
       val req = FakeRequest()
@@ -828,7 +830,8 @@ trait RelationshipsControllerGenericBehaviours {
       val enrolmentKey =
         if (serviceId == Service.Cbc.id) {
           EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
-        } else
+        }
+        else
           EnrolmentKey(Service.forId(serviceId), clientId)
       def extraSetup(serviceId: String): Unit = {
         if (serviceId == Service.Cbc.id)
@@ -843,7 +846,8 @@ trait RelationshipsControllerGenericBehaviours {
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
           getActiveRelationshipsViaClient(mtdItId, arn)
-        } else
+        }
+        else
           getActiveRelationshipsViaClient(clientId, arn)
 
         val result = doRequest
@@ -860,7 +864,8 @@ trait RelationshipsControllerGenericBehaviours {
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
           getInactiveRelationshipViaClient(mtdItId, arn.value)
-        } else
+        }
+        else
           getInactiveRelationshipViaClient(clientId, arn.value)
 
         val result = doRequest
@@ -879,7 +884,8 @@ trait RelationshipsControllerGenericBehaviours {
             arn2.value,
             arn3.value
           )
-        } else
+        }
+        else
           getSomeActiveRelationshipsViaClient(
             clientId,
             arn.value,
@@ -900,7 +906,8 @@ trait RelationshipsControllerGenericBehaviours {
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
           getActiveRelationshipFailsWith(mtdItId, status = 404)
-        } else
+        }
+        else
           getActiveRelationshipFailsWith(clientId, status = 404)
 
         val result = doRequest
@@ -914,7 +921,8 @@ trait RelationshipsControllerGenericBehaviours {
         if (clientIdType == "NI") {
           givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
           getActiveRelationshipFailsWith(mtdItId, status = 400)
-        } else
+        }
+        else
           getActiveRelationshipFailsWith(clientId, status = 400)
 
         val result = doRequest

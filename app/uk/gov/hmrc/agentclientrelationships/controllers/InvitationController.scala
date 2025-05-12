@@ -50,8 +50,8 @@ class InvitationController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -75,8 +75,7 @@ class InvitationController @Inject() (
                       UnsupportedService.getResult(msg)
 
                     case InvalidClientId =>
-                      val msg =
-                        s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
+                      val msg = s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
                       Logger(getClass).warn(msg)
                       InvalidClientId.getResult(msg)
 
@@ -128,18 +127,18 @@ class InvitationController @Inject() (
         case Some(invitation) if invitation.status == Pending =>
           for {
             enrolment <- validationService
-                           .validateForEnrolmentKey(
-                             invitation.service,
-                             ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                             invitation.clientId
-                           )
-                           .map(either =>
-                             either.getOrElse(
-                               throw new RuntimeException(
-                                 s"Could not parse invitation details into enrolment reason: ${either.left}"
-                               )
-                             )
-                           )
+              .validateForEnrolmentKey(
+                invitation.service,
+                ClientIdType.forId(invitation.clientIdType).enrolmentId,
+                invitation.clientId
+              )
+              .map(either =>
+                either.getOrElse(
+                  throw new RuntimeException(
+                    s"Could not parse invitation details into enrolment reason: ${either.left}"
+                  )
+                )
+              )
             result <-
               authorisedUser(
                 None,
@@ -179,7 +178,7 @@ class InvitationController @Inject() (
           UtrType.id
         )
         .map {
-          case true  => NoContent
+          case true => NoContent
           case false => NotFound
         }
     }

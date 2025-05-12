@@ -21,7 +21,8 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.LocalDate
 
-class PptSubscriptionDetailsSpec extends UnitSpec {
+class PptSubscriptionDetailsSpec
+extends UnitSpec {
 
   "PptSubscriptionDetails" should {
 
@@ -35,7 +36,7 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
               "dateOfApplication" -> "2020-01-01",
               "customerDetails" ->
                 Json.obj(
-                  "customerType"      -> "Individual",
+                  "customerType" -> "Individual",
                   "individualDetails" -> Json.obj("firstName" -> "Bernard", "lastName" -> "Silver")
                 )
             ),
@@ -60,7 +61,7 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
               "dateOfApplication" -> "2020-01-01",
               "customerDetails" ->
                 Json.obj(
-                  "customerType"        -> "Organisation",
+                  "customerType" -> "Organisation",
                   "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
                 )
             ),
@@ -85,7 +86,7 @@ class PptSubscriptionDetailsSpec extends UnitSpec {
               "dateOfApplication" -> "2020-01-01",
               "customerDetails" ->
                 Json.obj(
-                  "customerType"        -> "Organisation",
+                  "customerType" -> "Organisation",
                   "organisationDetails" -> Json.obj("organisationName" -> "CFG Solutions")
                 )
             )

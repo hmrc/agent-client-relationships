@@ -51,8 +51,8 @@ trait DesStubs {
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[${agentIds
-          .map(id => s"""{"hasAgent":true,"agentId":"$id"}""")
-          .mkString(",")}, $someAlienAgent, $someCeasedAgent ]}""")
+            .map(id => s"""{"hasAgent":true,"agentId":"$id"}""")
+            .mkString(",")}, $someAlienAgent, $someCeasedAgent ]}""")
     )
   )
 
@@ -75,8 +75,8 @@ trait DesStubs {
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[${agentIds
-          .map(id => s"""{"hasAgent":true,"agentId":"$id","agentCeasedDate":"2020-12-31"}""")
-          .mkString(",")}]}""")
+            .map(id => s"""{"hasAgent":true,"agentId":"$id","agentCeasedDate":"2020-12-31"}""")
+            .mkString(",")}]}""")
     )
   )
 

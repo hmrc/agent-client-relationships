@@ -26,7 +26,9 @@ import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 import scala.concurrent.ExecutionContext
 
-class AgentDetailsControllerISpec extends BaseControllerISpec with TestData {
+class AgentDetailsControllerISpec
+extends BaseControllerISpec
+with TestData {
 
   val uid = "TestUID"
   val normalizedAgentName = "TestNormalizedAgentName"
@@ -54,7 +56,7 @@ class AgentDetailsControllerISpec extends BaseControllerISpec with TestData {
       val result = doGetRequest(testUrl)
       result.status shouldBe 200
       result.json shouldBe Json.obj(
-        "agencyDetails"     -> Json.obj("agencyName" -> "My Agency", "agencyEmail" -> "abc@abc.com"),
+        "agencyDetails" -> Json.obj("agencyName" -> "My Agency", "agencyEmail" -> "abc@abc.com"),
         "suspensionDetails" -> Json.obj("suspensionStatus" -> false)
       )
 

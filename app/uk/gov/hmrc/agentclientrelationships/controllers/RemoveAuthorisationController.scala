@@ -62,8 +62,8 @@ class RemoveAuthorisationController @Inject() (
   auditService: AuditService,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -74,32 +74,32 @@ class RemoveAuthorisationController @Inject() (
       val responseT =
         for {
           validRequest <- EitherT.fromEither[Future](
-                            deauthorisationService.validateRequest(request.body.service, request.body.clientId)
-                          )
+            deauthorisationService.validateRequest(request.body.service, request.body.clientId)
+          )
           enrolmentKey <- EitherT(getEnrolmentKey(validRequest))
           result <- EitherT.right[InvitationFailureResponse](
-                      authorisedUser(
-                        arn = Some(arn),
-                        clientId = enrolmentKey.oneTaxIdentifier(),
-                        strideRoles = strideRoles
-                      ) { implicit currentUser =>
-                        removeAuthorisationForValidRequest(
-                          arn,
-                          validRequest,
-                          enrolmentKey
-                        ).map(
-                          _.fold(
-                            err =>
-                              invitationErrorHandler(
-                                err,
-                                request.body.service,
-                                request.body.clientId
-                              ),
-                            _ => NoContent
-                          )
-                        )
-                      }
-                    )
+            authorisedUser(
+              arn = Some(arn),
+              clientId = enrolmentKey.oneTaxIdentifier(),
+              strideRoles = strideRoles
+            ) { implicit currentUser =>
+              removeAuthorisationForValidRequest(
+                arn,
+                validRequest,
+                enrolmentKey
+              ).map(
+                _.fold(
+                  err =>
+                    invitationErrorHandler(
+                      err,
+                      request.body.service,
+                      request.body.clientId
+                    ),
+                  _ => NoContent
+                )
+              )
+            }
+          )
         } yield result
 
       responseT.value
@@ -143,7 +143,8 @@ class RemoveAuthorisationController @Inject() (
               )
               auditService.auditForPirTermination(arn, enrolmentKey)
               Right(true)
-            } else
+            }
+            else
               Left(RelationshipNotFound)
           }
           .recover { case error: UpstreamErrorResponse => Left(RelationshipDeleteFailed(error.getMessage)) }
@@ -151,34 +152,35 @@ class RemoveAuthorisationController @Inject() (
         (
           for {
             deauthResult <- EitherT(
-                              deauthorisationService
-                                .deauthPartialAuth(
-                                  arn,
-                                  validRequest.suppliedClientId,
-                                  validRequest.service
-                                )
-                                .map { result =>
-                                  if (result) {
-                                    auditService.sendTerminatePartialAuthAuditEvent(
-                                      arn.value,
-                                      enrolmentKey.service,
-                                      enrolmentKey.oneIdentifier().value
-                                    )
-                                    Right(result)
-                                  } else
-                                    Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
-                                }
-                            )
+              deauthorisationService
+                .deauthPartialAuth(
+                  arn,
+                  validRequest.suppliedClientId,
+                  validRequest.service
+                )
+                .map { result =>
+                  if (result) {
+                    auditService.sendTerminatePartialAuthAuditEvent(
+                      arn.value,
+                      enrolmentKey.service,
+                      enrolmentKey.oneIdentifier().value
+                    )
+                    Right(result)
+                  }
+                  else
+                    Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
+                }
+            )
             _ <- EitherT.right[InvitationFailureResponse](
-                   deauthorisationService
-                     .deauthAltItsaInvitation(
-                       arn,
-                       validRequest.suppliedClientId,
-                       validRequest.service,
-                       currentUser.affinityGroup
-                     )
-                     .map(_ => true)
-                 )
+              deauthorisationService
+                .deauthAltItsaInvitation(
+                  arn,
+                  validRequest.suppliedClientId,
+                  validRequest.service,
+                  currentUser.affinityGroup
+                )
+                .map(_ => true)
+            )
           } yield deauthResult
         ).value
       case _ => deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
@@ -191,19 +193,19 @@ class RemoveAuthorisationController @Inject() (
     val resultT =
       for {
         suppliedEnrolmentKey <- EitherT(
-                                  validationService.validateForEnrolmentKey(
-                                    validRequest.service.id,
-                                    validRequest.suppliedClientId.enrolmentId,
-                                    validRequest.suppliedClientId.value
-                                  )
-                                ).leftMap(_ => InvalidClientId)
+          validationService.validateForEnrolmentKey(
+            validRequest.service.id,
+            validRequest.suppliedClientId.enrolmentId,
+            validRequest.suppliedClientId.value
+          )
+        ).leftMap(_ => InvalidClientId)
         enrolmentKey <- EitherT(
-                          deauthorisationService.replaceEnrolmentKeyForItsa(
-                            validRequest.suppliedClientId,
-                            suppliedEnrolmentKey,
-                            validRequest.service
-                          )
-                        )
+          deauthorisationService.replaceEnrolmentKeyForItsa(
+            validRequest.suppliedClientId,
+            suppliedEnrolmentKey,
+            validRequest.service
+          )
+        )
 
       } yield enrolmentKey
     resultT.value
@@ -223,9 +225,9 @@ class RemoveAuthorisationController @Inject() (
     )
     .map(_ => Right(true))
     .recover {
-      case RelationshipNotFoundEx(_)  => Left(RelationshipNotFound)
+      case RelationshipNotFoundEx(_) => Left(RelationshipNotFound)
       case upS: UpstreamErrorResponse => Left(RelationshipDeleteFailed(upS.getMessage))
-      case NonFatal(ex)               => Left(RelationshipDeleteFailed(ex.getMessage))
+      case NonFatal(ex) => Left(RelationshipDeleteFailed(ex.getMessage))
     }
 
   private def invitationErrorHandler(

@@ -27,7 +27,8 @@ import java.time.ZoneId
 class Module(
   environment: Environment,
   configuration: Configuration
-) extends AbstractModule {
+)
+extends AbstractModule {
 
   override def configure(): Unit = {
     bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
@@ -36,7 +37,8 @@ class Module(
 
     if (internalAuthTokenEnabled) {
       bind(classOf[InternalAuthTokenInitialiser]).to(classOf[InternalAuthTokenInitialiserImpl]).asEagerSingleton()
-    } else {
+    }
+    else {
       bind(classOf[InternalAuthTokenInitialiser]).to(classOf[NoOpInternalAuthTokenInitialiser]).asEagerSingleton()
     }
 

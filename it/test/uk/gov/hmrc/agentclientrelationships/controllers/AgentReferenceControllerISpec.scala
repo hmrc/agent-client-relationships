@@ -25,7 +25,8 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceR
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-class AgentReferenceControllerISpec extends BaseControllerISpec {
+class AgentReferenceControllerISpec
+extends BaseControllerISpec {
 
   val referenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
   val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()

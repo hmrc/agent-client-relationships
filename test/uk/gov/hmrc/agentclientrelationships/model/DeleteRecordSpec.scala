@@ -30,7 +30,9 @@ import uk.gov.hmrc.http.SessionId
 import java.time.Instant
 import java.time.ZoneOffset
 
-class DeleteRecordSpec extends UnitSpec with Inside {
+class DeleteRecordSpec
+extends UnitSpec
+with Inside {
 
   "DeleteRecord" should {
     "serialize and deserialize from and to json" in {

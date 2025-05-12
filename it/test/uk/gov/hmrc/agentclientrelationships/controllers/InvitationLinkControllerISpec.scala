@@ -41,7 +41,10 @@ import java.time.Instant
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-class InvitationLinkControllerISpec extends BaseControllerISpec with TestData with HipStub {
+class InvitationLinkControllerISpec
+extends BaseControllerISpec
+with TestData
+with HipStub {
 
   val uid = "TestUID"
   val existingAgentUid = "ExitingAgentUid"

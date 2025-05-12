@@ -61,7 +61,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class CheckAndCopyRelationshipServiceSpec extends UnitSpec with BeforeAndAfterEach with ResettingMockitoSugar {
+class CheckAndCopyRelationshipServiceSpec
+extends UnitSpec
+with BeforeAndAfterEach
+with ResettingMockitoSugar {
 
   val testDataGenerator = new Generator()
   val arn: Arn = Arn("AARN0000002")

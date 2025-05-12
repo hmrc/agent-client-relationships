@@ -37,7 +37,7 @@ class ChangeInvitationStatusByIdController @Inject() (
   changeInvitationStatusByIdService: ChangeInvitationStatusByIdService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
   def changeInvitationStatusById(
     invitationId: String,
@@ -54,9 +54,9 @@ class ChangeInvitationStatusByIdController @Inject() (
         _.fold(
           {
             case InvitationFailureResponse.UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
-            case updateStatusFailed @ UpdateStatusFailed(_)        => updateStatusFailed.getResult("")
-            case InvitationFailureResponse.InvitationNotFound      => InvitationNotFound.getResult("")
-            case _                                                 => BadRequest
+            case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
+            case InvitationFailureResponse.InvitationNotFound => InvitationNotFound.getResult("")
+            case _ => BadRequest
           },
           _ => NoContent
         )

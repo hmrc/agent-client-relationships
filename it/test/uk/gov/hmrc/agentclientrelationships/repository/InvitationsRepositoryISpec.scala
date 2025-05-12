@@ -48,10 +48,10 @@ import scala.concurrent.duration.DAYS
 import scala.util.Random
 
 class InvitationsRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[Invitation] {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[Invitation] {
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
@@ -104,8 +104,7 @@ class InvitationsRepositoryISpec
     }
 
     "have a custom index for the invitationId field" in {
-      val invitationIdIndex =
-        repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("invitationId")).get
+      val invitationIdIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("invitationId")).get
 
       invitationIdIndex.getKeys shouldBe Indexes.ascending("invitationId")
       invitationIdIndex.getOptions.getName shouldBe "invitationIdIndex"

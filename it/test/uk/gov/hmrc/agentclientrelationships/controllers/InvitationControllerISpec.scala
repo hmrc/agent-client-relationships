@@ -50,13 +50,13 @@ import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with AgentAssuranceStubs
-    with EmailStubs
-    with HipStub
-    with TestData {
+extends BaseControllerISpec
+with ClientDetailsStub
+with AfiRelationshipStub
+with AgentAssuranceStubs
+with EmailStubs
+with HipStub
+with TestData {
 
   override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
@@ -97,7 +97,7 @@ class InvitationControllerISpec
 
   def allServices: Map[String, CreateInvitationRequest] = Map(
     HMRCMTDIT -> baseInvitationInputData,
-    HMRCPIR   -> baseInvitationInputData.copy(service = HMRCPIR),
+    HMRCPIR -> baseInvitationInputData.copy(service = HMRCPIR),
     HMRCMTDVAT -> baseInvitationInputData
       .copy(
         service = HMRCMTDVAT,
@@ -398,7 +398,7 @@ class InvitationControllerISpec
               "agencyName" -> "testAgentName",
               "clientName" -> "Erling Haal",
               "expiryDate" -> LocalDate.now().format(dateFormatter),
-              "service"    -> messagesApi(s"service.$taxService")
+              "service" -> messagesApi(s"service.$taxService")
             )
           )
 
@@ -433,8 +433,7 @@ class InvitationControllerISpec
               Some("personal")
             )
           )
-          val requestPath =
-            s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
+          val requestPath = s"/agent-client-relationships/client/authorisation-response/reject/${pendingInvitation.invitationId}"
           val result = doAgentPutRequest(requestPath)
           result.status shouldBe 204
 

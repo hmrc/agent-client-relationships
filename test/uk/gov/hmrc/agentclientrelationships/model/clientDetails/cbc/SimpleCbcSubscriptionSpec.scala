@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class SimpleCbcSubscriptionSpec extends UnitSpec {
+class SimpleCbcSubscriptionSpec
+extends UnitSpec {
 
   "SimpleCbcSubscription" should {
 
@@ -32,21 +33,21 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
             Json.obj(
               "responseDetail" ->
                 Json.obj(
-                  "isGBUser"    -> true,
+                  "isGBUser" -> true,
                   "tradingName" -> "CFG Solutions",
                   "primaryContact" ->
                     Json.arr(
                       Json.obj(
-                        "email"        -> "test@email.com",
-                        "individual"   -> Json.obj("firstName" -> "Erling", "lastName" -> "Haal"),
+                        "email" -> "test@email.com",
+                        "individual" -> Json.obj("firstName" -> "Erling", "lastName" -> "Haal"),
                         "organisation" -> Json.obj("organisationName" -> "CFG")
                       )
                     ),
                   "secondaryContact" ->
                     Json.arr(
                       Json.obj(
-                        "email"        -> "test2@email.com",
-                        "individual"   -> Json.obj("firstName" -> "Kevin", "lastName" -> "De Burner"),
+                        "email" -> "test2@email.com",
+                        "individual" -> Json.obj("firstName" -> "Kevin", "lastName" -> "De Burner"),
                         "organisation" -> Json.obj("organisationName" -> "CFG")
                       )
                     )
@@ -70,8 +71,8 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
             Json.obj(
               "responseDetail" ->
                 Json.obj(
-                  "isGBUser"         -> true,
-                  "primaryContact"   -> Json.arr(),
+                  "isGBUser" -> true,
+                  "primaryContact" -> Json.arr(),
                   "secondaryContact" -> Json.arr()
                 )
             )
@@ -110,11 +111,11 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
           Json.obj(
             "requestCommon" ->
               Json.obj(
-                "regime"                   -> "CBC",
-                "receiptDate"              -> "2020-01-01T00:00:00Z",
+                "regime" -> "CBC",
+                "receiptDate" -> "2020-01-01T00:00:00Z",
                 "acknowledgementReference" -> "abc123",
-                "originatingSystem"        -> "MDTP",
-                "conversationID"           -> "abc123"
+                "originatingSystem" -> "MDTP",
+                "conversationID" -> "abc123"
               ),
             "requestDetail" -> Json.obj("IDType" -> "CBC", "IDNumber" -> "XCBCX1234567890")
           )

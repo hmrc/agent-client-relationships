@@ -44,7 +44,9 @@ import java.time.Instant
 import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
-class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with TestData {
+class ChangeInvitationStatusControllerISpec
+extends BaseControllerISpec
+with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -53,24 +55,23 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt                -> mtdItId,
+    MtdIt -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat                  -> vrn,
-    Trust                -> utr,
-    TrustNT              -> urn,
-    CapitalGains         -> cgtRef,
-    Ppt                  -> pptRef,
-    Cbc                  -> cbcId,
-    CbcNonUk             -> cbcId,
-    Pillar2              -> plrId,
-    MtdItSupp            -> mtdItId
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
+    CapitalGains -> cgtRef,
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId
   )
 
   def requestPath(
     service: String,
     clientId: String
-  ): String =
-    s"/agent-client-relationships/transitional/change-invitation-status/arn/${arn.value}/service/$service/client/$clientId"
+  ): String = s"/agent-client-relationships/transitional/change-invitation-status/arn/${arn.value}/service/$service/client/$clientId"
 
   allServices.foreach(testset =>
     s"/transitional/change-invitation-status/arn/:arn/service/:service/client/:clientId change status to DeAuthorised" should {
@@ -79,7 +80,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
       val suppliedClientId =
         taxIdentifier match {
           case _: MtdItId => ClientIdentifier(nino)
-          case taxId      => ClientIdentifier(taxId)
+          case taxId => ClientIdentifier(taxId)
         }
       val clientName = "TestClientName"
       val agentName = "testAgentName"
@@ -88,7 +89,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
       val serviceId =
         service match {
           case PersonalIncomeRecord => PersonalIncomeRecord.id
-          case s                    => s.id
+          case s => s.id
         }
 
       s"when no invitation record for ${service.id}" should {

@@ -45,7 +45,7 @@ class ChangeInvitationStatusService @Inject() (
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   val validStatusChangesFrom: Map[InvitationStatus, Set[InvitationStatus]] = Map(
     DeAuthorised -> Set(Accepted, PartialAuth)
@@ -62,9 +62,9 @@ class ChangeInvitationStatusService @Inject() (
   ): Either[InvitationFailureResponse, ClientId] =
     for {
       suppliedClientId <- Try(ClientIdentifier(clientIdStr, service.supportedSuppliedClientIdType.id)).fold(
-                            _ => Left(InvalidClientId),
-                            Right(_)
-                          )
+        _ => Left(InvalidClientId),
+        Right(_)
+      )
     } yield suppliedClientId
 
   private def findPartialAuthInvitation(
@@ -94,7 +94,7 @@ class ChangeInvitationStatusService @Inject() (
       Instant.now
     )
     .map {
-      case true  => Right(())
+      case true => Right(())
       case false => Left(UpdateStatusFailed("Update status for PartialAuth invitation failed."))
     }
 
@@ -113,9 +113,7 @@ class ChangeInvitationStatusService @Inject() (
       lastUpdated = lastUpdated
     )
     .map(
-      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(
-        _ => Right(())
-      )
+      _.fold[Either[InvitationFailureResponse, Unit]](Left(UpdateStatusFailed("Update status for invitation failed.")))(_ => Right(()))
     )
 
   private def findAllMatchingInvitations(
@@ -136,27 +134,26 @@ class ChangeInvitationStatusService @Inject() (
     changeRequest: ChangeInvitationStatusRequest
   ): Future[Either[InvitationFailureResponse, Unit]] =
     for {
-      invitationStoreResults <-
-        findAllMatchingInvitations(
-          arn,
-          service,
-          suppliedClientId
-        ).map(_.find(x => validStatusChangesFrom(changeRequest.invitationStatus).contains(x.status)))
-          .flatMap {
-            case Some(invitation) =>
-              updateInvitationStore(
-                invitationId = invitation.invitationId,
-                fromStatus = invitation.status,
-                toStatus = changeRequest.invitationStatus,
-                endedBy =
-                  if (changeRequest.invitationStatus == DeAuthorised)
-                    changeRequest.endedBy.orElse(Some("HMRC"))
-                  else
-                    None,
-                lastUpdated = None
-              )
-            case None => Future.successful(Left(InvitationNotFound))
-          }
+      invitationStoreResults <- findAllMatchingInvitations(
+        arn,
+        service,
+        suppliedClientId
+      ).map(_.find(x => validStatusChangesFrom(changeRequest.invitationStatus).contains(x.status)))
+        .flatMap {
+          case Some(invitation) =>
+            updateInvitationStore(
+              invitationId = invitation.invitationId,
+              fromStatus = invitation.status,
+              toStatus = changeRequest.invitationStatus,
+              endedBy =
+                if (changeRequest.invitationStatus == DeAuthorised)
+                  changeRequest.endedBy.orElse(Some("HMRC"))
+                else
+                  None,
+              lastUpdated = None
+            )
+          case None => Future.successful(Left(InvitationNotFound))
+        }
 
       partialStoreResults <-
         changeRequest.invitationStatus match {
@@ -178,9 +175,9 @@ class ChangeInvitationStatusService @Inject() (
         }
 
     } yield invitationStoreResults match {
-      case Left(value: UpdateStatusFailed)    => Left(value)
+      case Left(value: UpdateStatusFailed) => Left(value)
       case Left(_: InvitationFailureResponse) => partialStoreResults
-      case Right(value)                       => Right(value)
+      case Right(value) => Right(value)
     }
 
 }

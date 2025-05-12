@@ -35,7 +35,8 @@ import scala.util.Try
 @Singleton
 class CleanUpInvitationStatusService @Inject() (invitationsRepository: InvitationsRepository)(implicit
   ec: ExecutionContext
-) extends Logging {
+)
+extends Logging {
 
   def validateService(serviceStr: String): Either[InvitationFailureResponse, Service] =
     for {
@@ -48,9 +49,9 @@ class CleanUpInvitationStatusService @Inject() (invitationsRepository: Invitatio
   ): Either[InvitationFailureResponse, ClientId] =
     for {
       clientId <- Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)).fold(
-                    _ => Left(InvalidClientId),
-                    Right(_)
-                  )
+        _ => Left(InvalidClientId),
+        Right(_)
+      )
     } yield clientId
 
   def deauthoriseInvitation(
@@ -66,7 +67,7 @@ class CleanUpInvitationStatusService @Inject() (invitationsRepository: Invitatio
       relationshipEndedBy = relationshipEndedBy
     )
     .map {
-      case true  => Right(())
+      case true => Right(())
       case false => Left(InvitationNotFound)
     }
 

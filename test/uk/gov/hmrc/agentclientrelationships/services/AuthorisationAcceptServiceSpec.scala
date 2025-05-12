@@ -47,28 +47,28 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class AuthorisationAcceptServiceSpec
-    extends UnitSpec
-    with ResettingMockitoSugar
-    with MockCreateRelationshipsService
-    with MockItsaDeauthAndCleanupService
-    with MockEmailService
-    with MockInvitationsRepository
-    with MockPartialAuthRepository
-    with MockAgentFiRelationshipConnector
-    with MockAuditService {
+extends UnitSpec
+with ResettingMockitoSugar
+with MockCreateRelationshipsService
+with MockItsaDeauthAndCleanupService
+with MockEmailService
+with MockInvitationsRepository
+with MockPartialAuthRepository
+with MockAgentFiRelationshipConnector
+with MockAuditService {
 
   def also: AfterWord = afterWord("also")
 
   object TestService
-      extends AuthorisationAcceptService(
-        createRelationshipsService = mockCreateRelationshipsService,
-        emailService = mockEmailService,
-        itsaDeauthAndCleanupService = mockItsaDeauthAndCleanupService,
-        invitationsRepository = mockInvitationsRepository,
-        partialAuthRepository = mockPartialAuthRepository,
-        agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
-        auditService = mockAuditService
-      )
+  extends AuthorisationAcceptService(
+    createRelationshipsService = mockCreateRelationshipsService,
+    emailService = mockEmailService,
+    itsaDeauthAndCleanupService = mockItsaDeauthAndCleanupService,
+    invitationsRepository = mockInvitationsRepository,
+    partialAuthRepository = mockPartialAuthRepository,
+    agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
+    auditService = mockAuditService
+  )
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()

@@ -42,8 +42,8 @@ trait MappingStubs {
       aResponse()
         .withStatus(200)
         .withBody(s"""{"mappings":[${refs
-          .map(ref => s"""{"arn":"${arn.value}","saAgentReference":"${ref.value}"}""")
-          .mkString(",")}]}""")
+            .map(ref => s"""{"arn":"${arn.value}","saAgentReference":"${ref.value}"}""")
+            .mkString(",")}]}""")
     )
   )
 
@@ -66,8 +66,8 @@ trait MappingStubs {
       aResponse()
         .withStatus(200)
         .withBody(s"""{"mappings":[${agentCodes
-          .map(agentCode => s"""{"arn":"${arn.value}","agentCode":"${agentCode.value}"}""")
-          .mkString(",")}]}""")
+            .map(agentCode => s"""{"arn":"${arn.value}","agentCode":"${agentCode.value}"}""")
+            .mkString(",")}]}""")
     )
   )
 

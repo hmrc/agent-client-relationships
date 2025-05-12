@@ -41,7 +41,8 @@ class AgentAssuranceConnector @Inject() (
 )(implicit
   appConfig: AppConfig,
   val ec: ExecutionContext
-) extends HttpApiMonitor {
+)
+extends HttpApiMonitor {
 
   // TODO: why agent-assurance uses internal-auth.token?
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken

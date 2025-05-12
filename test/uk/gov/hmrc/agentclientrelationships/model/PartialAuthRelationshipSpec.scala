@@ -26,10 +26,11 @@ import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 import java.time.Instant
 
-class PartialAuthRelationshipSpec extends UnitSpec {
+class PartialAuthRelationshipSpec
+extends UnitSpec {
 
-  implicit val crypto: Encrypter with Decrypter =
-    SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  implicit val crypto: Encrypter
+    with Decrypter = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val activeTestModel: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),
@@ -41,11 +42,11 @@ class PartialAuthRelationshipSpec extends UnitSpec {
   )
 
   val testJsonResponse: JsObject = Json.obj(
-    "created"     -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-    "arn"         -> "XARN1234567",
-    "service"     -> "HMRC-MTD-VAT",
-    "nino"        -> encryptedString("123456789"),
-    "active"      -> true,
+    "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
+    "arn" -> "XARN1234567",
+    "service" -> "HMRC-MTD-VAT",
+    "nino" -> encryptedString("123456789"),
+    "active" -> true,
     "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000"))
   )
 

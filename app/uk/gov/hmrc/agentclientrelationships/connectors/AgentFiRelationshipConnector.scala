@@ -17,7 +17,9 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import cats.data.EitherT
-import play.api.http.Status.{CREATED, NOT_FOUND, OK}
+import play.api.http.Status.CREATED
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.mvc.RequestHeader
@@ -49,14 +51,13 @@ class AgentFiRelationshipConnector @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
-    extends HttpApiMonitor {
+extends HttpApiMonitor {
 
   private def afiRelationshipUrl(
     arn: Arn,
     service: String,
     clientId: String
-  ): URL =
-    url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"
+  ): URL = url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"
 
   def getRelationship(
     arn: Arn,
@@ -108,8 +109,7 @@ class AgentFiRelationshipConnector @Inject() (
         .map { response =>
           response.status match {
             case CREATED => ()
-            case status =>
-              throw UpstreamErrorResponse(s"Unexpected status $status received from AFI create relationship", status)
+            case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI create relationship", status)
           }
         }
     }
@@ -135,10 +135,9 @@ class AgentFiRelationshipConnector @Inject() (
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => true
+            case OK => true
             case NOT_FOUND => false
-            case status =>
-              throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
+            case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
           }
         }
     }
@@ -151,9 +150,7 @@ class AgentFiRelationshipConnector @Inject() (
       ifNone = RelationshipFailureResponse.RelationshipNotFound
     )
     .value
-    .recover { case ex: UpstreamErrorResponse =>
-      Left(RelationshipFailureResponse.ErrorRetrievingRelationship(ex.statusCode, ex.getMessage))
-    }
+    .recover { case ex: UpstreamErrorResponse => Left(RelationshipFailureResponse.ErrorRetrievingRelationship(ex.statusCode, ex.getMessage)) }
 
   def findIrvRelationshipForClient(clientId: String)(implicit rh: RequestHeader): Future[Option[ClientRelationship]] = {
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = true)
@@ -177,7 +174,7 @@ class AgentFiRelationshipConnector @Inject() (
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK        => Right(response.json.as[List[ClientRelationship]])
+            case OK => Right(response.json.as[List[ClientRelationship]])
             case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
             case status =>
               Left(

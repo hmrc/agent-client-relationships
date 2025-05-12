@@ -39,7 +39,9 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
+class EmailServiceSpec
+extends UnitSpec
+with ResettingMockitoSugar {
 
   val mockEmailConnector: EmailConnector = resettingMock[EmailConnector]
   lazy val messagesApi: MessagesApi = stubControllerComponents().messagesApi
@@ -75,10 +77,10 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
         to = Seq("agent@email.com"),
         templateId = "agent_invitations_about_to_expire",
         parameters = Map(
-          "agencyName"          -> "Will Gates",
+          "agencyName" -> "Will Gates",
           "numberOfInvitations" -> "2",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> "1 January 2020"
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> "1 January 2020"
         )
       )
       val invitations = Seq(invitation, invitation.copy(invitationId = "2", suppliedClientId = "2"))
@@ -92,10 +94,10 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
         to = Seq("agent@email.com"),
         templateId = "agent_invitation_about_to_expire_single",
         parameters = Map(
-          "agencyName"          -> "Will Gates",
+          "agencyName" -> "Will Gates",
           "numberOfInvitations" -> "1",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> "1 January 2020"
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> "1 January 2020"
         )
       )
 
@@ -130,7 +132,7 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
               "agencyName" -> "Will Gates",
               "clientName" -> "Macrosoft",
               "expiryDate" -> "1 January 2020",
-              "service"    -> messagesApi(s"service.$serviceKey")
+              "service" -> messagesApi(s"service.$serviceKey")
             )
           )
 

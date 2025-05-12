@@ -40,8 +40,8 @@ case class EnrolmentKey(
 
   /** Note: unsafe (i.e. can throw exceptions)
     *
-    * Supplying no key assumes the service has a single 'supported' identifier! For other enrolments with multiple
-    * identifiers you should try and specify which one, or it will grab the first.
+    * Supplying no key assumes the service has a single 'supported' identifier! For other enrolments with multiple identifiers you should try and specify which
+    * one, or it will grab the first.
     */
   def oneIdentifier(key: Option[String] = None): Identifier = identifiers
     .find(i =>
@@ -49,7 +49,8 @@ case class EnrolmentKey(
         key.getOrElse(
           if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
             Service.forId(service).supportedClientIdType.enrolmentId
-          } else
+          }
+          else
             identifiers.head.key // fallback to old behaviour
         )
     )
@@ -88,7 +89,8 @@ object EnrolmentKey {
       val service = parts.head
       val identifiers = parts.tail.sliding(2, 2).map(a => Identifier(a(0), a(1))).toSeq
       Some(EnrolmentKey(service, identifiers))
-    } else
+    }
+    else
       None
   }
 
@@ -101,8 +103,7 @@ object EnrolmentKey {
     new Reads[EnrolmentKey] {
       override def reads(json: JsValue): JsResult[EnrolmentKey] =
         json match {
-          case JsString(value) =>
-            parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
+          case JsString(value) => parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
           case _ => JsError("STRING_VALUE_EXPECTED")
         }
     }

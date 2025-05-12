@@ -41,7 +41,7 @@ class CleanUpInvitationStatusController @Inject() (
   setRelationshipEndedService: CleanUpInvitationStatusService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
   def deauthoriseInvitation: Action[JsValue] =
     Action.async(parse.json) { implicit request =>
@@ -54,16 +54,16 @@ class CleanUpInvitationStatusController @Inject() (
               for {
                 service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
                 clientId <- EitherT.fromEither[Future](
-                              setRelationshipEndedService.validateClientId(service, payload.clientId)
-                            )
+                  setRelationshipEndedService.validateClientId(service, payload.clientId)
+                )
                 result <- EitherT(
-                            setRelationshipEndedService.deauthoriseInvitation(
-                              arn = payload.arn,
-                              clientId = clientId.value,
-                              service = service.id,
-                              relationshipEndedBy = "HMRC"
-                            )
-                          )
+                  setRelationshipEndedService.deauthoriseInvitation(
+                    arn = payload.arn,
+                    clientId = clientId.value,
+                    service = service.id,
+                    relationshipEndedBy = "HMRC"
+                  )
+                )
               } yield result
 
             responseT.value

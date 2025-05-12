@@ -25,7 +25,8 @@ import play.api.test.Helpers.USER_AGENT
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-trait AgentAssuranceStubs extends TestData {
+trait AgentAssuranceStubs
+extends TestData {
 
   def givenAgentRecordFound(
     arn: Arn,

@@ -42,13 +42,13 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import scala.concurrent.ExecutionContext
 
 class DesConnectorISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DesStubs
-    with DesStubsGet
-    with DataStreamStub
-    with IfStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DesStubs
+with DesStubsGet
+with DataStreamStub
+with IfStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -58,22 +58,22 @@ class DesConnectorISpec
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-    "microservice.services.tax-enrolments.port"        -> wireMockPort,
-    "microservice.services.users-groups-search.port"   -> wireMockPort,
-    "microservice.services.des.port"                   -> wireMockPort,
-    "microservice.services.auth.port"                  -> wireMockPort,
-    "microservice.services.des.environment"            -> "stub",
-    "microservice.services.des.authorization-token"    -> "token",
-    "microservice.services.agent-mapping.port"         -> wireMockPort,
-    "auditing.consumer.baseUri.host"                   -> wireMockHost,
-    "auditing.consumer.baseUri.port"                   -> wireMockPort,
-    "features.copy-relationship.mtd-it"                -> true,
-    "features.copy-relationship.mtd-vat"               -> true,
-    "features.recovery-enable"                         -> false,
-    "agent.cache.expires"                              -> "1 millis",
-    "agent.cache.enabled"                              -> false,
-    "agent.trackPage.cache.expires"                    -> "1 millis",
-    "agent.trackPage.cache.enabled"                    -> false
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.des.port" -> wireMockPort,
+    "microservice.services.auth.port" -> wireMockPort,
+    "microservice.services.des.environment" -> "stub",
+    "microservice.services.des.authorization-token" -> "token",
+    "microservice.services.agent-mapping.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
+    "features.recovery-enable" -> false,
+    "agent.cache.expires" -> "1 millis",
+    "agent.cache.enabled" -> false,
+    "agent.trackPage.cache.expires" -> "1 millis",
+    "agent.trackPage.cache.enabled" -> false
   )
 
   private implicit val request: RequestHeader = FakeRequest()

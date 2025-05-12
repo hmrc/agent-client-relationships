@@ -49,7 +49,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class ClientDetailsServiceSpec extends UnitSpec {
+class ClientDetailsServiceSpec
+extends UnitSpec {
 
   val mockConnector: ClientDetailsConnector = mock[ClientDetailsConnector]
   val mockIfOrHipConnector: IfOrHipConnector = mock[IfOrHipConnector]

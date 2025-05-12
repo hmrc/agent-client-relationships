@@ -44,8 +44,8 @@ class StrideClientDetailsController @Inject() (
   cc: ControllerComponents,
   appConfig: AppConfig
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
   val strideRole: String = appConfig.newAuthStrideRole
@@ -69,7 +69,7 @@ class StrideClientDetailsController @Inject() (
               .getClientDetailsWithChecks(validKey)
               .map {
                 case Some(clientDetails) => Ok(Json.toJson(clientDetails))
-                case None                => NotFound
+                case None => NotFound
               }
           }
       }
@@ -86,13 +86,12 @@ class StrideClientDetailsController @Inject() (
             case Left(error) =>
               error match {
                 case RelationshipFailureResponse.RelationshipBadRequest => BadRequest
-                case RelationshipFailureResponse.TaxIdentifierError     => BadRequest
-                case RelationshipFailureResponse.ClientDetailsNotFound  => NotFound
-                case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) =>
-                  InternalServerError(message)
-                case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message)    => InternalServerError(message)
+                case RelationshipFailureResponse.TaxIdentifierError => BadRequest
+                case RelationshipFailureResponse.ClientDetailsNotFound => NotFound
+                case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) => InternalServerError(message)
+                case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) => InternalServerError(message)
                 case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) => InternalServerError(message)
-                case _                                                                   => InternalServerError
+                case _ => InternalServerError
               }
 
           }

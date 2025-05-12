@@ -41,8 +41,8 @@ class AgentUserClientDetailsConnector @Inject() (
   val metrics: Metrics,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
-    extends HttpApiMonitor
-    with Logging {
+extends HttpApiMonitor
+with Logging {
 
   val baseUrl = appConfig.agentUserClientDetailsUrl
 
@@ -55,8 +55,7 @@ class AgentUserClientDetailsConnector @Inject() (
         .execute[HttpResponse]
         .map(response =>
           response.status match {
-            case NOT_FOUND | NO_CONTENT =>
-              () // TODO endpoint should not return NotFound because it's not obvious what is not found
+            case NOT_FOUND | NO_CONTENT => () // TODO endpoint should not return NotFound because it's not obvious what is not found
             case other => throw new RuntimeException(s"cache refresh returned status $other")
           }
         )

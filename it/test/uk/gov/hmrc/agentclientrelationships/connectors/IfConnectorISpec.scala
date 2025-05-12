@@ -41,11 +41,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 
 class IFConnectorISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with IfStub
-    with DataStreamStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with IfStub
+with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -54,24 +54,24 @@ class IFConnectorISpec
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
-    "microservice.services.enrolment-store-proxy.port"     -> wireMockPort,
-    "microservice.services.tax-enrolments.port"            -> wireMockPort,
-    "microservice.services.users-groups-search.port"       -> wireMockPort,
-    "microservice.services.if.port"                        -> wireMockPort,
-    "microservice.services.auth.port"                      -> wireMockPort,
-    "microservice.services.if.environment"                 -> "stub",
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.if.port" -> wireMockPort,
+    "microservice.services.auth.port" -> wireMockPort,
+    "microservice.services.if.environment" -> "stub",
     "microservice.services.if.authorization-api1171-token" -> "token",
-    "microservice.services.agent-mapping.port"             -> wireMockPort,
-    "auditing.consumer.baseUri.host"                       -> wireMockHost,
-    "auditing.consumer.baseUri.port"                       -> wireMockPort,
-    "features.copy-relationship.mtd-it"                    -> true,
-    "features.copy-relationship.mtd-vat"                   -> true,
-    "features.recovery-enable"                             -> false,
-    "agent.cache.expires"                                  -> "1 millis",
-    "agent.cache.enabled"                                  -> false,
-    "agent.trackPage.cache.expires"                        -> "1 millis",
-    "agent.trackPage.cache.enabled"                        -> false,
-    "hip.BusinessDetails.enabled"                          -> false
+    "microservice.services.agent-mapping.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
+    "features.recovery-enable" -> false,
+    "agent.cache.expires" -> "1 millis",
+    "agent.cache.enabled" -> false,
+    "agent.trackPage.cache.expires" -> "1 millis",
+    "agent.trackPage.cache.enabled" -> false,
+    "hip.BusinessDetails.enabled" -> false
   )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
@@ -101,12 +101,12 @@ class IFConnectorISpec
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
-    case Vrn(_)     => Vrn("101747641")
-    case Utr(_)     => Utr("2134514321")
-    case Urn(_)     => Urn("XXTRUST12345678")
-    case PptRef(_)  => PptRef("XAPPT0004567890")
-    case PlrId(_)   => PlrId("XMPLR0012345678")
-    case x          => x
+    case Vrn(_) => Vrn("101747641")
+    case Utr(_) => Utr("2134514321")
+    case Urn(_) => Urn("XXTRUST12345678")
+    case PptRef(_) => PptRef("XAPPT0004567890")
+    case PlrId(_) => PlrId("XMPLR0012345678")
+    case x => x
   }
 
   "IfConnector GetBusinessDetails" should {

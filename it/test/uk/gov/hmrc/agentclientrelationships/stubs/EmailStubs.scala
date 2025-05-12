@@ -23,7 +23,8 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
-trait EmailStubs extends TestData {
+trait EmailStubs
+extends TestData {
 
   def verifyRejectInvitationSent(
     emailInformation: EmailInformation,

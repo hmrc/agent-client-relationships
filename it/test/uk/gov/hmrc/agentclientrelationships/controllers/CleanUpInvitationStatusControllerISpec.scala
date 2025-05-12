@@ -41,7 +41,9 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with TestData {
+class CleanUpInvitationStatusControllerISpec
+extends BaseControllerISpec
+with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -61,17 +63,17 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
   )
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt                -> mtdItId,
+    MtdIt -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat                  -> vrn,
-    Trust                -> utr,
-    TrustNT              -> urn,
-    CapitalGains         -> cgtRef,
-    Ppt                  -> pptRef,
-    Cbc                  -> cbcId,
-    CbcNonUk             -> cbcId,
-    Pillar2              -> plrId,
-    MtdItSupp            -> mtdItId
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
+    CapitalGains -> cgtRef,
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId
   )
 
   val requestPath: String = "/agent-client-relationships/cleanup-invitation-status"
@@ -97,7 +99,7 @@ class CleanUpInvitationStatusControllerISpec extends BaseControllerISpec with Te
       val serviceId =
         service match {
           case PersonalIncomeRecord => PersonalIncomeRecord.id
-          case s                    => s.id
+          case s => s.id
         }
 
       s"when no invitation record for ${service.id}" should {

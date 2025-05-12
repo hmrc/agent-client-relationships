@@ -60,7 +60,9 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Base64
 
-class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec with HipStub {
+class RelationshipshipControllerISpec
+extends RelationshipsBaseControllerISpec
+with HipStub {
 
   val relationshipCopiedSuccessfully: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
@@ -163,7 +165,8 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     if (isLoggedInClientStride) {
       givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE, "strideId-1234456")
       givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
-    } else if (isLoggedInClientInd)
+    }
+    else if (isLoggedInClientInd)
       givenLoginClientIndAll(
         mtdItId,
         vrn,
@@ -229,9 +232,9 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
     def doRequest() = doGetRequest(requestPath)
 
     s"find relationship for service ${testClient.service} and user ${if (isLoggedInClientInd)
-      "Individual"
-    else
-      "Business"}" in
+        "Individual"
+      else
+        "Business"}" in
       new LoggedInUser(
         false,
         isLoggedInClientInd,
@@ -249,9 +252,9 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
 
     s"find multiple relationships for service ${testClient.service} " +
       s"but filter out active and ended relationships for user ${if (isLoggedInClientInd)
-        "Individual"
-      else
-        "Business"}" in
+          "Individual"
+        else
+          "Business"}" in
       new LoggedInUser(
         false,
         isLoggedInClientInd,
@@ -283,9 +286,9 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
 
     "find relationship but filter out if the end date has been changed from 9999-12-31 " +
       s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
-        "Individual"
-      else
-        "Business"}" in
+          "Individual"
+        else
+          "Business"}" in
       new LoggedInUser(
         false,
         isLoggedInClientInd,
@@ -300,9 +303,9 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
 
     "return 404 when DES returns 404 relationship not found " +
       s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
-        "Individual"
-      else
-        "Business"}" in
+          "Individual"
+        else
+          "Business"}" in
       new LoggedInUser(
         false,
         isLoggedInClientInd,
@@ -317,9 +320,9 @@ class RelationshipshipControllerISpec extends RelationshipsBaseControllerISpec w
 
     "return 404 when IF returns 400 (treated as relationship not found) " +
       s"for service ${testClient.service} and user ${if (isLoggedInClientInd)
-        "Individual"
-      else
-        "Business"}" in
+          "Individual"
+        else
+          "Business"}" in
       new LoggedInUser(
         false,
         isLoggedInClientInd,

@@ -54,43 +54,53 @@ sealed trait CheckAndCopyResult {
   val grantAccess: Boolean
 }
 
-case object CheckAndCopyNotImplemented extends CheckAndCopyResult {
+case object CheckAndCopyNotImplemented
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object AlreadyCopiedDidNotCheck extends CheckAndCopyResult {
+case object AlreadyCopiedDidNotCheck
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object FoundAndCopied extends CheckAndCopyResult {
+case object FoundAndCopied
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object FoundButLockedCouldNotCopy extends CheckAndCopyResult {
+case object FoundButLockedCouldNotCopy
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object FoundAndFailedToCopy extends CheckAndCopyResult {
+case object FoundAndFailedToCopy
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object NotFound extends CheckAndCopyResult {
+case object NotFound
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object CopyRelationshipNotEnabled extends CheckAndCopyResult {
+case object CopyRelationshipNotEnabled
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case class AltItsaCreateRelationshipSuccess(service: String) extends CheckAndCopyResult {
+case class AltItsaCreateRelationshipSuccess(service: String)
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
-case object AltItsaNotFoundOrFailed extends CheckAndCopyResult {
+case object AltItsaNotFoundOrFailed
+extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object VrnNotFoundInEtmp extends CheckAndCopyResult {
+case object VrnNotFoundInEtmp
+extends CheckAndCopyResult {
   override val grantAccess = true
 }
 
@@ -110,8 +120,8 @@ class CheckAndCopyRelationshipsService @Inject() (
   val metrics: Metrics,
   val appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-    extends Monitoring
-    with Logging {
+extends Monitoring
+with Logging {
 
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
@@ -127,7 +137,8 @@ class CheckAndCopyRelationshipsService @Inject() (
     def ifEnabled(copyRelationshipFlag: Boolean)(body: => Future[CheckAndCopyResult]): Future[CheckAndCopyResult] =
       if (copyRelationshipFlag) {
         body
-      } else {
+      }
+      else {
         returnValue(CopyRelationshipNotEnabled)
       }
 
@@ -232,7 +243,8 @@ class CheckAndCopyRelationshipsService @Inject() (
               ni,
               mtdItId
             )
-          } else {
+          }
+          else {
             logger.error("error ending partialauth")
             Future.successful(false)
           }
@@ -284,7 +296,7 @@ class CheckAndCopyRelationshipsService @Inject() (
     implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
 
     for {
-      mNino        <- mNino.fold(ifOrHipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
+      mNino <- mNino.fold(ifOrHipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
       mPartialAuth <- findPartialAuth(arn, mNino)
       createFromPartialAuthRes <-
         mPartialAuth.fold[Future[CheckAndCopyResult]](Future.successful(AltItsaNotFoundOrFailed))(partialAuth =>
@@ -297,17 +309,17 @@ class CheckAndCopyRelationshipsService @Inject() (
               case Some(DbUpdateSucceeded) =>
                 for {
                   _ <- endPartialAuth(
-                         arn,
-                         partialAuth,
-                         mNino,
-                         mtdItId
-                       )
+                    arn,
+                    partialAuth,
+                    mNino,
+                    mtdItId
+                  )
                   _ <- itsaDeauthAndCleanupService.deleteSameAgentRelationship(
-                         partialAuth,
-                         arn.value,
-                         Some(mtdItId.value),
-                         mNino.getOrElse(throw new Exception("nino missing")).value
-                       )
+                    partialAuth,
+                    arn.value,
+                    Some(mtdItId.value),
+                    mNino.getOrElse(throw new Exception("nino missing")).value
+                  )
                 } yield AltItsaCreateRelationshipSuccess(partialAuth)
               case _ => Future.successful(AltItsaNotFoundOrFailed)
             }
@@ -473,7 +485,8 @@ class CheckAndCopyRelationshipsService @Inject() (
           auditService.sendCheckCesaAndPartialAuthAuditEvent()
           optPartialAuth.nonEmpty
         }
-    } else
+    }
+    else
       Future successful true
   )
 
@@ -490,14 +503,14 @@ class CheckAndCopyRelationshipsService @Inject() (
       agentGroupIds <- es.getDelegatedGroupIdsForHMCEVATDECORG(clientVrn)
       groupInfos = agentGroupIds.map(ugs.getGroupInfo)
       agentCodes <- Future
-                      .sequence(groupInfos)
-                      .map { setOptions: Set[Option[GroupInfo]] =>
-                        setOptions
-                          .flatMap { maybeGroup =>
-                            maybeGroup.map(_.agentCode)
-                          }
-                          .collect { case Some(ac) => ac }
-                      }
+        .sequence(groupInfos)
+        .map { setOptions: Set[Option[GroupInfo]] =>
+          setOptions
+            .flatMap { maybeGroup =>
+              maybeGroup.map(_.agentCode)
+            }
+            .collect { case Some(ac) => ac }
+        }
       matching <-
         intersection[AgentCode](agentCodes.toSeq) {
           mapping.getAgentCodesFor(arn)
@@ -514,15 +527,16 @@ class CheckAndCopyRelationshipsService @Inject() (
     if (referenceIdSet.isEmpty) {
       // logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
       returnValue(Set.empty)
-    } else
+    }
+    else
       mappingServiceCall.map { mappingServiceIds =>
         val intersected = mappingServiceIds.toSet.intersect(referenceIdSet)
         logger.info(
           s"The CESA SA references have been found, " +
             s"${if (intersected.isEmpty)
-              "but no previous relationship exists"
-            else
-              "and will attempt to copy existing relationship"}"
+                "but no previous relationship exists"
+              else
+                "and will attempt to copy existing relationship"}"
         )
         intersected
       }

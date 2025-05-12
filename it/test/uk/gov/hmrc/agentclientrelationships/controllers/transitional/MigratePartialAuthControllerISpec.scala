@@ -41,12 +41,12 @@ import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
 class MigratePartialAuthControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with AgentAssuranceStubs
-    with EmailStubs
-    with TestData {
+extends BaseControllerISpec
+with ClientDetailsStub
+with AfiRelationshipStub
+with AgentAssuranceStubs
+with EmailStubs
+with TestData {
 
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]

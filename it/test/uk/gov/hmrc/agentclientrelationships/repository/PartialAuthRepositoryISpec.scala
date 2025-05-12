@@ -35,10 +35,10 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext
 
 class PartialAuthRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)

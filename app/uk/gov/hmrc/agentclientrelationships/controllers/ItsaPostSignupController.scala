@@ -49,9 +49,9 @@ class ItsaPostSignupController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions
-    with Logging {
+extends BackendController(cc)
+with AuthActions
+with Logging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
@@ -71,7 +71,7 @@ class ItsaPostSignupController @Inject() (
               )
               .map {
                 case AltItsaCreateRelationshipSuccess(service) => Created(Json.parse(s"""{"service": "$service"}"""))
-                case FoundAndCopied                            => Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
+                case FoundAndCopied => Created(Json.parse(s"""{"service": "$HMRCMTDIT"}"""))
                 case AltItsaNotFoundOrFailed =>
                   val msg = s"itsa-post-signup create relationship failed: no partial auth"
                   logger.warn(msg)

@@ -50,21 +50,21 @@ import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.MongoComponent
 
 trait BaseControllerISpec
-    extends UnitSpec
-    with MongoSupport
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with RelationshipStubs
-    with DesStubs
-    with DesStubsGet
-    with MappingStubs
-    with DataStreamStub
-    with AuthStub
-    with MockitoSugar
-    with JsonMatchers
-    with AUCDStubs
-    with AgentAssuranceStubs
-    with IntegrationPatience {
+extends UnitSpec
+with MongoSupport
+with GuiceOneServerPerSuite
+with WireMockSupport
+with RelationshipStubs
+with DesStubs
+with DesStubsGet
+with MappingStubs
+with DataStreamStub
+with AuthStub
+with MockitoSugar
+with JsonMatchers
+with AUCDStubs
+with AgentAssuranceStubs
+with IntegrationPatience {
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
   override implicit lazy val app: Application = appBuilder.build()
@@ -86,35 +86,35 @@ trait BaseControllerISpec
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure(
-      "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
-      "microservice.services.tax-enrolments.port"             -> wireMockPort,
-      "microservice.services.users-groups-search.port"        -> wireMockPort,
-      "microservice.services.des.port"                        -> wireMockPort,
-      "microservice.services.if.port"                         -> wireMockPort,
-      "microservice.services.eis.port"                        -> wireMockPort,
-      "microservice.services.hip.port"                        -> wireMockPort,
-      "microservice.services.citizen-details.port"            -> wireMockPort,
-      "microservice.services.auth.port"                       -> wireMockPort,
-      "microservice.services.agent-mapping.port"              -> wireMockPort,
+      "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+      "microservice.services.tax-enrolments.port" -> wireMockPort,
+      "microservice.services.users-groups-search.port" -> wireMockPort,
+      "microservice.services.des.port" -> wireMockPort,
+      "microservice.services.if.port" -> wireMockPort,
+      "microservice.services.eis.port" -> wireMockPort,
+      "microservice.services.hip.port" -> wireMockPort,
+      "microservice.services.citizen-details.port" -> wireMockPort,
+      "microservice.services.auth.port" -> wireMockPort,
+      "microservice.services.agent-mapping.port" -> wireMockPort,
       "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-      "microservice.services.agent-permissions.port"          -> wireMockPort,
-      "auditing.consumer.baseUri.host"                        -> wireMockHost,
-      "auditing.consumer.baseUri.port"                        -> wireMockPort,
-      "microservice.services.agent-user-client-details.port"  -> wireMockPort,
-      "microservice.services.agent-assurance.port"            -> wireMockPort,
-      "microservice.services.agent-fi-relationship.port"      -> wireMockPort,
-      "microservice.services.email.port"                      -> wireMockPort,
-      "features.copy-relationship.mtd-it"                     -> true,
-      "features.copy-relationship.mtd-vat"                    -> true,
-      "features.recovery-enable"                              -> false,
-      "agent.cache.expires"                                   -> "1 millis",
-      "agent.cache.enabled"                                   -> true,
-      "agent.trackPage.cache.expires"                         -> "1 millis",
-      "agent.trackPage.cache.enabled"                         -> true,
-      "mongodb.uri"                                           -> mongoUri,
-      "internal-auth.token"                                   -> "internalAuthToken",
-      "new.auth.stride.role"                                  -> NEW_STRIDE_ROLE,
-      "old.auth.stride.role"                                  -> STRIDE_ROLE
+      "microservice.services.agent-permissions.port" -> wireMockPort,
+      "auditing.consumer.baseUri.host" -> wireMockHost,
+      "auditing.consumer.baseUri.port" -> wireMockPort,
+      "microservice.services.agent-user-client-details.port" -> wireMockPort,
+      "microservice.services.agent-assurance.port" -> wireMockPort,
+      "microservice.services.agent-fi-relationship.port" -> wireMockPort,
+      "microservice.services.email.port" -> wireMockPort,
+      "features.copy-relationship.mtd-it" -> true,
+      "features.copy-relationship.mtd-vat" -> true,
+      "features.recovery-enable" -> false,
+      "agent.cache.expires" -> "1 millis",
+      "agent.cache.enabled" -> true,
+      "agent.trackPage.cache.expires" -> "1 millis",
+      "agent.trackPage.cache.enabled" -> true,
+      "mongodb.uri" -> mongoUri,
+      "internal-auth.token" -> "internalAuthToken",
+      "new.auth.stride.role" -> NEW_STRIDE_ROLE,
+      "old.auth.stride.role" -> STRIDE_ROLE
     )
     .overrides(moduleWithOverrides)
     .configure(additionalConfig)
@@ -169,13 +169,13 @@ trait BaseControllerISpec
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
-    case Vrn(_)     => Vrn("101747641")
-    case Utr(_)     => Utr("2134514321")
-    case Urn(_)     => Urn("XXTRUST12345678")
-    case CgtRef(_)  => cgtRef
-    case PptRef(_)  => pptRef
-    case PlrId(_)   => plrId
-    case x          => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+    case Vrn(_) => Vrn("101747641")
+    case Utr(_) => Utr("2134514321")
+    case Urn(_) => Urn("XXTRUST12345678")
+    case CgtRef(_) => cgtRef
+    case PptRef(_) => pptRef
+    case PlrId(_) => plrId
+    case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
   }
 
   protected def doGetRequest(route: String): HttpResponse = new Resource(route, port).get()

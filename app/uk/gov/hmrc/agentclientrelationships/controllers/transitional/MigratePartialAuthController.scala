@@ -35,8 +35,8 @@ class MigratePartialAuthController @Inject() (
   invitationService: InvitationService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with Logging {
+extends BackendController(cc)
+with Logging {
 
   def migratePartialAuth: Action[AnyContent] = Action.async { implicit request =>
     val invitation = request.body.asJson.get.as[Invitation](Invitation.acaReads)

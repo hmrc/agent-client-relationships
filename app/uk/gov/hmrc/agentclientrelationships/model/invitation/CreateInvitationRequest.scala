@@ -42,15 +42,15 @@ case class CreateInvitationRequest(
     for {
       service <- getService
       _ <- Either.cond[InvitationFailureResponse, String](
-             service.supportedSuppliedClientIdType.isValid(clientId),
-             clientId,
-             InvalidClientId
-           )
+        service.supportedSuppliedClientIdType.isValid(clientId),
+        clientId,
+        InvalidClientId
+      )
       _ <- Either.cond[InvitationFailureResponse, String](
-             service.supportedSuppliedClientIdType.id == suppliedClientIdType,
-             suppliedClientIdType,
-             UnsupportedClientIdType
-           )
+        service.supportedSuppliedClientIdType.id == suppliedClientIdType,
+        suppliedClientIdType,
+        UnsupportedClientIdType
+      )
       clientId <- Try(ClientIdentifier(clientId, suppliedClientIdType)).fold(_ => Left(InvalidClientId), Right(_))
     } yield clientId
 
@@ -63,8 +63,8 @@ case class CreateInvitationRequest(
   def getClientType: Either[InvitationFailureResponse, Option[String]] =
     clientType match {
       case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
-      case Some(_)                                             => Left(UnsupportedClientType)
-      case None                                                => Right(None)
+      case Some(_) => Left(UnsupportedClientType)
+      case None => Right(None)
     }
 
 }

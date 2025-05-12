@@ -55,8 +55,9 @@ class IfConnector @Inject() (
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
-) extends HttpApiMonitor
-    with Logging {
+)
+extends HttpApiMonitor
+with Logging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 
@@ -77,7 +78,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       ifEnv
     ).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
@@ -100,7 +101,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
       ifEnv
     ).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
@@ -178,8 +179,8 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     authToken: String,
     env: String
   ): Seq[(String, String)] = Seq(
-    Environment               -> env,
-    CorrelationId             -> randomUuidGenerator.makeCorrelationId(),
+    Environment -> env,
+    CorrelationId -> randomUuidGenerator.makeCorrelationId(),
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 

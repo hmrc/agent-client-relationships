@@ -33,16 +33,17 @@ import scala.concurrent.Future
 
 class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector)(implicit
   executionContext: ExecutionContext
-) extends Logging {
+)
+extends Logging {
 
   def updateFriendlyName(
     invitation: Invitation,
     enrolment: EnrolmentKey
   )(implicit request: RequestHeader): Future[Unit] =
     invitation.service match {
-      case `HMRCPIR`                                             => Future.unit
+      case `HMRCPIR` => Future.unit
       case `HMRCMTDITSUPP` | `HMRCMTDIT` if invitation.isAltItsa => Future.unit
-      case _                                                     => doUpdateFriendlyName(invitation, enrolment)
+      case _ => doUpdateFriendlyName(invitation, enrolment)
     }
 
   private def doUpdateFriendlyName(
@@ -54,13 +55,13 @@ class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStor
     (
       for {
         groupId <- enrolmentStoreProxyConnector
-                     .getPrincipalGroupIdFor(Arn(invitation.arn))
-                     .recover { case _ => throw GroupIdError }
+          .getPrincipalGroupIdFor(Arn(invitation.arn))
+          .recover { case _ => throw GroupIdError }
         _ <- enrolmentStoreProxyConnector.updateEnrolmentFriendlyName(
-               groupId,
-               enrolment.toString,
-               clientName
-             )
+          groupId,
+          enrolment.toString,
+          clientName
+        )
       } yield logger.info(s"updateFriendlyName succeeded for client ${invitation.clientId}, agent ${invitation.arn}")
     ).recover {
       case GroupIdError =>
@@ -76,5 +77,7 @@ class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStor
 
 }
 
-sealed trait FriendlyNameUpdateError extends Exception
-case object GroupIdError extends FriendlyNameUpdateError
+sealed trait FriendlyNameUpdateError
+extends Exception
+case object GroupIdError
+extends FriendlyNameUpdateError

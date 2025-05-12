@@ -39,7 +39,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
 
-object AgentClientRelationshipEvent extends Enumeration {
+object AgentClientRelationshipEvent
+extends Enumeration {
 
   val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES,
     TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned = Value
@@ -64,7 +65,8 @@ class AuditData {
 }
 
 @Singleton
-class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Logging {
+class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext)
+extends Logging {
 
   private def collectDetails(
     data: Map[String, Any],
@@ -167,19 +169,18 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     "abandonmentReason"
   )
 
-  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit request: RequestHeader): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CreateInvitation,
-      "create-invitation",
-      Seq(
-        arnKey              -> invitation.arn,
-        serviceKey          -> invitation.service,
-        clientIdKey         -> invitation.clientId,
-        clientIdTypeKey     -> invitation.clientIdType,
-        invitationIdKey     -> invitation.invitationId,
-        suppliedClientIdKey -> invitation.suppliedClientId
-      )
+  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit request: RequestHeader): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CreateInvitation,
+    "create-invitation",
+    Seq(
+      arnKey -> invitation.arn,
+      serviceKey -> invitation.service,
+      clientIdKey -> invitation.clientId,
+      clientIdTypeKey -> invitation.clientIdType,
+      invitationIdKey -> invitation.invitationId,
+      suppliedClientIdKey -> invitation.suppliedClientId
     )
+  )
 
   def sendRespondToInvitationAuditEvent(
     invitation: Invitation,
@@ -189,11 +190,11 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     AgentClientRelationshipEvent.RespondToInvitation,
     "respond-to-invitation",
     Seq(
-      arnKey              -> invitation.arn,
-      serviceKey          -> invitation.service,
-      clientIdKey         -> invitation.clientId,
-      clientIdTypeKey     -> invitation.clientIdType,
-      invitationIdKey     -> invitation.invitationId,
+      arnKey -> invitation.arn,
+      serviceKey -> invitation.service,
+      clientIdKey -> invitation.clientId,
+      clientIdTypeKey -> invitation.clientIdType,
+      invitationIdKey -> invitation.invitationId,
       suppliedClientIdKey -> invitation.suppliedClientId,
       responseKey ->
         (if (accepted)
@@ -274,10 +275,10 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
       auditData.set(
         howRelationshipTerminatedKey,
         currentUser.affinityGroup match {
-          case _ if currentUser.isStride                                         => hmrcLedTermination
+          case _ if currentUser.isStride => hmrcLedTermination
           case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => clientLedTermination
-          case Some(AffinityGroup.Agent)                                         => agentLedTermination
-          case _                                                                 => "unknown"
+          case Some(AffinityGroup.Agent) => agentLedTermination
+          case _ => "unknown"
         }
       )
     }
@@ -339,10 +340,10 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
       auditData.set(
         howPartialAuthTerminatedKey,
         currentUser.affinityGroup match {
-          case _ if currentUser.isStride                                         => hmrcLedTermination
+          case _ if currentUser.isStride => hmrcLedTermination
           case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => clientLedTermination
-          case Some(AffinityGroup.Agent)                                         => agentLedTermination
-          case _                                                                 => "unknown"
+          case Some(AffinityGroup.Agent) => agentLedTermination
+          case _ => "unknown"
         }
       )
     }
@@ -388,7 +389,7 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     def toString(x: Any): String =
       x match {
         case t: TaxIdentifier => t.value
-        case _                => x.toString
+        case _ => x.toString
       }
     val hc = RequestSupport.hc
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)

@@ -46,21 +46,21 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class EmailSchedulerISpec
-    extends TestKit(ActorSystem("testSystem"))
-    with UnitSpec
-    with MongoApp
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with BeforeAndAfterEach
-    with EmailStubs {
+extends TestKit(ActorSystem("testSystem"))
+with UnitSpec
+with MongoApp
+with GuiceOneServerPerSuite
+with WireMockSupport
+with BeforeAndAfterEach
+with EmailStubs {
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure(
-      "emailScheduler.enabled"                    -> true,
+      "emailScheduler.enabled" -> true,
       "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
       "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
-      "emailScheduler.lockDurationInSeconds"      -> "1",
-      "microservice.services.email.port"          -> wireMockPort
+      "emailScheduler.lockDurationInSeconds" -> "1",
+      "microservice.services.email.port" -> wireMockPort
     )
     .configure(mongoConfiguration)
 
@@ -125,10 +125,10 @@ class EmailSchedulerISpec
         to = Seq("agent@email.com"),
         templateId = "agent_invitations_about_to_expire",
         parameters = Map(
-          "agencyName"          -> "Will Gates",
+          "agencyName" -> "Will Gates",
           "numberOfInvitations" -> "2",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
         )
       )
 
@@ -136,10 +136,10 @@ class EmailSchedulerISpec
         to = Seq("agent2@email.com"),
         templateId = "agent_invitation_about_to_expire_single",
         parameters = Map(
-          "agencyName"          -> "Will Fence",
+          "agencyName" -> "Will Fence",
           "numberOfInvitations" -> "1",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
         )
       )
 
@@ -174,10 +174,10 @@ class EmailSchedulerISpec
           to = Seq("agent@email.com"),
           templateId = "agent_invitation_about_to_expire_single",
           parameters = Map(
-            "agencyName"          -> "Will Gates",
+            "agencyName" -> "Will Gates",
             "numberOfInvitations" -> "1",
-            "createdDate"         -> "6 June 2020",
-            "expiryDate"          -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
+            "createdDate" -> "6 June 2020",
+            "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
           )
         )
 
@@ -218,7 +218,7 @@ class EmailSchedulerISpec
           "agencyName" -> "Will Gates",
           "clientName" -> "Macrosoft",
           "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().minusDays(1L)),
-          "service"    -> "manage their Making Tax Digital for VAT."
+          "service" -> "manage their Making Tax Digital for VAT."
         )
       )
 
@@ -229,7 +229,7 @@ class EmailSchedulerISpec
           "agencyName" -> "Will Fence",
           "clientName" -> "Macrosoft",
           "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().minusDays(1L)),
-          "service"    -> "manage their Making Tax Digital for VAT."
+          "service" -> "manage their Making Tax Digital for VAT."
         )
       )
 
@@ -256,7 +256,7 @@ class EmailSchedulerISpec
           "agencyName" -> "Will Gates",
           "clientName" -> "Macrosoft",
           "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().minusDays(1L)),
-          "service"    -> "manage their Making Tax Digital for VAT."
+          "service" -> "manage their Making Tax Digital for VAT."
         )
       )
 

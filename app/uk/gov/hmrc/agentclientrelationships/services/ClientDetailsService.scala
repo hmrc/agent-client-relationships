@@ -45,21 +45,21 @@ class ClientDetailsService @Inject() (
   appConfig: AppConfig,
   ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier
   )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     taxIdentifier match {
-      case Nino(nino)     => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
-      case Vrn(vrn)       => getVatClientDetails(vrn)
-      case Utr(utr)       => getTrustClientDetails(utr)
-      case Urn(urn)       => getTrustClientDetails(urn)
+      case Nino(nino) => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
+      case Vrn(vrn) => getVatClientDetails(vrn)
+      case Utr(utr) => getTrustClientDetails(utr)
+      case Urn(urn) => getTrustClientDetails(urn)
       case CgtRef(cgtRef) => getCgtClientDetails(cgtRef)
       case PptRef(pptRef) => getPptClientDetails(pptRef)
-      case CbcId(cbcId)   => getCbcClientDetails(cbcId)
-      case PlrId(plrId)   => getPillar2ClientDetails(plrId)
-      case _              => Future.successful(Left(ClientDetailsNotFound))
+      case CbcId(cbcId) => getCbcClientDetails(cbcId)
+      case PlrId(plrId) => getPillar2ClientDetails(plrId)
+      case _ => Future.successful(Left(ClientDetailsNotFound))
     }
 
   def findClientDetails(
@@ -67,14 +67,14 @@ class ClientDetailsService @Inject() (
     clientId: String
   )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     service.toUpperCase match {
-      case "HMRC-MTD-IT"                       => getItsaClientDetails(clientId)
-      case "HMRC-MTD-VAT" | "HMCE-VATDEC-ORG"  => getVatClientDetails(clientId)
+      case "HMRC-MTD-IT" => getItsaClientDetails(clientId)
+      case "HMRC-MTD-VAT" | "HMCE-VATDEC-ORG" => getVatClientDetails(clientId)
       case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" => getTrustClientDetails(clientId)
-      case "PERSONAL-INCOME-RECORD"            => getIrvClientDetails(clientId)
-      case "HMRC-CGT-PD"                       => getCgtClientDetails(clientId)
-      case "HMRC-PPT-ORG"                      => getPptClientDetails(clientId)
-      case "HMRC-CBC-ORG"                      => getCbcClientDetails(clientId)
-      case "HMRC-PILLAR2-ORG"                  => getPillar2ClientDetails(clientId)
+      case "PERSONAL-INCOME-RECORD" => getIrvClientDetails(clientId)
+      case "HMRC-CGT-PD" => getCgtClientDetails(clientId)
+      case "HMRC-PPT-ORG" => getPptClientDetails(clientId)
+      case "HMRC-CBC-ORG" => getCbcClientDetails(clientId)
+      case "HMRC-PILLAR2-ORG" => getPillar2ClientDetails(clientId)
     }
 
   private def getItsaClientDetails(nino: String)(implicit
@@ -106,7 +106,7 @@ class ClientDetailsService @Inject() (
       case Left(ClientDetailsNotFound) =>
         (
           for {
-            citizenDetails     <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
+            citizenDetails <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
             designatoryDetails <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino))
             optName = citizenDetails.name
             optSaUtr = citizenDetails.saUtr

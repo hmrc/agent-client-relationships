@@ -524,20 +524,20 @@ trait HipStub {
                  |{
                  |  "refNumber" : "${taxIdentifier.value}",
                  |  "arn" : "ABCDE123456", """.stripMargin + individualOrOrganisationJson + s"""
-                                                                                               |  "dateFrom" : "2015-09-10",
-                                                                                               |  "dateTo" : "2018-09-09",
-                                                                                               |  "contractAccountCategory" : "01",
-                                                                                               |  "activity" : "09"
-                                                                                               |},
-                                                                                               |{
-                                                                                               | "refNumber" : "${taxIdentifier.value}",
-                                                                                               |  "arn" : "ABCDE777777", """.stripMargin + individualOrOrganisationJson + s"""
-                                                                                                                                                                             |  "dateFrom" : "2019-09-09",
-                                                                                                                                                                             |  "dateTo" : "2050-09-09",
-                                                                                                                                                                             |  "contractAccountCategory" : "01",
-                                                                                                                                                                             |  "activity" : "09"
-                                                                                                                                                                             |  }
-                                                                                                                                                                             |]}""".stripMargin
+                                                                                              |  "dateFrom" : "2015-09-10",
+                                                                                              |  "dateTo" : "2018-09-09",
+                                                                                              |  "contractAccountCategory" : "01",
+                                                                                              |  "activity" : "09"
+                                                                                              |},
+                                                                                              |{
+                                                                                              | "refNumber" : "${taxIdentifier.value}",
+                                                                                              |  "arn" : "ABCDE777777", """.stripMargin + individualOrOrganisationJson + s"""
+                                                                                                                                                                           |  "dateFrom" : "2019-09-09",
+                                                                                                                                                                           |  "dateTo" : "2050-09-09",
+                                                                                                                                                                           |  "contractAccountCategory" : "01",
+                                                                                                                                                                           |  "activity" : "09"
+                                                                                                                                                                           |  }
+                                                                                                                                                                           |]}""".stripMargin
             )
         )
     )
@@ -720,10 +720,8 @@ trait HipStub {
         s"/etmp/RESTAdapter/rosm/agent-relationship?refNumber=$mtdItId&isAnAgent=false&activeOnly=$activeOnly&regime=ITSA$dateRangeParams&relationshipType=ZA01$authProfileParam"
       case Vrn(vrn) =>
         s"/etmp/RESTAdapter/rosm/agent-relationship?idType=VRN&refNumber=$vrn&isAnAgent=false&activeOnly=$activeOnly&regime=VATC$dateRangeParams&relationshipType=ZA01$authProfileParam"
-      case Utr(utr) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
-      case Urn(urn) =>
-        s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
+      case Utr(utr) => s"/etmp/RESTAdapter/rosm/agent-relationship?idType=UTR&refNumber=$utr&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
+      case Urn(urn) => s"/etmp/RESTAdapter/rosm/agent-relationship?idType=URN&refNumber=$urn&isAnAgent=false&activeOnly=$activeOnly&regime=TRS$dateRangeParams"
       case CgtRef(ref) =>
         s"/etmp/RESTAdapter/rosm/agent-relationship?idType=ZCGT&refNumber=$ref&isAnAgent=false&activeOnly=$activeOnly&regime=CGT$dateRangeParams&relationshipType=ZA01$authProfileParam"
       case PptRef(ref) =>

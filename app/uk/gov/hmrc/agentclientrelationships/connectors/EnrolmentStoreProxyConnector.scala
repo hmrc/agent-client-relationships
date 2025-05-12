@@ -80,8 +80,8 @@ class EnrolmentStoreProxyConnector @Inject() (
   val metrics: Metrics,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
-    extends HttpApiMonitor
-    with Logging {
+extends HttpApiMonitor
+with Logging {
 
   val espBaseUrl = appConfig.enrolmentStoreProxyUrl
   val teBaseUrl = appConfig.taxEnrolmentsUrl
@@ -132,7 +132,7 @@ class EnrolmentStoreProxyConnector @Inject() (
         .map { response =>
           response.status match {
             // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
-            case Status.OK         => (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
+            case Status.OK => (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
             case Status.NO_CONTENT => Set.empty
             case other =>
               throw UpstreamErrorResponse(
@@ -144,13 +144,12 @@ class EnrolmentStoreProxyConnector @Inject() (
         }
     }
 
-  def getDelegatedGroupIdsForHMCEVATDECORG(vrn: Vrn)(implicit request: RequestHeader): Future[Set[String]] =
-    getDelegatedGroupIdsFor(
-      EnrolmentKey(
-        "HMCE-VATDEC-ORG",
-        Seq(Identifier("VATRegNo", vrn.value))
-      )
+  def getDelegatedGroupIdsForHMCEVATDECORG(vrn: Vrn)(implicit request: RequestHeader): Future[Set[String]] = getDelegatedGroupIdsFor(
+    EnrolmentKey(
+      "HMCE-VATDEC-ORG",
+      Seq(Identifier("VATRegNo", vrn.value))
     )
+  )
 
   // ES2 - delegated
   def getEnrolmentsAssignedToUser(
@@ -225,8 +224,7 @@ class EnrolmentStoreProxyConnector @Inject() (
     enrolmentKey: EnrolmentKey,
     agentCode: AgentCode
   )(implicit request: RequestHeader): Future[Unit] = {
-    val url =
-      url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
+    val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
 
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKey.service}-POST") {
       httpClient
@@ -235,7 +233,7 @@ class EnrolmentStoreProxyConnector @Inject() (
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.CREATED  => ()
+            case Status.CREATED => ()
             case Status.CONFLICT =>
               // TODO: it should fail not just log a warning which is mostlikely to be ignored leaving user with the problem alone
               logger.warn(
@@ -266,7 +264,7 @@ class EnrolmentStoreProxyConnector @Inject() (
         .map { response =>
           response.status match {
             case Status.NO_CONTENT => ()
-            case other             =>
+            case other =>
               // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
               throw UpstreamErrorResponse(
                 response.body,
@@ -294,7 +292,7 @@ class EnrolmentStoreProxyConnector @Inject() (
         .map { response =>
           response.status match {
             case Status.NO_CONTENT =>
-            case other             =>
+            case other =>
               // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
               throw UpstreamErrorResponse(
                 response.body,

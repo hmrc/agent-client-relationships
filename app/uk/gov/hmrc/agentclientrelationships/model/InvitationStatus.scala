@@ -35,13 +35,13 @@ object InvitationStatus extends Logging {
 
   def apply(status: String): InvitationStatus =
     status.toLowerCase match {
-      case "pending"      => Pending
-      case "rejected"     => Rejected
-      case "accepted"     => Accepted
-      case "cancelled"    => Cancelled
-      case "expired"      => Expired
+      case "pending" => Pending
+      case "rejected" => Rejected
+      case "accepted" => Accepted
+      case "cancelled" => Cancelled
+      case "expired" => Expired
       case "deauthorised" => DeAuthorised
-      case "partialauth"  => PartialAuth
+      case "partialauth" => PartialAuth
       case value =>
         logger.warn(s"Status of [$value] is not a valid InvitationStatus")
         throw new IllegalArgumentException
@@ -49,13 +49,13 @@ object InvitationStatus extends Logging {
 
   def unapply(status: InvitationStatus): String =
     status match {
-      case Pending      => "Pending"
-      case Rejected     => "Rejected"
-      case Accepted     => "Accepted"
-      case Cancelled    => "Cancelled"
-      case Expired      => "Expired"
+      case Pending => "Pending"
+      case Rejected => "Rejected"
+      case Accepted => "Accepted"
+      case Cancelled => "Cancelled"
+      case Expired => "Expired"
       case DeAuthorised => "Deauthorised"
-      case PartialAuth  => "Partialauth"
+      case PartialAuth => "Partialauth"
     }
 
   implicit val format: Format[InvitationStatus] =

@@ -55,8 +55,8 @@ class InvitationLinkController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -96,8 +96,8 @@ class InvitationLinkController @Inject() (
     val suppServices = serviceKeys.filter(multiAgentServices.contains).map(service => multiAgentServices(service))
     (enrolments.map(_.service) ++ suppServices).map {
       case "HMRC-NI" | "HMRC-PT" if serviceKeys.contains("HMRC-MTD-IT") => "HMRC-MTD-IT"
-      case "HMRC-NI" | "HMRC-PT"                                        => "PERSONAL-INCOME-RECORD"
-      case serviceKey                                                   => serviceKey
+      case "HMRC-NI" | "HMRC-PT" => "PERSONAL-INCOME-RECORD"
+      case serviceKey => serviceKey
     }.toSet
   }
 
@@ -132,9 +132,9 @@ class InvitationLinkController @Inject() (
                       )
                     for {
                       existingRelationship <- checkRelationshipsService.findCurrentMainAgent(
-                                                invitation,
-                                                enrolments.find(_.service == invitation.service)
-                                              )
+                        invitation,
+                        enrolments.find(_.service == invitation.service)
+                      )
                     } yield Ok(
                       Json.toJson(
                         ValidateInvitationResponse(
