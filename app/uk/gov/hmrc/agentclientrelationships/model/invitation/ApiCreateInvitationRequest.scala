@@ -27,7 +27,8 @@ import scala.util.Try
 case class ApiCreateInvitationRequest(
   service: String,
   suppliedClientId: String,
-  knownFact: String
+  knownFact: String,
+  clientType: Option[String]
 ) {
 
   def getService(apiSupportedServices: Seq[Service]): Either[InvitationFailureResponse, Service] =
@@ -50,6 +51,14 @@ case class ApiCreateInvitationRequest(
       Try(ClientIdentifier(suppliedClientId, service.supportedSuppliedClientIdType.id))
         .fold(_ => Left(UnsupportedClientIdType), Right(_))
   } yield clientId
+
+  private val validClientTypes = Seq("personal", "business", "trust")
+
+  def getClientType: Either[InvitationFailureResponse, Option[String]] = clientType match {
+    case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
+    case Some(_)                                             => Left(UnsupportedClientType)
+    case None                                                => Right(None)
+  }
 
 }
 

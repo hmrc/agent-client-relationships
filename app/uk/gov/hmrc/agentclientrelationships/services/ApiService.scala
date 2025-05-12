@@ -64,8 +64,9 @@ class ApiService @Inject() (
       // validate inputData
       suppliedClientId <-
         EitherT.fromEither[Future](apiCreateInvitationInputData.getSuppliedClientId(supportedServices))
-      service  <- EitherT.fromEither[Future](apiCreateInvitationInputData.getService(supportedServices))
-      clientId <- EitherT(getClientId(suppliedClientId, service))
+      service    <- EitherT.fromEither[Future](apiCreateInvitationInputData.getService(supportedServices))
+      clientId   <- EitherT(getClientId(suppliedClientId, service))
+      clientType <- EitherT.fromEither[Future](apiCreateInvitationInputData.getClientType)
 
       _           <- EitherT(checkPendingInvitation(arn, service.id, suppliedClientId.value))
       agentRecord <- EitherT(getAgentDetailsByArn(arn))
@@ -94,7 +95,7 @@ class ApiService @Inject() (
                         clientId = clientId,
                         suppliedClientId = suppliedClientId,
                         clientName = clientDetails.name,
-                        clientType = None,
+                        clientType = clientType,
                         agentDetails = agentRecord.agencyDetails
                       )
                     )

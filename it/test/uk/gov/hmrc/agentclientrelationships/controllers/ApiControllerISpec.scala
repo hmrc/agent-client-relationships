@@ -144,7 +144,7 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
   )
 
   val baseInvitationInputData: ApiCreateInvitationRequest =
-    ApiCreateInvitationRequest(service = MtdIt.id, suppliedClientId = nino.value, knownFact = "AA1 1AA")
+    ApiCreateInvitationRequest(service = MtdIt.id, suppliedClientId = nino.value, knownFact = "AA1 1AA", None)
 
   private def getStandardStubForCreateInvitation(taxService: String) = {
     givenAuditConnector()
@@ -644,7 +644,7 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
 
     s"return BadRequest status and valid JSON CLIENT_ID_DOES_NOT_MATCH_SERVICE for ${Trust.id}" in {
       val inputData: ApiCreateInvitationRequest =
-        ApiCreateInvitationRequest(service = Trust.id, suppliedClientId = utr.value, knownFact = "AA1 1AA")
+        ApiCreateInvitationRequest(service = Trust.id, suppliedClientId = utr.value, knownFact = "AA1 1AA", None)
 
       givenAuditConnector()
       val expectedJson: JsValue = Json.toJson(
