@@ -21,7 +21,8 @@ import org.mongodb.scala.MongoException
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IfOrHipConnector}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoPendingInvitation}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{DuplicateInvitationError, NoAuthorisation, NoPendingInvitation}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.{CreateInvitationRequest, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation, Rejected, TrackRequestsResult}
@@ -102,8 +103,9 @@ class InvitationService @Inject() (
     invitationId: String
   )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Unit]] =
     invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
-      case true => Right(())
-      case _    => Left(NoPendingInvitation)
+      case Success      => Right(())
+      case NoPermission => Left(NoAuthorisation)
+      case _            => Left(NoPendingInvitation)
     }
 
   def deauthoriseInvitation(

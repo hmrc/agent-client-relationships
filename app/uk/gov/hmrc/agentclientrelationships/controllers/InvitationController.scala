@@ -171,6 +171,8 @@ class InvitationController @Inject() (
               Logger(getClass).warn(msg)
               NoPendingInvitation.getResult(msg)
 
+            case NoAuthorisation => Forbidden
+
             case _ => BadRequest
           },
           _ => NoContent

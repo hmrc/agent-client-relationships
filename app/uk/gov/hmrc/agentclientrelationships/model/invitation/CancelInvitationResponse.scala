@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 HM Revenue & Customs
+ * Copyright 2024 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.mocks
+package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import play.api.libs.json._
 
-trait MockIFConnector {
-  this: ResettingMockitoSugar =>
+sealed trait CancelInvitationResponse
 
-  val mockIfOrHipConnector: IfOrHipConnector = resettingMock[IfOrHipConnector]
-
+object CancelInvitationResponse {
+  case object Success extends CancelInvitationResponse
+  case object NoPermission extends CancelInvitationResponse
+  case object NotFound extends CancelInvitationResponse
 }

@@ -71,6 +71,17 @@ object InvitationFailureResponse {
     )
   }
 
+  case object NoAuthorisation extends InvitationFailureResponse {
+    def getResult(message: String): Result = Forbidden(
+      toJson(
+        ErrorBody(
+          "REQUEST_NOT_AUTHORISED",
+          "ARN does not match that in the found invitation."
+        )
+      )
+    )
+  }
+
   case object RelationshipNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(
       toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
