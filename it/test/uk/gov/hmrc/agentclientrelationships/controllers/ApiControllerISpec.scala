@@ -144,7 +144,12 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
   )
 
   val baseInvitationInputData: ApiCreateInvitationRequest =
-    ApiCreateInvitationRequest(service = MtdIt.id, suppliedClientId = nino.value, knownFact = "AA1 1AA", None)
+    ApiCreateInvitationRequest(
+      service = MtdIt.id,
+      suppliedClientId = nino.value,
+      knownFact = "AA1 1AA",
+      Some("personal")
+    )
 
   private def getStandardStubForCreateInvitation(taxService: String) = {
     givenAuditConnector()
@@ -171,7 +176,12 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
   def allServices: Map[String, ApiCreateInvitationRequest] = Map(
     HMRCMTDIT -> baseInvitationInputData,
     HMRCMTDVAT -> baseInvitationInputData
-      .copy(service = HMRCMTDVAT, suppliedClientId = vrn.value, knownFact = "2020-01-01"),
+      .copy(
+        service = HMRCMTDVAT,
+        suppliedClientId = vrn.value,
+        knownFact = "2020-01-01",
+        clientType = Some("business")
+      ),
     HMRCMTDITSUPP -> baseInvitationInputData.copy(service = HMRCMTDITSUPP)
   )
 
@@ -661,6 +671,28 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       result.status shouldBe BAD_REQUEST
       result.json shouldBe expectedJson
     }
+
+    allServicesClientIdFormatInvalidService.keySet.foreach(taxService =>
+      s"return BadRequest status and valid JSON CLIENT_TYPE_NOT_SUPPORTED for $taxService when clientType is not supported" in {
+        val inputData: ApiCreateInvitationRequest =
+          allServices(taxService).copy(clientType = Some("UNSUPPORTED"))
+
+        givenAuditConnector()
+        val expectedJson: JsValue = Json.toJson(
+          toJson(
+            ErrorBody(
+              "CLIENT_TYPE_NOT_SUPPORTED",
+              "The client type requested is not supported. Check the API documentation to find which client types are supported."
+            )
+          )
+        )
+
+        val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
+        val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
+        result.status shouldBe BAD_REQUEST
+        result.json shouldBe expectedJson
+      }
+    )
 
     // AGENT
     allServices.keySet.foreach(taxService =>

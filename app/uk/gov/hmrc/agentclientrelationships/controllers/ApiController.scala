@@ -62,6 +62,7 @@ class ApiController @Inject() (
                 case UnsupportedService      => ApiErrorResults.UnsupportedService
                 case InvalidClientId         => ApiErrorResults.ClientIdInvalidFormat
                 case UnsupportedClientIdType => ApiErrorResults.ClientIdDoesNotMatchService
+                case UnsupportedClientType   => ApiErrorResults.UnsupportedClientType
 
                 // Get Agent, suspention check NoPermissionOnAgency
                 case AgentSuspended                     => ApiErrorResults.AgentSuspended
