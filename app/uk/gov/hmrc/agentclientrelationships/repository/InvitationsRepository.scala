@@ -139,13 +139,11 @@ class InvitationsRepository @Inject() (mongoComponent: MongoComponent, appConfig
   def cancelByIdForAgent(arn: String, invitationId: String): Future[CancelInvitationResponse] = {
     val filterById = equal(invitationIdKey, invitationId)
 
-    collection.find(filterById).first().toFuture().flatMap {
-      case null => Future.successful(NotFound)
-      case invitation if invitation.status != Pending =>
-        Future.successful(NotFound)
-      case invitation if invitation.arn != arn =>
-        Future.successful(NoPermission)
-      case _ =>
+    collection.find(filterById).headOption().flatMap {
+      case None                                             => Future.successful(NotFound)
+      case Some(invitation) if invitation.status != Pending => Future.successful(NotFound)
+      case Some(invitation) if invitation.arn != arn        => Future.successful(NoPermission)
+      case Some(_) =>
         collection
           .updateOne(
             and(
