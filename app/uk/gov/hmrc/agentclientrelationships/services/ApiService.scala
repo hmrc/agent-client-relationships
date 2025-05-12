@@ -84,7 +84,7 @@ class ApiService @Inject() (
 
       _ <- EitherT.fromEither[Future](knowFactsCheckService.checkKnowFacts(apiCreateInvitationInputData, clientDetails))
 
-      _ <- EitherT(checkExistingRelationship(arn, service.id, suppliedClientId.enrolmentId, suppliedClientId.value))
+      _ <- EitherT(getExistingRelationship(arn, service.id, suppliedClientId.enrolmentId, suppliedClientId.value))
 
       // create invitation
       invitation <- EitherT(
@@ -234,19 +234,6 @@ class ApiService @Inject() (
         case invitation +: _ =>
           Left(InvitationFailureResponse.DuplicateAuthorisationRequest(Some(invitation.invitationId)))
       }
-
-  private def checkExistingRelationship(arn: Arn, service: String, clientIdType: String, suppliedClientId: String)(
-    implicit
-    hc: HeaderCarrier,
-    request: Request[Any]
-  ): Future[Either[InvitationFailureResponse, Boolean]] =
-    (for {
-      _ <- EitherT(getExistingRelationship(arn, service, clientIdType, suppliedClientId))
-//      _ <-
-//        if (multiAgentServices.contains(service))
-//          EitherT(getExistingRelationship(arn, multiAgentServicesOtherService(service), clientIdType, suppliedClientId))
-//        else EitherT[Future, InvitationFailureResponse, Boolean](Future.successful(Right(false)))
-    } yield false).value
 
   private def getExistingRelationship(arn: Arn, service: String, clientIdType: String, clientId: String)(implicit
     hc: HeaderCarrier,

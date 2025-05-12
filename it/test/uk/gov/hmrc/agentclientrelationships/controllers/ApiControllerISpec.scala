@@ -22,12 +22,10 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{Cancelled, EnrolmentKey, Invitation, Pending, Rejected}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisationRequestInfo, ApiCreateInvitationRequest}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiErrorResults.ErrorBody
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisationRequestInfo, ApiCreateInvitationRequest}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneId, ZoneOffset}
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository, PartialAuthRepository}
 import uk.gov.hmrc.agentclientrelationships.services.ApiService
 import uk.gov.hmrc.agentclientrelationships.stubs._
@@ -36,6 +34,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 
+import java.time.{Instant, LocalDate, ZoneId}
 import scala.concurrent.ExecutionContext
 
 class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with HipStub with TestData {
@@ -68,8 +67,11 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
-  val testDate: LocalDate = LocalDate.of(2025, 5, 10)
-  val testTime: Instant = LocalDateTime.of(2025, 5, 9, 23, 0).toInstant(ZoneOffset.UTC)
+  val testDate: LocalDate = LocalDate.now()
+  val testTime: Instant =
+    testDate
+      .atStartOfDay(ZoneId.systemDefault())
+      .toInstant
 
   val uid = "TestUID"
   val agencyName = "test agency Name"
@@ -130,7 +132,7 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         clientName = "TestClientName",
         agencyName = agencyName,
         agencyEmail = "agent@email.com",
-        expiryDate = LocalDate.now(),
+        expiryDate = testDate,
         clientType = Some("personal")
       )
       .copy(created = testTime, lastUpdated = testTime)
