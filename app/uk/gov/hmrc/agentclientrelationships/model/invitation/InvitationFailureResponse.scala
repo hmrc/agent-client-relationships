@@ -71,12 +71,12 @@ object InvitationFailureResponse {
     )
   }
 
-  case object NoAuthorisation extends InvitationFailureResponse {
+  case object NoPermissionOnAgency extends InvitationFailureResponse {
     def getResult(message: String): Result = Forbidden(
       toJson(
         ErrorBody(
-          "REQUEST_NOT_AUTHORISED",
-          "ARN does not match that in the found invitation."
+          "NO_PERMISSION_ON_AGENCY",
+          "The user that is signed in cannot access this authorisation request. Their details do not match the agent business that created the authorisation request."
         )
       )
     )
