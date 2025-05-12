@@ -72,7 +72,7 @@ class ClientDetailsService @Inject() (
     hc: HeaderCarrier
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     service.toUpperCase match {
-      case "HMRC-MTD-IT" =>
+      case "HMRC-MTD-IT" | "HMRC-MTD-IT-SUPP" =>
         getItsaClientDetails(clientId)
       case "HMRC-MTD-VAT" | "HMCE-VATDEC-ORG" =>
         getVatClientDetails(clientId)
