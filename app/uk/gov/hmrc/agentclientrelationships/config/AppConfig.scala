@@ -129,7 +129,11 @@ class AppConfig @Inject() (
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
   val supportedServicesWithoutPir: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
   val supportedServices: Seq[Service] = Service.supportedServices
-  val apiSupportedServices: Seq[Service] = Seq(Service.MtdIt, Service.MtdItSupp, Service.Vat)
+  val apiSupportedServices: Seq[Service] = Seq(
+    Service.MtdIt,
+    Service.MtdItSupp,
+    Service.Vat
+  )
 
   val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 

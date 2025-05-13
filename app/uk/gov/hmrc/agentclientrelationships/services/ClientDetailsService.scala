@@ -41,15 +41,15 @@ import scala.concurrent.Future
 
 @Singleton
 class ClientDetailsService @Inject() (
-                                       clientDetailsConnector: ClientDetailsConnector,
-                                       appConfig: AppConfig,
-                                       ifOrHipConnector: IfOrHipConnector
-                                     )(implicit ec: ExecutionContext)
-  extends Logging {
+  clientDetailsConnector: ClientDetailsConnector,
+  appConfig: AppConfig,
+  ifOrHipConnector: IfOrHipConnector
+)(implicit ec: ExecutionContext)
+extends Logging {
 
   def findClientDetailsByTaxIdentifier(
-                                        taxIdentifier: TaxIdentifier
-                                      )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+    taxIdentifier: TaxIdentifier
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     taxIdentifier match {
       case Nino(nino) => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
       case Vrn(vrn) => getVatClientDetails(vrn)
@@ -63,39 +63,32 @@ class ClientDetailsService @Inject() (
     }
 
   def findClientDetails(
-                         service: String,
-                         clientId: String
-                       )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+    service: String,
+    clientId: String
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     service.toUpperCase match {
-      case "HMRC-MTD-IT" | "HMRC-MTD-IT-SUPP" =>
-        getItsaClientDetails(clientId)
-      case "HMRC-MTD-VAT" | "HMCE-VATDEC-ORG" =>
-        getVatClientDetails(clientId)
-      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" =>
-        getTrustClientDetails(clientId)
-      case "PERSONAL-INCOME-RECORD" =>
-        getIrvClientDetails(clientId)
-      case "HMRC-CGT-PD" =>
-        getCgtClientDetails(clientId)
-      case "HMRC-PPT-ORG" =>
-        getPptClientDetails(clientId)
-      case "HMRC-CBC-ORG" =>
-        getCbcClientDetails(clientId)
-      case "HMRC-PILLAR2-ORG" =>
-        getPillar2ClientDetails(clientId)    }
+      case "HMRC-MTD-IT" | "HMRC-MTD-IT-SUPP" => getItsaClientDetails(clientId)
+      case "HMRC-MTD-VAT" | "HMCE-VATDEC-ORG" => getVatClientDetails(clientId)
+      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" => getTrustClientDetails(clientId)
+      case "PERSONAL-INCOME-RECORD" => getIrvClientDetails(clientId)
+      case "HMRC-CGT-PD" => getCgtClientDetails(clientId)
+      case "HMRC-PPT-ORG" => getPptClientDetails(clientId)
+      case "HMRC-CBC-ORG" => getCbcClientDetails(clientId)
+      case "HMRC-PILLAR2-ORG" => getPillar2ClientDetails(clientId)
+    }
 
   private def getItsaClientDetails(nino: String)(implicit
-                                                 request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = ifOrHipConnector
     .getItsaBusinessDetails(nino)
     .flatMap {
       case Right(
-      details @ ItsaBusinessDetails(
-      name,
-      Some(postcode),
-      _
-      )
-      ) =>
+            details @ ItsaBusinessDetails(
+              name,
+              Some(postcode),
+              _
+            )
+          ) =>
         Future.successful(
           Right(
             ClientDetailsResponse(
@@ -119,7 +112,7 @@ class ClientDetailsService @Inject() (
             optSaUtr = citizenDetails.saUtr
             optPostcode = designatoryDetails.postCode
           } yield (optName, optSaUtr, optPostcode)
-          ).subflatMap {
+        ).subflatMap {
           case (Some(name), Some(_), Some(postcode)) =>
             Right(
               ClientDetailsResponse(
@@ -136,30 +129,30 @@ class ClientDetailsService @Inject() (
     }
 
   private def getVatClientDetails(vrn: String)(implicit
-                                               request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getVatCustomerInfo(vrn)
     .map {
       case Right(
-      VatCustomerDetails(
-      None,
-      None,
-      None,
-      _,
-      _
-      )
-      ) =>
+            VatCustomerDetails(
+              None,
+              None,
+              None,
+              _,
+              _
+            )
+          ) =>
         logger.warn("[getVatClientDetails] - No name was returned by the API")
         Left(ClientDetailsNotFound)
       case Right(
-      details @ VatCustomerDetails(
-      _,
-      _,
-      _,
-      Some(regDate),
-      _
-      )
-      ) =>
+            details @ VatCustomerDetails(
+              _,
+              _,
+              _,
+              Some(regDate),
+              _
+            )
+          ) =>
         val clientName = details.tradingName.getOrElse(details.organisationName.getOrElse(details.individual.get.name))
         val clientStatus =
           if (details.isInsolvent)
@@ -182,7 +175,7 @@ class ClientDetailsService @Inject() (
     }
 
   private def getTrustClientDetails(trustTaxIdentifier: String)(implicit
-                                                                request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getTrustName(trustTaxIdentifier)
     .map {
@@ -200,18 +193,18 @@ class ClientDetailsService @Inject() (
     }
 
   private def getIrvClientDetails(nino: String)(implicit
-                                                request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getItsaCitizenDetails(nino)
     .map {
       case Right(
-      details @ ItsaCitizenDetails(
-      _,
-      _,
-      Some(dateOfBirth),
-      _
-      )
-      ) =>
+            details @ ItsaCitizenDetails(
+              _,
+              _,
+              Some(dateOfBirth),
+              _
+            )
+          ) =>
         details.name match {
           case Some(name) =>
             Right(
@@ -234,17 +227,17 @@ class ClientDetailsService @Inject() (
     }
 
   private def getCgtClientDetails(cgtRef: String)(implicit
-                                                  request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getCgtSubscriptionDetails(cgtRef)
     .map {
       case Right(
-      CgtSubscriptionDetails(
-      name,
-      Some(postcode),
-      countryCode
-      )
-      ) if countryCode.toUpperCase == "GB" =>
+            CgtSubscriptionDetails(
+              name,
+              Some(postcode),
+              countryCode
+            )
+          ) if countryCode.toUpperCase == "GB" =>
         Right(
           ClientDetailsResponse(
             name,
@@ -255,12 +248,12 @@ class ClientDetailsService @Inject() (
           )
         )
       case Right(
-      CgtSubscriptionDetails(
-      name,
-      _,
-      countryCode
-      )
-      ) =>
+            CgtSubscriptionDetails(
+              name,
+              _,
+              countryCode
+            )
+          ) =>
         Right(
           ClientDetailsResponse(
             name,
@@ -274,7 +267,7 @@ class ClientDetailsService @Inject() (
     }
 
   private def getPptClientDetails(pptRef: String)(implicit
-                                                  request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getPptSubscriptionDetails(pptRef)
     .map {
@@ -298,7 +291,7 @@ class ClientDetailsService @Inject() (
     }
 
   private def getCbcClientDetails(cbcId: String)(implicit
-                                                 request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getCbcSubscriptionDetails(cbcId)
     .map {
@@ -322,7 +315,7 @@ class ClientDetailsService @Inject() (
     }
 
   private def getPillar2ClientDetails(plrId: String)(implicit
-                                                     request: RequestHeader
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getPillar2SubscriptionDetails(plrId)
     .map {

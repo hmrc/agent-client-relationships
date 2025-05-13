@@ -21,246 +21,256 @@ import com.github.tomakehurst.wiremock.stubbing.StubMapping
 
 trait ClientDetailsStub {
 
-  def givenItsaDesignatoryDetailsExists(nino: String): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""
-                         |{
-                         |  "address": {
-                         |    "postcode": "AA1 1AA"
-                         |  }
-                         |}
+  def givenItsaDesignatoryDetailsExists(nino: String): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "address": {
+                       |    "postcode": "AA1 1AA"
+                       |  }
+                       |}
           """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenItsaDesignatoryDetailsError(nino: String, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenItsaDesignatoryDetailsError(
+    nino: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
-  def givenItsaCitizenDetailsExists(nino: String): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/citizen-details/nino/$nino"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""
-                         |{
-                         |  "name": {
-                         |    "current": {
-                         |      "firstName": "Matthew",
-                         |      "lastName": "Kovacic"
-                         |    }
-                         |  },
-                         |  "dateOfBirth": "01012000",
-                         |  "ids": {
-                         |    "sautr": "11223344"
-                         |  }
-                         |}
+  def givenItsaCitizenDetailsExists(nino: String): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/nino/$nino"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "name": {
+                       |    "current": {
+                       |      "firstName": "Matthew",
+                       |      "lastName": "Kovacic"
+                       |    }
+                       |  },
+                       |  "dateOfBirth": "01012000",
+                       |  "ids": {
+                       |    "sautr": "11223344"
+                       |  }
+                       |}
           """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenItsaCitizenDetailsError(nino: String, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/citizen-details/nino/$nino"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenItsaCitizenDetailsError(
+    nino: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/nino/$nino"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
   def givenVatCustomerInfoExists(
-                                  vrn: String,
-                                  regDate: String = "2020-01-01",
-                                  isInsolvent: Boolean = false
-                                ): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""
-                         |{
-                         |  "approvedInformation": {
-                         |    "customerDetails": {
-                         |      "organisationName": "CFG",
-                         |      "tradingName": "CFG Solutions",
-                         |      "individual": {
-                         |        "title": "0001",
-                         |        "firstName": "Ilkay",
-                         |        "middleName": "Silky",
-                         |        "lastName": "Gundo"
-                         |      },
-                         |      "effectiveRegistrationDate": "$regDate",
-                         |      "isInsolvent": $isInsolvent,
-                         |      "overseasIndicator": true
-                         |    }
-                         |  }
-                         |}
+    vrn: String,
+    regDate: String = "2020-01-01",
+    isInsolvent: Boolean = false
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "approvedInformation": {
+                       |    "customerDetails": {
+                       |      "organisationName": "CFG",
+                       |      "tradingName": "CFG Solutions",
+                       |      "individual": {
+                       |        "title": "0001",
+                       |        "firstName": "Ilkay",
+                       |        "middleName": "Silky",
+                       |        "lastName": "Gundo"
+                       |      },
+                       |      "effectiveRegistrationDate": "$regDate",
+                       |      "isInsolvent": $isInsolvent,
+                       |      "overseasIndicator": true
+                       |    }
+                       |  }
+                       |}
           """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenVatCustomerInfoError(vrn: String, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenVatCustomerInfoError(
+    vrn: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
-  def givenTrustDetailsExist(identifier: String, identifierType: String): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/trusts/agent-known-fact-check/$identifierType/$identifier"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""
-                         |{
-                         |  "trustDetails": {
-                         |    "trustName": "The Safety Trust"
-                         |  }
-                         |}
+  def givenTrustDetailsExist(
+    identifier: String,
+    identifierType: String
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/trusts/agent-known-fact-check/$identifierType/$identifier"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "trustDetails": {
+                       |    "trustName": "The Safety Trust"
+                       |  }
+                       |}
             """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenTrustDetailsError(identifier: String, identifierType: String, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/trusts/agent-known-fact-check/$identifierType/$identifier"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenTrustDetailsError(
+    identifier: String,
+    identifierType: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/trusts/agent-known-fact-check/$identifierType/$identifier"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
-  def givenCgtDetailsExist(cgtRef: String): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""
-                         |{
-                         |  "subscriptionDetails": {
-                         |    "typeOfPersonDetails": {
-                         |      "typeOfPerson": "Trustee",
-                         |      "organisationName": "CFG Solutions"
-                         |    },
-                         |    "addressDetails": {
-                         |      "postalCode": "AA1 1AA",
-                         |      "countryCode": "GB"
-                         |    }
-                         |  }
-                         |}
+  def givenCgtDetailsExist(cgtRef: String): StubMapping = stubFor(
+    get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "subscriptionDetails": {
+                       |    "typeOfPersonDetails": {
+                       |      "typeOfPerson": "Trustee",
+                       |      "organisationName": "CFG Solutions"
+                       |    },
+                       |    "addressDetails": {
+                       |      "postalCode": "AA1 1AA",
+                       |      "countryCode": "GB"
+                       |    }
+                       |  }
+                       |}
             """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenCgtDetailsError(cgtRef: String, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenCgtDetailsError(
+    cgtRef: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
-  def givenPptDetailsExist(pptRef: String): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/plastic-packaging-tax/subscriptions/PPT/$pptRef/display"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""
-                         |{
-                         |  "legalEntityDetails": {
-                         |    "dateOfApplication": "2020-01-01",
-                         |    "customerDetails": {
-                         |      "customerType": "Organisation",
-                         |      "organisationDetails": {
-                         |        "organisationName": "CFG Solutions"
-                         |      }
-                         |    }
-                         |  },
-                         |  "changeOfCircumstanceDetails": {
-                         |    "deregistrationDetails": {
-                         |      "deregistrationDate": "2030-01-01"
-                         |    }
-                         |  }
-                         |}
+  def givenPptDetailsExist(pptRef: String): StubMapping = stubFor(
+    get(urlEqualTo(s"/plastic-packaging-tax/subscriptions/PPT/$pptRef/display"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "legalEntityDetails": {
+                       |    "dateOfApplication": "2020-01-01",
+                       |    "customerDetails": {
+                       |      "customerType": "Organisation",
+                       |      "organisationDetails": {
+                       |        "organisationName": "CFG Solutions"
+                       |      }
+                       |    }
+                       |  },
+                       |  "changeOfCircumstanceDetails": {
+                       |    "deregistrationDetails": {
+                       |      "deregistrationDate": "2030-01-01"
+                       |    }
+                       |  }
+                       |}
             """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenPptDetailsError(pptRef: String, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/plastic-packaging-tax/subscriptions/PPT/$pptRef/display"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenPptDetailsError(
+    pptRef: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/plastic-packaging-tax/subscriptions/PPT/$pptRef/display"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
-  def givenCbcDetailsExist(isGBUser: Boolean = true): StubMapping =
-    stubFor(
-      post(urlEqualTo("/dac6/dct50d/v1"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""{
-                         |  "displaySubscriptionForCBCResponse": {
-                         |    "responseDetail": {
-                         |      "isGBUser": $isGBUser,
-                         |      "tradingName": "CFG Solutions",
-                         |      "primaryContact": [
-                         |        {
-                         |          "email": "test@email.com",
-                         |          "individual": {
-                         |            "firstName": "Erling",
-                         |            "lastName": "Haal"
-                         |          },
-                         |          "organisation": {
-                         |            "organisationName": "CFG"
-                         |          }
-                         |        }
-                         |      ],
-                         |      "secondaryContact": [
-                         |        {
-                         |          "email": "test2@email.com",
-                         |          "individual": {
-                         |            "firstName": "Kevin",
-                         |            "lastName": "De Burner"
-                         |          },
-                         |          "organisation": {
-                         |            "organisationName": "CFG"
-                         |          }
-                         |        }
-                         |      ]
-                         |    }
-                         |  }
-                         |}
+  def givenCbcDetailsExist(isGBUser: Boolean = true): StubMapping = stubFor(
+    post(urlEqualTo("/dac6/dct50d/v1"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""{
+                       |  "displaySubscriptionForCBCResponse": {
+                       |    "responseDetail": {
+                       |      "isGBUser": $isGBUser,
+                       |      "tradingName": "CFG Solutions",
+                       |      "primaryContact": [
+                       |        {
+                       |          "email": "test@email.com",
+                       |          "individual": {
+                       |            "firstName": "Erling",
+                       |            "lastName": "Haal"
+                       |          },
+                       |          "organisation": {
+                       |            "organisationName": "CFG"
+                       |          }
+                       |        }
+                       |      ],
+                       |      "secondaryContact": [
+                       |        {
+                       |          "email": "test2@email.com",
+                       |          "individual": {
+                       |            "firstName": "Kevin",
+                       |            "lastName": "De Burner"
+                       |          },
+                       |          "organisation": {
+                       |            "organisationName": "CFG"
+                       |          }
+                       |        }
+                       |      ]
+                       |    }
+                       |  }
+                       |}
             """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenCbcDetailsError(status: Int): StubMapping =
-    stubFor(
-      post(urlEqualTo("/dac6/dct50d/v1"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenCbcDetailsError(status: Int): StubMapping = stubFor(
+    post(urlEqualTo("/dac6/dct50d/v1"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
-  def givenPillar2DetailsExist(plrId: String): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/pillar2/subscription/$plrId"))
-        .willReturn(
-          aResponse()
-            .withBody(s"""{
-                         |  "success": {
-                         |    "upeDetails": {
-                         |      "organisationName": "CFG Solutions",
-                         |      "registrationDate": "2020-01-01"
-                         |    },
-                         |    "upeCorrespAddressDetails": {
-                         |      "countryCode": "GB"
-                         |    },
-                         |    "accountStatus": {
-                         |      "inactive": true
-                         |    }
-                         |  }
-                         |}
+  def givenPillar2DetailsExist(plrId: String): StubMapping = stubFor(
+    get(urlEqualTo(s"/pillar2/subscription/$plrId"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""{
+                       |  "success": {
+                       |    "upeDetails": {
+                       |      "organisationName": "CFG Solutions",
+                       |      "registrationDate": "2020-01-01"
+                       |    },
+                       |    "upeCorrespAddressDetails": {
+                       |      "countryCode": "GB"
+                       |    },
+                       |    "accountStatus": {
+                       |      "inactive": true
+                       |    }
+                       |  }
+                       |}
             """.stripMargin)
-        )
-    )
+      )
+  )
 
-  def givenPillar2DetailsError(plrId: String, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/pillar2/subscription/$plrId"))
-        .willReturn(aResponse().withStatus(status))
-    )
+  def givenPillar2DetailsError(
+    plrId: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/pillar2/subscription/$plrId"))
+      .willReturn(aResponse().withStatus(status))
+  )
+
 }
