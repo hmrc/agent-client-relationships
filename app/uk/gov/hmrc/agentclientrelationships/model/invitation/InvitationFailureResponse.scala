@@ -71,6 +71,17 @@ object InvitationFailureResponse {
     )
   }
 
+  case object NoPermissionOnAgency extends InvitationFailureResponse {
+    def getResult(message: String): Result = Forbidden(
+      toJson(
+        ErrorBody(
+          "NO_PERMISSION_ON_AGENCY",
+          "The user that is signed in cannot access this authorisation request. Their details do not match the agent business that created the authorisation request."
+        )
+      )
+    )
+  }
+
   case object RelationshipNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(
       toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
