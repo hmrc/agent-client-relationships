@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, InvitationStatus}
-import uk.gov.hmrc.agentclientrelationships.model.ServiceExtentions._
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 import java.time.{Instant, LocalDate}
@@ -46,7 +45,7 @@ object ApiAuthorisationRequestInfo {
       uid = uid,
       normalizedAgentName = normalizedAgentName,
       created = invitation.created,
-      service = Service(invitation.service).apiServiceName,
+      service = invitation.service,
       status = invitation.status,
       expiresOn = invitation.expiryDate,
       invitationId = invitation.invitationId,

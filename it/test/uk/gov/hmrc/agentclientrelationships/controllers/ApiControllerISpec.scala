@@ -894,11 +894,11 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
           "uid"                 -> agentReferenceRecord.uid,
           "normalizedAgentName" -> normalizedAgencyName,
           "created"             -> testTime.toString,
-          "service"      -> { if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)) "MTD-IT" else "MTD-VAT" },
-          "status"       -> invitation.status,
-          "expiresOn"    -> testDate.toString,
-          "invitationId" -> invitation.invitationId,
-          "lastUpdated"  -> testTime.toString
+          "service"             -> invitation.service,
+          "status"              -> invitation.status,
+          "expiresOn"           -> testDate.toString,
+          "invitationId"        -> invitation.invitationId,
+          "lastUpdated"         -> testTime.toString
         )
 
       }
@@ -920,11 +920,11 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
           "uid"                 -> agentReferenceRecord.uid,
           "normalizedAgentName" -> normalizedAgencyName,
           "created"             -> testTime.toString,
-          "service"      -> { if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)) "MTD-IT" else "MTD-VAT" },
-          "status"       -> invitation.status,
-          "expiresOn"    -> testDate.toString,
-          "invitationId" -> invitation.invitationId,
-          "lastUpdated"  -> testTime.toString
+          "service"             -> invitation.service,
+          "status"              -> invitation.status,
+          "expiresOn"           -> testDate.toString,
+          "invitationId"        -> invitation.invitationId,
+          "lastUpdated"         -> testTime.toString
         )
 
       }
@@ -944,9 +944,7 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val resultApiAuthorisationRequestInfo = result.json.as[ApiAuthorisationRequestInfo]
         resultApiAuthorisationRequestInfo.normalizedAgentName shouldBe normalizedAgencyName
         resultApiAuthorisationRequestInfo.status shouldBe Pending
-        resultApiAuthorisationRequestInfo.service shouldBe {
-          if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)) "MTD-IT" else "MTD-VAT"
-        }
+        resultApiAuthorisationRequestInfo.service shouldBe invitation.service
         resultApiAuthorisationRequestInfo.invitationId shouldBe invitation.invitationId
 
       }
