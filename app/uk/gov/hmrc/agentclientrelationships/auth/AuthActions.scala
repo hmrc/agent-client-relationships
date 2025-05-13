@@ -194,10 +194,7 @@ with Logging {
         }
     }
 
-  def withAuthorisedAsClient[
-    A,
-    T
-  ](body: Map[Service, TaxIdentifier] => Future[Result])(implicit request: RequestHeader): Future[Result] =
+  def withAuthorisedAsClient[A, T](body: Map[Service, TaxIdentifier] => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
       enrolments =>
         val identifiers =
