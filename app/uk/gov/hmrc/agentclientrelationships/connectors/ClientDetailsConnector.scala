@@ -49,7 +49,6 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-//TODO SRP violation, this connector aggregates too many endpoints from DES, IF, and EIS. Split it into separate connectors.
 @Singleton
 class ClientDetailsConnector @Inject() (
   appConfig: AppConfig,
@@ -84,7 +83,6 @@ with Logging {
         .map { response =>
           response.status match {
             case OK => Right(response.json.as[ItsaDesignatoryDetails])
-            // TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getItsaDesignatoryDetails', statusCode=$status")
@@ -102,7 +100,6 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            // TODO: Do we really need to handle all those cases where the status is not OK? Ultimately, if it's not OK, the user sees technical difficulties, so why bother and hide the stack trace logged by the default error handler in such cases?
             case OK => Right(response.json.as[ItsaCitizenDetails])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
@@ -121,10 +118,6 @@ with Logging {
         .get(url)
         .setHeader(desHeaders(appConfig.desToken): _*)
         .execute[HttpResponse]
-        // TODO: easier is to do
-        // .execute[Option[VatCustomerDetails]]
-        // .map(_.toRight(ClientDetailsNotFound))
-        // but not suer if the Left(ErrorRetrievingClientDetail) is used anywhere. Analyse and simplify
         .map { response =>
           response.status match {
             case OK => Right(response.json.as[VatCustomerDetails])

@@ -83,7 +83,6 @@ extends HttpApiMonitor {
       implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.irvReads
       httpClient
         .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
-        // TODO: it would be easier if the underlying endpoint could return emtpy list instead of NOT_FOUND. Easier to implement and no problem when to distinguish between URL not found and records are not there
         .execute[Option[Seq[InactiveRelationship]]]
         .map(_.fold(Seq[InactiveRelationship]())(identity))
     }
