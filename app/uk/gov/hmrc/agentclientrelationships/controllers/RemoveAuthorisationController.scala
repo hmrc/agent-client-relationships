@@ -133,7 +133,7 @@ with AuthActions {
             validRequest.service.id,
             validRequest.suppliedClientId.value
           )
-          .map { result =>
+          .map { result: Boolean =>
             if (result) {
               val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse("HMRC")
               deleteService.setRelationshipEnded(
