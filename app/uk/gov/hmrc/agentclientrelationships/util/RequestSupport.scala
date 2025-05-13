@@ -16,22 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.util
 
-import play.api.libs.typedmap.TypedMap
-import play.api.mvc.request.RemoteConnection
-import play.api.mvc.request.RequestTarget
-import play.api.mvc.Headers
-import play.api.mvc.Request
-import play.api.mvc.RequestHeader
+import play.api.mvc.{Request, RequestHeader}
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendHeaderCarrierProvider
 
 import javax.inject.Inject
 
-/** I'm repeating a pattern which was brought originally by play-framework and putting some more data which can be derived from a request
-  *
-  * Use it to provide HeaderCarrier, Lang, or Messages
-  */
+/** I'm repeating a pattern which was brought originally by play-framework and putting some more data which can be
+ * derived from a request
+ *
+ * Use it to provide HeaderCarrier, Lang, or Messages
+ */
 class RequestSupport @Inject() () {
   implicit def hc(implicit request: Request[_]): HeaderCarrier = RequestSupport.hc
 }
@@ -40,14 +36,12 @@ object RequestSupport {
 
   implicit def hc(implicit request: RequestHeader): HeaderCarrier = HcProvider.headerCarrier
 
-  /** This is because we want to give responsibility of creation of HeaderCarrier to the platform code. If they refactor how hc is created our code will pick it
-    * up automatically.
-    */
-  private object HcProvider
-  extends BackendHeaderCarrierProvider {
+  /** This is because we want to give responsibility of creation of HeaderCarrier to the platform code. If they refactor
+   * how hc is created our code will pick it up automatically.
+   */
+  private object HcProvider extends BackendHeaderCarrierProvider {
     def headerCarrier(implicit request: RequestHeader): HeaderCarrier = hc(request)
   }
 
   val thereIsNoRequest: RequestHeader = NoRequest
-
 }
