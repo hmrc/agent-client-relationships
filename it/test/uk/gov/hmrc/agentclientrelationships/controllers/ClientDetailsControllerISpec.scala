@@ -16,47 +16,60 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.http.Status.{INTERNAL_SERVER_ERROR, NOT_FOUND}
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout, stubControllerComponents}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
+import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.{CheckRelationshipsOrchestratorService, ClientDetailsService}
-import uk.gov.hmrc.agentclientrelationships.stubs.{ClientDetailsStub, HipStub}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{MtdIt, MtdItSupp, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Vrn}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
+import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
+import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
-class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetailsStub with HipStub {
+class ClientDetailsControllerISpec
+extends BaseControllerISpec
+with ClientDetailsStub
+with HipStub {
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
-  val partialAuthRepo: PartialAuthRepository =
-    app.injector.instanceOf[PartialAuthRepository]
-  val checkRelationshipsService: CheckRelationshipsOrchestratorService =
-    app.injector.instanceOf[CheckRelationshipsOrchestratorService]
+  val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
+  val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector
+    .instanceOf[CheckRelationshipsOrchestratorService]
 
-  val controller = new ClientDetailsController(
-    clientDetailsService,
-    checkRelationshipsService,
-    invitationsRepo,
-    partialAuthRepo,
-    authConnector,
-    stubControllerComponents()
-  )
+  val controller =
+    new ClientDetailsController(
+      clientDetailsService,
+      checkRelationshipsService,
+      invitationsRepo,
+      partialAuthRepo,
+      authConnector,
+      stubControllerComponents(),
+      appConfig
+    )
 
-  override def additionalConfig: Map[String, Any] = Map(
-    "hip.BusinessDetails.enabled" -> true
-  )
+  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
   def setupCommonStubs(request: FakeRequest[?]): Unit = {
     givenAuthorisedAsValidAgent(request, "XARN1234567")
@@ -83,10 +96,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "Erling Haal",
-            "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA11AA"),
-            "knownFactType"        -> "PostalCode",
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false
           )
         }
@@ -100,27 +113,26 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
 
           await(
-            invitationsRepo
-              .create(
-                "XARN1234567",
-                MtdIt,
-                Nino("AA000001B"),
-                Nino("AA000001B"),
-                "Erling Haal",
-                "testAgentName",
-                "agent@email.com",
-                LocalDate.now(),
-                Some("personal")
-              )
+            invitationsRepo.create(
+              "XARN1234567",
+              MtdIt,
+              Nino("AA000001B"),
+              Nino("AA000001B"),
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "Erling Haal",
-            "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA11AA"),
-            "knownFactType"        -> "PostalCode",
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> true
           )
         }
@@ -133,27 +145,26 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            invitationsRepo
-              .create(
-                "XARN1234567",
-                MtdItSupp,
-                Nino("AA000001B"),
-                Nino("AA000001B"),
-                "Erling Haal",
-                "testAgentName",
-                "agent@email.com",
-                LocalDate.now(),
-                Some("personal")
-              )
+            invitationsRepo.create(
+              "XARN1234567",
+              MtdItSupp,
+              Nino("AA000001B"),
+              Nino("AA000001B"),
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "Erling Haal",
-            "isOverseas"           -> false,
-            "knownFacts"           -> Json.arr("AA11AA"),
-            "knownFactType"        -> "PostalCode",
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> true
           )
         }
@@ -169,11 +180,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
@@ -189,11 +200,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
           )
         }
@@ -208,11 +219,11 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "CFG Solutions",
-            "isOverseas"                 -> true,
-            "knownFacts"                 -> Json.arr("test@email.com", "test2@email.com"),
-            "knownFactType"              -> "Email",
-            "hasPendingInvitation"       -> false,
+            "name" -> "CFG Solutions",
+            "isOverseas" -> true,
+            "knownFacts" -> Json.arr("test@email.com", "test2@email.com"),
+            "knownFactType" -> "Email",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-CBC-NONUK-ORG"
           )
         }
@@ -225,23 +236,22 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            partialAuthRepo
-              .create(
-                Instant.parse("2020-01-01T00:00:00.000Z"),
-                Arn("XARN1234567"),
-                MtdIt.toString(),
-                Nino("AA000001B")
-              )
+            partialAuthRepo.create(
+              Instant.parse("2020-01-01T00:00:00.000Z"),
+              Arn("XARN1234567"),
+              MtdIt.toString(),
+              Nino("AA000001B")
+            )
           )
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
@@ -254,23 +264,22 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            partialAuthRepo
-              .create(
-                Instant.now(),
-                Arn("XARN1234567"),
-                MtdItSupp.toString(),
-                Nino("AA000001B")
-              )
+            partialAuthRepo.create(
+              Instant.now(),
+              Arn("XARN1234567"),
+              MtdItSupp.toString(),
+              Nino("AA000001B")
+            )
           )
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> false,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
           )
         }
@@ -283,28 +292,27 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
-            invitationsRepo
-              .create(
-                "XARN1234567",
-                MtdIt,
-                Nino("AA000001B"),
-                Nino("AA000001B"),
-                "Erling Haal",
-                "testAgentName",
-                "agent@email.com",
-                LocalDate.now(),
-                Some("personal")
-              )
+            invitationsRepo.create(
+              "XARN1234567",
+              MtdIt,
+              Nino("AA000001B"),
+              Nino("AA000001B"),
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
           )
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "Erling Haal",
-            "isOverseas"                 -> false,
-            "knownFacts"                 -> Json.arr("AA11AA"),
-            "knownFactType"              -> "PostalCode",
-            "hasPendingInvitation"       -> true,
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> true,
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
@@ -322,9 +330,9 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "CFG Solutions",
-            "knownFacts"           -> Json.arr("2020-01-01"),
-            "knownFactType"        -> "Date",
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
             "hasPendingInvitation" -> false
           )
         }
@@ -352,9 +360,9 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                 -> "CFG Solutions",
-            "knownFacts"           -> Json.arr("2020-01-01"),
-            "knownFactType"        -> "Date",
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
             "hasPendingInvitation" -> true
           )
         }
@@ -368,10 +376,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "CFG Solutions",
-            "knownFacts"                 -> Json.arr("2020-01-01"),
-            "knownFactType"              -> "Date",
-            "hasPendingInvitation"       -> false,
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
+            "hasPendingInvitation" -> false,
             "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
           )
         }
@@ -398,10 +406,10 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name"                       -> "CFG Solutions",
-            "knownFacts"                 -> Json.arr("2020-01-01"),
-            "knownFactType"              -> "Date",
-            "hasPendingInvitation"       -> true,
+            "name" -> "CFG Solutions",
+            "knownFacts" -> Json.arr("2020-01-01"),
+            "knownFactType" -> "Date",
+            "hasPendingInvitation" -> true,
             "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
           )
         }
@@ -454,4 +462,5 @@ class ClientDetailsControllerISpec extends BaseControllerISpec with ClientDetail
       result.status shouldBe 401
     }
   }
+
 }

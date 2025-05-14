@@ -18,44 +18,52 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.http.Status.OK
 import play.api.libs.json.Json
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
-class AgentAssuranceConnector @Inject() (httpV2: HttpClientV2)(implicit
-  val metrics: Metrics,
+class AgentAssuranceConnector @Inject() (
+  httpClient: HttpClientV2,
+  val metrics: Metrics
+)(implicit
   appConfig: AppConfig,
   val ec: ExecutionContext
-) extends HttpAPIMonitor {
+)
+extends HttpApiMonitor {
 
-  private lazy val baseUrl = appConfig.agentAssuranceBaseUrl
-
-  import uk.gov.hmrc.http.HttpReads.Implicits._
-
+  // TODO: why agent-assurance uses internal-auth.token?
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
 
-  def getAgentRecordWithChecks(arn: Arn)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[AgentDetailsDesResponse] =
-    httpV2
-      .get(new URL(s"$baseUrl/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
-      .setHeader(aaHeaders)
-      .execute[HttpResponse]
-      .map(response =>
-        response.status match {
-          case OK    => Json.parse(response.body).as[AgentDetailsDesResponse]
-          case other => throw UpstreamErrorResponse(s"Agent record unavailable: des response code: $other", other)
-        }
-      )
+  def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = httpClient
+    .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
+    .setHeader(aaHeaders)
+    .execute[HttpResponse]
+    .map(response =>
+      response.status match {
+        case OK => Json.parse(response.body).as[AgentDetailsDesResponse]
+        // TODO: Review error handling flow
+        // Current implementation throws an exception with status code
+        // which gets recovered in an unknown location in the call chain.
+        // This should be implemented as below, returning None for 404 case, and errors for other cases.
+        // No recovery from exceptions should take place.
+        case other => throw UpstreamErrorResponse(s"Agent record unavailable: des response code: $other", other)
+      }
+    )
+//    .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
+//    .setHeader(aaHeaders)
+//    .execute[Option[AgentDetailsDesResponse]]
 
 }

@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import play.api.mvc.Request
@@ -27,30 +28,29 @@ import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AffinityGroup
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 
 trait MockDeleteRelationshipsService {
   this: ResettingMockitoSugar =>
 
-  val mockDeleteRelationshipsService: DeleteRelationshipsService =
-    resettingMock[DeleteRelationshipsService]
+  val mockDeleteRelationshipsService: DeleteRelationshipsService = resettingMock[DeleteRelationshipsService]
 
   def mockDeleteRelationship(
     arn: Arn,
     enrolment: EnrolmentKey,
     affinityGroup: Option[AffinityGroup]
-  )(response: Future[Unit] = Future.unit): OngoingStubbing[Future[Unit]] =
-    when(
-      mockDeleteRelationshipsService
-        .deleteRelationship(eqs(arn), eqs(enrolment), eqs(affinityGroup))(
-          any[HeaderCarrier],
-          any[Request[_]],
-          any[CurrentUser],
-          any[AuditData]
-        )
+  )(response: Future[Unit] = Future.unit): OngoingStubbing[Future[Unit]] = when(
+    mockDeleteRelationshipsService.deleteRelationship(
+      eqs(arn),
+      eqs(enrolment),
+      eqs(affinityGroup)
+    )(
+      any[RequestHeader],
+      any[CurrentUser],
+      any[AuditData]
     )
-      .thenReturn(response)
+  ).thenReturn(response)
 
 }

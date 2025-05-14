@@ -17,10 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.support
 
 import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.actor.Props
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -30,42 +33,43 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class RecoverySchedulerISpec
-    extends TestKit(ActorSystem("testSystem"))
-    with UnitSpec
-    with MongoSupport
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with RelationshipStubs
-    with DataStreamStub
-    with HipStub
-    with AUCDStubs
-    with BeforeAndAfterEach {
+extends TestKit(ActorSystem("testSystem"))
+with UnitSpec
+with MongoSupport
+with GuiceOneServerPerSuite
+with WireMockSupport
+with RelationshipStubs
+with DataStreamStub
+with HipStub
+with AUCDStubs
+with BeforeAndAfterEach {
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port"      -> wireMockPort,
-        "microservice.services.tax-enrolments.port"             -> wireMockPort,
-        "microservice.services.users-groups-search.port"        -> wireMockPort,
-        "microservice.services.hip.port"                        -> wireMockPort,
-        "auditing.consumer.baseUri.host"                        -> wireMockHost,
-        "auditing.consumer.baseUri.port"                        -> wireMockPort,
-        "features.copy-relationship.mtd-it"                     -> true,
-        "features.copy-relationship.mtd-vat"                    -> true,
-        "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-        "microservice.services.agent-user-client-details.port"  -> wireMockPort,
-        "features.recovery-enable"                              -> false,
-        "auditing.enabled"                                      -> true,
-        "mongodb.uri"                                           -> mongoUri
-      )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.hip.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
+    "microservice.services.agent-client-authorisation.port" -> wireMockPort,
+    "microservice.services.agent-user-client-details.port" -> wireMockPort,
+    "features.recovery-enable" -> false,
+    "auditing.enabled" -> true,
+    "mongodb.uri" -> mongoUri
+  )
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -73,8 +77,10 @@ class RecoverySchedulerISpec
   private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
   private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
 
-  override implicit val patienceConfig: PatienceConfig =
-    PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(
+    scaled(Span(30, Seconds)),
+    scaled(Span(2, Seconds))
+  )
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   private val arn: Arn = Arn("AARN0000002")
@@ -94,17 +100,21 @@ class RecoverySchedulerISpec
   val testKit: ActorTestKit = ActorTestKit()
   val actorRef: ActorRef = system.actorOf(
     Props(
-      new TaskActor(recoveryRepo, 2, deleteRelationshipService.tryToResume(ec, new AuditData()).map(_ => ())(ec))(ec)
+      new TaskActor(
+        recoveryRepo,
+        2,
+        deleteRelationshipService.tryToResume(new AuditData()).map(_ => ())(ec)
+      )(ec)
     )
   )
 
-  testKit.scheduler.scheduleOnce(
-    1.second,
-    new Runnable {
-      def run =
-        actorRef ! "uid"
-    }
-  )(ec)
+  testKit.scheduler
+    .scheduleOnce(
+      1.second,
+      new Runnable {
+        def run = actorRef ! "uid"
+      }
+    )(ec)
 
   "Recovery Scheduler" should {
 
@@ -258,4 +268,5 @@ class RecoverySchedulerISpec
       }
     }
   }
+
 }

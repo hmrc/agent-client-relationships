@@ -16,10 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
 
-case class ActiveMainAgent(agentName: String, arn: String, service: String)
+case class ActiveMainAgent(
+  agentName: String,
+  arn: String,
+  service: String
+)
 
 object ActiveMainAgent {
   implicit val format: Format[ActiveMainAgent] = Json.format[ActiveMainAgent]

@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 
-object ClientStatus extends Enumeration {
+object ClientStatus
+extends Enumeration {
 
   type ClientStatus = Value
 
@@ -27,4 +29,5 @@ object ClientStatus extends Enumeration {
   val Inactive: ClientStatus = Value("Inactive")
 
   implicit val format: Format[ClientStatus.Value] = Json.formatEnum(this)
+
 }

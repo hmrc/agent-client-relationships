@@ -16,10 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.util
 
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainText
 
 object CryptoUtil {
 
-  def encryptedString(string: String)(implicit crypto: Encrypter with Decrypter): String =
-    crypto.encrypt(PlainText(string)).value
+  def encryptedString(string: String)(implicit
+    crypto: Encrypter
+      with Decrypter
+  ): String = crypto.encrypt(PlainText(string)).value
 }

@@ -17,39 +17,50 @@
 package uk.gov.hmrc.agentclientrelationships.controllers.transitional
 
 import cats.data.EitherT
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvitationNotFound, UnsupportedStatusChange, UpdateStatusFailed}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedStatusChange
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UpdateStatusFailed
 import uk.gov.hmrc.agentclientrelationships.services.transitional.ChangeInvitationStatusByIdService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class ChangeInvitationStatusByIdController @Inject() (
   changeInvitationStatusByIdService: ChangeInvitationStatusByIdService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
-  def changeInvitationStatusById(invitationId: String, action: String): Action[AnyContent] = Action.async { _ =>
-    val responseT = for {
-      invitationStatusAction <- EitherT.fromEither[Future](changeInvitationStatusByIdService.validateAction(action))
-      result <- EitherT(changeInvitationStatusByIdService.changeStatusById(invitationId, invitationStatusAction))
-    } yield result
+  def changeInvitationStatusById(
+    invitationId: String,
+    action: String
+  ): Action[AnyContent] = Action.async { _ =>
+    val responseT =
+      for {
+        invitationStatusAction <- EitherT.fromEither[Future](changeInvitationStatusByIdService.validateAction(action))
+        result <- EitherT(changeInvitationStatusByIdService.changeStatusById(invitationId, invitationStatusAction))
+      } yield result
 
-    responseT.value.map(
-      _.fold(
-        {
-          case InvitationFailureResponse.UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
-          case updateStatusFailed @ UpdateStatusFailed(_)        => updateStatusFailed.getResult("")
-          case InvitationFailureResponse.InvitationNotFound      => InvitationNotFound.getResult("")
-          case _                                                 => BadRequest
-        },
-        _ => NoContent
+    responseT.value
+      .map(
+        _.fold(
+          {
+            case InvitationFailureResponse.UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
+            case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
+            case InvitationFailureResponse.InvitationNotFound => InvitationNotFound.getResult("")
+            case _ => BadRequest
+          },
+          _ => NoContent
+        )
       )
-    )
   }
 
 }

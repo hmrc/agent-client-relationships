@@ -16,41 +16,61 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.Actor
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.actor.Props
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.repository.{MongoRecoveryScheduleRepository, RecoveryRecord}
+import uk.gov.hmrc.agentclientrelationships.repository.MongoRecoveryScheduleRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RecoveryRecord
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Random
 
 @Singleton
 class RecoveryScheduler @Inject() (
   mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
   deleteRelationshipsService: DeleteRelationshipsService,
-  actorSystem: ActorSystem
-)(implicit appConfig: AppConfig, ec: ExecutionContext)
-    extends Logging {
+  actorSystem: ActorSystem,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext)
+extends Logging {
 
   val recoveryInterval = appConfig.recoveryInterval
   val recoveryEnable = appConfig.recoveryEnabled
 
   if (recoveryEnable) {
-    val taskActor: ActorRef = actorSystem.actorOf(Props {
-      new TaskActor(mongoRecoveryScheduleRepository, recoveryInterval, recover)
-    })
-    actorSystem.scheduler.scheduleOnce(5.seconds, taskActor, "<start>")
-  } else
+    val taskActor: ActorRef = actorSystem.actorOf(
+      Props {
+        new TaskActor(
+          mongoRecoveryScheduleRepository,
+          recoveryInterval,
+          recover
+        )
+      }
+    )
+    actorSystem.scheduler
+      .scheduleOnce(
+        5.seconds,
+        taskActor,
+        "<start>"
+      )
+  }
+  else
     logger.warn("Recovery job scheduler not enabled.")
 
-  def recover: Future[Unit] =
-    deleteRelationshipsService.tryToResume(ec, new AuditData).map(_ => ())
+  def recover: Future[Unit] = deleteRelationshipsService.tryToResume(new AuditData).map(_ => ())
+
 }
 
 class TaskActor(
@@ -58,32 +78,53 @@ class TaskActor(
   recoveryInterval: Int,
   recover: => Future[Unit]
 )(implicit ec: ExecutionContext)
-    extends Actor
-    with Logging {
+extends Actor
+with Logging {
 
   def receive: PartialFunction[Any, Unit] = { case uid: String =>
-    mongoRecoveryScheduleRepository.read.foreach { case RecoveryRecord(recordUid, runAt) =>
-      val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
-      if (uid == recordUid) {
-        val newUid = UUID.randomUUID().toString
-        val nextRunAt = (if (runAt.isBefore(now)) now else runAt)
-          .plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
-        val delay = nextRunAt.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)
-        mongoRecoveryScheduleRepository
-          .write(newUid, nextRunAt)
-          .map { _ =>
-            context.system.scheduler.scheduleOnce(delay.seconds, self, newUid)
-            logger.info("About to start recovery job.")
-            recover
-          }
-      } else {
-        val dateTime = if (runAt.isBefore(now)) now else runAt
-        val delay = (dateTime.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)) + Random.nextInt(
-          Math.min(60, recoveryInterval)
-        )
-        context.system.scheduler.scheduleOnce(delay.seconds, self, recordUid)
-        Future.successful(())
+    mongoRecoveryScheduleRepository.read
+      .foreach { case RecoveryRecord(recordUid, runAt) =>
+        val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
+        if (uid == recordUid) {
+          val newUid = UUID.randomUUID().toString
+          val nextRunAt =
+            (
+              if (runAt.isBefore(now))
+                now
+              else
+                runAt
+            ).plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
+          val delay = nextRunAt.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)
+          mongoRecoveryScheduleRepository
+            .write(newUid, nextRunAt)
+            .map { _ =>
+              context.system.scheduler
+                .scheduleOnce(
+                  delay.seconds,
+                  self,
+                  newUid
+                )
+              logger.info("About to start recovery job.")
+              recover
+            }
+        }
+        else {
+          val dateTime =
+            if (runAt.isBefore(now))
+              now
+            else
+              runAt
+          val delay =
+            (dateTime.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)) +
+              Random.nextInt(Math.min(60, recoveryInterval))
+          context.system.scheduler
+            .scheduleOnce(
+              delay.seconds,
+              self,
+              recordUid
+            )
+          Future.successful(())
+        }
       }
-    }
   }
 }

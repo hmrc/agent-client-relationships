@@ -17,64 +17,70 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import play.api.i18n.{Lang, Langs, MessagesApi}
+import play.api.i18n.Lang
+import play.api.i18n.Langs
+import play.api.i18n.MessagesApi
 import uk.gov.hmrc.agentclientrelationships.connectors.EmailConnector
-import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation}
+import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class EmailService @Inject() (
   emailConnector: EmailConnector,
-  messagesApi: MessagesApi
-)(implicit langs: Langs)
-    extends Logging {
+  messagesApi: MessagesApi,
+  langs: Langs
+)(implicit ec: ExecutionContext)
+extends Logging {
 
+  // TODO: Currently, the language defaults to English by selecting the first available language.
+  // Update the implementation to allow the frontend to specify the desired language for sending emails.
+  // Ensure the language preference is passed and properly handled to select the appropriate language.
   implicit val lang: Lang = langs.availables.head
 
-  def sendWarningEmail(invitations: Seq[Invitation])(implicit ec: ExecutionContext): Future[Boolean] = {
-    implicit val hc: HeaderCarrier =
-      HeaderCarrier(extraHeaders = Seq("Warning-aboutToExpire-email-size" -> s"${invitations.size}"))
-    logger.info(
-      s"[EmailService] sending warning of expiry email for ${invitations.size} invitations for ARN ${invitations.head.arn}"
-    )
+  def sendWarningEmail(invitations: Seq[Invitation])(implicit request: RequestHeader): Future[Boolean] = {
     val numberOfInvitations = invitations.size
     val templateId =
-      if (invitations.size > 1) "agent_invitations_about_to_expire" else "agent_invitation_about_to_expire_single"
+      if (invitations.size > 1)
+        "agent_invitations_about_to_expire"
+      else
+        "agent_invitation_about_to_expire_single"
     emailConnector.sendEmail(
       EmailInformation(
         to = Seq(invitations.head.agencyEmail),
         templateId = templateId,
         parameters = Map(
-          "agencyName"          -> invitations.head.agencyName,
+          "agencyName" -> invitations.head.agencyName,
           "numberOfInvitations" -> numberOfInvitations.toString,
-          "createdDate"         -> DateTimeHelper.displayDate(invitations.head.created),
-          "expiryDate"          -> DateTimeHelper.displayDate(invitations.head.expiryDate)
+          "createdDate" -> DateTimeHelper.displayDate(invitations.head.created),
+          "expiryDate" -> DateTimeHelper.displayDate(invitations.head.expiryDate)
         )
       )
     )
   }
 
-  def sendExpiredEmail(invitation: Invitation)(implicit ec: ExecutionContext): Future[Boolean] = {
-    implicit val hc: HeaderCarrier =
-      HeaderCarrier(extraHeaders = Seq("Expired-Invitation" -> s"${invitation.invitationId}"))
-    logger.info(s"[EmailService] sending email for invitation ${invitation.invitationId} that has expired")
-    emailConnector.sendEmail(emailInformation("client_expired_authorisation_request", invitation))
-  }
+  def sendExpiredEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+    .sendEmail(emailInformation("client_expired_authorisation_request", invitation))
 
-  def sendAcceptedEmail(invitation: Invitation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] =
-    emailConnector.sendEmail(emailInformation("client_accepted_authorisation_request", invitation))
+  def sendAcceptedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+    .sendEmail(emailInformation("client_accepted_authorisation_request", invitation))
 
-  def sendRejectedEmail(invitation: Invitation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] =
-    emailConnector.sendEmail(emailInformation("client_rejected_authorisation_request", invitation))
+  def sendRejectedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+    .sendEmail(emailInformation("client_rejected_authorisation_request", invitation))
 
-  private def emailInformation(templateId: String, invitation: Invitation) = {
+  private def emailInformation(
+    templateId: String,
+    invitation: Invitation
+  ) = {
     val altItsaParam =
       if (invitation.isAltItsa)
         Map("additionalInfo" -> s"You must now sign ${invitation.clientName} up to Making Tax Digital for Income Tax.")
-      else Map()
+      else
+        Map()
 
     EmailInformation(
       Seq(invitation.agencyEmail),
@@ -83,8 +89,9 @@ class EmailService @Inject() (
         "agencyName" -> invitation.agencyName,
         "clientName" -> invitation.clientName,
         "expiryDate" -> DateTimeHelper.displayDate(invitation.expiryDate),
-        "service"    -> messagesApi(s"service.${invitation.service}")
+        "service" -> messagesApi(s"service.${invitation.service}")
       ) ++ altItsaParam
     )
   }
+
 }

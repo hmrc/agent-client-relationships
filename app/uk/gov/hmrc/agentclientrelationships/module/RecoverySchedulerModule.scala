@@ -17,10 +17,15 @@
 package uk.gov.hmrc.agentclientrelationships.module
 
 import com.google.inject.AbstractModule
-import play.api.{Configuration, Environment}
+import play.api.Configuration
+import play.api.Environment
 import uk.gov.hmrc.agentclientrelationships.support.RecoveryScheduler
 
-class RecoverySchedulerModule(val environment: Environment, val configuration: Configuration) extends AbstractModule {
+class RecoverySchedulerModule(
+  val environment: Environment,
+  val configuration: Configuration
+)
+extends AbstractModule {
   override def configure(): Unit =
     if (configuration.get[Option[Boolean]]("features.recovery-enable").getOrElse(false)) {
       bind(classOf[RecoveryScheduler]).asEagerSingleton()

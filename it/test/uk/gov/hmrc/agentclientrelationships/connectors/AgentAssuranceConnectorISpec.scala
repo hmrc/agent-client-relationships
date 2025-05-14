@@ -19,33 +19,37 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.stubs.AgentAssuranceStubs
-import uk.gov.hmrc.agentclientrelationships.support.{TestData, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.TestData
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class AgentAssuranceConnectorISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with TestData
-    with AgentAssuranceStubs {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with TestData
+with AgentAssuranceStubs {
 
   override lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.agent-assurance.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host"             -> wireMockHost,
-        "auditing.consumer.baseUri.port"             -> wireMockPort,
-        "internal-auth.token"                        -> "internalAuthToken"
-      )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.agent-assurance.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "internal-auth.token" -> "internalAuthToken"
+  )
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
 
   private lazy val connector = app.injector.instanceOf[AgentAssuranceConnector]
 

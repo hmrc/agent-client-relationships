@@ -16,22 +16,32 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.http.Status.{NOT_FOUND, OK, UNAUTHORIZED}
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
+import play.api.http.Status.UNAUTHORIZED
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.agentclientrelationships.model.{CustomerStatus, Invitation, PartialAuthRelationship, Pending}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, AgentAssuranceStubs, HipStub}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
+import uk.gov.hmrc.agentclientrelationships.model.CustomerStatus
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.AgentAssuranceStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 class CustomerStatusControllerISpec
-    extends BaseControllerISpec
-    with AfiRelationshipStub
-    with AgentAssuranceStubs
-    with HipStub {
+extends BaseControllerISpec
+with AfiRelationshipStub
+with AgentAssuranceStubs
+with HipStub {
 
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -73,7 +83,11 @@ class CustomerStatusControllerISpec
 
       "there are pending invitations and an active relationship from partial auth" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         givenAfiRelationshipForClientNotFound(nino.value)
         givenAgentRecordFound(arn, existingAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
@@ -93,7 +107,11 @@ class CustomerStatusControllerISpec
 
       "there are pending invitations and an existing relationship from HODs" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         getActiveRelationshipsViaClient(mtdItId, arn)
         givenAfiRelationshipForClientNotFound(nino.value)
         givenAgentRecordFound(arn, existingAgentRecordResponse)
@@ -113,7 +131,11 @@ class CustomerStatusControllerISpec
 
       "there are pending invitations and no existing relationship" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         givenAfiRelationshipForClientNotFound(nino.value)
         givenAgentRecordFound(arn, existingAgentRecordResponse)
@@ -133,7 +155,11 @@ class CustomerStatusControllerISpec
 
       "there is a pending invitation from a suspended agent and no existing relationships" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         givenAfiRelationshipForClientNotFound(nino.value)
         givenAgentRecordFound(arn, suspendedAgentRecordResponse)
@@ -153,7 +179,11 @@ class CustomerStatusControllerISpec
 
       "there are no pending invitations and an active relationship from partial auth" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         givenAfiRelationshipForClientNotFound(nino.value)
         await(partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture())
         val expectedBody = Json.toJson(
@@ -171,7 +201,11 @@ class CustomerStatusControllerISpec
 
       "there are no pending invitations, inactive partial auth and an existing relationship from HODs" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         getActiveRelationshipsViaClient(mtdItId, arn)
         givenAfiRelationshipForClientNotFound(nino.value)
         await(partialAuthRepo.collection.insertOne(inactivePartialAuthRelationship).toFuture())
@@ -190,7 +224,11 @@ class CustomerStatusControllerISpec
 
       "there are no pending invitations, no partial auth history and an existing relationship from HODs" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         givenAfiRelationshipForClientNotFound(nino.value)
         getActiveRelationshipsViaClient(mtdItId, arn)
         val expectedBody = Json.toJson(
@@ -208,8 +246,17 @@ class CustomerStatusControllerISpec
 
       "there are no pending invitations, no partial auth history and an existing IRV relationship" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
-        givenAfiRelationshipForClientIsActive(arn, "PERSONAL-INCOME-RECORD", nino.value, true)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
+        givenAfiRelationshipForClientIsActive(
+          arn,
+          "PERSONAL-INCOME-RECORD",
+          nino.value,
+          true
+        )
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         val expectedBody = Json.toJson(
           CustomerStatus(
@@ -226,7 +273,11 @@ class CustomerStatusControllerISpec
 
       "there are no pending invitations, inactive partial auth and no existing relationships" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         givenAfiRelationshipForClientNotFound(nino.value)
         await(partialAuthRepo.collection.insertOne(inactivePartialAuthRelationship).toFuture())
@@ -245,7 +296,11 @@ class CustomerStatusControllerISpec
 
       "there are no pending invitations, no partial auth history and no existing relationships" in {
         givenAuditConnector()
-        givenAuthorisedItsaClientWithNino(request, mtdItId, nino)
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         givenAfiRelationshipForClientNotFound(nino.value)
         val expectedBody = Json.toJson(
@@ -268,4 +323,5 @@ class CustomerStatusControllerISpec
       result.status shouldBe UNAUTHORIZED
     }
   }
+
 }

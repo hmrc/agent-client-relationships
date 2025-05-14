@@ -16,13 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.functional.syntax.{toFunctionalBuilderOps, unlift}
-import play.api.libs.json.{Format, Json, __}
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax.unlift
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import play.api.libs.json.__
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 case class PartialAuthRelationship(
   created: Instant,
@@ -45,8 +50,16 @@ case class PartialAuthRelationship(
     agencyEmail = "",
     warningEmailSent = false,
     expiredEmailSent = false,
-    status = if (this.active) PartialAuth else DeAuthorised,
-    relationshipEndedBy = if (this.active) None else Some(""),
+    status =
+      if (this.active)
+        PartialAuth
+      else
+        DeAuthorised,
+    relationshipEndedBy =
+      if (this.active)
+        None
+      else
+        Some(""),
     clientType = None,
     expiryDate = LocalDate.now(),
     created = this.created,
@@ -55,9 +68,13 @@ case class PartialAuthRelationship(
 }
 
 object PartialAuthRelationship {
+
   implicit val format: Format[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
 
-  def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[PartialAuthRelationship] = {
+  def mongoFormat(implicit
+    crypto: Encrypter
+      with Decrypter
+  ): Format[PartialAuthRelationship] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     (
       (__ \ "created").format[Instant] and
@@ -68,4 +85,5 @@ object PartialAuthRelationship {
         (__ \ "lastUpdated").format[Instant]
     )(PartialAuthRelationship.apply, unlift(PartialAuthRelationship.unapply))
   }
+
 }

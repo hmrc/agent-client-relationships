@@ -24,7 +24,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.Nino
@@ -34,15 +35,14 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext
 
 class PartialAuthRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
 
-  override lazy val app: Application =
-    new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-      .build()
+  override lazy val app: Application = new GuiceApplicationBuilder()
+    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
+    .build()
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -66,10 +66,19 @@ class PartialAuthRepositoryISpec
       val activeRecordsIndex = customIndexes(1)
       val ninoIndex = customIndexes(2)
 
-      allRecordsIndex.getKeys shouldBe Indexes.ascending("service", "nino", "arn", "active")
+      allRecordsIndex.getKeys shouldBe Indexes.ascending(
+        "service",
+        "nino",
+        "arn",
+        "active"
+      )
       allRecordsIndex.getOptions.isUnique shouldBe false
       allRecordsIndex.getOptions.getName shouldBe "allRelationshipsIndex"
-      activeRecordsIndex.getKeys shouldBe Indexes.ascending("service", "nino", "arn")
+      activeRecordsIndex.getKeys shouldBe Indexes.ascending(
+        "service",
+        "nino",
+        "arn"
+      )
       activeRecordsIndex.getOptions.getName shouldBe "activeRelationshipsIndex"
       activeRecordsIndex.getOptions.getPartialFilterExpression.toBsonDocument shouldBe BsonDocument("active" -> true)
       activeRecordsIndex.getOptions.isUnique shouldBe true
@@ -80,24 +89,26 @@ class PartialAuthRepositoryISpec
 
     "insert a new partial auth record" in {
       await(
-        repository.create(
-          Instant.parse("2020-01-01T00:00:00.000Z"),
-          Arn("XARN1234567"),
-          "HMRC-MTD-IT",
-          Nino("SX579189D")
-        )
+        repository
+          .create(
+            Instant.parse("2020-01-01T00:00:00.000Z"),
+            Arn("XARN1234567"),
+            "HMRC-MTD-IT",
+            Nino("SX579189D")
+          )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
     }
 
     "throw an exception if invalid service passed in" in {
       an[IllegalArgumentException] shouldBe thrownBy(
-        repository.create(
-          Instant.parse("2020-01-01T00:00:00.000Z"),
-          Arn("XARN1234567"),
-          "HMRC-MTD-VAT",
-          Nino("SX579189D")
-        )
+        repository
+          .create(
+            Instant.parse("2020-01-01T00:00:00.000Z"),
+            Arn("XARN1234567"),
+            "HMRC-MTD-VAT",
+            Nino("SX579189D")
+          )
       )
     }
 
@@ -108,7 +119,12 @@ class PartialAuthRepositoryISpec
       an[MongoWriteException] shouldBe thrownBy(
         await(
           repository
-            .create(Instant.parse("2020-01-01T00:00:00.000Z"), Arn("XARN1234567"), "HMRC-MTD-IT", Nino("SX579189D"))
+            .create(
+              Instant.parse("2020-01-01T00:00:00.000Z"),
+              Arn("XARN1234567"),
+              "HMRC-MTD-IT",
+              Nino("SX579189D")
+            )
         )
       )
     }
@@ -119,27 +135,55 @@ class PartialAuthRepositoryISpec
     "retrieve partial auth which matches service, nino and arn" in {
       val nonMatchingEvent1 = partialAuth.copy(arn = "ARN1234567")
       val nonMatchingEvent2 = partialAuth.copy(service = "HMRC-MTD-IT-SUPP", nino = "AB539803A")
-      val listOfPartialAuths = Seq(partialAuth, nonMatchingEvent1, nonMatchingEvent2)
+      val listOfPartialAuths = Seq(
+        partialAuth,
+        nonMatchingEvent1,
+        nonMatchingEvent2
+      )
       await(repository.collection.insertMany(listOfPartialAuths).toFuture())
-      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe Some(partialAuth)
+      await(
+        repository.findActive(
+          "HMRC-MTD-IT",
+          Nino("SX579189D"),
+          Arn("XARN1234567")
+        )
+      ) shouldBe Some(partialAuth)
     }
 
     "fail to retrieve partial auths when no partial auths match the given service" in {
       val unrelatedEvent = partialAuth.copy(service = "HMRC-MTD-IT-SUPP")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
+      await(
+        repository.findActive(
+          "HMRC-MTD-IT",
+          Nino("SX579189D"),
+          Arn("XARN1234567")
+        )
+      ) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given nino" in {
       val unrelatedEvent = partialAuth.copy(nino = "AB539803A")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
+      await(
+        repository.findActive(
+          "HMRC-MTD-IT",
+          Nino("SX579189D"),
+          Arn("XARN1234567")
+        )
+      ) shouldBe None
     }
 
     "fail to retrieve partial auths when no partial auths match the given arn" in {
       val unrelatedEvent = partialAuth.copy(arn = "XARN7654321")
       await(repository.collection.insertOne(unrelatedEvent).toFuture())
-      await(repository.findActive("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"))) shouldBe None
+      await(
+        repository.findActive(
+          "HMRC-MTD-IT",
+          Nino("SX579189D"),
+          Arn("XARN1234567")
+        )
+      ) shouldBe None
     }
   }
 
@@ -158,17 +202,23 @@ class PartialAuthRepositoryISpec
   "deauthorise" should {
     "deauthorise PartialAuth invitation success" in {
       await(
-        repository.create(
-          Instant.parse("2020-01-01T00:00:00.000Z"),
-          Arn("XARN1234567"),
-          "HMRC-MTD-IT",
-          Nino("SX579189D")
-        )
+        repository
+          .create(
+            Instant.parse("2020-01-01T00:00:00.000Z"),
+            Arn("XARN1234567"),
+            "HMRC-MTD-IT",
+            Nino("SX579189D")
+          )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
       await(
         repository
-          .deauthorise("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z"))
+          .deauthorise(
+            "HMRC-MTD-IT",
+            Nino("SX579189D"),
+            Arn("XARN1234567"),
+            Instant.parse("2020-01-01T00:00:00.000Z")
+          )
       )
       val result = await(
         repository.findActive(
@@ -185,7 +235,12 @@ class PartialAuthRepositoryISpec
       await(repository.collection.countDocuments().toFuture()) shouldBe 0
       await(
         repository
-          .deauthorise("HMRC-MTD-VAT", Nino("SX579189D"), Arn("XARN1234567"), Instant.parse("2020-01-01T00:00:00.000Z"))
+          .deauthorise(
+            "HMRC-MTD-VAT",
+            Nino("SX579189D"),
+            Arn("XARN1234567"),
+            Instant.parse("2020-01-01T00:00:00.000Z")
+          )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 0
     }
@@ -195,9 +250,16 @@ class PartialAuthRepositoryISpec
     "delete when active record exists" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
 
-      val result = await(repository.deleteActivePartialAuth("HMRC-MTD-IT", Nino("SX579189D"), Arn("XARN1234567")))
+      val result = await(
+        repository.deleteActivePartialAuth(
+          "HMRC-MTD-IT",
+          Nino("SX579189D"),
+          Arn("XARN1234567")
+        )
+      )
 
       result shouldBe true
     }
   }
+
 }

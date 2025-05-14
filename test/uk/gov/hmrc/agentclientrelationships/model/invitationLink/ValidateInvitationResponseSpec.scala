@@ -22,31 +22,31 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.Instant
 
-class ValidateInvitationResponseSpec extends UnitSpec {
+class ValidateInvitationResponseSpec
+extends UnitSpec {
 
   "ValidateInvitationResponse" should {
 
     "write to JSON" in {
 
-      val model =
-        ValidateInvitationResponse(
-          "ABC123",
-          "HMRC-MTD-IT",
-          "ABC Accountants",
-          Pending,
-          Instant.parse("2020-01-01T00:00:00Z"),
-          Some(ExistingMainAgent("XYZ Accountants", sameAgent = true)),
-          Some("personal")
-        )
+      val model = ValidateInvitationResponse(
+        "ABC123",
+        "HMRC-MTD-IT",
+        "ABC Accountants",
+        Pending,
+        Instant.parse("2020-01-01T00:00:00Z"),
+        Some(ExistingMainAgent("XYZ Accountants", sameAgent = true)),
+        Some("personal")
+      )
 
       val json = Json.obj(
-        "invitationId"      -> "ABC123",
-        "serviceKey"        -> "HMRC-MTD-IT",
-        "agentName"         -> "ABC Accountants",
-        "status"            -> "Pending",
-        "lastModifiedDate"  -> "2020-01-01T00:00:00Z",
+        "invitationId" -> "ABC123",
+        "serviceKey" -> "HMRC-MTD-IT",
+        "agentName" -> "ABC Accountants",
+        "status" -> "Pending",
+        "lastModifiedDate" -> "2020-01-01T00:00:00Z",
         "existingMainAgent" -> Json.obj("agencyName" -> "XYZ Accountants", "sameAgent" -> true),
-        "clientType"        -> "personal"
+        "clientType" -> "personal"
       )
 
       Json.toJson(model) shouldBe json

@@ -16,11 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP, HMRCMTDVAT}
-import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDVAT
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 import scala.util.Try
 
@@ -31,34 +35,40 @@ case class ApiCreateInvitationRequest(
   clientType: Option[String]
 ) {
 
-  def getService(apiSupportedServices: Seq[Service]): Either[InvitationFailureResponse, Service] =
-    Try(Service.forId(service))
-      .fold(_ => Left(UnsupportedService), Right(_))
-      .flatMap { service =>
-        if (apiSupportedServices.contains(service)) Right(service)
-        else Left(UnsupportedService)
-      }
+  def getService(apiSupportedServices: Seq[Service]): Either[InvitationFailureResponse, Service] = Try(Service.forId(service))
+    .fold(_ => Left(UnsupportedService), Right(_))
+    .flatMap { service =>
+      if (apiSupportedServices.contains(service))
+        Right(service)
+      else
+        Left(UnsupportedService)
+    }
 
-  def getSuppliedClientId(apiSupportedServices: Seq[Service]): Either[InvitationFailureResponse, ClientId] = for {
-    service <- getService(apiSupportedServices)
-    _ <- Either.cond[InvitationFailureResponse, String](
-           service.supportedSuppliedClientIdType.isValid(suppliedClientId),
-           suppliedClientId,
-           InvalidClientId
-         )
+  def getSuppliedClientId(apiSupportedServices: Seq[Service]): Either[InvitationFailureResponse, ClientId] =
+    for {
+      service <- getService(apiSupportedServices)
+      _ <- Either.cond[InvitationFailureResponse, String](
+        service.supportedSuppliedClientIdType.isValid(suppliedClientId),
+        suppliedClientId,
+        InvalidClientId
+      )
 
-    clientId <-
-      Try(ClientIdentifier(suppliedClientId, service.supportedSuppliedClientIdType.id))
+      clientId <- Try(ClientIdentifier(suppliedClientId, service.supportedSuppliedClientIdType.id))
         .fold(_ => Left(UnsupportedClientIdType), Right(_))
-  } yield clientId
+    } yield clientId
 
-  private val validClientTypes = Seq("personal", "business", "trust")
+  private val validClientTypes = Seq(
+    "personal",
+    "business",
+    "trust"
+  )
 
-  def getClientType: Either[InvitationFailureResponse, Option[String]] = clientType match {
-    case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
-    case Some(_)                                             => Left(UnsupportedClientType)
-    case None                                                => Right(None)
-  }
+  def getClientType: Either[InvitationFailureResponse, Option[String]] =
+    clientType match {
+      case Some(cliType) if validClientTypes.contains(cliType) => Right(clientType)
+      case Some(_) => Left(UnsupportedClientType)
+      case None => Right(None)
+    }
 
 }
 

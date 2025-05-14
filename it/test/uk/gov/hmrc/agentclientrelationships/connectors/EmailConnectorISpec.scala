@@ -22,30 +22,38 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with WireMockSupport with EmailStubs {
+class EmailConnectorISpec
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with EmailStubs {
 
   override lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.email.port" -> wireMockPort,
-        "auditing.consumer.baseUri.host"   -> wireMockHost,
-        "auditing.consumer.baseUri.port"   -> wireMockPort,
-        "internal-auth.token"              -> "internalAuthToken"
-      )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.email.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "internal-auth.token" -> "internalAuthToken"
+  )
 
   val connector: EmailConnector = app.injector.instanceOf[EmailConnector]
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
 
   "sendEmail" should {
-    val emailInfo = EmailInformation(Seq("abc@xyz.com"), "template-id", Map("param1" -> "foo", "param2" -> "bar"))
+    val emailInfo = EmailInformation(
+      Seq("abc@xyz.com"),
+      "template-id",
+      Map("param1" -> "foo", "param2" -> "bar")
+    )
 
     "return true when the email service responds with a 202" in {
       givenEmailSent(emailInfo)
@@ -63,4 +71,5 @@ class EmailConnectorISpec extends UnitSpec with GuiceOneServerPerSuite with Wire
       result shouldBe false
     }
   }
+
 }

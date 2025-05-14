@@ -19,12 +19,14 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-class AgentReferenceControllerISpec extends BaseControllerISpec {
+class AgentReferenceControllerISpec
+extends BaseControllerISpec {
 
   val referenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
   val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
@@ -70,8 +72,10 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
 
         await(referenceRepo.collection.insertOne(testRecord).toFuture())
 
-        val result =
-          doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj("normalisedAgentName" -> testName1))
+        val result = doAgentPutRequest(
+          fetchOrCreateUrl + s"/${testArn.value}",
+          Json.obj("normalisedAgentName" -> testName1)
+        )
 
         result.status shouldBe 200
         result.json shouldBe Json.toJson(testRecord)
@@ -82,8 +86,10 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
 
         await(referenceRepo.collection.insertOne(testRecord).toFuture())
 
-        val result =
-          doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj("normalisedAgentName" -> testName2))
+        val result = doAgentPutRequest(
+          fetchOrCreateUrl + s"/${testArn.value}",
+          Json.obj("normalisedAgentName" -> testName2)
+        )
 
         val expected = testRecord.copy(normalisedAgentNames = Seq(testName1, testName2))
         result.status shouldBe 200
@@ -94,8 +100,10 @@ class AgentReferenceControllerISpec extends BaseControllerISpec {
         givenAuditConnector()
         givenAuthorised()
 
-        val result =
-          doAgentPutRequest(fetchOrCreateUrl + s"/${testArn.value}", Json.obj("normalisedAgentName" -> testName1))
+        val result = doAgentPutRequest(
+          fetchOrCreateUrl + s"/${testArn.value}",
+          Json.obj("normalisedAgentName" -> testName1)
+        )
 
         val newRecord = await(referenceRepo.findByArn(testArn))
         result.status shouldBe 200

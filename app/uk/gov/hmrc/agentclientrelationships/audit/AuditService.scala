@@ -18,49 +18,60 @@ package uk.gov.hmrc.agentclientrelationships.audit
 
 import com.google.inject.Singleton
 import play.api.Logging
-import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, Invitation}
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import javax.inject.Inject
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Try
 
-object AgentClientRelationshipEvent extends Enumeration {
+object AgentClientRelationshipEvent
+extends Enumeration {
+
   val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES,
-    TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned =
-    Value
+    TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned = Value
   type AgentClientRelationshipEvent = Value
+
 }
 
 class AuditData {
 
   private val details = mutable.Map[String, Any]()
 
-  def set(key: String, value: Any): Unit = {
+  def set(
+    key: String,
+    value: Any
+  ): Unit = {
     details.put(key, value)
     ()
   }
 
-  def getDetails: Map[String, Any] =
-    details.toMap
+  def getDetails: Map[String, Any] = details.toMap
 
 }
 
 @Singleton
-class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext) extends Logging {
+class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext)
+extends Logging {
 
-  private def collectDetails(data: Map[String, Any], fields: Seq[String]): Seq[(String, Any)] =
+  private def collectDetails(
+    data: Map[String, Any],
+    fields: Seq[String]
+  ): Seq[(String, Any)] =
     for {
       field <- fields
       value <- data.get(field)
@@ -158,118 +169,105 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
     "abandonmentReason"
   )
 
-  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CreateInvitation,
-      "create-invitation",
-      Seq(
-        arnKey              -> invitation.arn,
-        serviceKey          -> invitation.service,
-        clientIdKey         -> invitation.clientId,
-        clientIdTypeKey     -> invitation.clientIdType,
-        invitationIdKey     -> invitation.invitationId,
-        suppliedClientIdKey -> invitation.suppliedClientId
-      )
+  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit request: RequestHeader): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CreateInvitation,
+    "create-invitation",
+    Seq(
+      arnKey -> invitation.arn,
+      serviceKey -> invitation.service,
+      clientIdKey -> invitation.clientId,
+      clientIdTypeKey -> invitation.clientIdType,
+      invitationIdKey -> invitation.invitationId,
+      suppliedClientIdKey -> invitation.suppliedClientId
     )
+  )
 
-  def sendRespondToInvitationAuditEvent(invitation: Invitation, accepted: Boolean, isStride: Boolean)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.RespondToInvitation,
-      "respond-to-invitation",
-      Seq(
-        arnKey              -> invitation.arn,
-        serviceKey          -> invitation.service,
-        clientIdKey         -> invitation.clientId,
-        clientIdTypeKey     -> invitation.clientIdType,
-        invitationIdKey     -> invitation.invitationId,
-        suppliedClientIdKey -> invitation.suppliedClientId,
-        responseKey         -> (if (accepted) acceptedInvitation else rejectedInvitation),
-        respondedByKey      -> (if (isStride) respondedByHmrc else respondedByClient)
-      )
+  def sendRespondToInvitationAuditEvent(
+    invitation: Invitation,
+    accepted: Boolean,
+    isStride: Boolean
+  )(implicit request: RequestHeader): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.RespondToInvitation,
+    "respond-to-invitation",
+    Seq(
+      arnKey -> invitation.arn,
+      serviceKey -> invitation.service,
+      clientIdKey -> invitation.clientId,
+      clientIdTypeKey -> invitation.clientIdType,
+      invitationIdKey -> invitation.invitationId,
+      suppliedClientIdKey -> invitation.suppliedClientId,
+      responseKey ->
+        (if (accepted)
+           acceptedInvitation
+         else
+           rejectedInvitation),
+      respondedByKey ->
+        (if (isStride)
+           respondedByHmrc
+         else
+           respondedByClient)
     )
+  )
 
   def sendCreateRelationshipAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CreateRelationship,
-      "create-relationship",
-      collectDetails(auditData.getDetails, createRelationshipDetailsFields)
-    )
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CreateRelationship,
+    "create-relationship",
+    collectDetails(auditData.getDetails, createRelationshipDetailsFields)
+  )
 
   def sendCreatePartialAuthAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CreatePartialAuthorisation,
-      "create-partial-auth",
-      collectDetails(auditData.getDetails, createPartialAuthDetailsFields)
-    )
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CreatePartialAuthorisation,
+    "create-partial-auth",
+    collectDetails(auditData.getDetails, createPartialAuthDetailsFields)
+  )
 
   // TODO Needs removing when we get the green light to remove legacy VAT code
   def sendCreateRelationshipAuditEventForMtdVat()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CreateRelationship,
-      "create-relationship",
-      collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat)
-    )
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CreateRelationship,
+    "create-relationship",
+    collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat)
+  )
 
   def sendCheckCesaAndPartialAuthAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CheckCESA,
-      "check-cesa",
-      collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
-    )
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CheckCESA,
+    "check-cesa",
+    collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
+  )
 
   def sendCheckEsAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.CheckES,
-      "check-es",
-      collectDetails(auditData.getDetails, checkEsDetailsFields)
-    )
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.CheckES,
+    "check-es",
+    collectDetails(auditData.getDetails, checkEsDetailsFields)
+  )
 
   def sendTerminateRelationshipAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.TerminateRelationship,
-      "terminate-relationship",
-      collectDetails(auditData.getDetails, terminateRelationshipFields)
-    )
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.TerminateRelationship,
+    "terminate-relationship",
+    collectDetails(auditData.getDetails, terminateRelationshipFields)
+  )
 
-  def setAuditDataForTermination(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
+  def setAuditDataForTermination(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  )(implicit
     auditData: AuditData,
     currentUser: CurrentUser
   ): AuditData = {
@@ -277,10 +275,10 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
       auditData.set(
         howRelationshipTerminatedKey,
         currentUser.affinityGroup match {
-          case _ if currentUser.isStride                                         => hmrcLedTermination
+          case _ if currentUser.isStride => hmrcLedTermination
           case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => clientLedTermination
-          case Some(AffinityGroup.Agent)                                         => agentLedTermination
-          case _                                                                 => "unknown"
+          case Some(AffinityGroup.Agent) => agentLedTermination
+          case _ => "unknown"
         }
       )
     }
@@ -301,7 +299,10 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
   def auditForPirTermination(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit currentUser: CurrentUser, hc: HeaderCarrier, request: Request[_]): Future[Unit] = {
+  )(implicit
+    currentUser: CurrentUser,
+    request: RequestHeader
+  ): Future[Unit] = {
     implicit val auditData: AuditData = new AuditData()
 
     setAuditDataForTermination(arn, enrolmentKey)
@@ -312,7 +313,7 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
   def auditForAgentReplacement(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit hc: HeaderCarrier, request: Request[_]): Future[Unit] = {
+  )(implicit request: RequestHeader): Future[Unit] = {
     implicit val auditData: AuditData = new AuditData()
     implicit val currentUser: CurrentUser = CurrentUser(None, None)
 
@@ -331,20 +332,18 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
   )(implicit
     // defaulted as it only needs to be predefined for special cases (agent replacement/role change)
     currentUser: CurrentUser = CurrentUser(None, None),
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     // defaulted as it only needs to be predefined for special cases (agent replacement/role change)
-    auditData: AuditData = new AuditData(),
-    ec: ExecutionContext
+    auditData: AuditData = new AuditData()
   ): Future[Unit] = {
     if (!auditData.getDetails.contains(howPartialAuthTerminatedKey)) {
       auditData.set(
         howPartialAuthTerminatedKey,
         currentUser.affinityGroup match {
-          case _ if currentUser.isStride                                         => hmrcLedTermination
+          case _ if currentUser.isStride => hmrcLedTermination
           case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => clientLedTermination
-          case Some(AffinityGroup.Agent)                                         => agentLedTermination
-          case _                                                                 => "unknown"
+          case Some(AffinityGroup.Agent) => agentLedTermination
+          case _ => "unknown"
         }
       )
     }
@@ -361,50 +360,58 @@ class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: Execu
   }
 
   def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
-    auditData: AuditData,
-    ec: ExecutionContext
-  ): Future[Unit] =
-    auditEvent(
-      AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
-      "recovery-of-delete-relationship-abandoned",
-      collectDetails(auditData.getDetails, recoveryOfDeleteRelationshipDetailsFields)
-    )
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.RecoveryOfDeleteRelationshipHasBeenAbandoned,
+    "recovery-of-delete-relationship-abandoned",
+    collectDetails(auditData.getDetails, recoveryOfDeleteRelationshipDetailsFields)
+  )
 
   private[audit] def auditEvent(
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: Seq[(String, Any)] = Seq.empty
-  )(implicit hc: HeaderCarrier, request: Request[Any], ec: ExecutionContext): Future[Unit] =
-    send(createEvent(event, transactionName, details: _*))
+  )(implicit request: RequestHeader): Future[Unit] = send(
+    createEvent(
+      event,
+      transactionName,
+      details: _*
+    )
+  )
 
   private def createEvent(
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: (String, Any)*
-  )(implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
+  )(implicit request: RequestHeader): DataEvent = {
 
-    def toString(x: Any): String = x match {
-      case t: TaxIdentifier => t.value
-      case _                => x.toString
-    }
-
+    def toString(x: Any): String =
+      x match {
+        case t: TaxIdentifier => t.value
+        case _ => x.toString
+      }
+    val hc = RequestSupport.hc
     val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
     val tags = hc.toAuditTags(transactionName, request.path)
-    DataEvent(auditSource = "agent-client-relationships", auditType = event.toString, tags = tags, detail = detail)
+    DataEvent(
+      auditSource = "agent-client-relationships",
+      auditType = event.toString,
+      tags = tags,
+      detail = detail
+    )
   }
 
-  private def send(events: DataEvent*)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =
-    Future {
-      events.foreach { event =>
-        Try(auditConnector.sendEvent(event))
-      }
+  private def send(events: DataEvent*)(implicit request: RequestHeader): Future[Unit] = Future {
+    events.foreach { event =>
+      Try(auditConnector.sendEvent(event))
     }
+  }
 
 }
 
 object AuditKeys {
+
   // Keys
   val agentCodeKey: String = "agentCode"
   val credIdKey: String = "credId"
@@ -447,4 +454,5 @@ object AuditKeys {
   val agentLedTermination: String = "AgentLedTermination"
   val agentReplacement: String = "AgentReplacement"
   val agentRoleChange: String = "AgentRoleChanged"
+
 }

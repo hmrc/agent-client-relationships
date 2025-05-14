@@ -16,31 +16,44 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.i18n.{Lang, Langs, MessagesApi}
+import play.api.i18n.Lang
+import play.api.i18n.Langs
+import play.api.i18n.MessagesApi
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.{JsValue, Json}
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiAuthorisationRequestInfo
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiErrorResults.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisationRequestInfo, ApiCreateInvitationRequest}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
-import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.ApiService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
 import uk.gov.hmrc.auth.core.AuthConnector
 
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import scala.concurrent.ExecutionContext
 
-class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with HipStub with TestData {
+class ApiControllerISpec
+extends BaseControllerISpec
+with ClientDetailsStub
+with HipStub
+with TestData {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled"                 -> true,
+    "hip.enabled" -> true,
     "hip.BusinessDetails.enabled" -> true
   )
 
@@ -77,65 +90,61 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
   val agencyName = "test agency Name"
   val normalizedAgencyName = "test-agency-name"
 
-  val itsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        arn = arn.value,
-        service = MtdIt,
-        clientId = mtdItId,
-        suppliedClientId = nino,
-        clientName = "TestClientName",
-        agencyName = agencyName,
-        agencyEmail = "agent@email.com",
-        expiryDate = testDate,
-        clientType = Some("personal")
-      )
-      .copy(created = testTime, lastUpdated = testTime)
+  val itsaInvitation: Invitation = Invitation
+    .createNew(
+      arn = arn.value,
+      service = MtdIt,
+      clientId = mtdItId,
+      suppliedClientId = nino,
+      clientName = "TestClientName",
+      agencyName = agencyName,
+      agencyEmail = "agent@email.com",
+      expiryDate = testDate,
+      clientType = Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime)
 
-  val altItsaInvitation: Invitation =
-    Invitation
-      .createNew(
-        arn = arn.value,
-        service = MtdIt,
-        clientId = mtdItId,
-        suppliedClientId = nino,
-        clientName = "TestClientName",
-        agencyName = agencyName,
-        agencyEmail = "agent@email.com",
-        expiryDate = testDate,
-        clientType = Some("personal")
-      )
-      .copy(created = testTime, lastUpdated = testTime)
+  val altItsaInvitation: Invitation = Invitation
+    .createNew(
+      arn = arn.value,
+      service = MtdIt,
+      clientId = mtdItId,
+      suppliedClientId = nino,
+      clientName = "TestClientName",
+      agencyName = agencyName,
+      agencyEmail = "agent@email.com",
+      expiryDate = testDate,
+      clientType = Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime)
 
-  val itsaSuppInvitation: Invitation =
-    Invitation
-      .createNew(
-        arn = arn.value,
-        service = MtdItSupp,
-        clientId = mtdItId,
-        suppliedClientId = nino,
-        clientName = "TestClientName",
-        agencyName = agencyName,
-        agencyEmail = "agent@email.com",
-        expiryDate = testDate,
-        clientType = Some("personal")
-      )
-      .copy(created = testTime, lastUpdated = testTime)
+  val itsaSuppInvitation: Invitation = Invitation
+    .createNew(
+      arn = arn.value,
+      service = MtdItSupp,
+      clientId = mtdItId,
+      suppliedClientId = nino,
+      clientName = "TestClientName",
+      agencyName = agencyName,
+      agencyEmail = "agent@email.com",
+      expiryDate = testDate,
+      clientType = Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime)
 
-  val vatInvitation: Invitation =
-    Invitation
-      .createNew(
-        arn = arn.value,
-        service = Vat,
-        clientId = vrn,
-        suppliedClientId = vrn,
-        clientName = "TestClientName",
-        agencyName = agencyName,
-        agencyEmail = "agent@email.com",
-        expiryDate = testDate,
-        clientType = Some("personal")
-      )
-      .copy(created = testTime, lastUpdated = testTime)
+  val vatInvitation: Invitation = Invitation
+    .createNew(
+      arn = arn.value,
+      service = Vat,
+      clientId = vrn,
+      suppliedClientId = vrn,
+      clientName = "TestClientName",
+      agencyName = agencyName,
+      agencyEmail = "agent@email.com",
+      expiryDate = testDate,
+      clientType = Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime)
 
   val agentReferenceRecord: AgentReferenceRecord = AgentReferenceRecord(
     uid = uid,
@@ -143,13 +152,12 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
     normalisedAgentNames = Seq(normalizedAgencyName, "NormalisedAgentName2")
   )
 
-  val baseInvitationInputData: ApiCreateInvitationRequest =
-    ApiCreateInvitationRequest(
-      service = MtdIt.id,
-      suppliedClientId = nino.value,
-      knownFact = "AA1 1AA",
-      Some("personal")
-    )
+  val baseInvitationInputData: ApiCreateInvitationRequest = ApiCreateInvitationRequest(
+    service = MtdIt.id,
+    suppliedClientId = nino.value,
+    knownFact = "AA1 1AA",
+    Some("personal")
+  )
 
   private def getStandardStubForCreateInvitation(taxService: String) = {
     givenAuditConnector()
@@ -161,8 +169,16 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
     if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, mtdItId))
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(taxService), mtdItId))
-      givenMtdItsaBusinessDetailsExists(nino = nino, mtdId = mtdItId, postCode = "AA1 1AA")
-      givenNinoItsaBusinessDetailsExists(mtdId = mtdItId, nino = nino, postCode = "AA1 1AA")
+      givenMtdItsaBusinessDetailsExists(
+        nino = nino,
+        mtdId = mtdItId,
+        postCode = "AA1 1AA"
+      )
+      givenNinoItsaBusinessDetailsExists(
+        mtdId = mtdItId,
+        nino = nino,
+        postCode = "AA1 1AA"
+      )
     }
 
     if (taxService == HMRCMTDVAT) {
@@ -186,8 +202,8 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
   )
 
   def allServicesGetInvitation: Map[String, Invitation] = Map(
-    HMRCMTDIT     -> itsaInvitation,
-    HMRCMTDVAT    -> vatInvitation,
+    HMRCMTDIT -> itsaInvitation,
+    HMRCMTDVAT -> vatInvitation,
     HMRCMTDITSUPP -> itsaSuppInvitation
   )
 
@@ -211,8 +227,7 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
     suspensionDetails = None
   )
 
-  private val multiAgentServicesOtherService: Map[String, String] =
-    Map(HMRCMTDIT -> HMRCMTDITSUPP, HMRCMTDITSUPP -> HMRCMTDIT)
+  private val multiAgentServicesOtherService: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP, HMRCMTDITSUPP -> HMRCMTDIT)
 
   "create invitation" should {
 
@@ -222,8 +237,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
         val clientId =
-          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value
-          else inputData.suppliedClientId
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+            mtdItId.value
+          else
+            inputData.suppliedClientId
 
         getStandardStubForCreateInvitation(taxService)
 
@@ -231,9 +248,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
         result.status shouldBe 201
 
-        val invitationSeq = invitationRepo
-          .findAllForAgent(arn.value)
-          .futureValue
+        val invitationSeq =
+          invitationRepo
+            .findAllForAgent(arn.value)
+            .futureValue
 
         invitationSeq.size shouldBe 1
 
@@ -304,8 +322,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       val clientId =
-        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value
-        else inputData.suppliedClientId
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+          mtdItId.value
+        else
+          inputData.suppliedClientId
 
       await(invitationRepo.collection.insertOne(itsaSuppInvitation).toFuture())
       getStandardStubForCreateInvitation(taxService)
@@ -331,8 +351,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(service = MtdItSupp.id)
 
       val clientId =
-        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value
-        else inputData.suppliedClientId
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+          mtdItId.value
+        else
+          inputData.suppliedClientId
 
       await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
       getStandardStubForCreateInvitation(taxService)
@@ -358,8 +380,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       val clientId =
-        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId.value
-        else inputData.suppliedClientId
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+          mtdItId.value
+        else
+          inputData.suppliedClientId
 
       await(invitationRepo.collection.insertOne(itsaInvitation.copy(status = Rejected)).toFuture())
       getStandardStubForCreateInvitation(taxService)
@@ -395,8 +419,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
         val taxIdentifier =
-          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) mtdItId
-          else vrn
+          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+            mtdItId
+          else
+            vrn
 
         getStandardStubForCreateInvitation(taxService)
         getActiveRelationshipsViaClient(taxIdentifier, arn)
@@ -433,9 +459,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe 201
 
-      val invitationSeq = invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue
+      val invitationSeq =
+        invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
 
       invitationSeq.size shouldBe 1
 
@@ -468,9 +495,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe 201
 
-      val invitationSeq = invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue
+      val invitationSeq =
+        invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
 
       invitationSeq.size shouldBe 1
 
@@ -570,9 +598,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe 201
 
-      val invitationSeq = invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue
+      val invitationSeq =
+        invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
 
       invitationSeq.size shouldBe 1
 
@@ -610,9 +639,10 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
       result.status shouldBe 201
 
-      val invitationSeq = invitationRepo
-        .findAllForAgent(arn.value)
-        .futureValue
+      val invitationSeq =
+        invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
 
       invitationSeq.size shouldBe 1
 
@@ -653,8 +683,12 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
     )
 
     s"return BadRequest status and valid JSON CLIENT_ID_DOES_NOT_MATCH_SERVICE for ${Trust.id}" in {
-      val inputData: ApiCreateInvitationRequest =
-        ApiCreateInvitationRequest(service = Trust.id, suppliedClientId = utr.value, knownFact = "AA1 1AA", None)
+      val inputData: ApiCreateInvitationRequest = ApiCreateInvitationRequest(
+        service = Trust.id,
+        suppliedClientId = utr.value,
+        knownFact = "AA1 1AA",
+        None
+      )
 
       givenAuditConnector()
       val expectedJson: JsValue = Json.toJson(
@@ -674,8 +708,7 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
 
     allServicesClientIdFormatInvalidService.keySet.foreach(taxService =>
       s"return BadRequest status and valid JSON CLIENT_TYPE_NOT_SUPPORTED for $taxService when clientType is not supported" in {
-        val inputData: ApiCreateInvitationRequest =
-          allServices(taxService).copy(clientType = Some("UNSUPPORTED"))
+        val inputData: ApiCreateInvitationRequest = allServices(taxService).copy(clientType = Some("UNSUPPORTED"))
 
         givenAuditConnector()
         val expectedJson: JsValue = Json.toJson(
@@ -741,10 +774,18 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
     // Client validation
     s"return Forbidden status and valid JSON VAT_CLIENT_INSOLVENT when VAT client is insolvent" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
-        .copy(service = HMRCMTDVAT, suppliedClientId = vrn.value, knownFact = "2020-01-01")
+        .copy(
+          service = HMRCMTDVAT,
+          suppliedClientId = vrn.value,
+          knownFact = "2020-01-01"
+        )
 
       getStandardStubForCreateInvitation(HMRCMTDVAT)
-      givenVatCustomerInfoExists(vrn = vrn.value, regDate = "2020-01-01", isInsolvent = true)
+      givenVatCustomerInfoExists(
+        vrn = vrn.value,
+        regDate = "2020-01-01",
+        isInsolvent = true
+      )
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -765,7 +806,11 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
     // KnowFacts checks
     s"return Forbidden status and valid JSON VAT_REG_DATE_FORMAT_INVALID when VAT knowFact date format is invalid" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
-        .copy(service = HMRCMTDVAT, suppliedClientId = vrn.value, knownFact = "2020/01/01")
+        .copy(
+          service = HMRCMTDVAT,
+          suppliedClientId = vrn.value,
+          knownFact = "2020/01/01"
+        )
 
       getStandardStubForCreateInvitation(HMRCMTDVAT)
 
@@ -787,7 +832,11 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
 
     s"return Forbidden status and valid JSON VAT_REG_DATE_DOES_NOT_MATCH when VAT knowFact date not match" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
-        .copy(service = HMRCMTDVAT, suppliedClientId = vrn.value, knownFact = "2020-01-02")
+        .copy(
+          service = HMRCMTDVAT,
+          suppliedClientId = vrn.value,
+          knownFact = "2020-01-02"
+        )
 
       getStandardStubForCreateInvitation(HMRCMTDVAT)
 
@@ -854,8 +903,18 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       getStandardStubForCreateInvitation(HMRCMTDIT)
-      givenMtdItsaBusinessDetailsExists(nino = nino, mtdId = mtdItId, postCode = "AA1 1AA", countryCode = "XX")
-      givenNinoItsaBusinessDetailsExists(mtdId = mtdItId, nino = nino, postCode = "AA1 1AA", countryCode = "XX")
+      givenMtdItsaBusinessDetailsExists(
+        nino = nino,
+        mtdId = mtdItId,
+        postCode = "AA1 1AA",
+        countryCode = "XX"
+      )
+      givenNinoItsaBusinessDetailsExists(
+        mtdId = mtdItId,
+        nino = nino,
+        postCode = "AA1 1AA",
+        countryCode = "XX"
+      )
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -891,14 +950,14 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         result.status shouldBe 200
 
         result.json shouldBe Json.obj(
-          "uid"                 -> agentReferenceRecord.uid,
+          "uid" -> agentReferenceRecord.uid,
           "normalizedAgentName" -> normalizedAgencyName,
-          "created"             -> testTime.toString,
-          "service"             -> invitation.service,
-          "status"              -> invitation.status,
-          "expiresOn"           -> testDate.toString,
-          "invitationId"        -> invitation.invitationId,
-          "lastUpdated"         -> testTime.toString
+          "created" -> testTime.toString,
+          "service" -> invitation.service,
+          "status" -> invitation.status,
+          "expiresOn" -> testDate.toString,
+          "invitationId" -> invitation.invitationId,
+          "lastUpdated" -> testTime.toString
         )
 
       }
@@ -917,14 +976,14 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         result.status shouldBe 200
 
         result.json shouldBe Json.obj(
-          "uid"                 -> agentReferenceRecord.uid,
+          "uid" -> agentReferenceRecord.uid,
           "normalizedAgentName" -> normalizedAgencyName,
-          "created"             -> testTime.toString,
-          "service"             -> invitation.service,
-          "status"              -> invitation.status,
-          "expiresOn"           -> testDate.toString,
-          "invitationId"        -> invitation.invitationId,
-          "lastUpdated"         -> testTime.toString
+          "created" -> testTime.toString,
+          "service" -> invitation.service,
+          "status" -> invitation.status,
+          "expiresOn" -> testDate.toString,
+          "invitationId" -> invitation.invitationId,
+          "lastUpdated" -> testTime.toString
         )
 
       }

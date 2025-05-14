@@ -21,44 +21,48 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.concurrent.PatienceConfiguration.Interval
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.{EmailService, MongoLockService}
+import uk.gov.hmrc.agentclientrelationships.services.EmailService
+import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class EmailSchedulerISpec
-    extends TestKit(ActorSystem("testSystem"))
-    with UnitSpec
-    with MongoApp
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with BeforeAndAfterEach
-    with EmailStubs {
+extends TestKit(ActorSystem("testSystem"))
+with UnitSpec
+with MongoApp
+with GuiceOneServerPerSuite
+with WireMockSupport
+with BeforeAndAfterEach
+with EmailStubs {
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "emailScheduler.enabled"                    -> true,
-        "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
-        "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
-        "emailScheduler.lockDurationInSeconds"      -> "1",
-        "microservice.services.email.port"          -> wireMockPort
-      )
-      .configure(mongoConfiguration)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure(
+      "emailScheduler.enabled" -> true,
+      "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+      "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+      "emailScheduler.lockDurationInSeconds" -> "1",
+      "microservice.services.email.port" -> wireMockPort
+    )
+    .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -72,12 +76,13 @@ class EmailSchedulerISpec
   val timeout: Span = scaled(Span(30, Seconds))
   val interval: Span = scaled(Span(2, Seconds))
 
-  val scheduler = new EmailScheduler(
-    system,
-    emailService,
-    invitationsRepository,
-    mongoLockService
-  )
+  val scheduler =
+    new EmailScheduler(
+      system,
+      emailService,
+      invitationsRepository,
+      mongoLockService
+    )
 
   val baseInvitation: Invitation = Invitation
     .createNew(
@@ -120,10 +125,10 @@ class EmailSchedulerISpec
         to = Seq("agent@email.com"),
         templateId = "agent_invitations_about_to_expire",
         parameters = Map(
-          "agencyName"          -> "Will Gates",
+          "agencyName" -> "Will Gates",
           "numberOfInvitations" -> "2",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
         )
       )
 
@@ -131,10 +136,10 @@ class EmailSchedulerISpec
         to = Seq("agent2@email.com"),
         templateId = "agent_invitation_about_to_expire_single",
         parameters = Map(
-          "agencyName"          -> "Will Fence",
+          "agencyName" -> "Will Fence",
           "numberOfInvitations" -> "1",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
         )
       )
 
@@ -169,10 +174,10 @@ class EmailSchedulerISpec
           to = Seq("agent@email.com"),
           templateId = "agent_invitation_about_to_expire_single",
           parameters = Map(
-            "agencyName"          -> "Will Gates",
+            "agencyName" -> "Will Gates",
             "numberOfInvitations" -> "1",
-            "createdDate"         -> "6 June 2020",
-            "expiryDate"          -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
+            "createdDate" -> "6 June 2020",
+            "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().plusDays(1L))
           )
         )
 
@@ -191,12 +196,13 @@ class EmailSchedulerISpec
     "send expired emails for each invitation, update the status to Expired and the expiredEmailSent flag to true" in {
       val nonExpiredInvitation = baseInvitation.copy(warningEmailSent = true)
       val expiredInvitation = baseInvitation.copy(invitationId = "2", expiryDate = LocalDate.now().minusDays(1L))
-      val expiredInvitationDiffAgent = expiredInvitation.copy(
-        arn = "TARN7654321",
-        agencyName = "Will Fence",
-        agencyEmail = "agent2@email.com",
-        invitationId = "3"
-      )
+      val expiredInvitationDiffAgent = expiredInvitation
+        .copy(
+          arn = "TARN7654321",
+          agencyName = "Will Fence",
+          agencyEmail = "agent2@email.com",
+          invitationId = "3"
+        )
       val invitations = Seq(
         nonExpiredInvitation,
         expiredInvitation,
@@ -212,7 +218,7 @@ class EmailSchedulerISpec
           "agencyName" -> "Will Gates",
           "clientName" -> "Macrosoft",
           "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().minusDays(1L)),
-          "service"    -> "manage their Making Tax Digital for VAT."
+          "service" -> "manage their Making Tax Digital for VAT."
         )
       )
 
@@ -223,7 +229,7 @@ class EmailSchedulerISpec
           "agencyName" -> "Will Fence",
           "clientName" -> "Macrosoft",
           "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().minusDays(1L)),
-          "service"    -> "manage their Making Tax Digital for VAT."
+          "service" -> "manage their Making Tax Digital for VAT."
         )
       )
 
@@ -250,7 +256,7 @@ class EmailSchedulerISpec
           "agencyName" -> "Will Gates",
           "clientName" -> "Macrosoft",
           "expiryDate" -> DateTimeHelper.displayDate(LocalDate.now().minusDays(1L)),
-          "service"    -> "manage their Making Tax Digital for VAT."
+          "service" -> "manage their Making Tax Digital for VAT."
         )
       )
 
@@ -285,4 +291,5 @@ class EmailSchedulerISpec
       }
     }
   }
+
 }

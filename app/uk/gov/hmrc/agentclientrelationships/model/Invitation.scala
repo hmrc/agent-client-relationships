@@ -17,16 +17,24 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Format, Json, Reads, __}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import play.api.libs.json.Reads
+import play.api.libs.json.__
 import uk.gov.hmrc.agentclientrelationships.model.transitional.StatusChangeEvent
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{HMRCMTDIT, HMRCMTDITSUPP}
-import uk.gov.hmrc.agentmtdidentifiers.model.{InvitationId, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentmtdidentifiers.model.InvitationId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
-import java.time.{Instant, LocalDate, ZoneOffset}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 case class Invitation(
   invitationId: String,
@@ -49,15 +57,18 @@ case class Invitation(
   lastUpdated: Instant
 ) {
   def isAltItsa: Boolean =
-    (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(this.service) &&
-      this.clientId == this.suppliedClientId) ||
+    (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(this.service) && this.clientId == this.suppliedClientId) ||
       this.status == PartialAuth
 }
 
 object Invitation {
+
   implicit val format: Format[Invitation] = Json.format[Invitation]
 
-  def mongoFormat(implicit crypto: Encrypter with Decrypter): Format[Invitation] = {
+  def mongoFormat(implicit
+    crypto: Encrypter
+      with Decrypter
+  ): Format[Invitation] = {
     implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     implicit val mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
     (
@@ -93,27 +104,32 @@ object Invitation {
     agencyEmail: String,
     expiryDate: LocalDate,
     clientType: Option[String]
-  ): Invitation =
-    Invitation(
-      InvitationId.create(arn, clientId.value, service.id)(service.invitationIdPrefix).value,
-      arn,
-      service.id,
-      clientId.value,
-      clientId.typeId,
-      suppliedClientId.value,
-      suppliedClientId.typeId,
-      clientName,
-      agencyName,
-      agencyEmail,
-      warningEmailSent = false,
-      expiredEmailSent = false,
-      Pending,
-      None,
-      clientType,
-      expiryDate,
-      Instant.now(),
-      Instant.now()
-    )
+  ): Invitation = Invitation(
+    InvitationId
+      .create(
+        arn,
+        clientId.value,
+        service.id
+      )(service.invitationIdPrefix)
+      .value,
+    arn,
+    service.id,
+    clientId.value,
+    clientId.typeId,
+    suppliedClientId.value,
+    suppliedClientId.typeId,
+    clientName,
+    agencyName,
+    agencyEmail,
+    warningEmailSent = false,
+    expiredEmailSent = false,
+    Pending,
+    None,
+    clientType,
+    expiryDate,
+    Instant.now(),
+    Instant.now()
+  )
 
   val acaReads: Reads[Invitation] =
     (
@@ -169,4 +185,5 @@ object Invitation {
           suppliedClientIdType = suppliedClientIdType
         )
     }
+
 }

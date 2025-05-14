@@ -18,20 +18,24 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HipStub}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model._
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, ZoneOffset}
+import java.time.Instant
+import java.time.ZoneOffset
 
 class ClientTaxAgentsDataControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with AfiRelationshipStub
-    with HipStub
-    with TestData {
+extends BaseControllerISpec
+with ClientDetailsStub
+with AfiRelationshipStub
+with HipStub
+with TestData {
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
@@ -269,25 +273,44 @@ class ClientTaxAgentsDataControllerISpec
 
   s"GET $testEndpoint returns" when {
     "pending invitations for one agent and no relationships, no events" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       invitationsRepo.collection
-        .insertMany(
-          Seq(
-            pendingVatInvitationAgent1,
-            pendingItsaInvitationAgent1
-          )
-        )
+        .insertMany(Seq(pendingVatInvitationAgent1, pendingItsaInvitationAgent1))
         .toFuture()
         .futureValue
 
       // no relationships
       getActiveRelationshipFailsWith(vrn, 422)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 404, activeOnly = false)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 404,
+        activeOnly = false
+      )
       getActiveRelationshipFailsWith(mtdItId, 422)
 
       // TODO UID is created each time
@@ -300,14 +323,21 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 1
 
       // Check how many invitations for agent we have
-      val agentNameInvitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
+      val agentNameInvitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
       agentNameInvitations.size shouldBe 2
 
     }
 
     "pending invitations for two agents and no relationships" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       invitationsRepo.collection
@@ -341,18 +371,24 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 2
 
       // Check how many invitations for agent we have
-      val agentName1Invitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
+      val agentName1Invitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
       agentName1Invitations.size shouldBe 2
 
-      val agentName2Invitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName2).get.invitations
+      val agentName2Invitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName2).get.invitations
       agentName2Invitations.size shouldBe 1
 
     }
 
     "pending invitations for suspended agents not returned" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       invitationsRepo.collection
@@ -368,18 +404,33 @@ class ClientTaxAgentsDataControllerISpec
 
       // no relationships
       getActiveRelationshipFailsWith(vrn, 422)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 404, activeOnly = false)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 404,
+        activeOnly = false
+      )
       getActiveRelationshipFailsWith(mtdItId, 422)
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(
         arn2,
-        testAgentRecord2.copy(suspensionDetails =
-          Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV"))))
-        )
+        testAgentRecord2
+          .copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV")))))
       )
 
       val result = doGetRequest(testEndpoint)
@@ -390,8 +441,7 @@ class ClientTaxAgentsDataControllerISpec
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 1
 
       // Check how many invitations for agent we have
-      val agentName1Invitations =
-        clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
+      val agentName1Invitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
       agentName1Invitations.size shouldBe 2
 
       clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName2) shouldBe None
@@ -399,15 +449,39 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "no pending invitations no relationships" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
       getActiveRelationshipFailsWith(vrn, 422)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 404, activeOnly = false)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 404,
+        activeOnly = false
+      )
       getActiveRelationshipFailsWith(mtdItId, 422)
 
       givenAgentRecordFound(arn, testAgentRecord1)
@@ -424,7 +498,15 @@ class ClientTaxAgentsDataControllerISpec
 
     // authorisation -----------------
     "active authorisations in HODs for all supported tax ids" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
@@ -434,11 +516,31 @@ class ClientTaxAgentsDataControllerISpec
         arnSup = arn2,
         activeOnly = false
       )
-      getAllActiveRelationshipsViaClient(taxIdentifier = vrn, arn = arn, activeOnly = false)
-      getAllActiveRelationshipsViaClient(taxIdentifier = utr, arn = arn, activeOnly = false)
-      getAllActiveRelationshipsViaClient(taxIdentifier = urn, arn = arn2, activeOnly = false)
-      getAllActiveRelationshipsViaClient(taxIdentifier = pptRef, arn = arn3, activeOnly = false)
-      getAllActiveRelationshipsViaClient(taxIdentifier = cgtRef, arn = arn3, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = vrn,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = utr,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = urn,
+        arn = arn2,
+        activeOnly = false
+      )
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = pptRef,
+        arn = arn3,
+        activeOnly = false
+      )
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = cgtRef,
+        arn = arn3,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -450,30 +552,18 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 3 // for 3 agents data
 
-      val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn.value)
-          .get
-          .authorisations
+      val agent1Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
       agent1Authorisations.size shouldBe 3
       agent1Authorisations.exists(_.service == Service.MtdIt.id) shouldBe true
       agent1Authorisations.exists(_.service == Service.Vat.id) shouldBe true
       agent1Authorisations.exists(_.service == Service.Trust.id) shouldBe true
 
-      val agent2Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn2.value)
-          .get
-          .authorisations
+      val agent2Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn2.value).get.authorisations
       agent2Authorisations.size shouldBe 2
       agent2Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true
       agent2Authorisations.exists(_.service == Service.TrustNT.id) shouldBe true
 
-      val agent3Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn3.value)
-          .get
-          .authorisations
+      val agent3Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn3.value).get.authorisations
       agent3Authorisations.size shouldBe 2
       agent3Authorisations.exists(_.service == Service.Ppt.id) shouldBe true
       agent3Authorisations.exists(_.service == Service.CapitalGains.id) shouldBe true
@@ -485,7 +575,12 @@ class ClientTaxAgentsDataControllerISpec
       givenAuditConnector()
 
       partialAuthRepo
-        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn, Service.MtdItSupp.id, nino)
+        .create(
+          Instant.now().truncatedTo(ChronoUnit.SECONDS),
+          arn,
+          Service.MtdItSupp.id,
+          nino
+        )
         .futureValue
 
       givenAgentRecordFound(arn, testAgentRecord1)
@@ -495,11 +590,7 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 1
 
-      val agent1Authorisations =
-        clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations
-          .find(x => x.arn == arn.value)
-          .get
-          .authorisations
+      val agent1Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(x => x.arn == arn.value).get.authorisations
 
       agent1Authorisations.size shouldBe 1
       agent1Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true
@@ -507,16 +598,48 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "active authorisation for ITSA Main and no authorisations for other tax identifiers - NotFount" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = vrn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
 
@@ -539,7 +662,15 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "active authorisation for ITSA Main and Supporting and no authorisations for other tax identifiers - NotFount" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
@@ -549,11 +680,31 @@ class ClientTaxAgentsDataControllerISpec
         arnSup = arn2,
         activeOnly = false
       )
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = vrn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -584,7 +735,15 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "active authorisation for ITSA Main, and do not return inactive for Supporting" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
@@ -594,11 +753,31 @@ class ClientTaxAgentsDataControllerISpec
         arnSup = arn2,
         activeOnly = false
       )
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = vrn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -624,16 +803,44 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "active authorisation for ITSA Main and  no authorisations for other tax identifiers - NotFount or Suspended" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
       getAllActiveRelationshipFailsWithSuspended(taxIdentifier = vrn, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
 
@@ -656,16 +863,48 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "active authorisation for ITSA Main and not found active relationship" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWith(taxIdentifier = vrn, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        taxIdentifier = vrn,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
 
@@ -688,16 +927,48 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "BadRequest 400 if authorisation check returns  error BadRequest 400  for one of the tax identifiers" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWith(taxIdentifier = vrn, status = 400, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        taxIdentifier = vrn,
+        status = 400,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
 
@@ -707,16 +978,48 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "ServiceUnavailable 503  if authorisation check returns any error other error 401  for one of the tax identifiers" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWith(taxIdentifier = vrn, status = 401, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        taxIdentifier = vrn,
+        status = 401,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
 
@@ -726,16 +1029,48 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "ServiceUnavailable 503 if agentDetails check returns any error 404 for one of the agents" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = vrn, status = 404, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentDetailsErrorResponse(arn, 404)
 
@@ -745,16 +1080,48 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "BadRequest if authorisation check returns Bad Request 400  for one of the tax identifiers and agentcheck 404" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWith(taxIdentifier = vrn, status = 400, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = utr, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        taxIdentifier = vrn,
+        status = 400,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentDetailsErrorResponse(arn, 404)
 
@@ -764,16 +1131,48 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "last error from authorisation check - depends what future finish first " in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
-      getAllActiveRelationshipsViaClient(taxIdentifier = mtdItId, arn = arn, activeOnly = false)
-      getAllActiveRelationshipFailsWith(taxIdentifier = vrn, status = 400, activeOnly = false)
-      getAllActiveRelationshipFailsWith(taxIdentifier = utr, status = 401, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = urn, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = pptRef, status = 422, activeOnly = false)
-      getAllActiveRelationshipFailsWithNotFound(taxIdentifier = cgtRef, status = 422, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        taxIdentifier = vrn,
+        status = 400,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        taxIdentifier = utr,
+        status = 401,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
 
@@ -783,7 +1182,15 @@ class ClientTaxAgentsDataControllerISpec
     }
 
     "Accept events for active relationships and DeAuthorised for inactive relationships" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       // no relationships
@@ -793,11 +1200,31 @@ class ClientTaxAgentsDataControllerISpec
         arnSup = arn2,
         activeOnly = false
       )
-      getAllActiveRelationshipsViaClient(taxIdentifier = vrn, arn = arn, activeOnly = false)
-      getAllInactiveRelationshipsViaClient(taxIdentifier = utr, arn = arn, activeOnly = false)
-      getAllActiveRelationshipsViaClient(taxIdentifier = urn, arn = arn2, activeOnly = false)
-      getAllActiveRelationshipsViaClient(taxIdentifier = pptRef, arn = arn3, activeOnly = false)
-      getAllInactiveRelationshipsViaClient(taxIdentifier = cgtRef, arn = arn3, activeOnly = false)
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = vrn,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllInactiveRelationshipsViaClient(
+        taxIdentifier = utr,
+        arn = arn,
+        activeOnly = false
+      )
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = urn,
+        arn = arn2,
+        activeOnly = false
+      )
+      getAllActiveRelationshipsViaClient(
+        taxIdentifier = pptRef,
+        arn = arn3,
+        activeOnly = false
+      )
+      getAllInactiveRelationshipsViaClient(
+        taxIdentifier = cgtRef,
+        arn = arn3,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -818,27 +1245,32 @@ class ClientTaxAgentsDataControllerISpec
       agent1Authorisations.exists(x => x.service == Service.Trust.id && x.eventType == Accepted) shouldBe true
       agent1Authorisations.exists(x => x.service == Service.Trust.id && x.eventType == DeAuthorised) shouldBe true
 
-      val agent2Authorisations =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName2)
+      val agent2Authorisations = clientTaxAgentsData.authorisationEvents.authorisationEvents
+        .filter(x => x.agentName == agentName2)
 
       agent2Authorisations.size shouldBe 2
       agent2Authorisations.exists(x => x.service == Service.MtdItSupp.id && x.eventType == Accepted) shouldBe true
       agent2Authorisations.exists(x => x.service == Service.TrustNT.id && x.eventType == Accepted) shouldBe true
 
-      val agent3Authorisations =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName3)
+      val agent3Authorisations = clientTaxAgentsData.authorisationEvents.authorisationEvents
+        .filter(x => x.agentName == agentName3)
       agent3Authorisations.size shouldBe 3
       agent3Authorisations.exists(x => x.service == Service.Ppt.id && x.eventType == Accepted) shouldBe true
       agent3Authorisations.exists(x => x.service == Service.CapitalGains.id && x.eventType == Accepted) shouldBe true
-      agent3Authorisations.exists(x =>
-        x.service == Service.CapitalGains.id && x.eventType == DeAuthorised
-      ) shouldBe true
+      agent3Authorisations
+        .exists(x => x.service == Service.CapitalGains.id && x.eventType == DeAuthorised) shouldBe true
     }
 
     "Authorisation events for Invitations excluding Pending, Accepted, DeAuthorised invitations" in {
-      givenAuthorisedAsClient(fakeRequest, mtdItId, vrn, utr, urn, pptRef, cgtRef)
+      givenAuthorisedAsClient(
+        fakeRequest,
+        mtdItId,
+        vrn,
+        utr,
+        urn,
+        pptRef,
+        cgtRef
+      )
       givenAuditConnector()
 
       invitationsRepo.collection
@@ -855,10 +1287,26 @@ class ClientTaxAgentsDataControllerISpec
         .toFuture()
         .futureValue
 
-      getAllActiveRelationshipFailsWith(pptRef, 404, activeOnly = false)
-      getAllActiveRelationshipFailsWith(vrn, 404, activeOnly = false)
-      getAllActiveRelationshipFailsWith(cgtRef, 404, activeOnly = false)
-      getAllActiveRelationshipFailsWith(mtdItId, 404, activeOnly = false)
+      getAllActiveRelationshipFailsWith(
+        pptRef,
+        404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        vrn,
+        404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        cgtRef,
+        404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWith(
+        mtdItId,
+        404,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -879,15 +1327,13 @@ class ClientTaxAgentsDataControllerISpec
       agent1AuthorisationEvents.exists(x => x.service == Service.Vat.id && x.eventType == Pending) shouldBe false
       agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == DeAuthorised) shouldBe false
 
-      val agent2AuthorisationEvents =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName2)
+      val agent2AuthorisationEvents = clientTaxAgentsData.authorisationEvents.authorisationEvents
+        .filter(x => x.agentName == agentName2)
 
       agent2AuthorisationEvents.size shouldBe 2
       agent2AuthorisationEvents.exists(x => x.service == Service.Vat.id && x.eventType == Cancelled) shouldBe true
-      agent2AuthorisationEvents.exists(x =>
-        x.service == Service.CapitalGains.id && x.eventType == Rejected
-      ) shouldBe true
+      agent2AuthorisationEvents
+        .exists(x => x.service == Service.CapitalGains.id && x.eventType == Rejected) shouldBe true
       agent2AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe false
     }
 
@@ -895,21 +1341,24 @@ class ClientTaxAgentsDataControllerISpec
       givenAuthorisedAsClientWithNino(fakeRequest, nino)
       givenAuditConnector()
 
-      invitationsRepo.collection
-        .insertMany(
-          Seq(
-            acceptedPartialAuthInvitationAgent2
-          )
+      invitationsRepo.collection.insertMany(Seq(acceptedPartialAuthInvitationAgent2)).toFuture().futureValue
+
+      partialAuthRepo
+        .create(
+          Instant.now().truncatedTo(ChronoUnit.SECONDS),
+          arn2,
+          Service.MtdIt.id,
+          nino
         )
-        .toFuture()
         .futureValue
 
       partialAuthRepo
-        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn2, Service.MtdIt.id, nino)
-        .futureValue
-
-      partialAuthRepo
-        .create(Instant.now().truncatedTo(ChronoUnit.SECONDS), arn, Service.MtdIt.id, nino)
+        .create(
+          Instant.now().truncatedTo(ChronoUnit.SECONDS),
+          arn,
+          Service.MtdIt.id,
+          nino
+        )
         .futureValue
 
       partialAuthRepo
@@ -932,17 +1381,15 @@ class ClientTaxAgentsDataControllerISpec
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
       clientTaxAgentsData.authorisationEvents.authorisationEvents.size shouldBe 3
 
-      val agent1AuthorisationEvents =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName1)
+      val agent1AuthorisationEvents = clientTaxAgentsData.authorisationEvents.authorisationEvents
+        .filter(x => x.agentName == agentName1)
 
       agent1AuthorisationEvents.size shouldBe 2
       agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == DeAuthorised) shouldBe true
       agent1AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe true
 
-      val agent2AuthorisationEvents =
-        clientTaxAgentsData.authorisationEvents.authorisationEvents
-          .filter(x => x.agentName == agentName2)
+      val agent2AuthorisationEvents = clientTaxAgentsData.authorisationEvents.authorisationEvents
+        .filter(x => x.agentName == agentName2)
 
       agent2AuthorisationEvents.size shouldBe 1
       agent2AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe true

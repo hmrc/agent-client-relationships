@@ -23,13 +23,14 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.test.Helpers.AUTHORIZATION
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 
 class InternalAuthTokenInitialiserISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with DataStreamStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with DataStreamStub {
 
   "when configured to run" should {
     "should initialise the internal-auth token if it is not already initialised" in {
@@ -37,41 +38,31 @@ class InternalAuthTokenInitialiserISpec
       val appName = "appName"
 
       val expectedRequest = Json.obj(
-        "token"     -> authToken,
+        "token" -> authToken,
         "principal" -> appName,
         "permissions" -> Seq(
           Json.obj(
-            "resourceType"     -> "agent-assurance",
+            "resourceType" -> "agent-assurance",
             "resourceLocation" -> "agent-record-with-checks/arn",
-            "actions"          -> List("WRITE")
+            "actions" -> List("WRITE")
           )
         )
       )
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(NOT_FOUND))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(NOT_FOUND)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(CREATED))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(CREATED)))
 
       new GuiceApplicationBuilder()
         .configure(
           "microservice.services.internal-auth.port" -> wireMockPort,
-          "appName"                                  -> appName,
-          "internal-auth-token-enabled-on-start"     -> true,
-          "internal-auth.token"                      -> authToken
+          "appName" -> appName,
+          "internal-auth-token-enabled-on-start" -> true,
+          "internal-auth.token" -> authToken
         )
         .build()
 
-      verify(
-        1,
-        getRequestedFor(urlMatching("/test-only/token"))
-          .withHeader(AUTHORIZATION, equalTo(authToken))
-      )
+      verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(
         1,
         postRequestedFor(urlMatching("/test-only/token"))
@@ -83,45 +74,35 @@ class InternalAuthTokenInitialiserISpec
       val appName = "appName"
 
       val expectedRequest = Json.obj(
-        "token"     -> authToken,
+        "token" -> authToken,
         "principal" -> appName,
         "permissions" -> Seq(
           Json.obj(
-            "resourceType"     -> "agent-assurance",
+            "resourceType" -> "agent-assurance",
             "resourceLocation" -> "agent-record-with-checks/arn",
-            "actions"          -> List("WRITE")
+            "actions" -> List("WRITE")
           )
         )
       )
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(NOT_FOUND))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(NOT_FOUND)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(OK))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(OK)))
 
       val exception = intercept[RuntimeException] {
         new GuiceApplicationBuilder()
           .configure(
             "microservice.services.internal-auth.port" -> wireMockPort,
-            "appName"                                  -> appName,
-            "internal-auth-token-enabled-on-start"     -> true,
-            "internal-auth.token"                      -> authToken
+            "appName" -> appName,
+            "internal-auth-token-enabled-on-start" -> true,
+            "internal-auth.token" -> authToken
           )
           .build()
       }
 
       exception.getMessage should include("Unable to initialise internal-auth token")
 
-      verify(
-        1,
-        getRequestedFor(urlMatching("/test-only/token"))
-          .withHeader(AUTHORIZATION, equalTo(authToken))
-      )
+      verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(
         1,
         postRequestedFor(urlMatching("/test-only/token"))
@@ -132,32 +113,22 @@ class InternalAuthTokenInitialiserISpec
       val authToken = "authToken"
       val appName = "appName"
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(OK))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(OK)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(CREATED))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(CREATED)))
 
       val app = new GuiceApplicationBuilder()
         .configure(
           "microservice.services.internal-auth.port" -> wireMockPort,
-          "appName"                                  -> appName,
-          "internal-auth-token-enabled-on-start"     -> true,
-          "internal-auth.token"                      -> authToken
+          "appName" -> appName,
+          "internal-auth-token-enabled-on-start" -> true,
+          "internal-auth.token" -> authToken
         )
         .build()
 
       app.injector.instanceOf[InternalAuthTokenInitialiser].initialised.futureValue
 
-      verify(
-        1,
-        getRequestedFor(urlMatching("/test-only/token"))
-          .withHeader(AUTHORIZATION, equalTo(authToken))
-      )
+      verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(0, postRequestedFor(urlMatching("/test-only/token")))
     }
   }
@@ -167,22 +138,16 @@ class InternalAuthTokenInitialiserISpec
       val authToken = "authToken"
       val appName = "appName"
 
-      stubFor(
-        get(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(OK))
-      )
+      stubFor(get(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(OK)))
 
-      stubFor(
-        post(urlMatching("/test-only/token"))
-          .willReturn(aResponse().withStatus(CREATED))
-      )
+      stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(CREATED)))
 
       val app = new GuiceApplicationBuilder()
         .configure(
           "microservice.services.internal-auth.port" -> wireMockPort,
-          "appName"                                  -> appName,
-          "internal-auth-token-enabled-on-start"     -> false,
-          "internal-auth.token"                      -> authToken
+          "appName" -> appName,
+          "internal-auth-token-enabled-on-start" -> false,
+          "internal-auth.token" -> authToken
         )
         .build()
 
@@ -192,4 +157,5 @@ class InternalAuthTokenInitialiserISpec
       verify(0, postRequestedFor(urlMatching("/test-only/token")))
     }
   }
+
 }

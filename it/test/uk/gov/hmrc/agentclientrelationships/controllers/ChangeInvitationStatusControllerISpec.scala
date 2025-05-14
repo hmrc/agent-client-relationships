@@ -23,16 +23,30 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.transitional.ChangeInvitationStatusRequest
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CapitalGains
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.PersonalIncomeRecord
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Pillar2
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Ppt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
-import java.time.{Instant, ZoneOffset}
+import java.time.Instant
+import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
-class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with TestData {
+class ChangeInvitationStatusControllerISpec
+extends BaseControllerISpec
+with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -41,38 +55,42 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt                -> mtdItId,
+    MtdIt -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat                  -> vrn,
-    Trust                -> utr,
-    TrustNT              -> urn,
-    CapitalGains         -> cgtRef,
-    Ppt                  -> pptRef,
-    Cbc                  -> cbcId,
-    CbcNonUk             -> cbcId,
-    Pillar2              -> plrId,
-    MtdItSupp            -> mtdItId
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
+    CapitalGains -> cgtRef,
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId
   )
 
-  def requestPath(service: String, clientId: String): String =
-    s"/agent-client-relationships/transitional/change-invitation-status/arn/${arn.value}/service/$service/client/$clientId"
+  def requestPath(
+    service: String,
+    clientId: String
+  ): String = s"/agent-client-relationships/transitional/change-invitation-status/arn/${arn.value}/service/$service/client/$clientId"
 
   allServices.foreach(testset =>
     s"/transitional/change-invitation-status/arn/:arn/service/:service/client/:clientId change status to DeAuthorised" should {
       val (service, taxIdentifier) = testset
       val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
-      val suppliedClientId = taxIdentifier match {
-        case _: MtdItId => ClientIdentifier(nino)
-        case taxId      => ClientIdentifier(taxId)
-      }
+      val suppliedClientId =
+        taxIdentifier match {
+          case _: MtdItId => ClientIdentifier(nino)
+          case taxId => ClientIdentifier(taxId)
+        }
       val clientName = "TestClientName"
       val agentName = "testAgentName"
       val agentEmail = "agent@email.com"
       val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
-      val serviceId = service match {
-        case PersonalIncomeRecord => PersonalIncomeRecord.id
-        case s                    => s.id
-      }
+      val serviceId =
+        service match {
+          case PersonalIncomeRecord => PersonalIncomeRecord.id
+          case s => s.id
+        }
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
@@ -204,8 +222,14 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
     s"when invitation exists with the status PartialAuth in PartialAuthStore for ${service.id}" should {
       s"update status to " in {
         val created = Instant.parse("2020-01-01T00:00:00.000Z")
-        val partialAuth =
-          PartialAuthRelationship(created, arn.value, service.id, nino.value, active = true, lastUpdated = created)
+        val partialAuth = PartialAuthRelationship(
+          created,
+          arn.value,
+          service.id,
+          nino.value,
+          active = true,
+          lastUpdated = created
+        )
 
         val newInvitation = Invitation
           .createNew(
@@ -232,15 +256,27 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
         ).status shouldBe 204
 
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
-        await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
+        await(
+          partialAuthRepository.findActive(
+            service.id,
+            nino,
+            arn
+          )
+        ) shouldBe None
       }
     }
 
     s"when invitation exists with the status PartialAuth in PartialAuthStore and InvitationStore for ${service.id}" should {
       s"update status to " in {
         val created = Instant.parse("2020-01-01T00:00:00.000Z")
-        val partialAuth =
-          PartialAuthRelationship(created, arn.value, service.id, nino.value, active = true, lastUpdated = created)
+        val partialAuth = PartialAuthRelationship(
+          created,
+          arn.value,
+          service.id,
+          nino.value,
+          active = true,
+          lastUpdated = created
+        )
 
         await(partialAuthRepository.collection.insertOne(partialAuth).toFuture())
 
@@ -251,7 +287,13 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
             .toString()
         ).status shouldBe 204
 
-        await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
+        await(
+          partialAuthRepository.findActive(
+            service.id,
+            nino,
+            arn
+          )
+        ) shouldBe None
       }
     }
 
@@ -297,10 +339,7 @@ class ChangeInvitationStatusControllerISpec extends BaseControllerISpec with Tes
         )
         result.status shouldBe 400
         result.json shouldBe toJson(
-          ErrorBody(
-            "INVALID_CLIENT_ID",
-            "Invalid clientId \"ABCDEF123456789\", for service type \"HMRC-MTD-IT\""
-          )
+          ErrorBody("INVALID_CLIENT_ID", "Invalid clientId \"ABCDEF123456789\", for service type \"HMRC-MTD-IT\"")
         )
       }
 

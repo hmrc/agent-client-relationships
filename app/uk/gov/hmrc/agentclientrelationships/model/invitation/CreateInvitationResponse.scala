@@ -18,9 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json._
 
-case class CreateInvitationResponse(
-  invitationId: String
-)
+case class CreateInvitationResponse(invitationId: String)
 
 object CreateInvitationResponse {
 

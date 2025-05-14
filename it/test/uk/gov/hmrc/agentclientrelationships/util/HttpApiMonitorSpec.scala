@@ -17,24 +17,30 @@
 package uk.gov.hmrc.agentclientrelationships.util
 
 import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpAPIMonitor {
+class HttpApiMonitorSpec
+extends UnitSpec
+with GuiceOneServerPerSuite
+with HttpApiMonitor {
 
-  override implicit val patienceConfig: PatienceConfig =
-    PatienceConfig(scaled(Span(30, Seconds)), scaled(Span(2, Seconds)))
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(
+    scaled(Span(30, Seconds)),
+    scaled(Span(2, Seconds))
+  )
 
   override lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder().configure("metrics.enabled" -> true)
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure("metrics.enabled" -> true)
 
   val metrics: Metrics = app.injector.instanceOf[Metrics]
   val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -53,4 +59,5 @@ class HttpApiMonitorSpec extends UnitSpec with GuiceOneServerPerSuite with HttpA
       }
     }
   }
+
 }

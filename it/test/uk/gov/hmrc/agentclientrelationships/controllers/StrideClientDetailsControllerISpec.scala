@@ -18,24 +18,33 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride._
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, PartialAuthRelationship, Pending}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.stubs.{AfiRelationshipStub, ClientDetailsStub, HipStub}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{Cbc, CbcNonUk}
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 class StrideClientDetailsControllerISpec
-    extends BaseControllerISpec
-    with ClientDetailsStub
-    with HipStub
-    with AfiRelationshipStub {
+extends BaseControllerISpec
+with ClientDetailsStub
+with HipStub
+with AfiRelationshipStub {
 
   override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
 
@@ -103,13 +112,19 @@ class StrideClientDetailsControllerISpec
     suspensionDetails = Option(SuspensionDetails(suspended, Some(Set("AGSV"))))
   )
 
-  def invitationWithAgentName(invitation: Invitation, suspended: Boolean = false) =
-    InvitationWithAgentName.fromInvitationAndAgentRecord(invitation, agentDetailsDesResponse(suspended))
+  def invitationWithAgentName(
+    invitation: Invitation,
+    suspended: Boolean = false
+  ) = InvitationWithAgentName
+    .fromInvitationAndAgentRecord(invitation, agentDetailsDesResponse(suspended))
 
   val testEndpoint = "/agent-client-relationships/stride/client-details/service/"
 
-  def makeRequestUrl(service: String, clientIdType: String, clientId: String): String =
-    s"$testEndpoint$service/client/$clientIdType/$clientId"
+  def makeRequestUrl(
+    service: String,
+    clientIdType: String,
+    clientId: String
+  ): String = s"$testEndpoint$service/client/$clientIdType/$clientId"
 
   s"GET $testEndpoint" should {
     "return Unauthorised" when {
@@ -118,7 +133,13 @@ class StrideClientDetailsControllerISpec
         requestIsNotAuthenticated()
         givenAuditConnector()
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "NI", s"$nino"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "NI",
+            s"$nino"
+          )
+        )
         result.status shouldBe 401
       }
     }
@@ -127,7 +148,13 @@ class StrideClientDetailsControllerISpec
       "invalid parameters" in {
         givenAuditConnector()
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "VRN", s"$nino"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "VRN",
+            s"$nino"
+          )
+        )
         result.status shouldBe 400
       }
     }
@@ -140,11 +167,14 @@ class StrideClientDetailsControllerISpec
 
         givenVatCustomerInfoError(vrn.value, 404)
         getActiveRelationshipsViaClient(vrn, arn)
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
+        givenAgentRecordFound(arn, testAgentRecord)
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
         )
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
         result.status shouldBe 404
       }
     }
@@ -157,11 +187,14 @@ class StrideClientDetailsControllerISpec
 
         givenVatCustomerInfoExists(vrn.value)
         getActiveRelationshipsViaClient(vrn, arn)
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
+        givenAgentRecordFound(arn, testAgentRecord)
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
         )
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
         result.status shouldBe 200
 
         result.body shouldBe """{"clientName":"CFG Solutions","pendingInvitations":[],"activeMainAgent":{"agentName":"ABC Ltd","arn":"AARN0000002","service":"HMRC-MTD-VAT"}}"""
@@ -176,11 +209,14 @@ class StrideClientDetailsControllerISpec
 
         givenVatCustomerInfoExists(vrn.value)
         getActiveRelationshipFailsWith(vrn, 422)
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
+        givenAgentRecordFound(arn, testAgentRecord)
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
         )
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
         result.status shouldBe 200
 
         result.body shouldBe """{"clientName":"CFG Solutions","pendingInvitations":[]}"""
@@ -194,11 +230,14 @@ class StrideClientDetailsControllerISpec
         invitationsRepo.collection.insertOne(pendingInvitation).toFuture().futureValue
 
         getActiveRelationshipFailsWith(vrn, 422)
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
+        givenAgentRecordFound(arn, testAgentRecord)
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
         )
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -219,19 +258,19 @@ class StrideClientDetailsControllerISpec
 
         invitationsRepo.collection.insertOne(pendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn, testAgentRecord)
 
         getActiveRelationshipsViaClient(vrn, arn2)
 
-        givenAgentRecordFound(
-          arn2,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -239,7 +278,13 @@ class StrideClientDetailsControllerISpec
             ClientDetailsStrideResponse(
               clientName = pendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(pendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-VAT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-VAT"
+                )
+              )
             )
           )
           .toString()
@@ -256,19 +301,21 @@ class StrideClientDetailsControllerISpec
 
         givenAgentRecordFound(
           arn,
-          testAgentRecord.copy(suspensionDetails =
-            Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV"))))
-          )
+          testAgentRecord
+            .copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV")))))
         )
 
         getActiveRelationshipsViaClient(vrn, arn2)
 
-        givenAgentRecordFound(
-          arn2,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-VAT", "VRN", s"${vrn.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-VAT",
+            "VRN",
+            s"${vrn.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -276,7 +323,13 @@ class StrideClientDetailsControllerISpec
             ClientDetailsStrideResponse(
               clientName = "CFG Solutions",
               pendingInvitations = Seq(),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-VAT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-VAT"
+                )
+              )
             )
           )
           .toString()
@@ -287,24 +340,28 @@ class StrideClientDetailsControllerISpec
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
-        val altItsaPendingInvitation =
-          pendingInvitation.copy(service = "HMRC-MTD-IT", suppliedClientId = nino.value, clientId = nino.value)
+        val altItsaPendingInvitation = pendingInvitation
+          .copy(
+            service = "HMRC-MTD-IT",
+            suppliedClientId = nino.value,
+            clientId = nino.value
+          )
 
         invitationsRepo.collection.insertOne(altItsaPendingInvitation).toFuture().futureValue
 
         partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn, testAgentRecord)
 
-        givenAgentRecordFound(
-          arn2,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "NI", s"${nino.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "NI",
+            s"${nino.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -312,7 +369,13 @@ class StrideClientDetailsControllerISpec
             ClientDetailsStrideResponse(
               clientName = altItsaPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(altItsaPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-IT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-IT"
+                )
+              )
             )
           )
           .toString()
@@ -323,25 +386,29 @@ class StrideClientDetailsControllerISpec
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
-        val itsaPendingInvitation =
-          pendingInvitation.copy(service = "HMRC-MTD-IT", suppliedClientId = nino.value, clientId = mtdItId.value)
+        val itsaPendingInvitation = pendingInvitation
+          .copy(
+            service = "HMRC-MTD-IT",
+            suppliedClientId = nino.value,
+            clientId = mtdItId.value
+          )
 
         invitationsRepo.collection.insertOne(itsaPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn, testAgentRecord)
 
         givenMtdItIdIsKnownFor(nino, mtdItId)
         getActiveRelationshipsViaClient(mtdItId, arn2)
 
-        givenAgentRecordFound(
-          arn2,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-MTD-IT", "NI", s"${nino.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-MTD-IT",
+            "NI",
+            s"${nino.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -349,7 +416,13 @@ class StrideClientDetailsControllerISpec
             ClientDetailsStrideResponse(
               clientName = itsaPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(itsaPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-MTD-IT"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-MTD-IT"
+                )
+              )
             )
           )
           .toString()
@@ -360,8 +433,8 @@ class StrideClientDetailsControllerISpec
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
-        val irvPendingInvitation =
-          pendingInvitation.copy(
+        val irvPendingInvitation = pendingInvitation
+          .copy(
             service = "PERSONAL-INCOME-RECORD",
             suppliedClientId = nino.value,
             clientId = nino.value
@@ -369,19 +442,24 @@ class StrideClientDetailsControllerISpec
 
         invitationsRepo.collection.insertOne(irvPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn, testAgentRecord)
 
-        givenAfiRelationshipForClientIsActive(arn2, "PERSONAL-INCOME-RECORD", nino.value, fromCesa = true)
-
-        givenAgentRecordFound(
+        givenAfiRelationshipForClientIsActive(
           arn2,
-          testAgentRecord
+          "PERSONAL-INCOME-RECORD",
+          nino.value,
+          fromCesa = true
         )
 
-        val result = doGetRequest(makeRequestUrl("PERSONAL-INCOME-RECORD", "NINO", s"${nino.value}"))
+        givenAgentRecordFound(arn2, testAgentRecord)
+
+        val result = doGetRequest(
+          makeRequestUrl(
+            "PERSONAL-INCOME-RECORD",
+            "NINO",
+            s"${nino.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -389,7 +467,13 @@ class StrideClientDetailsControllerISpec
             ClientDetailsStrideResponse(
               clientName = irvPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(irvPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "PERSONAL-INCOME-RECORD"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "PERSONAL-INCOME-RECORD"
+                )
+              )
             )
           )
           .toString()
@@ -400,8 +484,8 @@ class StrideClientDetailsControllerISpec
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
-        val cbcPendingInvitation =
-          pendingInvitation.copy(
+        val cbcPendingInvitation = pendingInvitation
+          .copy(
             service = "HMRC-CBC-ORG",
             suppliedClientId = cbcId.value,
             clientId = cbcId.value
@@ -409,21 +493,25 @@ class StrideClientDetailsControllerISpec
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn, testAgentRecord)
 
-        givenKnownFactsQuery(Cbc, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
+        givenKnownFactsQuery(
+          Cbc,
+          cbcId,
+          Some(Seq(Identifier("cbcId", cbcId.value)))
+        )
 
         getActiveRelationshipsViaClient(cbcId, arn2)
 
-        givenAgentRecordFound(
-          arn2,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-CBC-ORG", "cbcId", s"${cbcId.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-CBC-ORG",
+            "cbcId",
+            s"${cbcId.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -431,7 +519,13 @@ class StrideClientDetailsControllerISpec
             ClientDetailsStrideResponse(
               clientName = cbcPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(cbcPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-CBC-ORG"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-CBC-ORG"
+                )
+              )
             )
           )
           .toString()
@@ -442,8 +536,8 @@ class StrideClientDetailsControllerISpec
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
-        val cbcPendingInvitation =
-          pendingInvitation.copy(
+        val cbcPendingInvitation = pendingInvitation
+          .copy(
             service = "HMRC-CBC-NONUK-ORG",
             suppliedClientId = cbcId.value,
             clientId = cbcId.value
@@ -451,22 +545,26 @@ class StrideClientDetailsControllerISpec
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(
-          arn,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn, testAgentRecord)
 
         givenCbcUkDoesNotExistInES(cbcId)
-        givenKnownFactsQuery(CbcNonUk, cbcId, Some(Seq(Identifier("cbcId", cbcId.value))))
+        givenKnownFactsQuery(
+          CbcNonUk,
+          cbcId,
+          Some(Seq(Identifier("cbcId", cbcId.value)))
+        )
 
         getActiveRelationshipsViaClient(cbcId, arn2)
 
-        givenAgentRecordFound(
-          arn2,
-          testAgentRecord
-        )
+        givenAgentRecordFound(arn2, testAgentRecord)
 
-        val result = doGetRequest(makeRequestUrl("HMRC-CBC-ORG", "cbcId", s"${cbcId.value}"))
+        val result = doGetRequest(
+          makeRequestUrl(
+            "HMRC-CBC-ORG",
+            "cbcId",
+            s"${cbcId.value}"
+          )
+        )
         result.status shouldBe 200
 
         result.body shouldBe Json
@@ -474,7 +572,13 @@ class StrideClientDetailsControllerISpec
             ClientDetailsStrideResponse(
               clientName = cbcPendingInvitation.clientName,
               pendingInvitations = Seq(invitationWithAgentName(cbcPendingInvitation)),
-              activeMainAgent = Some(ActiveMainAgent(agentName = "ABC Ltd", arn2.value, "HMRC-CBC-NONUK-ORG"))
+              activeMainAgent = Some(
+                ActiveMainAgent(
+                  agentName = "ABC Ltd",
+                  arn2.value,
+                  "HMRC-CBC-NONUK-ORG"
+                )
+              )
             )
           )
           .toString()
@@ -484,8 +588,7 @@ class StrideClientDetailsControllerISpec
 
   s"POST /stride/active-relationships" should {
 
-    val requestPath: String =
-      s"/agent-client-relationships/stride/active-relationships"
+    val requestPath: String = s"/agent-client-relationships/stride/active-relationships"
 
     val req = FakeRequest()
 
@@ -507,137 +610,138 @@ class StrideClientDetailsControllerISpec
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
 
-        cr.clientIdType match {
-          case NinoType.id =>
-            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-            getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
-            givenAfiRelationshipForClientIsActive(arn, "PERSONAL-INCOME-RECORD", nino.value, true)
-            givenItsaCitizenDetailsExists(nino.value)
-            givenItsaDesignatoryDetailsExists(nino.value)
-            givenAgentRecordFound(arn, testAgentRecord)
-            givenAgentRecordFound(arn2, testAgentRecord2)
-            partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case UtrType.id =>
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenTrustDetailsExist(taxIdentifier.value, UtrType.id.toUpperCase)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case UrnType.id =>
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenTrustDetailsExist(taxIdentifier.value, UrnType.id.toUpperCase)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case CgtRefType.id =>
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenCgtDetailsExist(taxIdentifier.value)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case PptRefType.id =>
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenPptDetailsExist(taxIdentifier.value)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case CbcIdType.id =>
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenKnownFactsQuery(Service.CbcNonUk, taxIdentifier, Some(Seq(Identifier("cbcId", taxIdentifier.value))))
-            givenCbcDetailsExist(true)
-            givenKnownFactsQuery(
-              Service.Cbc,
-              taxIdentifier,
-              Some(Seq(Identifier("cbcId", taxIdentifier.value), Identifier("UTR", utr.value)))
-            )
-            givenAgentRecordFound(arn, testAgentRecord)
-          case PlrIdType.id =>
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenPillar2DetailsExist(taxIdentifier.value)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case _ =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              getItsaMainAndSupportingActiveRelationshipsViaClient(
+                mtdItId,
+                arn,
+                arn2
+              )
+              givenAfiRelationshipForClientIsActive(
+                arn,
+                "PERSONAL-INCOME-RECORD",
+                nino.value,
+                true
+              )
+              givenItsaCitizenDetailsExists(nino.value)
+              givenItsaDesignatoryDetailsExists(nino.value)
+              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecordFound(arn2, testAgentRecord2)
+              partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case UtrType.id =>
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenTrustDetailsExist(taxIdentifier.value, UtrType.id.toUpperCase)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case UrnType.id =>
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenTrustDetailsExist(taxIdentifier.value, UrnType.id.toUpperCase)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case CgtRefType.id =>
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenCgtDetailsExist(taxIdentifier.value)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case PptRefType.id =>
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenPptDetailsExist(taxIdentifier.value)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case CbcIdType.id =>
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenKnownFactsQuery(
+                Service.CbcNonUk,
+                taxIdentifier,
+                Some(Seq(Identifier("cbcId", taxIdentifier.value)))
+              )
+              givenCbcDetailsExist(true)
+              givenKnownFactsQuery(
+                Service.Cbc,
+                taxIdentifier,
+                Some(Seq(Identifier("cbcId", taxIdentifier.value), Identifier("UTR", utr.value)))
+              )
+              givenAgentRecordFound(arn, testAgentRecord)
+            case PlrIdType.id =>
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenPillar2DetailsExist(taxIdentifier.value)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case _ =>
+          }
+
         }
 
-      }
-
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       response.activeClientRelationships.size shouldBe 11
       // validate result
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            val mainRelationships =
-              response.activeClientRelationships.filter(x =>
-                x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value
-              )
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              val mainRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn.value)
 
-            val partialAuthRelationships =
-              response.activeClientRelationships.filter(x =>
-                x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value
-              )
+              val partialAuthRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id && x.arn == arn2.value)
 
-            val suppRelationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
-            )
+              val suppRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
-            val irvRelationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id
-            )
+              val irvRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.PersonalIncomeRecord.id)
 
-            mainRelationships.size shouldBe 1
-            partialAuthRelationships.size shouldBe 1
-            suppRelationships.size shouldBe 1
-            irvRelationships.size shouldBe 1
+              mainRelationships.size shouldBe 1
+              partialAuthRelationships.size shouldBe 1
+              suppRelationships.size shouldBe 1
+              irvRelationships.size shouldBe 1
 
-          case VrnType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
-            relationships.size shouldBe 1
+            case VrnType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+              relationships.size shouldBe 1
 
-          case UtrType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Trust.id)
-            relationships.size shouldBe 1
+            case UtrType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Trust.id)
+              relationships.size shouldBe 1
 
-          case UrnType.id =>
-            val relationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.TrustNT.id
-            )
-            relationships.size shouldBe 1
+            case UrnType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.TrustNT.id)
+              relationships.size shouldBe 1
 
-          case CgtRefType.id =>
-            val relationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.CapitalGains.id
-            )
-            relationships.size shouldBe 1
+            case CgtRefType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.CapitalGains.id)
+              relationships.size shouldBe 1
 
-          case PptRefType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Ppt.id)
-            relationships.size shouldBe 1
+            case PptRefType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Ppt.id)
+              relationships.size shouldBe 1
 
-          case CbcIdType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Cbc.id)
-            relationships.size shouldBe 1
+            case CbcIdType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Cbc.id)
+              relationships.size shouldBe 1
 
-          case PlrIdType.id =>
-            val relationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.Pillar2.id
-            )
-            relationships.size shouldBe 1
-          case _ =>
+            case PlrIdType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Pillar2.id)
+              relationships.size shouldBe 1
+            case _ =>
 
+          }
         }
-      }
 
     }
 
@@ -662,18 +766,11 @@ class StrideClientDetailsControllerISpec
       )
 
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(ClientsRelationshipsRequest(Seq(cr)))
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(ClientsRelationshipsRequest(Seq(cr))).toString())
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
-      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
-        Seq(expectedPartialAuthRelationship)
-      )
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships = Seq(expectedPartialAuthRelationship))
 
     }
 
@@ -698,208 +795,180 @@ class StrideClientDetailsControllerISpec
       )
 
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(ClientsRelationshipsRequest(Seq(cr)))
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(ClientsRelationshipsRequest(Seq(cr))).toString())
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
-      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships =
-        Seq(expectedPartialAuthRelationship)
-      )
+      response shouldBe ActiveClientsRelationshipResponse(activeClientRelationships = Seq(expectedPartialAuthRelationship))
 
     }
 
     "return only records when relationship exists and do not return when relationship not found" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        Seq(
-          ClientRelationshipRequest(NinoType.id, nino.value),
-          ClientRelationshipRequest(VrnType.id, vrn.value)
-        )
+        Seq(ClientRelationshipRequest(NinoType.id, nino.value), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
 
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
 
-        cr.clientIdType match {
-          case NinoType.id =>
-            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-            getAllActiveRelationshipFailsWith(mtdItId, status = 404)
-            givenAfiRelationshipForClientNotFound(cr.clientId)
-            givenItsaCitizenDetailsExists(nino.value)
-            givenItsaDesignatoryDetailsExists(nino.value)
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case _ =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+              givenAfiRelationshipForClientNotFound(cr.clientId)
+              givenItsaCitizenDetailsExists(nino.value)
+              givenItsaDesignatoryDetailsExists(nino.value)
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case _ =>
+          }
+
         }
 
-      }
-
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            val mainRelationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-            val suppRelationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
-            )
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              val mainRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+              val suppRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
-            mainRelationships.size shouldBe 0
-            suppRelationships.size shouldBe 0
+              mainRelationships.size shouldBe 0
+              suppRelationships.size shouldBe 0
 
-          case VrnType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
-            relationships.size shouldBe 1
-          case _ =>
+            case VrnType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+              relationships.size shouldBe 1
+            case _ =>
 
+          }
         }
-      }
 
     }
 
     "return only records when relationship exists and do not return when relationship 422 code 009" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        Seq(
-          ClientRelationshipRequest(NinoType.id, nino.value),
-          ClientRelationshipRequest(VrnType.id, vrn.value)
-        )
+        Seq(ClientRelationshipRequest(NinoType.id, nino.value), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
 
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
 
-        cr.clientIdType match {
-          case NinoType.id =>
-            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-            getAllActiveRelationshipFailsWithNotFound(mtdItId, status = 422)
-            givenAfiRelationshipForClientNotFound(cr.clientId)
-            givenItsaCitizenDetailsExists(nino.value)
-            givenItsaDesignatoryDetailsExists(nino.value)
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case _ =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              getAllActiveRelationshipFailsWithNotFound(mtdItId, status = 422)
+              givenAfiRelationshipForClientNotFound(cr.clientId)
+              givenItsaCitizenDetailsExists(nino.value)
+              givenItsaDesignatoryDetailsExists(nino.value)
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case _ =>
+
+          }
 
         }
 
-      }
-
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            val mainRelationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-            val suppRelationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
-            )
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              val mainRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+              val suppRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
-            mainRelationships.size shouldBe 0
-            suppRelationships.size shouldBe 0
+              mainRelationships.size shouldBe 0
+              suppRelationships.size shouldBe 0
 
-          case VrnType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
-            relationships.size shouldBe 1
-          case _ =>
+            case VrnType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+              relationships.size shouldBe 1
+            case _ =>
 
+          }
         }
-      }
 
     }
 
     "return empty array and 200 when no relationships were found" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        Seq(
-          ClientRelationshipRequest(NinoType.id, nino.value),
-          ClientRelationshipRequest(VrnType.id, vrn.value)
-        )
+        Seq(ClientRelationshipRequest(NinoType.id, nino.value), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
 
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-            getAllActiveRelationshipFailsWith(mtdItId, status = 404)
-            givenAfiRelationshipForClientNotFound(cr.clientId)
-            givenItsaCitizenDetailsExists(nino.value)
-            givenItsaDesignatoryDetailsExists(nino.value)
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipFailsWith(vrn, status = 404)
-          case _ =>
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              getAllActiveRelationshipFailsWith(mtdItId, status = 404)
+              givenAfiRelationshipForClientNotFound(cr.clientId)
+              givenItsaCitizenDetailsExists(nino.value)
+              givenItsaDesignatoryDetailsExists(nino.value)
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipFailsWith(vrn, status = 404)
+            case _ =>
+          }
+
         }
 
-      }
-
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            val mainRelationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-            val suppRelationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
-            )
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              val mainRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+              val suppRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
 
-            mainRelationships.size shouldBe 0
-            suppRelationships.size shouldBe 0
+              mainRelationships.size shouldBe 0
+              suppRelationships.size shouldBe 0
 
-          case VrnType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
-            relationships.size shouldBe 0
-          case _ =>
+            case VrnType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+              relationships.size shouldBe 0
+            case _ =>
 
+          }
         }
-      }
 
       response.activeClientRelationships.size shouldBe 0
 
@@ -907,198 +976,175 @@ class StrideClientDetailsControllerISpec
 
     "return empty array and 200 when agent is suspended" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        Seq(
-          ClientRelationshipRequest(NinoType.id, nino.value),
-          ClientRelationshipRequest(VrnType.id, vrn.value)
-        )
+        Seq(ClientRelationshipRequest(NinoType.id, nino.value), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
 
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-            getAllActiveRelationshipFailsWithSuspended(mtdItId)
-            givenAfiRelationshipForClientNotFound(cr.clientId)
-            givenItsaCitizenDetailsExists(nino.value)
-            givenItsaDesignatoryDetailsExists(nino.value)
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipFailsWithSuspended(vrn)
-          case _ =>
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              getAllActiveRelationshipFailsWithSuspended(mtdItId)
+              givenAfiRelationshipForClientNotFound(cr.clientId)
+              givenItsaCitizenDetailsExists(nino.value)
+              givenItsaDesignatoryDetailsExists(nino.value)
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipFailsWithSuspended(vrn)
+            case _ =>
+          }
+
         }
 
-      }
-
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 200
       val response: ActiveClientsRelationshipResponse = result.json.as[ActiveClientsRelationshipResponse]
 
       // validate result
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            val mainRelationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
-            val suppRelationships = response.activeClientRelationships.filter(x =>
-              x.clientId == cr.clientId && x.service == Service.MtdItSupp.id
-            )
-            mainRelationships.size shouldBe 0
-            suppRelationships.size shouldBe 0
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              val mainRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdIt.id)
+              val suppRelationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.MtdItSupp.id)
+              mainRelationships.size shouldBe 0
+              suppRelationships.size shouldBe 0
 
-          case VrnType.id =>
-            val relationships =
-              response.activeClientRelationships.filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
-            relationships.size shouldBe 0
-          case _ =>
+            case VrnType.id =>
+              val relationships = response.activeClientRelationships
+                .filter(x => x.clientId == cr.clientId && x.service == Service.Vat.id)
+              relationships.size shouldBe 0
+            case _ =>
 
+          }
         }
-      }
       response.activeClientRelationships.size shouldBe 0
 
     }
 
     "return 400 when one of the clientId is incorrect" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        Seq(
-          ClientRelationshipRequest(NinoType.id, "FAKENINO"),
-          ClientRelationshipRequest(VrnType.id, vrn.value)
-        )
+        Seq(ClientRelationshipRequest(NinoType.id, "FAKENINO"), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
       givenAuthorisedAsStrideUser(req, "someStrideId")
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipFailsWithSuspended(vrn)
-          case _ =>
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipFailsWithSuspended(vrn)
+            case _ =>
+          }
+
         }
 
-      }
-
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 400
 
     }
 
     "return 500 when client details fail" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        Seq(
-          ClientRelationshipRequest(NinoType.id, nino.value),
-          ClientRelationshipRequest(VrnType.id, vrn.value)
-        )
+        Seq(ClientRelationshipRequest(NinoType.id, nino.value), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
 
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-            getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
-            givenAfiRelationshipForClientNotFound(cr.clientId)
-            givenItsaCitizenDetailsError(nino.value, 403)
-            givenItsaDesignatoryDetailsExists(nino.value)
-            givenAgentRecordFound(arn, testAgentRecord)
-            givenAgentRecordFound(arn2, testAgentRecord2)
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipsViaClient(vrn, arn)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case _ =>
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              getItsaMainAndSupportingActiveRelationshipsViaClient(
+                mtdItId,
+                arn,
+                arn2
+              )
+              givenAfiRelationshipForClientNotFound(cr.clientId)
+              givenItsaCitizenDetailsError(nino.value, 403)
+              givenItsaDesignatoryDetailsExists(nino.value)
+              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecordFound(arn2, testAgentRecord2)
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipsViaClient(vrn, arn)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case _ =>
+          }
+
         }
 
-      }
-
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 500
 
     }
 
     "return 404 when get agent data  fail" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
-        Seq(
-          ClientRelationshipRequest(NinoType.id, nino.value),
-          ClientRelationshipRequest(VrnType.id, vrn.value)
-        )
+        Seq(ClientRelationshipRequest(NinoType.id, nino.value), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
 
       // set all required stub calls
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        cr.clientIdType match {
-          case NinoType.id =>
-            givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
-            getItsaMainAndSupportingActiveRelationshipsViaClient(mtdItId, arn, arn2)
-            givenAfiRelationshipForClientNotFound(cr.clientId)
-            givenItsaCitizenDetailsExists(nino.value)
-            givenItsaDesignatoryDetailsExists(nino.value)
-            givenAgentRecordFound(arn, testAgentRecord)
-            givenAgentDetailsErrorResponse(arn2, 404)
-          case VrnType.id =>
-            getVrnIsKnownInETMPFor2(vrn)
-            getAllActiveRelationshipsViaClient(vrn, arn)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case _ =>
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          cr.clientIdType match {
+            case NinoType.id =>
+              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              getItsaMainAndSupportingActiveRelationshipsViaClient(
+                mtdItId,
+                arn,
+                arn2
+              )
+              givenAfiRelationshipForClientNotFound(cr.clientId)
+              givenItsaCitizenDetailsExists(nino.value)
+              givenItsaDesignatoryDetailsExists(nino.value)
+              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentDetailsErrorResponse(arn2, 404)
+            case VrnType.id =>
+              getVrnIsKnownInETMPFor2(vrn)
+              getAllActiveRelationshipsViaClient(vrn, arn)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case _ =>
+          }
+
         }
 
-      }
-
       // Test
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 404
 
     }
     "return 404 when get client data fail" in {
-      val clientsRelationshipsRequest: ClientsRelationshipsRequest =
-        ClientsRelationshipsRequest(Seq(ClientRelationshipRequest(VrnType.id, vrn.value)))
+      val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
+        Seq(ClientRelationshipRequest(VrnType.id, vrn.value))
+      )
 
       givenAuthorisedAsStrideUser(req, "someStrideId")
 
-      clientsRelationshipsRequest.clientRelationshipRequest.foreach { cr =>
-        val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
-        cr.clientIdType match {
-          case VrnType.id =>
-            givenDESRespondsWithStatusForVrn(vrn, 404)
-            getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-            givenAgentRecordFound(arn, testAgentRecord)
-          case _ =>
+      clientsRelationshipsRequest.clientRelationshipRequest
+        .foreach { cr =>
+          val taxIdentifier = ClientIdType.forId(cr.clientIdType).createUnderlying(cr.clientId)
+          cr.clientIdType match {
+            case VrnType.id =>
+              givenDESRespondsWithStatusForVrn(vrn, 404)
+              getAllActiveRelationshipsViaClient(taxIdentifier, arn)
+              givenAgentRecordFound(arn, testAgentRecord)
+            case _ =>
+          }
         }
-      }
 
-      val result = doAgentPostRequest(
-        requestPath,
-        Json
-          .toJson(clientsRelationshipsRequest)
-          .toString()
-      )
+      val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 404
     }
 

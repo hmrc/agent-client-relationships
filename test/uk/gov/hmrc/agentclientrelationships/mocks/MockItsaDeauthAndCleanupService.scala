@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.services.ItsaDeauthAndCleanupService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import java.time.Instant
 import scala.concurrent.Future
@@ -33,18 +34,19 @@ trait MockItsaDeauthAndCleanupService {
 
   val mockItsaDeauthAndCleanupService: ItsaDeauthAndCleanupService = resettingMock[ItsaDeauthAndCleanupService]
 
-  def mockDeleteSameAgentRelationship(service: String, arn: String, mtdItId: Option[String], nino: String)(
-    response: Future[Boolean]
-  ): OngoingStubbing[Future[Boolean]] =
-    when(
-      mockItsaDeauthAndCleanupService.deleteSameAgentRelationship(
-        eqs(service),
-        eqs(arn),
-        eqs(mtdItId),
-        eqs(nino),
-        any[Instant]
-      )(any[HeaderCarrier], any[CurrentUser], any[Request[_]])
-    )
-      .thenReturn(response)
+  def mockDeleteSameAgentRelationship(
+    service: String,
+    arn: String,
+    mtdItId: Option[String],
+    nino: String
+  )(response: Future[Boolean]): OngoingStubbing[Future[Boolean]] = when(
+    mockItsaDeauthAndCleanupService.deleteSameAgentRelationship(
+      eqs(service),
+      eqs(arn),
+      eqs(mtdItId),
+      eqs(nino),
+      any[Instant]
+    )(any[RequestHeader], any[CurrentUser])
+  ).thenReturn(response)
 
 }

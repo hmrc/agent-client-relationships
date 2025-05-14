@@ -28,21 +28,27 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 class AgentReferenceRepositoryISpec
-    extends AnyWordSpec
-    with Matchers
-    with GuiceOneAppPerSuite
-    with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
-    with LogCapturing {
+extends AnyWordSpec
+with Matchers
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
+with LogCapturing {
 
-  override lazy val app: Application =
-    new GuiceApplicationBuilder()
-      .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-      .build()
+  override lazy val app: Application = new GuiceApplicationBuilder()
+    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
+    .build()
 
   val repository: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
   "AgentReferenceRepository" when {
-    def agentReferenceRecord(uid: String, arn: String) = AgentReferenceRecord(uid, Arn(arn), Seq("stan-lee"))
+    def agentReferenceRecord(
+      uid: String,
+      arn: String
+    ) = AgentReferenceRecord(
+      uid,
+      Arn(arn),
+      Seq("stan-lee")
+    )
 
     "create" should {
       "successfully create a record in the agentReferenceRepository" in {
@@ -114,21 +120,22 @@ class AgentReferenceRepositoryISpec
         withCaptureOfErrorLogging(repository.localLogger) { logEvents =>
           await(repository.delete(Arn("LARN7404004"))) shouldBe ()
 
-          logEvents.count(
-            _.getMessage.contains("could not delete agent reference record, no matching ARN found.")
-          ) shouldBe 1
+          logEvents
+            .count(_.getMessage.contains("could not delete agent reference record, no matching ARN found.")) shouldBe 1
         }
 
         await(repository.delete(Arn("LARN7404004"))) shouldBe ()
       }
     }
   }
+
 }
 
 trait LogCapturing {
 
   import ch.qos.logback.classic.spi.ILoggingEvent
-  import ch.qos.logback.classic.{Level, Logger => LogbackLogger}
+  import ch.qos.logback.classic.Level
+  import ch.qos.logback.classic.{Logger => LogbackLogger}
   import ch.qos.logback.core.read.ListAppender
   import play.api.LoggerLike
 
@@ -144,4 +151,5 @@ trait LogCapturing {
     logbackLogger.setAdditive(true)
     body(appender.list.asScala.toList)
   }
+
 }

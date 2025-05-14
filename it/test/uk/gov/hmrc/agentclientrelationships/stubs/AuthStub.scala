@@ -22,7 +22,8 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.SessionKeys
 
 trait AuthStub {
@@ -47,12 +48,20 @@ trait AuthStub {
     withThisGgUserId: String = "12345-credId"
   ) = {
     stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(givenLoginClientIndAllJsonResponseBody(mtdItId, vrn, nino, cgtRef, pptRef, withThisGgUserId))
-        )
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(
+            givenLoginClientIndAllJsonResponseBody(
+              mtdItId,
+              vrn,
+              nino,
+              cgtRef,
+              pptRef,
+              withThisGgUserId
+            )
+          )
+      )
     )
     this
   }
@@ -123,14 +132,22 @@ trait AuthStub {
     withThisGgUserId: String = "12345-credId"
   ) = {
     stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(
-              givenLoginClientBusinessAllJsonResponseBody(vrn, utr, urn, cgtRef, pptRef, cbcId, plrId, withThisGgUserId)
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(
+            givenLoginClientBusinessAllJsonResponseBody(
+              vrn,
+              utr,
+              urn,
+              cgtRef,
+              pptRef,
+              cbcId,
+              plrId,
+              withThisGgUserId
             )
-        )
+          )
+      )
     )
     this
   }
@@ -218,25 +235,27 @@ trait AuthStub {
 
   // VIA Stride
 
-  def givenUserIsAuthenticatedWithStride(strideRole: String, strideUserId: String) = {
+  def givenUserIsAuthenticatedWithStride(
+    strideRole: String,
+    strideUserId: String
+  ) = {
     stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"affinityGroup": "Individual",
-                         |"allEnrolments": [{
-                         |  "key": "$strideRole"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "$strideUserId",
-                         |    "providerType": "PrivilegedApplication"
-                         |  }
-                         |}
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{
+                       |"affinityGroup": "Individual",
+                       |"allEnrolments": [{
+                       |  "key": "$strideRole"
+                       |	}],
+                       |  "optionalCredentials": {
+                       |    "providerId": "$strideUserId",
+                       |    "providerType": "PrivilegedApplication"
+                       |  }
+                       |}
        """.stripMargin)
-        )
+      )
     )
     this
   }
@@ -250,149 +269,155 @@ trait AuthStub {
     withThisAgentCode: String = "12345"
   ): AuthStub = {
     stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |	"affinityGroup": "Agent",
-                         |	"allEnrolments": [{
-                         |		"key": "HMRC-AS-AGENT",
-                         |		"identifiers": [{
-                         |			"key": "AgentReferenceNumber",
-                         |			"value": "${withThisArn.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "$withThisGgUserId",
-                         |    "providerType": "GovernmentGateway"
-                         |  },
-                         |  "agentCode": "$withThisAgentCode",
-                         |  "groupIdentifier": "$withThisGroupId"
-                         |}
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{
+                       |	"affinityGroup": "Agent",
+                       |	"allEnrolments": [{
+                       |		"key": "HMRC-AS-AGENT",
+                       |		"identifiers": [{
+                       |			"key": "AgentReferenceNumber",
+                       |			"value": "${withThisArn.value}"
+                       |		}],
+                       |		"state": "Activated"
+                       |	}],
+                       |  "optionalCredentials": {
+                       |    "providerId": "$withThisGgUserId",
+                       |    "providerType": "GovernmentGateway"
+                       |  },
+                       |  "agentCode": "$withThisAgentCode",
+                       |  "groupIdentifier": "$withThisGroupId"
+                       |}
        """.stripMargin)
-        )
+      )
     )
     this
   }
 
-  def givenUserHasNoAgentEnrolments(arn: Arn, withThisGgUserId: String = "12345-credId"): AuthStub = {
+  def givenUserHasNoAgentEnrolments(
+    arn: Arn,
+    withThisGgUserId: String = "12345-credId"
+  ): AuthStub = {
     stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |	"affinityGroup": "Agent",
-                         |	"allEnrolments": [{
-                         |		"key": " ",
-                         |		"identifiers": [{
-                         |			"key": "AgentReferenceNumber",
-                         |			"value": "${arn.value}"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "$withThisGgUserId",
-                         |    "providerType": "GovernmentGateway"
-                         |  }
-                         |}
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{
+                       |	"affinityGroup": "Agent",
+                       |	"allEnrolments": [{
+                       |		"key": " ",
+                       |		"identifiers": [{
+                       |			"key": "AgentReferenceNumber",
+                       |			"value": "${arn.value}"
+                       |		}],
+                       |		"state": "Activated"
+                       |	}],
+                       |  "optionalCredentials": {
+                       |    "providerId": "$withThisGgUserId",
+                       |    "providerType": "GovernmentGateway"
+                       |  }
+                       |}
        """.stripMargin)
-        )
+      )
     )
     this
   }
 
   def givenUserHasNoClientEnrolments: AuthStub = {
     stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |	"affinityGroup": "Individual",
-                         |	"allEnrolments": [{
-                         |		"key": " ",
-                         |		"identifiers": [{
-                         |			"key": "MTDITID",
-                         |			"value": "ID"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "12345-credId",
-                         |    "providerType": "GovernmentGateway"
-                         |  }
-                         |}
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{
+                       |	"affinityGroup": "Individual",
+                       |	"allEnrolments": [{
+                       |		"key": " ",
+                       |		"identifiers": [{
+                       |			"key": "MTDITID",
+                       |			"value": "ID"
+                       |		}],
+                       |		"state": "Activated"
+                       |	}],
+                       |  "optionalCredentials": {
+                       |    "providerId": "12345-credId",
+                       |    "providerType": "GovernmentGateway"
+                       |  }
+                       |}
        """.stripMargin)
-        )
+      )
     )
     this
   }
 
   // noinspection ScalaStyle
-  def givenUserIsSubscribedClient(identifier: TaxIdentifier, withThisGgUserId: String = "12345-credId"): AuthStub = {
-    val (service, key, value) = identifier match {
-      case Nino(v)    => ("HMRC-NI", "NINO", v)
-      case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
-      case Vrn(v)     => ("HMRC-MTD-VAT", "VRN", v)
-      case Utr(v)     => ("HMRC-TERS-ORG", "SAUTR", v)
-      case Urn(v)     => ("HMRC-TERSNT-ORG", "URN", v)
-      case CgtRef(v)  => ("HMRC-CGT-PD", "CGTPDRef", v)
-      case PptRef(v)  => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
-      case CbcId(v)   => ("HMRC-CBC-ORG", "cbcId", v)
-      case PlrId(v)   => ("HMRC-PILLAR2-ORG", "PLRID", v)
-      case x          => throw new IllegalArgumentException(s"Tax identifier not supported $x")
-    }
+  def givenUserIsSubscribedClient(
+    identifier: TaxIdentifier,
+    withThisGgUserId: String = "12345-credId"
+  ): AuthStub = {
+    val (service, key, value) =
+      identifier match {
+        case Nino(v) => ("HMRC-NI", "NINO", v)
+        case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
+        case Vrn(v) => ("HMRC-MTD-VAT", "VRN", v)
+        case Utr(v) => ("HMRC-TERS-ORG", "SAUTR", v)
+        case Urn(v) => ("HMRC-TERSNT-ORG", "URN", v)
+        case CgtRef(v) => ("HMRC-CGT-PD", "CGTPDRef", v)
+        case PptRef(v) => ("HMRC-PPT-ORG", "EtmpRegistrationNumber", v)
+        case CbcId(v) => ("HMRC-CBC-ORG", "cbcId", v)
+        case PlrId(v) => ("HMRC-PILLAR2-ORG", "PLRID", v)
+        case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
+      }
 
     stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(s"""
-                         |{
-                         |"affinityGroup": "${if (key == "URN") "Organisation" else "Individual"}",
-                         |"allEnrolments": [{
-                         |  "key": "$service",
-                         |  "identifiers": [{
-                         |			"key": "$key",
-                         |			"value": "$value"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "HMCE-VAT-AGNT",
-                         |		"identifiers": [{
-                         |			"key": "AgentRefNo",
-                         |			"value": "V3264H"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "HMRC-AGENT-AGENT",
-                         |		"identifiers": [{
-                         |			"key": "AgentRefNumber",
-                         |			"value": "JARN1234567"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}, {
-                         |		"key": "IR-SA-AGENT",
-                         |		"identifiers": [{
-                         |			"key": "IRAgentReference",
-                         |			"value": "V3264H"
-                         |		}],
-                         |		"state": "Activated"
-                         |	}],
-                         |  "optionalCredentials": {
-                         |    "providerId": "$withThisGgUserId",
-                         |    "providerType": "GovernmentGateway"
-                         |  }
-                         |}
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{
+                       |"affinityGroup": "${if (key == "URN")
+                        "Organisation"
+                      else
+                        "Individual"}",
+                       |"allEnrolments": [{
+                       |  "key": "$service",
+                       |  "identifiers": [{
+                       |			"key": "$key",
+                       |			"value": "$value"
+                       |		}],
+                       |		"state": "Activated"
+                       |	}, {
+                       |		"key": "HMCE-VAT-AGNT",
+                       |		"identifiers": [{
+                       |			"key": "AgentRefNo",
+                       |			"value": "V3264H"
+                       |		}],
+                       |		"state": "Activated"
+                       |	}, {
+                       |		"key": "HMRC-AGENT-AGENT",
+                       |		"identifiers": [{
+                       |			"key": "AgentRefNumber",
+                       |			"value": "JARN1234567"
+                       |		}],
+                       |		"state": "Activated"
+                       |	}, {
+                       |		"key": "IR-SA-AGENT",
+                       |		"identifiers": [{
+                       |			"key": "IRAgentReference",
+                       |			"value": "V3264H"
+                       |		}],
+                       |		"state": "Activated"
+                       |	}],
+                       |  "optionalCredentials": {
+                       |    "providerId": "$withThisGgUserId",
+                       |    "providerType": "GovernmentGateway"
+                       |  }
+                       |}
        """.stripMargin)
-        )
+      )
     )
     this
   }
@@ -406,15 +431,38 @@ trait AuthStub {
     pptRef: PptRef,
     cgtRef: CgtRef
   ): FakeRequest[A] = {
-    val enrolments =
-      Seq(
-        Enrolment("HMRC-MTD-IT", "MTDITID", mtdItId.value),
-        Enrolment("HMRC-MTD-VAT", "VRN", vrn.value),
-        Enrolment("HMRC-TERS-ORG", "SAUTR", utr.value),
-        Enrolment("HMRC-TERSNT-ORG", "URN", urn.value),
-        Enrolment("HMRC-PPT-ORG", "EtmpRegistrationNumber", pptRef.value),
-        Enrolment("HMRC-CGT-PD", "CGTPDRef", cgtRef.value)
+    val enrolments = Seq(
+      Enrolment(
+        "HMRC-MTD-IT",
+        "MTDITID",
+        mtdItId.value
+      ),
+      Enrolment(
+        "HMRC-MTD-VAT",
+        "VRN",
+        vrn.value
+      ),
+      Enrolment(
+        "HMRC-TERS-ORG",
+        "SAUTR",
+        utr.value
+      ),
+      Enrolment(
+        "HMRC-TERSNT-ORG",
+        "URN",
+        urn.value
+      ),
+      Enrolment(
+        "HMRC-PPT-ORG",
+        "EtmpRegistrationNumber",
+        pptRef.value
+      ),
+      Enrolment(
+        "HMRC-CGT-PD",
+        "CGTPDRef",
+        cgtRef.value
       )
+    )
 
     givenAuthorisedFor(
       s"""
@@ -426,10 +474,10 @@ trait AuthStub {
          |{
          |  "allEnrolments": [
          |    ${enrolments
-        .map(enrolment =>
-          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
-        )
-        .mkString(", ")}
+          .map(enrolment =>
+            s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+          )
+          .mkString(", ")}
          |  ],
          |  "nino": "$defaultNino"
          |}
@@ -443,10 +491,13 @@ trait AuthStub {
     request: FakeRequest[A],
     vrn: Vrn
   ): FakeRequest[A] = {
-    val enrolments =
-      Seq(
-        Enrolment("HMRC-MTD-VAT", "VRN", vrn.value)
+    val enrolments = Seq(
+      Enrolment(
+        "HMRC-MTD-VAT",
+        "VRN",
+        vrn.value
       )
+    )
 
     givenAuthorisedFor(
       s"""
@@ -463,10 +514,10 @@ trait AuthStub {
          |  },
          |  "allEnrolments": [
          |    ${enrolments
-        .map(enrolment =>
-          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
-        )
-        .mkString(", ")}
+          .map(enrolment =>
+            s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+          )
+          .mkString(", ")}
          |  ]
          |}
           """.stripMargin
@@ -484,13 +535,10 @@ trait AuthStub {
       Json
         .obj(
           "allEnrolments" -> Json.arr(
-            Json.obj(
-              "key"         -> "HMRC-PT",
-              "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino.value))
-            )
+            Json.obj("key" -> "HMRC-PT", "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino.value)))
           ),
           "nino" -> s"${nino.value}",
-          "utr"  -> "1234567890"
+          "utr" -> "1234567890"
         )
         .toString
     )
@@ -521,20 +569,19 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenAuthorisedItsaClientWithNino(request: FakeRequest[?], mtdItId: MtdItId, nino: Nino): FakeRequest[?] = {
+  def givenAuthorisedItsaClientWithNino(
+    request: FakeRequest[?],
+    mtdItId: MtdItId,
+    nino: Nino
+  ): FakeRequest[?] = {
     givenAuthorisedFor(
       Json.obj("retrieve" -> Json.arr("allEnrolments", "nino")).toString,
       Json
         .obj(
           "allEnrolments" -> Json.arr(
-            Json.obj(
-              "key"         -> "HMRC-MTD-IT",
-              "identifiers" -> Json.arr(Json.obj("key" -> "MTDITID", "value" -> mtdItId))
-            ),
-            Json.obj(
-              "key"         -> "HMRC-PT",
-              "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino))
-            )
+            Json
+              .obj("key" -> "HMRC-MTD-IT", "identifiers" -> Json.arr(Json.obj("key" -> "MTDITID", "value" -> mtdItId))),
+            Json.obj("key" -> "HMRC-PT", "identifiers" -> Json.arr(Json.obj("key" -> "NINO", "value" -> nino)))
           ),
           "nino" -> nino.value
         )
@@ -544,10 +591,22 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenAuthorisedAsValidAgent[A](request: FakeRequest[A], arn: String) =
-    authenticatedAgent(request, Enrolment("HMRC-AS-AGENT", "AgentReferenceNumber", arn))
+  def givenAuthorisedAsValidAgent[A](
+    request: FakeRequest[A],
+    arn: String
+  ) = authenticatedAgent(
+    request,
+    Enrolment(
+      "HMRC-AS-AGENT",
+      "AgentReferenceNumber",
+      arn
+    )
+  )
 
-  def authenticatedAgent[A](request: FakeRequest[A], enrolment: Enrolment): FakeRequest[A] = {
+  def authenticatedAgent[A](
+    request: FakeRequest[A],
+    enrolment: Enrolment
+  ): FakeRequest[A] = {
     givenAuthorisedFor(
       s"""
          |{
@@ -570,17 +629,16 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenUnauthorisedWith(mdtpDetail: String): StubMapping =
-    stubFor(
-      post(urlEqualTo("/auth/authorise"))
-        .willReturn(
-          aResponse()
-            .withStatus(401)
-            .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")
-        )
-    )
+  def givenUnauthorisedWith(mdtpDetail: String): StubMapping = stubFor(
+    post(urlEqualTo("/auth/authorise"))
+      .willReturn(aResponse().withStatus(401).withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail""""))
+  )
 
-  def authenticated[A](request: FakeRequest[A], enrolments: Seq[Enrolment], isAgent: Boolean): FakeRequest[A] = {
+  def authenticated[A](
+    request: FakeRequest[A],
+    enrolments: Seq[Enrolment],
+    isAgent: Boolean
+  ): FakeRequest[A] = {
     givenAuthorisedFor(
       s"""
          |{
@@ -595,17 +653,20 @@ trait AuthStub {
          |{
          |"authorisedEnrolments": [
          |  ${enrolments
-        .map(enrolment =>
-          s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
-        )
-        .mkString(", ")}
+          .map(enrolment =>
+            s"""{ "key":"${enrolment.serviceName}", "identifiers": [{"key":"${enrolment.identifierName}", "value": "${enrolment.identifierValue}"}]}"""
+          )
+          .mkString(", ")}
          |]}
           """.stripMargin
     )
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenAuthorisedAsStrideUser[A](request: FakeRequest[A], strideUserId: String): FakeRequest[A] = {
+  def givenAuthorisedAsStrideUser[A](
+    request: FakeRequest[A],
+    strideUserId: String
+  ): FakeRequest[A] = {
     givenAuthorisedFor(
       s"""
          |{
@@ -627,39 +688,39 @@ trait AuthStub {
     request.withHeaders(SessionKeys.authToken -> "Bearer XYZ")
   }
 
-  def givenAuthorisedFor(payload: String, responseBody: String): Seq[StubMapping] =
-    List(
-      stubFor(
-        post(urlEqualTo("/auth/authorise"))
-          .atPriority(1)
-          .withRequestBody(equalToJson(payload, true, true))
-          .willReturn(
-            aResponse()
-              .withStatus(200)
-              .withHeader("Content-Type", "application/json")
-              .withBody(responseBody)
-          )
-      ),
-      stubFor(
-        post(urlEqualTo("/auth/authorise"))
-          .atPriority(2)
-          .willReturn(
-            aResponse()
-              .withStatus(401)
-              .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
-          )
-      )
-    )
-
-  def givenAuthorised(): StubMapping =
+  def givenAuthorisedFor(
+    payload: String,
+    responseBody: String
+  ): Seq[StubMapping] = List(
     stubFor(
       post(urlEqualTo("/auth/authorise"))
+        .atPriority(1)
+        .withRequestBody(
+          equalToJson(
+            payload,
+            true,
+            true
+          )
+        )
+        .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json").withBody(responseBody))
+    ),
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .atPriority(2)
         .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(Json.obj().toString())
+          aResponse().withStatus(401).withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
         )
     )
+  )
 
-  case class Enrolment(serviceName: String, identifierName: String, identifierValue: String)
+  def givenAuthorised(): StubMapping = stubFor(
+    post(urlEqualTo("/auth/authorise")).willReturn(aResponse().withStatus(200).withBody(Json.obj().toString()))
+  )
+
+  case class Enrolment(
+    serviceName: String,
+    identifierName: String,
+    identifierValue: String
+  )
+
 }

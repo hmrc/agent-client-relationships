@@ -19,16 +19,30 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, CbcNonUk, MtdIt, MtdItSupp, PersonalIncomeRecord, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CapitalGains
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.PersonalIncomeRecord
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Pillar2
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Ppt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
 
-import java.time.{Instant, ZoneOffset}
+import java.time.Instant
+import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 
-class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with TestData {
+class ChangeInvitationStatusByIdControllerISpec
+extends BaseControllerISpec
+with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -43,21 +57,23 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
   )
 
   def allServices: Map[Service, TaxIdentifier] = Map(
-    MtdIt                -> mtdItId,
+    MtdIt -> mtdItId,
     PersonalIncomeRecord -> nino,
-    Vat                  -> vrn,
-    Trust                -> utr,
-    TrustNT              -> urn,
-    CapitalGains         -> cgtRef,
-    Ppt                  -> pptRef,
-    Cbc                  -> cbcId,
-    CbcNonUk             -> cbcId,
-    Pillar2              -> plrId,
-    MtdItSupp            -> mtdItId
+    Vat -> vrn,
+    Trust -> utr,
+    TrustNT -> urn,
+    CapitalGains -> cgtRef,
+    Ppt -> pptRef,
+    Cbc -> cbcId,
+    CbcNonUk -> cbcId,
+    Pillar2 -> plrId,
+    MtdItSupp -> mtdItId
   )
 
-  def requestPath(invitationId: String, action: String): String =
-    s"/agent-client-relationships/authorisation-request/action-invitation/$invitationId/action/$action"
+  def requestPath(
+    invitationId: String,
+    action: String
+  ): String = s"/agent-client-relationships/authorisation-request/action-invitation/$invitationId/action/$action"
   allActions.foreach(testActionData =>
     allServices.foreach(testset =>
       s"/authorisation-request/action-invitation/:invitationId/action/:action change status to ${testActionData._1}" should {
@@ -65,10 +81,11 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         val expectedStatus = testActionData._2
         val (service, taxIdentifier) = testset
         val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
-        val suppliedClientId = taxIdentifier match {
-          case _: MtdItId => ClientIdentifier(nino)
-          case taxId      => ClientIdentifier(taxId)
-        }
+        val suppliedClientId =
+          taxIdentifier match {
+            case _: MtdItId => ClientIdentifier(nino)
+            case taxId => ClientIdentifier(taxId)
+          }
         val clientName = "TestClientName"
         val agentName = "testAgentName"
         val agentEmail = "agent@email.com"
@@ -76,37 +93,36 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
 
         s"when no invitation record for ${service.id}" should {
           s"return 404 NOT_FOUND" in {
-            val result = doAgentPutRequest(
-              requestPath("FakeInvitationId", action),
-              ""
-            )
+            val result = doAgentPutRequest(requestPath("FakeInvitationId", action), "")
             result.status shouldBe NOT_FOUND
           }
         }
 
         s"when invitation exists with Pending status in invitationStore for ${service.id}" should {
           s"update status to " in {
-            val newInvitation: Invitation = Invitation
-              .createNew(
-                arn.value,
-                service,
-                clientId,
-                suppliedClientId,
-                clientName,
-                agentName,
-                agentEmail,
-                expiryDate,
-                None
-              )
+            val newInvitation: Invitation = Invitation.createNew(
+              arn.value,
+              service,
+              clientId,
+              suppliedClientId,
+              clientName,
+              agentName,
+              agentEmail,
+              expiryDate,
+              None
+            )
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-            doAgentPutRequest(
-              requestPath(newInvitation.invitationId, action),
-              ""
-            ).status shouldBe 204
+            doAgentPutRequest(requestPath(newInvitation.invitationId, action), "").status shouldBe 204
 
             if (!newInvitation.isAltItsa)
-              await(partialAuthRepository.findActive(service.id, nino, arn)) shouldBe None
+              await(
+                partialAuthRepository.findActive(
+                  service.id,
+                  nino,
+                  arn
+                )
+              ) shouldBe None
 
             val newStatus = await(invitationRepo.findOneById(newInvitation.invitationId)).get.status
             expectedStatus.contains(newStatus) should be(true)
@@ -132,10 +148,7 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
 
             await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-            doAgentPutRequest(
-              requestPath(newInvitation.invitationId, action),
-              ""
-            ).status shouldBe NOT_FOUND
+            doAgentPutRequest(requestPath(newInvitation.invitationId, action), "").status shouldBe NOT_FOUND
 
             await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
           }
@@ -160,26 +173,28 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
         givenUserIsAuthenticatedWithStride(NEW_STRIDE_ROLE, "strideId-1234456")
         givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-1234456")
 
-        val newInvitation = Invitation
-          .createNew(
-            arn.value,
-            service,
-            clientId,
-            suppliedClientId,
-            clientName,
-            agentName,
-            agentEmail,
-            expiryDate,
-            None
-          )
+        val newInvitation = Invitation.createNew(
+          arn.value,
+          service,
+          clientId,
+          suppliedClientId,
+          clientName,
+          agentName,
+          agentEmail,
+          expiryDate,
+          None
+        )
         await(invitationRepo.collection.insertOne(newInvitation).toFuture())
 
-        doAgentPutRequest(
-          requestPath(newInvitation.invitationId, "accept"),
-          ""
-        ).status shouldBe 204
+        doAgentPutRequest(requestPath(newInvitation.invitationId, "accept"), "").status shouldBe 204
 
-        await(partialAuthRepository.findActive(service.id, nino, arn)).get.active shouldBe true
+        await(
+          partialAuthRepository.findActive(
+            service.id,
+            nino,
+            arn
+          )
+        ).get.active shouldBe true
         await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == PartialAuth
 
       }
@@ -189,11 +204,9 @@ class ChangeInvitationStatusByIdControllerISpec extends BaseControllerISpec with
   "handle errors" should {
     "when request data are incorrect" should {
       "return BadRequest 400 status when action is not valid for service" in {
-        doAgentPutRequest(
-          requestPath("AnyInvitationId", "fakeAtion"),
-          ""
-        ).status shouldBe 400
+        doAgentPutRequest(requestPath("AnyInvitationId", "fakeAtion"), "").status shouldBe 400
       }
     }
   }
+
 }

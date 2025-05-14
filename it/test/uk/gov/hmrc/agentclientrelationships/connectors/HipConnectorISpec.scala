@@ -20,69 +20,87 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HIPHeaders
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
+import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HipStub}
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, Cbc, MtdIt, MtdItSupp, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.CapitalGains
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Pillar2
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Ppt
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.LocalDate
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 
 class HipConnectorISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with HipStub
-    with DataStreamStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with HipStub
+with DataStreamStub {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
   val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
-  val hipHeaders: HIPHeaders = app.injector.instanceOf[HIPHeaders]
+  val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port"     -> wireMockPort,
-        "microservice.services.tax-enrolments.port"            -> wireMockPort,
-        "microservice.services.users-groups-search.port"       -> wireMockPort,
-        "microservice.services.if.port"                        -> wireMockPort,
-        "microservice.services.auth.port"                      -> wireMockPort,
-        "microservice.services.if.environment"                 -> "stub",
-        "microservice.services.if.authorization-api1171-token" -> "token",
-        "microservice.services.agent-mapping.port"             -> wireMockPort,
-        "auditing.consumer.baseUri.host"                       -> wireMockHost,
-        "auditing.consumer.baseUri.port"                       -> wireMockPort,
-        "features.copy-relationship.mtd-it"                    -> true,
-        "features.copy-relationship.mtd-vat"                   -> true,
-        "features.recovery-enable"                             -> false,
-        "agent.cache.expires"                                  -> "1 millis",
-        "agent.cache.enabled"                                  -> false,
-        "agent.trackPage.cache.expires"                        -> "1 millis",
-        "agent.trackPage.cache.enabled"                        -> false,
-        "microservice.services.hip.port"                       -> wireMockPort,
-        "microservice.services.hip.authorization-token"        -> "token",
-        "hip.BusinessDetails.enabled"                          -> true
-      )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.if.port" -> wireMockPort,
+    "microservice.services.auth.port" -> wireMockPort,
+    "microservice.services.if.environment" -> "stub",
+    "microservice.services.if.authorization-api1171-token" -> "token",
+    "microservice.services.agent-mapping.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
+    "features.recovery-enable" -> false,
+    "agent.cache.expires" -> "1 millis",
+    "agent.cache.enabled" -> false,
+    "agent.trackPage.cache.expires" -> "1 millis",
+    "agent.trackPage.cache.enabled" -> false,
+    "microservice.services.hip.port" -> wireMockPort,
+    "microservice.services.hip.authorization-token" -> "token",
+    "hip.BusinessDetails.enabled" -> true
+  )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
   val hipConnector =
-    new HipConnector(httpClient, agentCacheProvider, hipHeaders, ec)(metrics, appConfig)
+    new HipConnector(
+      httpClient,
+      agentCacheProvider,
+      hipHeaders,
+      appConfig
+    )(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
@@ -102,12 +120,12 @@ class HipConnectorISpec
 
   val otherTaxIdentifier: TaxIdentifier => TaxIdentifier = {
     case MtdItId(_) => MtdItId("ABCDE1234567890")
-    case Vrn(_)     => Vrn("101747641")
-    case Utr(_)     => Utr("2134514321")
-    case Urn(_)     => Urn("XXTRUST12345678")
-    case PptRef(_)  => PptRef("XAPPT0004567890")
-    case PlrId(_)   => PlrId("XMPLR0012345678")
-    case x          => x
+    case Vrn(_) => Vrn("101747641")
+    case Utr(_) => Utr("2134514321")
+    case Urn(_) => Urn("XXTRUST12345678")
+    case PptRef(_) => PptRef("XAPPT0004567890")
+    case PlrId(_) => PlrId("XMPLR0012345678")
+    case x => x
   }
 
   "HIPConnector CreateAgentRelationship" should {
@@ -182,19 +200,18 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
-          .withRequestBody(
-            equalToJson(
-              s"""{
-                 |"regime": "VATC",
-                 |"idType" : "VRN",
-                 |"relationshipType" : "ZA01",
-                 |"authProfile" : "ALL00001"
-                 |}""".stripMargin,
-              true,
-              true
-            )
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship")).withRequestBody(
+          equalToJson(
+            s"""{
+               |"regime": "VATC",
+               |"idType" : "VRN",
+               |"relationshipType" : "ZA01",
+               |"authProfile" : "ALL00001"
+               |}""".stripMargin,
+            true,
+            true
           )
+        )
       )
     }
 
@@ -206,17 +223,16 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
-          .withRequestBody(
-            equalToJson(
-              s"""{
-                 |"regime": "TRS",
-                 |"idType" : "UTR"
-                 |}""".stripMargin,
-              true,
-              true
-            )
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship")).withRequestBody(
+          equalToJson(
+            s"""{
+               |"regime": "TRS",
+               |"idType" : "UTR"
+               |}""".stripMargin,
+            true,
+            true
           )
+        )
       )
     }
 
@@ -228,17 +244,16 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
-          .withRequestBody(
-            equalToJson(
-              s"""{
-                 |"regime": "TRS",
-                 |"idType" : "URN"
-                 |}""".stripMargin,
-              true,
-              true
-            )
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship")).withRequestBody(
+          equalToJson(
+            s"""{
+               |"regime": "TRS",
+               |"idType" : "URN"
+               |}""".stripMargin,
+            true,
+            true
           )
+        )
       )
     }
 
@@ -250,17 +265,16 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
-          .withRequestBody(
-            equalToJson(
-              s"""{
-                 |"regime": "PPT",
-                 |"refNumber" : "XAPPT0004567890"
-                 |}""".stripMargin,
-              true,
-              true
-            )
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship")).withRequestBody(
+          equalToJson(
+            s"""{
+               |"regime": "PPT",
+               |"refNumber" : "XAPPT0004567890"
+               |}""".stripMargin,
+            true,
+            true
           )
+        )
       )
     }
 
@@ -272,17 +286,16 @@ class HipConnectorISpec
 
       verify(
         1,
-        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship"))
-          .withRequestBody(
-            equalToJson(
-              s"""{
-                 |"regime": "PLR",
-                 |"refNumber" : "XMPLR0012345678"
-                 |}""".stripMargin,
-              true,
-              true
-            )
+        postRequestedFor(urlPathEqualTo("/etmp/RESTAdapter/rosm/agent-relationship")).withRequestBody(
+          equalToJson(
+            s"""{
+               |"regime": "PLR",
+               |"refNumber" : "XMPLR0012345678"
+               |}""".stripMargin,
+            true,
+            true
           )
+        )
       )
     }
 
@@ -398,7 +411,11 @@ class HipConnectorISpec
     }
 
     "return existing active relationships for specified clientId for ItSa Supp service" in {
-      getActiveRelationshipsViaClient(mtdItId, agentARN, "ITSAS001")
+      getActiveRelationshipsViaClient(
+        mtdItId,
+        agentARN,
+        "ITSAS001"
+      )
       givenAuditConnector()
 
       val result = await(hipConnector.getActiveClientRelationships(mtdItId, Service.MtdItSupp))
@@ -524,7 +541,11 @@ class HipConnectorISpec
     val encodedArn = UriEncoding.encodePathSegment(agentARN.value, "UTF-8")
 
     "return existing inactive relationships for specified clientId for ItSa service" in {
-      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(mtdItId), mtdItId)
+      getInactiveRelationshipsViaAgent(
+        agentARN,
+        otherTaxIdentifier(mtdItId),
+        mtdItId
+      )
       givenAuditConnector()
       val result = await(hipConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
@@ -538,7 +559,11 @@ class HipConnectorISpec
     }
 
     "return existing inactive relationships for specified clientId for Vat service" in {
-      getInactiveRelationshipsViaAgent(agentARN, otherTaxIdentifier(vrn), vrn)
+      getInactiveRelationshipsViaAgent(
+        agentARN,
+        otherTaxIdentifier(vrn),
+        vrn
+      )
       givenAuditConnector()
       val result = await(hipConnector.getInactiveRelationships(agentARN))
       result(0).arn shouldBe agentARN
@@ -753,11 +778,21 @@ class HipConnectorISpec
   }
 
   "isActive" should {
-    val noEndRelationship = ActiveRelationship(Arn("foo"), None, Some(LocalDate.parse("1111-11-11")))
-    val afterCurrentDateRelationship =
-      ActiveRelationship(Arn("foo"), Some(LocalDate.parse("2222-11-11")), Some(LocalDate.parse("1111-11-11")))
-    val beforeCurrentDateRelationship =
-      ActiveRelationship(Arn("foo"), Some(LocalDate.parse("1111-11-11")), Some(LocalDate.parse("1111-11-11")))
+    val noEndRelationship = ActiveRelationship(
+      Arn("foo"),
+      None,
+      Some(LocalDate.parse("1111-11-11"))
+    )
+    val afterCurrentDateRelationship = ActiveRelationship(
+      Arn("foo"),
+      Some(LocalDate.parse("2222-11-11")),
+      Some(LocalDate.parse("1111-11-11"))
+    )
+    val beforeCurrentDateRelationship = ActiveRelationship(
+      Arn("foo"),
+      Some(LocalDate.parse("1111-11-11")),
+      Some(LocalDate.parse("1111-11-11"))
+    )
     "return true when the relationship has no end date" in {
       givenAuditConnector()
       hipConnector.isActive(noEndRelationship) shouldBe true
@@ -773,33 +808,30 @@ class HipConnectorISpec
   }
 
   "isInactive" should {
-    val noEndRelationship =
-      InactiveRelationship(
-        Arn("foo"),
-        None,
-        Some(LocalDate.parse("1111-11-11")),
-        "123456789",
-        "personal",
-        "HMRC-MTD-VAT"
-      )
-    val endsBeforeCurrentDate =
-      InactiveRelationship(
-        Arn("foo"),
-        Some(LocalDate.parse("1111-11-11")),
-        Some(LocalDate.parse("1111-11-11")),
-        "123456789",
-        "personal",
-        "HMRC-MTD-VAT"
-      )
-    val endsAtCurrentDateRelationship =
-      InactiveRelationship(
-        Arn("foo"),
-        Some(LocalDate.now()),
-        Some(LocalDate.parse("1111-11-11")),
-        "123456789",
-        "personal",
-        "HMRC-MTD-VAT"
-      )
+    val noEndRelationship = InactiveRelationship(
+      Arn("foo"),
+      None,
+      Some(LocalDate.parse("1111-11-11")),
+      "123456789",
+      "personal",
+      "HMRC-MTD-VAT"
+    )
+    val endsBeforeCurrentDate = InactiveRelationship(
+      Arn("foo"),
+      Some(LocalDate.parse("1111-11-11")),
+      Some(LocalDate.parse("1111-11-11")),
+      "123456789",
+      "personal",
+      "HMRC-MTD-VAT"
+    )
+    val endsAtCurrentDateRelationship = InactiveRelationship(
+      Arn("foo"),
+      Some(LocalDate.now()),
+      Some(LocalDate.parse("1111-11-11")),
+      "123456789",
+      "personal",
+      "HMRC-MTD-VAT"
+    )
 
     "return false when the relationship is active" in {
       givenAuditConnector()
@@ -814,4 +846,5 @@ class HipConnectorISpec
       hipConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
     }
   }
+
 }

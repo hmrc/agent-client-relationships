@@ -17,12 +17,18 @@
 package uk.gov.hmrc.agentclientrelationships.config
 
 import com.google.inject.AbstractModule
-import play.api.{Configuration, Environment}
+import play.api.Configuration
+import play.api.Environment
 import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
 
-import java.time.{Clock, ZoneId}
+import java.time.Clock
+import java.time.ZoneId
 
-class Module(environment: Environment, configuration: Configuration) extends AbstractModule {
+class Module(
+  environment: Environment,
+  configuration: Configuration
+)
+extends AbstractModule {
 
   override def configure(): Unit = {
     bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
@@ -30,13 +36,10 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     val internalAuthTokenEnabled: Boolean = configuration.get[Boolean]("internal-auth-token-enabled-on-start")
 
     if (internalAuthTokenEnabled) {
-      bind(classOf[InternalAuthTokenInitialiser])
-        .to(classOf[InternalAuthTokenInitialiserImpl])
-        .asEagerSingleton()
-    } else {
-      bind(classOf[InternalAuthTokenInitialiser])
-        .to(classOf[NoOpInternalAuthTokenInitialiser])
-        .asEagerSingleton()
+      bind(classOf[InternalAuthTokenInitialiser]).to(classOf[InternalAuthTokenInitialiserImpl]).asEagerSingleton()
+    }
+    else {
+      bind(classOf[InternalAuthTokenInitialiser]).to(classOf[NoOpInternalAuthTokenInitialiser]).asEagerSingleton()
     }
 
     bind(classOf[EmailScheduler]).asEagerSingleton()

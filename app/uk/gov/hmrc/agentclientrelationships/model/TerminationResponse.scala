@@ -16,9 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 
-case class DeletionCount(service: String, store: String, count: Int)
+case class DeletionCount(
+  service: String,
+  store: String,
+  count: Int
+)
 
 object DeletionCount {
   implicit val formats: OFormat[DeletionCount] = Json.format[DeletionCount]

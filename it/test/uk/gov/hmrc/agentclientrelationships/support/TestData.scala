@@ -16,9 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import play.api.libs.json.{Format, Json, OFormat}
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
-import uk.gov.hmrc.agentmtdidentifiers.model.{SuspensionDetails, Utr}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
+import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 
 trait TestData {
 
@@ -64,14 +68,32 @@ trait TestData {
     Some("My Agency"),
     Some("abc@abc.com"),
     Some("07345678901"),
-    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
+    Some(
+      TestBusinessAddress(
+        "25 Any Street",
+        Some("Central Grange"),
+        Some("Telford"),
+        None,
+        Some("TF4 3TR"),
+        "GB"
+      )
+    )
   )
 
   val existingAgencyDetailsResponse: TestAgencyDetails = TestAgencyDetails(
     Some("ExistingAgent"),
     Some("abc@example.com"),
     Some("07345678901"),
-    Some(TestBusinessAddress("25 Any Street", Some("Central Grange"), Some("Telford"), None, Some("TF4 3TR"), "GB"))
+    Some(
+      TestBusinessAddress(
+        "25 Any Street",
+        Some("Central Grange"),
+        Some("Telford"),
+        None,
+        Some("TF4 3TR"),
+        "GB"
+      )
+    )
   )
 
   val agentRecordResponse: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
@@ -98,15 +120,9 @@ trait TestData {
     suspensionDetails = Some(suspensionDetailsSuspended)
   )
 
-  val agentDetails: AgencyDetails = AgencyDetails(
-    "My Agency",
-    "abc@abc.com"
-  )
+  val agentDetails: AgencyDetails = AgencyDetails("My Agency", "abc@abc.com")
 
-  val existingAgentDetails: AgencyDetails = AgencyDetails(
-    "ExistingAgent",
-    "abc@abc.com"
-  )
+  val existingAgentDetails: AgencyDetails = AgencyDetails("ExistingAgent", "abc@abc.com")
 
   val agentRecord: AgentDetailsDesResponse = AgentDetailsDesResponse(
     agencyDetails = agentDetails,

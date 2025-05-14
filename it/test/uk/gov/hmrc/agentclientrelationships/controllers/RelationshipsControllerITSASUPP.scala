@@ -20,11 +20,11 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 
 trait RelationshipsControllerITSASUPP {
-  this: RelationshipsBaseControllerISpec with HipStub =>
+  this: RelationshipsBaseControllerISpec
+    with HipStub =>
 
   def relationshipControllerITSASUPPBehaviours(): Unit = {
-    val requestPath: String =
-      s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT-SUPP/client/MTDITID/${mtdItId.value}"
+    val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT-SUPP/client/MTDITID/${mtdItId.value}"
 
     def doRequest = doGetRequest(requestPath)
 
@@ -36,7 +36,12 @@ trait RelationshipsControllerITSASUPP {
         givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
         givenNinoIsUnknownFor(mtdItId)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -49,7 +54,12 @@ trait RelationshipsControllerITSASUPP {
         givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
         givenNinoIsKnownFor(mtdItId, nino)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -65,7 +75,12 @@ trait RelationshipsControllerITSASUPP {
         givenAgentCanBeAllocated(mtdItId, arn)
         givenMTDITSUPPEnrolmentAllocationSucceeds(mtdItId, "bar")
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 200
@@ -74,17 +89,17 @@ trait RelationshipsControllerITSASUPP {
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "nino"                    -> nino.value,
-            "saAgentRef"              -> "foo",
-            "service"                 -> "HMRC-MTD-IT-SUPP",
-            "clientId"                -> mtdItId.value,
-            "clientIdType"            -> "mtditid",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "service" -> "HMRC-MTD-IT-SUPP",
+            "clientId" -> mtdItId.value,
+            "clientIdType" -> "mtditid",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "true",
-            "howRelationshipCreated"  -> "Alt ITSA"
+            "enrolmentDelegated" -> "true",
+            "howRelationshipCreated" -> "Alt ITSA"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )

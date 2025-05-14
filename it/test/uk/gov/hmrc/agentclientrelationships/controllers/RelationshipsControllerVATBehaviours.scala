@@ -20,7 +20,8 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
-import uk.gov.hmrc.agentclientrelationships.repository.{RelationshipCopyRecord, SyncStatus}
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.AgentCode
@@ -28,7 +29,9 @@ import uk.gov.hmrc.domain.AgentCode
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
 
-trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerISpec with HipStub =>
+trait RelationshipsControllerVATBehaviours {
+  this: RelationshipsBaseControllerISpec
+    with HipStub =>
 
   def relationshipControllerVATSpecificBehaviours(): Unit = {
     val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
@@ -40,8 +43,7 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
 
     "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
 
-      val requestPath: String =
-        s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
+      val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
 
       def doRequest = doGetRequest(requestPath)
 
@@ -57,7 +59,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
         givenAdminUser("foo", "any")
         getVrnIsKnownInETMPFor(vrn)
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         await(repo.findBy(arn, vatEnrolmentKey)) shouldBe empty
 
@@ -76,17 +83,17 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "oldAgentCodes"           -> oldAgentCode,
-            "service"                 -> "mtd-vat",
-            "vrn"                     -> vrn.value,
-            "ESRelationship"          -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "oldAgentCodes" -> oldAgentCode,
+            "service" -> "mtd-vat",
+            "vrn" -> vrn.value,
+            "ESRelationship" -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "true",
-            "howRelationshipCreated"  -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"         -> "true"
+            "enrolmentDelegated" -> "true",
+            "howRelationshipCreated" -> "CopyExistingESRelationship",
+            "vrnExistsInEtmp" -> "true"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -96,11 +103,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "oldAgentCodes"        -> oldAgentCode,
-            "vrn"                  -> vrn.value,
-            "ESRelationship"       -> "true"
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "oldAgentCodes" -> oldAgentCode,
+            "vrn" -> vrn.value,
+            "ESRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -128,9 +135,9 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode,
-            "ESRelationship"       -> "true"
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -148,7 +155,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
         givenAdminUser("foo", "any")
         getVrnIsKnownInETMPFor(vrn)
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
@@ -171,10 +183,20 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
         givenAgentCanBeAllocated(vrn, arn)
-        givenEnrolmentAllocationFailsWith(404)("foo", "any", EnrolmentKey(Service.Vat, vrn), "bar")
+        givenEnrolmentAllocationFailsWith(404)(
+          "foo",
+          "any",
+          EnrolmentKey(Service.Vat, vrn),
+          "bar"
+        )
         givenAdminUser("foo", "any")
         getVrnIsKnownInETMPFor(vrn)
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
 
@@ -193,17 +215,17 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"    -> arn.value,
-            "credId"                  -> "any",
-            "agentCode"               -> "bar",
-            "service"                 -> "mtd-vat",
-            "vrn"                     -> vrn.value,
-            "oldAgentCodes"           -> oldAgentCode,
-            "ESRelationship"          -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "service" -> "mtd-vat",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true",
             "etmpRelationshipCreated" -> "true",
-            "enrolmentDelegated"      -> "false",
-            "howRelationshipCreated"  -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"         -> "true"
+            "enrolmentDelegated" -> "false",
+            "howRelationshipCreated" -> "CopyExistingESRelationship",
+            "vrnExistsInEtmp" -> "true"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -213,11 +235,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "ESRelationship"       -> "true",
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "ESRelationship" -> "true",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -243,13 +265,13 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           1,
           event = AgentClientRelationshipEvent.CreateRelationship,
           detail = Map(
-            "agentReferenceNumber"   -> arn.value,
-            "service"                -> "mtd-vat",
-            "vrn"                    -> vrn.value,
-            "oldAgentCodes"          -> oldAgentCode,
-            "ESRelationship"         -> "true",
+            "agentReferenceNumber" -> arn.value,
+            "service" -> "mtd-vat",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true",
             "howRelationshipCreated" -> "CopyExistingESRelationship",
-            "vrnExistsInEtmp"        -> "false"
+            "vrnExistsInEtmp" -> "false"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
@@ -259,11 +281,11 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId"               -> "any",
-            "agentCode"            -> "bar",
-            "ESRelationship"       -> "true",
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode
+            "credId" -> "any",
+            "agentCode" -> "bar",
+            "ESRelationship" -> "true",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
@@ -274,7 +296,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenAdminUser("foo", "any")
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         await(repo.collection.insertOne(relationshipCopiedSuccessfullyForMtdVat).toFuture())
         val result = doRequest
@@ -292,7 +319,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           givenAdminUser("foo", "any")
           givenAgentCanBeAllocated(vrn, arn)
           givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-          givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+          givenUserIsSubscribedAgent(
+            arn,
+            withThisGroupId = "foo",
+            withThisGgUserId = "any",
+            withThisAgentCode = "bar"
+          )
 
           await(repo.collection.insertOne(relationshipCopiedSuccessfullyForMtdVat).toFuture())
           val result = doRequest
@@ -302,7 +334,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
 
       "return 404 when credentials are not found but relationship copy was made before" in {
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         await(repo.collection.insertOne(relationshipCopiedSuccessfullyForMtdVat).toFuture())
         val result = doRequest
@@ -315,7 +352,12 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
         givenServiceReturnsServiceUnavailable()
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
 
         val result = doRequest
         result.status shouldBe 404
@@ -324,15 +366,19 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
 
     "GET /agent/:arn/service/HMCE-VATDEC-ORG/client/vrn/:vrn" should {
 
-      val requestPath =
-        s"/agent-client-relationships/agent/${arn.value}/service/HMCE-VATDEC-ORG/client/vrn/${vrn.value}"
+      val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMCE-VATDEC-ORG/client/vrn/${vrn.value}"
 
       def doRequest = doGetRequest(requestPath)
 
       "return 404 when agent not allocated to client in es" in {
         givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
         givenDelegatedGroupIdsNotExistFor(EnrolmentKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"))
-        givenUserIsSubscribedAgent(arn, withThisGroupId = "foo", withThisGgUserId = "any", withThisAgentCode = "bar")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
         val result = doRequest
         result.status shouldBe 404
         (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
@@ -369,9 +415,9 @@ trait RelationshipsControllerVATBehaviours { this: RelationshipsBaseControllerIS
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "vrn"                  -> vrn.value,
-            "oldAgentCodes"        -> oldAgentCode,
-            "ESRelationship"       -> "true"
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "ESRelationship" -> "true"
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
