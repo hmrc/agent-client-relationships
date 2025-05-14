@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.model.{Invitation, InvitationStatus}
 
 import java.time.{Instant, LocalDate}
 
-case class ApiSeqAuthorisation(
+case class ApiBulkAuthorisation(
   created: Instant,
   service: String,
   status: InvitationStatus,
@@ -30,11 +30,11 @@ case class ApiSeqAuthorisation(
   lastUpdated: Instant
 )
 
-object ApiSeqAuthorisation {
-  implicit val format: Format[ApiSeqAuthorisation] = Json.format[ApiSeqAuthorisation]
+object ApiBulkAuthorisation {
+  implicit val format: Format[ApiBulkAuthorisation] = Json.format[ApiBulkAuthorisation]
 
-  def createApiSeqAuthorisation(invitation: Invitation): ApiSeqAuthorisation =
-    ApiSeqAuthorisation(
+  def createApiSeqAuthorisation(invitation: Invitation): ApiBulkAuthorisation =
+    ApiBulkAuthorisation(
       created = invitation.created,
       service = invitation.service,
       status = invitation.status,
@@ -48,7 +48,7 @@ object ApiSeqAuthorisation {
 case class ApiSeqAuthorisations(
   uid: String,
   normalizedAgentName: String,
-  invitations: Seq[ApiSeqAuthorisation]
+  invitations: Seq[ApiBulkAuthorisation]
 )
 
 object ApiSeqAuthorisations {
@@ -63,6 +63,6 @@ object ApiSeqAuthorisations {
       uid = uid,
       normalizedAgentName = normalizedAgentName,
       invitations = invitations
-        .map(ApiSeqAuthorisation.createApiSeqAuthorisation)
+        .map(ApiBulkAuthorisation.createApiSeqAuthorisation)
     )
 }
